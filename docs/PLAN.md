@@ -788,7 +788,7 @@ Todo lo que se hace queda registrado en tres niveles. Sirve para el seguimiento 
 
 | Nivel                                                  | Qué recoge                                                                                                                                         | Quién lo hace                                                     |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Eventos (`docs/bitacora/eventos.jsonl`)                | Cada petición del humano, cada comando, cada archivo tocado y el inicio y fin de cada sesión, con su hora                                          | Automático, con los hooks de Claude Code                          |
+| Eventos (`docs/bitacora/eventos.jsonl`, solo en local) | La hora de cada petición del humano (sin su texto), cada comando, cada archivo tocado y el inicio y fin de cada sesión, con su hora                | Automático, con los hooks de Claude Code                          |
 | Métricas (`docs/bitacora/metricas.csv`)                | Por paso: duración de la sesión, tokens de entrada, salida y caché, coste equivalente en API, líneas añadidas y borradas, archivos tocados y tests | Script `npm run metrics`, que el agente ejecuta al cerrar el paso |
 | Bitácora del paso (`docs/bitacora/<paso>-<nombre>.md`) | El relato del paso: qué se pidió, qué hizo Claude, comandos e instalaciones, problemas y solución, decisiones, validación y capturas               | El agente al cerrar el paso; el humano añade horas y validación   |
 
@@ -810,7 +810,7 @@ Reglas:
 
 - **Coste equivalente:** con una suscripción no se paga por token. El coste que calcula el script es lo que costaría lo mismo con la API, y sirve como dato para la memoria y la presentación.
 - **Retención:** por defecto, Claude Code borra las conversaciones locales a los 30 días. Por eso las métricas se calculan y se guardan al cerrar cada paso, y además se sube `cleanupPeriodDays` (paso 0.1).
-- **Privacidad:** las conversaciones completas de Claude Code no se suben al repositorio; solo los eventos, las métricas y la bitácora.
+- **Privacidad:** ni las conversaciones de Claude Code ni `eventos.jsonl` se suben al repositorio (D-012): `eventos.jsonl` está en `.gitignore`, se queda en el equipo del autor y nunca guarda el texto de las peticiones. Al repositorio solo van las métricas y la bitácora.
 
 Plantilla de la bitácora de un paso (`docs/bitacora/_plantilla.md`):
 
@@ -891,7 +891,7 @@ Commit: `chore: scaffold`.
 
 **0.2 · Bitácora automática y métricas (≈1,5 h)**
 
-- Hooks de Claude Code en `.claude/settings.json`, que llaman a un script de Node (sin bash ni jq, para que funcione en Windows) y añaden una línea a `docs/bitacora/eventos.jsonl` por cada evento: inicio y fin de sesión, cada petición del humano, cada comando ejecutado y cada archivo creado o modificado, con la hora y el identificador de sesión. Sin la salida de los comandos. El formato exacto de los hooks se comprueba en la documentación de Claude Code.
+- Hooks de Claude Code en `.claude/settings.json`, que llaman a un script de Node (sin bash ni jq, para que funcione en Windows) y añaden una línea a `docs/bitacora/eventos.jsonl` por cada evento: inicio y fin de sesión, la hora de cada petición del humano (nunca su texto), cada comando ejecutado y cada archivo creado o modificado, con la hora y el identificador de sesión. Sin la salida de los comandos (D-012). El formato exacto de los hooks se comprueba en la documentación de Claude Code.
 - Script `npm run metrics -- <paso>`. Para la sesión del paso calcula la duración, los tokens (entrada, salida y caché) y el coste equivalente en API a partir de los registros locales de Claude Code (con `ccusage` o leyendo los JSONL de `~/.claude/projects/`). Del repositorio saca las líneas añadidas y borradas y los archivos tocados. Escribe el resultado en `docs/bitacora/metricas.csv`.
 - Plantilla `docs/bitacora/_plantilla.md` (5.6) y carpeta `docs/capturas/`.
 - Tú: reinicia Claude Code para que cargue los hooks (si te lo pide, apruébalos en `/hooks`).

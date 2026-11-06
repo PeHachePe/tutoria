@@ -27,7 +27,8 @@ export function toEventEntry(input, { projectDir, homeDir, now }) {
     case 'SessionEnd':
       return { ...common, event: 'session_end', reason: input.reason };
     case 'UserPromptSubmit':
-      return { ...common, event: 'prompt', text: input.prompt };
+      // Only the time of each prompt: the text of the conversation never goes to the repository.
+      return { ...common, event: 'prompt' };
     case 'PostToolUse':
     case 'PostToolUseFailure':
       return toolEntry(input, common, projectDir, homeDir);
@@ -41,7 +42,8 @@ function toolEntry(input, common, projectDir, homeDir) {
   const ok = input.hook_event_name === 'PostToolUse';
 
   if (SHELL_TOOLS.has(tool)) {
-    const entry = { ...common, event: 'command', tool, command: input.tool_input?.command, ok };
+    const command = hideUserFolders(input.tool_input?.command);
+    const entry = { ...common, event: 'command', tool, command, ok };
     const exitCode = /^Exit code (\d+)/.exec(input.error ?? '')?.[1];
     return exitCode === undefined ? entry : { ...entry, exitCode: Number(exitCode) };
   }
@@ -61,6 +63,16 @@ function toolEntry(input, common, projectDir, homeDir) {
   return null;
 }
 
+/**
+ * Replaces any user folder in free text (`C:\Users\name`, `C:/Users/NAME~1.X`, `/c/Users/name`)
+ * with `~`, so commands and prompts never reveal the account name of the machine.
+ *
+ * @param {string | undefined} text
+ */
+export function hideUserFolders(text) {
+  return text?.replace(/(?:[A-Za-z]:|\/[A-Za-z])?[\\/]+Users[\\/]+[^\\/\s"'`]+/gi, '~');
+}
+
 /** Path relative to the project, or to the user folder (`~`) so the user name stays out. */
 function displayPath(filePath, projectDir, homeDir) {
   const absolute = path.win32.normalize(filePath);
@@ -73,5 +85,5 @@ function displayPath(filePath, projectDir, homeDir) {
       return prefix + relative.split(path.win32.sep).join('/');
     }
   }
-  return absolute.split(path.win32.sep).join('/');
+  return hideUserFolders(absolute.split(path.win32.sep).join('/'));
 }

@@ -1,7 +1,20 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { toEventEntry } from './event-entry.mjs';
+import { hideUserFolders, toEventEntry } from './event-entry.mjs';
+
+describe('hideUserFolders', () => {
+  it('hides the user folder in Windows, short and Git Bash forms', () => {
+    assert.equal(hideUserFolders('cat C:\\Users\\some.one\\x.txt'), 'cat ~\\x.txt');
+    assert.equal(hideUserFolders('cd "C:/Users/SOME~1.ONE/AppData/Temp"'), 'cd "~/AppData/Temp"');
+    assert.equal(hideUserFolders('ls /c/Users/some.one/.claude'), 'ls ~/.claude');
+  });
+
+  it('leaves other paths and missing text untouched', () => {
+    assert.equal(hideUserFolders('npm run check'), 'npm run check');
+    assert.equal(hideUserFolders(undefined), undefined);
+  });
+});
 
 const context = {
   projectDir: 'D:\\TutorIA\\tutoria',
@@ -43,13 +56,16 @@ describe('toEventEntry', () => {
     assert.equal(entry.reason, 'other');
   });
 
-  it('records each prompt of the human', () => {
+  it('records the time of each prompt but never its text', () => {
     const entry = toEventEntry(
       { ...base, hook_event_name: 'UserPromptSubmit', prompt: 'Paso 0.2' },
       context,
     );
-    assert.equal(entry.event, 'prompt');
-    assert.equal(entry.text, 'Paso 0.2');
+    assert.deepEqual(entry, {
+      ts: '2026-11-06T20:00:00.000Z',
+      session: 'abc-123',
+      event: 'prompt',
+    });
   });
 
   it('records a successful command without its output', () => {
@@ -150,6 +166,19 @@ describe('toEventEntry', () => {
       context,
     );
     assert.equal(entry.path, '~/.claude/memory/note.md');
+  });
+
+  it('hides the user folder when it is written with its short name', () => {
+    const entry = toEventEntry(
+      {
+        ...base,
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: { file_path: 'C:\\Users\\SOMEON~1\\AppData\\Local\\Temp\\a.mjs' },
+      },
+      context,
+    );
+    assert.equal(entry.path, '~/AppData/Local/Temp/a.mjs');
   });
 
   it('marks the events of a subagent', () => {
