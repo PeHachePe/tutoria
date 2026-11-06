@@ -30,6 +30,7 @@ El equipo es Windows: los scripts de `package.json` los ejecuta `cmd`, así que 
 
 - **Estado con signals,** sin `@ngrx/signals` ni otras librerías. Se lee con `resource()` (no en `ngOnInit`) y se escribe con métodos `async`. Solo existen los stores previstos en `docs/PLAN.md` §4.5, y exponen su estado como solo lectura (`asReadonly()` o `computed()`).
 - **`effect()`** solo en la frontera con APIs imperativas (CodeMirror, Web Speech, Realtime), justificado en un comentario.
+- **Formularios:** Signal Forms con `<form [formRoot]>` y la opción `submission` de `form()` (`docs/PLAN.md` §4.6).
 - **Ante la duda,** `search_documentation` para Angular y los tipos de `node_modules/@angular/material` para Material, cuya API ha cambiado hace poco.
 
 ## Arquitectura

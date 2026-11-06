@@ -38,7 +38,7 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - Las buenas prácticas de Angular 22 prevalecen sobre este plan (principio 5).
 - Bitácora automática y métricas de cada paso: tiempos, tokens, comandos, archivos y capturas (paso 0.2 y apartado 5.6).
 
-**Cambios de la v4.2** (revisión contra las buenas prácticas de Angular; ver D-002 a D-007 en `DECISIONES.md`):
+**Cambios de la v4.2** (revisión contra las buenas prácticas de Angular; ver D-002 a D-008 en `DECISIONES.md`):
 
 - Estructura y nombres según la guía de estilo de Angular: carpetas por funcionalidad o tema, nunca por tipo (sin `features/`, `layouts/`, `shared/components/` ni `shared/utils/`), ficheros con el nombre de lo que contienen y sin prefijos `_` (4.1 y 4.5).
 - Accesibilidad como exige el `CLAUDE.md` de Angular: axe sin ninguna infracción en el e2e de cada pantalla desde el paso 0.6, no solo al final (5.4 y 7.1).
@@ -47,6 +47,7 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - `ng lint` hace cumplir las buenas prácticas de Angular, y el CLI genera los componentes sin hoja de estilos (4.8).
 - Capturas ordenadas en `memoria/`, regeneradas con un script en cada entrega, y `evolucion/`, con la versión de cada pantalla al cerrar su paso. Ya no se guardan las de cada iteración (5.6).
 - Scripts de npm con nombre en inglés, como el resto del código: `metrics` y `screenshots` (antes `metricas`).
+- Los stores de pantalla se destruyen al salir de ella, con `withAutoCleanupInjectors()` en el router (4.5).
 
 ---
 
@@ -516,7 +517,7 @@ El acceso, el catálogo, el histórico, la gestión de ejercicios y la administr
 - Las escrituras se hacen con métodos `async` (del componente o del store) que actualizan los signals de forma inmutable, con `set` o `update`, sin mutar nunca.
 - En los stores, el estado privado vive en signals escribibles con el sufijo `State` (`attemptState`) y se expone con `asReadonly()` (`attempt`) o con `computed()`, como en los ejemplos de angular.dev. Sin prefijos `_`: la guía de TypeScript de Google, a la que remite la guía de estilo de Angular, no los admite en miembros privados.
 - Nada de `effect()` en los stores. Si algo debe ocurrir cuando cambia X, va dentro del método que cambia X.
-- Los stores de pantalla llevan `@Service({ autoProvided: false })` y se proveen en los `providers` de su ruta.
+- Los stores de pantalla llevan `@Service({ autoProvided: false })` y se proveen en los `providers` de su ruta. Si la pantalla tiene rutas hijas, como el panel en vivo y su detalle, se proveen en la ruta padre para que las dos compartan el store. Por defecto, Angular no destruye lo que se provee en una ruta al salir de ella, así que el router se configura con `withAutoCleanupInjectors()` (paso 0.6): al salir de la pantalla, el store se destruye y su `DestroyRef` cierra lo que tenga abierto (temporizadores, suscripciones de Realtime). Mientras se cambia de un ejercicio a otro, la ruta sigue activa y el store se reutiliza.
 
 Ejemplo sin store (catálogo):
 
@@ -670,7 +671,7 @@ Los bloques de plantilla de este documento van marcados como `angular`, no como 
   - el componente pinta; si su estado es solo suyo, lo guarda él y lee con `resource()` de los servicios de datos;
   - si el estado es compartido o global, va en un store (4.5), que tiene las acciones y habla con los servicios de datos;
   - las funciones puras que se usan en más de un sitio van a `shared/`, en un fichero con su nombre; por ejemplo, `shared/is-stuck.ts`, que comparten el panel docente y el tutor proactivo;
-  - los servicios de datos son clases abstractas porque la misma pantalla tiene que funcionar con datos simulados y con Supabase.
+  - los servicios de datos son clases abstractas porque la misma pantalla tiene que funcionar con datos simulados y con Supabase. La clase abstracta no lleva decorador, y sus versiones simulada y de Supabase llevan `@Service({ autoProvided: false })` (4.2).
 - Las combinaciones que se repiten (cabecera de página, estado vacío, chip de estado) son componentes propios en `shared/`, cada uno en su carpeta (`shared/page-header/`) y con la plantilla en línea si es pequeño.
 - **Tests:** se buscan los elementos como lo haría el usuario, por rol, etiqueta o texto (`getByRole('button', { name: 'Entregar' })`). Así también comprueban que cada control tiene un nombre accesible. `data-testid` solo donde no hay forma accesible (el overlay de reacciones, las barras de la gráfica), y nunca clases de Material.
 - Nada sensible en el cliente: el cliente nunca es confiable.
@@ -931,7 +932,7 @@ Commit: `chore: logbook`.
 
 **0.6 · Shell, rutas por rol y guards (≈2 h)**
 
-- Rutas perezosas por rol (2.2) con `withComponentInputBinding()`: cada rol tiene las suyas en su carpeta (`student/student.routes.ts`…) y `app.routes.ts` las carga con `loadChildren`.
+- Rutas perezosas por rol (2.2), con `withComponentInputBinding()` y `withAutoCleanupInjectors()` (4.5) en `provideRouter`: cada rol tiene las suyas en su carpeta (`student/student.routes.ts`…) y `app.routes.ts` las carga con `loadChildren`.
 - Guards `canMatch` por rol (el administrador entra en todo); redirección por rol tras el login; página 404.
 - Layout de cada rol en su carpeta (`student/student-layout/`…): el del alumno con barra superior; los de docente y administrador con menú lateral que se pliega en el móvil. Las pantallas son marcadores de posición.
 - Accesibilidad de la navegación: cada ruta tiene su `title` y, al cambiar de ruta, el foco va al encabezado principal de la pantalla.
@@ -1143,7 +1144,7 @@ Etiqueta: `v0.3-beta`.
 **4.2 · Detalle del intento (≈3 h)** · ficha `07-detalle`
 
 - Línea temporal de eventos e interacciones con el tutor.
-- Código en un CodeMirror de solo lectura.
+- Código con `<app-code-editor>` en solo lectura (4.7), dentro de `@defer`.
 
 🧪 Component test con datos de ejemplo.
 
