@@ -150,6 +150,8 @@ Plantilla para las siguientes:
 
 **Aprobación:** el autor (06/11/2026). Aplicada en la iteración 2 del paso 0.2.
 
+**Aclaración del autor (06/11/2026, paso 0.3):** «lo que no depende de nosotros» incluye las ramas internas que genera Angular (por ejemplo, el código que produce el compilador para las plantillas) y que no se pueden ejecutar desde un test. No hace falta forzarlas: se excluyen con `/* v8 ignore */` y un comentario, o se explica en la bitácora por qué no llegan al 100 %.
+
 ## D-011 · Integración continua con GitHub Actions (06/11/2026)
 
 **Contexto:** hoy, que el código que llega al repositorio pase `npm run check` depende de que el agente lo ejecute al cerrar cada paso y de que el autor lo revise antes del commit. Nada lo comprueba de forma independiente, y todo se prueba solo en el equipo del autor, con Windows. El repositorio está en GitHub (`PeHachePe/tutoria`).
@@ -213,16 +215,16 @@ Plantilla para las siguientes:
 
 **Consecuencias:** el chip de estado y las piezas propias se pintan solo con tokens, y el modo oscuro no necesita utilidades `dark:`. Si hace falta un tamaño o un color nuevo, se añade como token en `theme.scss` y `styles.css`. Si se aprueba, conviene citar los tokens propios en `docs/PLAN.md` §4.8.
 
-**Aprobación:** pendiente.
+**Aprobación:** el autor (06/11/2026).
 
 ## D-014 · Páginas de desarrollo registradas por el entorno (06/11/2026)
 
-**Contexto:** el muestrario `/dev/ui` (y en el 0.5, la barra de desarrollo) solo debe existir en desarrollo. Una condición en `app.routes.ts` dejaría una rama que los tests unitarios, que usan un único entorno, no pueden cubrir al 100 % (D-010).
+**Contexto:** el muestrario `/dev/ui` (y en el 0.5, la barra de desarrollo) solo debe existir en desarrollo, y su código no debería llegar al build de producción.
 
 **Decisión:** cada entorno declara sus rutas de desarrollo en `environment.devRoutes`, igual que declarará sus servicios de datos (§4.4). `environment.development.ts` importa `dev/dev.routes.ts`; `environment.ts` (producción) no importa nada de `dev/`, así que el muestrario no llega a su build. Se comprobó buscando el texto del muestrario en el JavaScript de producción.
 
-**Alternativas:** un indicador `devTools` y una condición en las rutas, que depende de que el minificador elimine el código muerto y deja una rama sin cubrir.
+**Alternativas:** un indicador `devTools` y una condición en las rutas. Depende de que el minificador elimine el código muerto, y deja una rama que solo se ejecuta en uno de los dos entornos.
 
 **Consecuencias:** el paso 0.5 puede añadir `devTools` y `dataProviders` a los mismos ficheros de entorno.
 
-**Aprobación:** pendiente.
+**Aprobación:** el autor (06/11/2026). Le parece bien, aunque no le importaría que el muestrario llegara a producción: si hace falta enseñarlo en la web pública, se puede publicar en una ruta como `/demo`.
