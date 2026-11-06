@@ -252,7 +252,9 @@ Plantilla para las siguientes:
 - Medir la inactividad solo con los eventos: sin `updatedAt`, un alumno que escribe sin ejecutar parecería parado.
 - Devolver el motivo (fallos o inactividad) en lugar de un booleano: se puede añadir cuando una pantalla lo necesite.
 
-**Consecuencias:** el panel docente necesita, de cada intento, su `status`, su `updatedAt` y sus eventos, y el tutor proactivo lo mismo del intento en curso. El cooldown entre intervenciones (§2.7) no forma parte de la función: lo aplica quien la llama. Si se aprueba, conviene resumir la regla en `docs/PLAN.md` §2.7.
+**Consecuencias:** el panel docente necesita, de cada intento, su `status`, su `updatedAt` y sus eventos, y el tutor proactivo lo mismo del intento en curso. El cooldown entre intervenciones (§2.7) no forma parte de la función: lo aplica quien la llama. La regla se resume en `docs/PLAN.md` §2.7.
+
+**Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026).
 
 ## D-016 · Tipos de datos del cliente (07/11/2026)
 
@@ -260,7 +262,14 @@ Plantilla para las siguientes:
 
 **Decisión:**
 
-- `data/models.ts` tiene los tipos de las 10 entidades y los de §2.6 y §4.2, con los campos en camelCase, como pide la guía de TypeScript, y todos `readonly`. Las versiones de cada servicio traducen desde snake_case.
+- Los tipos de las 10 entidades y los de §2.6 y §4.2 van en `data/`, en un fichero por concepto con el nombre de lo que contiene, como pide la guía de estilo de Angular:
+  - `user.ts`: usuarios, grupos y matrículas;
+  - `exercise.ts`: ejercicios, pruebas, asignaciones y lo que leen el catálogo y la pantalla de trabajo;
+  - `attempt.ts`: intentos, resultados de una ejecución e historial;
+  - `process-event.ts`: eventos de proceso;
+  - `tutor.ts`: petición, eventos de respuesta e interacciones con el tutor;
+  - `ai-provider-setting.ts`: el ajuste del adaptador de IA.
+- Los campos van en camelCase, como pide la guía de TypeScript, y todos son `readonly`. Las versiones de cada servicio traducen desde snake_case.
 - Las fechas son cadenas ISO 8601, como las devuelve Supabase. Quien necesita operar con ellas usa `Date.parse`.
 - `AttemptStatus` incluye `not_started` para las vistas, y `Attempt.status` usa `StoredAttemptStatus`, sin él, porque ese estado no se guarda (§2.4).
 - `ProcessEvent` es una unión discriminada por `type`, con el `detail` de cada tipo de §2.8. `ClientProcessEvent` limita a los que registra el navegador lo que acepta `EventService`.
@@ -268,6 +277,12 @@ Plantilla para las siguientes:
 - Las firmas de `LiveService`, `StatsService` y `AdminService` son provisionales. Se ajustan en los pasos que los implementan (4.1, 4.2 y fase 5).
 - `DataError` lleva un `kind` y un `cause` opcional, y las pantallas eligen su mensaje según el `kind`.
 
-**Alternativas:** usar los nombres de las columnas en el cliente, sin traducir, o generar los tipos solo a partir del esquema de Supabase (paso 2.1). En los dos casos, las pantallas dependerían de la base de datos, y los datos simulados existen antes que el esquema.
+**Alternativas:**
 
-**Consecuencias:** en el paso 2.1, los tipos generados por Supabase se quedan en `data/supabase/` y se traducen a estos.
+- Usar los nombres de las columnas en el cliente, sin traducir, o generar los tipos solo a partir del esquema de Supabase (paso 2.1). En los dos casos, las pantallas dependerían de la base de datos, y los datos simulados existen antes que el esquema.
+- Un único `models.ts`, como decía el plan. Fue la primera versión: un nombre genérico que mezcla todos los temas y crecería con cada fase.
+- Un fichero por tipo, que deja unos 25 ficheros minúsculos (`role.ts`, `difficulty.ts`…) que siempre se usan juntos.
+
+**Consecuencias:** en el paso 2.1, los tipos generados por Supabase se quedan en `data/supabase/` y se traducen a estos. Cambian `docs/PLAN.md` (§4.1 y paso 0.4).
+
+**Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026).

@@ -270,7 +270,11 @@ Los intentos de elusión (`elusion: true`) quedan registrados para su análisis.
 - **Disparadores:** se evalúan en el cliente con los umbrales de cada ejercicio:
   - `max_repeated_failures`: por defecto, 3 fallos de la misma prueba;
   - `max_idle_minutes`: por defecto, 4 minutos sin actividad.
-- **Comprobación:** cada 15 segundos, con la misma función `isStuck()` que usa el panel docente.
+- **Comprobación:** cada 15 segundos, con la misma función `isStuck()` que usa el panel docente (D-015):
+  - solo en intentos en `in_progress` o `tests_failed`;
+  - fallos: la misma prueba falla en las últimas N ejecuciones seguidas, y la cuenta vuelve a cero si la supera;
+  - inactividad: N minutos desde la última actividad del alumno (guardar código, ejecutar, entregar, pedir pista, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan);
+  - basta con llegar al umbral.
 - **Cooldown:** hay un tiempo mínimo entre intervenciones.
 - **Llamada:** lleva `kind: 'proactive'`. Si el modelo decide callar (`silent`), la aplicación no muestra nada.
 - El alumno puede desactivar la proactividad en sus ajustes.
@@ -374,7 +378,7 @@ src/app/
   admin/              # admin.routes.ts, admin-layout/, users/, groups/, system/
   core/               # app-wide services without a screen: theme-service.ts, error handler, event-logger.ts
   data/
-    models.ts         # data types: Exercise, Test, Attempt, TutorEvent, RunResult...
+    user.ts  exercise.ts  attempt.ts  process-event.ts  tutor.ts  ai-provider-setting.ts   # data types, one file per concept
     *-service.ts      # data services as abstract classes: exercise-service.ts, attempt-service.ts...
     mock/             # mock-db.ts, fixtures/, mock-*-service.ts, Web Worker runner, scripted tutor, live simulator
     supabase/         # client, generated types, supabase-*-service.ts
@@ -916,7 +920,7 @@ Commit: `chore: logbook`.
 
 **0.4 · Tipos y servicios de datos, con TDD (≈1,5 h)**
 
-- `data/models.ts`: tipos de 2.3 y 2.6 (`Exercise`, `Test`, `Attempt`, `AttemptStatus`, `TutorEvent`, `RunResult`, `ProcessEvent`…).
+- Tipos de 2.3 y 2.6 en `data/`, un fichero por concepto (D-016): `user.ts`, `exercise.ts`, `attempt.ts`, `process-event.ts`, `tutor.ts` y `ai-provider-setting.ts`.
 - `data/`: los servicios de datos de 4.2 (clases abstractas) y `DataError`.
 - `shared/is-stuck.ts`: función pura con los umbrales como parámetros.
 
