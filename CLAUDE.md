@@ -39,7 +39,7 @@ Una aplicación Angular normal, sin capas ni patrones extra (`docs/PLAN.md` §4)
 
 - **Estructura:** carpetas por funcionalidad (`auth/`, `student/`, `teacher/`, `admin/`) o por tema (`core/`, `data/`, `shared/`, `dev/`), nunca por tipo.
 - **Datos:** pantallas y stores dependen solo de los servicios de datos (clases abstractas en `src/app/data`), nunca de Supabase ni de los datos simulados.
-- **TDD** en la lógica de stores, servicios simulados y funciones puras: primero el test.
+- **Tests:** cobertura del 100 % en la app Angular, que exige `npm run check`; solo se exime lo que no depende de nosotros, justificado en un comentario y en la bitácora (D-010). Los scripts auxiliares no entran. TDD en la lógica de stores, servicios simulados y funciones puras: primero el test.
 - **UI:** Material para los componentes y Tailwind para la disposición y las piezas propias. Sin CSS por componente: el aspecto de Material solo se toca en `src/theme.scss`. Colores solo con tokens (nunca directos ni `dark:`), y fuentes e iconos autoalojados, sin Google Fonts.
 - **Tests:** busca los elementos como el usuario, por rol, etiqueta o texto. `data-testid` solo si no hay forma accesible.
 
