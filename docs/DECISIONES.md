@@ -228,3 +228,46 @@ Plantilla para las siguientes:
 **Consecuencias:** el paso 0.5 puede añadir `devTools` y `dataProviders` a los mismos ficheros de entorno.
 
 **Aprobación:** el autor (06/11/2026). Le parece bien, aunque no le importaría que el muestrario llegara a producción: si hace falta enseñarlo en la web pública, se puede publicar en una ruta como `/demo`.
+
+## D-015 · Reglas de la señal «atascado» (07/11/2026)
+
+**Contexto:** el plan (§2.7) y la memoria (CU-03 y RF-17) dan los dos umbrales del tutor proactivo, «fallos repetidos de la misma prueba» (3 por defecto) e «inactividad» (4 minutos por defecto), pero no dicen cómo se cuentan. `isStuck()` es la misma función para el panel docente y para el tutor proactivo, así que su regla tiene que quedar fijada antes de usarla en los dos sitios.
+
+**Decisión:** `isStuck(attempt, events, thresholds, now)`, función pura en `shared/is-stuck.ts`:
+
+- Solo puede estar atascado un intento en `in_progress` o `tests_failed`. En `passed` o `submitted`, nunca.
+- **Fallos repetidos:** una misma prueba ha fallado (por fallo, error o tiempo agotado) en las últimas N ejecuciones seguidas. Si la supera una vez, su cuenta vuelve a cero, y no se suman fallos de pruebas distintas.
+- **Inactividad:** han pasado N minutos desde la última actividad del alumno, que es lo más reciente de:
+  - `attempt.updatedAt`, que cambia con cada guardado del código, porque editar no genera ningún evento;
+  - los eventos `run`, `submit`, `hint_requested`, `paste` y `focus_gained`.
+
+  `focus_lost` y `proactive_intervention` no cuentan, porque no son acciones del alumno.
+
+- Basta con llegar al umbral: exactamente 3 fallos o exactamente 4 minutos ya cuentan.
+- Los eventos se ordenan por hora dentro de la función, así que pueden llegar en cualquier orden (por ejemplo, desde Realtime).
+
+**Alternativas:**
+
+- Contar los fallos totales de una prueba en todo el intento: un alumno que ya la superó seguiría marcado.
+- Medir la inactividad solo con los eventos: sin `updatedAt`, un alumno que escribe sin ejecutar parecería parado.
+- Devolver el motivo (fallos o inactividad) en lugar de un booleano: se puede añadir cuando una pantalla lo necesite.
+
+**Consecuencias:** el panel docente necesita, de cada intento, su `status`, su `updatedAt` y sus eventos, y el tutor proactivo lo mismo del intento en curso. El cooldown entre intervenciones (§2.7) no forma parte de la función: lo aplica quien la llama. Si se aprueba, conviene resumir la regla en `docs/PLAN.md` §2.7.
+
+## D-016 · Tipos de datos del cliente (07/11/2026)
+
+**Contexto:** el plan da el modelo de datos con los nombres de las columnas (snake_case) y los tipos `RunResult` y `TutorEvent`, pero no cómo se representan en TypeScript ni dónde viven los tipos de entrada de cada servicio.
+
+**Decisión:**
+
+- `data/models.ts` tiene los tipos de las 10 entidades y los de §2.6 y §4.2, con los campos en camelCase, como pide la guía de TypeScript, y todos `readonly`. Las versiones de cada servicio traducen desde snake_case.
+- Las fechas son cadenas ISO 8601, como las devuelve Supabase. Quien necesita operar con ellas usa `Date.parse`.
+- `AttemptStatus` incluye `not_started` para las vistas, y `Attempt.status` usa `StoredAttemptStatus`, sin él, porque ese estado no se guarda (§2.4).
+- `ProcessEvent` es una unión discriminada por `type`, con el `detail` de cada tipo de §2.8. `ClientProcessEvent` limita a los que registra el navegador lo que acepta `EventService`.
+- Los tipos que solo usa un servicio (`Credentials`, `ExerciseDraft`, `LiveUpdate`, `SessionStats`…) viven en el fichero de ese servicio: lo relacionado, junto.
+- Las firmas de `LiveService`, `StatsService` y `AdminService` son provisionales. Se ajustan en los pasos que los implementan (4.1, 4.2 y fase 5).
+- `DataError` lleva un `kind` y un `cause` opcional, y las pantallas eligen su mensaje según el `kind`.
+
+**Alternativas:** usar los nombres de las columnas en el cliente, sin traducir, o generar los tipos solo a partir del esquema de Supabase (paso 2.1). En los dos casos, las pantallas dependerían de la base de datos, y los datos simulados existen antes que el esquema.
+
+**Consecuencias:** en el paso 2.1, los tipos generados por Supabase se quedan en `data/supabase/` y se traducen a estos.
