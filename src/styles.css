@@ -1,3 +1,123 @@
-/* You can add global styles to this file, and also import other style files */
-
+/* Tailwind for layout and our own pieces. Colours and type come only from the Material theme
+   (src/theme.scss): the default Tailwind palette and type scale are removed, so `bg-red-500`
+   or `text-sm` do not exist and dark mode needs no `dark:` utilities. */
 @import 'tailwindcss';
+
+@theme inline {
+  --color-*: initial;
+  --text-*: initial;
+  --font-*: initial;
+
+  --font-sans: var(--mat-sys-body-medium-font);
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  /* Material colour roles */
+  --color-primary: var(--mat-sys-primary);
+  --color-on-primary: var(--mat-sys-on-primary);
+  --color-primary-container: var(--mat-sys-primary-container);
+  --color-on-primary-container: var(--mat-sys-on-primary-container);
+  --color-secondary: var(--mat-sys-secondary);
+  --color-on-secondary: var(--mat-sys-on-secondary);
+  --color-secondary-container: var(--mat-sys-secondary-container);
+  --color-on-secondary-container: var(--mat-sys-on-secondary-container);
+  --color-tertiary: var(--mat-sys-tertiary);
+  --color-on-tertiary: var(--mat-sys-on-tertiary);
+  --color-tertiary-container: var(--mat-sys-tertiary-container);
+  --color-on-tertiary-container: var(--mat-sys-on-tertiary-container);
+  --color-error: var(--mat-sys-error);
+  --color-on-error: var(--mat-sys-on-error);
+  --color-error-container: var(--mat-sys-error-container);
+  --color-on-error-container: var(--mat-sys-on-error-container);
+  --color-surface: var(--mat-sys-surface);
+  --color-on-surface: var(--mat-sys-on-surface);
+  --color-on-surface-variant: var(--mat-sys-on-surface-variant);
+  --color-surface-container-lowest: var(--mat-sys-surface-container-lowest);
+  --color-surface-container-low: var(--mat-sys-surface-container-low);
+  --color-surface-container: var(--mat-sys-surface-container);
+  --color-surface-container-high: var(--mat-sys-surface-container-high);
+  --color-surface-container-highest: var(--mat-sys-surface-container-highest);
+  --color-inverse-surface: var(--mat-sys-inverse-surface);
+  --color-inverse-on-surface: var(--mat-sys-inverse-on-surface);
+  --color-outline: var(--mat-sys-outline);
+  --color-outline-variant: var(--mat-sys-outline-variant);
+
+  /* App tokens (src/theme.scss) */
+  --color-canvas: var(--app-canvas);
+  --color-panel: var(--app-panel);
+  --color-success: var(--app-success);
+  --color-on-success: var(--app-on-success);
+  --color-success-container: var(--app-success-container);
+  --color-on-success-container: var(--app-on-success-container);
+  --color-warning: var(--app-warning);
+  --color-on-warning: var(--app-on-warning);
+  --color-warning-container: var(--app-warning-container);
+  --color-on-warning-container: var(--app-on-warning-container);
+  --color-info: var(--app-info);
+  --color-on-info: var(--app-on-info);
+  --color-info-container: var(--app-info-container);
+  --color-on-info-container: var(--app-on-info-container);
+
+  /* Material type scale: text-title-medium, text-body-small… */
+  --text-display-small: var(--mat-sys-display-small-size);
+  --text-display-small--line-height: var(--mat-sys-display-small-line-height);
+  --text-display-small--font-weight: var(--mat-sys-display-small-weight);
+  --text-display-small--letter-spacing: var(--mat-sys-display-small-tracking);
+  --text-headline-large: var(--mat-sys-headline-large-size);
+  --text-headline-large--line-height: var(--mat-sys-headline-large-line-height);
+  --text-headline-large--font-weight: var(--mat-sys-headline-large-weight);
+  --text-headline-large--letter-spacing: var(--mat-sys-headline-large-tracking);
+  --text-headline-medium: var(--mat-sys-headline-medium-size);
+  --text-headline-medium--line-height: var(--mat-sys-headline-medium-line-height);
+  --text-headline-medium--font-weight: var(--mat-sys-headline-medium-weight);
+  --text-headline-medium--letter-spacing: var(--mat-sys-headline-medium-tracking);
+  --text-headline-small: var(--mat-sys-headline-small-size);
+  --text-headline-small--line-height: var(--mat-sys-headline-small-line-height);
+  --text-headline-small--font-weight: var(--mat-sys-headline-small-weight);
+  --text-headline-small--letter-spacing: var(--mat-sys-headline-small-tracking);
+  --text-title-large: var(--mat-sys-title-large-size);
+  --text-title-large--line-height: var(--mat-sys-title-large-line-height);
+  --text-title-large--font-weight: var(--mat-sys-title-large-weight);
+  --text-title-large--letter-spacing: var(--mat-sys-title-large-tracking);
+  --text-title-medium: var(--mat-sys-title-medium-size);
+  --text-title-medium--line-height: var(--mat-sys-title-medium-line-height);
+  --text-title-medium--font-weight: var(--mat-sys-title-medium-weight);
+  --text-title-medium--letter-spacing: var(--mat-sys-title-medium-tracking);
+  --text-title-small: var(--mat-sys-title-small-size);
+  --text-title-small--line-height: var(--mat-sys-title-small-line-height);
+  --text-title-small--font-weight: var(--mat-sys-title-small-weight);
+  --text-title-small--letter-spacing: var(--mat-sys-title-small-tracking);
+  --text-body-large: var(--mat-sys-body-large-size);
+  --text-body-large--line-height: var(--mat-sys-body-large-line-height);
+  --text-body-large--font-weight: var(--mat-sys-body-large-weight);
+  --text-body-large--letter-spacing: var(--mat-sys-body-large-tracking);
+  --text-body-medium: var(--mat-sys-body-medium-size);
+  --text-body-medium--line-height: var(--mat-sys-body-medium-line-height);
+  --text-body-medium--font-weight: var(--mat-sys-body-medium-weight);
+  --text-body-medium--letter-spacing: var(--mat-sys-body-medium-tracking);
+  --text-body-small: var(--mat-sys-body-small-size);
+  --text-body-small--line-height: var(--mat-sys-body-small-line-height);
+  --text-body-small--font-weight: var(--mat-sys-body-small-weight);
+  --text-body-small--letter-spacing: var(--mat-sys-body-small-tracking);
+  --text-label-large: var(--mat-sys-label-large-size);
+  --text-label-large--line-height: var(--mat-sys-label-large-line-height);
+  --text-label-large--font-weight: var(--mat-sys-label-large-weight);
+  --text-label-large--letter-spacing: var(--mat-sys-label-large-tracking);
+  --text-label-medium: var(--mat-sys-label-medium-size);
+  --text-label-medium--line-height: var(--mat-sys-label-medium-line-height);
+  --text-label-medium--font-weight: var(--mat-sys-label-medium-weight);
+  --text-label-medium--letter-spacing: var(--mat-sys-label-medium-tracking);
+  --text-label-small: var(--mat-sys-label-small-size);
+  --text-label-small--line-height: var(--mat-sys-label-small-line-height);
+  --text-label-small--font-weight: var(--mat-sys-label-small-weight);
+  --text-label-small--letter-spacing: var(--mat-sys-label-small-tracking);
+}
+
+/* Section overline used above panels ("CATÁLOGO DE EJERCICIOS") */
+@utility eyebrow {
+  font-size: var(--mat-sys-label-small-size);
+  line-height: var(--mat-sys-label-small-line-height);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}

@@ -1,23 +1,26 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+
 import { App } from './app';
 
+@Component({ template: '<h1>Página de prueba</h1>' })
+class TestPage {}
+
 describe('App', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
+  it('renders the page of the current route', async () => {
+    TestBed.configureTestingModule({
       imports: [App],
-    }).compileComponents();
-  });
-
-  it('should create the app', () => {
+      providers: [provideRouter([{ path: 'prueba', component: TestPage }])],
+    });
     const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
+    const harness = await RouterTestingHarness.create();
 
-  it('should render title', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, tutoria');
+    await harness.navigateByUrl('/prueba');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('router-outlet')).not.toBeNull();
+    expect(harness.routeNativeElement?.textContent).toContain('Página de prueba');
   });
 });

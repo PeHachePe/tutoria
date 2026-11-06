@@ -1,0 +1,144 @@
+// Material theme: the only place that styles Angular Material components.
+// Light and dark come from `color-scheme` (`theme-type: color-scheme` emits `light-dark()`),
+// so ThemeService only has to change `color-scheme` on <html>.
+@use 'sass:map';
+@use '@angular/material' as mat;
+@use './theme-colors' as brand;
+
+$font-family: 'Roboto Variable', Roboto, system-ui, sans-serif;
+
+// Status colours that Material 3 does not have (passed, in progress, stuck…).
+// Tonal palettes generated with `ng generate @angular/material:theme-color` from softer seeds,
+// so their container/on-container pairs follow the same tone rules as the Material roles.
+$status-palettes: (
+  // seed #4A7C59
+  success: (
+      10: #00210e,
+      20: #01391c,
+      30: #1e5031,
+      40: #376847,
+      80: #9dd3aa,
+      90: #b9efc5,
+      100: #ffffff,
+    ),
+  // seed #E0A100
+  warning: (
+      10: #271900,
+      20: #422d00,
+      30: #5e4200,
+      40: #7c5800,
+      80: #febb2a,
+      90: #ffdea8,
+      100: #ffffff,
+    ),
+  // seed #4A6FA5
+  info: (
+      10: #001c3b,
+      20: #003060,
+      30: #1e477b,
+      40: #395f94,
+      80: #a7c8ff,
+      90: #d5e3ff,
+      100: #ffffff,
+    )
+);
+
+html {
+  color-scheme: light dark; // follows the system until ThemeService applies the saved mode
+
+  @include mat.theme(
+    (
+      color: (
+        primary: brand.$primary-palette,
+        tertiary: brand.$tertiary-palette,
+        theme-type: color-scheme,
+      ),
+      typography: (
+        plain-family: $font-family,
+        brand-family: $font-family,
+      ),
+      density: 0,
+    )
+  );
+
+  // The brand green #03473A is darker than the generated tone 40: use it as primary in light mode.
+  @include mat.theme-overrides(
+    (
+      primary: light-dark(#03473a, #98d2c0),
+    )
+  );
+
+  // App surfaces: grey-green page with white panels in light mode; in dark mode panels are
+  // lighter than the page so that elevation still reads.
+  --app-canvas: light-dark(var(--mat-sys-surface-container), var(--mat-sys-surface));
+  --app-panel: light-dark(
+    var(--mat-sys-surface-container-lowest),
+    var(--mat-sys-surface-container)
+  );
+
+  @each $name, $palette in $status-palettes {
+    --app-#{$name}: light-dark(#{map.get($palette, 40)}, #{map.get($palette, 80)});
+    --app-on-#{$name}: light-dark(#{map.get($palette, 100)}, #{map.get($palette, 20)});
+    --app-#{$name}-container: light-dark(#{map.get($palette, 90)}, #{map.get($palette, 30)});
+    --app-on-#{$name}-container: light-dark(#{map.get($palette, 10)}, #{map.get($palette, 90)});
+  }
+
+  // Containers that sit on the page take the panel colour, like our own panels.
+  @include mat.card-overrides(
+    (
+      elevated-container-color: var(--app-panel),
+      outlined-container-color: var(--app-panel),
+    )
+  );
+  @include mat.table-overrides(
+    (
+      background-color: var(--app-panel),
+    )
+  );
+  @include mat.paginator-overrides(
+    (
+      container-background-color: var(--app-panel),
+    )
+  );
+  @include mat.expansion-overrides(
+    (
+      container-background-color: var(--app-panel),
+    )
+  );
+
+  // Brand app bar: deep green in both modes.
+  @include mat.toolbar-overrides(
+    (
+      container-background-color: light-dark(
+          var(--mat-sys-primary),
+          var(--mat-sys-primary-container)
+        ),
+      container-text-color: light-dark(
+          var(--mat-sys-on-primary),
+          var(--mat-sys-on-primary-container)
+        ),
+    )
+  );
+
+  @media (prefers-contrast: more) {
+    @include brand.high-contrast-overrides(color-scheme);
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: var(--app-canvas);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  letter-spacing: var(--mat-sys-body-medium-tracking);
+}
+
+// Icon buttons inside the app bar take the bar's text colour.
+.mat-toolbar {
+  @include mat.icon-button-overrides(
+    (
+      icon-color: currentColor,
+    )
+  );
+}

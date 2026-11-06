@@ -1014,6 +1014,7 @@ Commit: `chore: foundations`.
 - Overlay que lee el evento `meta` (emoción e intensidad).
 - Animación CSS de 2 a 3 segundos en una posición variable, con `aria-hidden`.
 - Se puede desactivar y respeta `prefers-reduced-motion`.
+- Sección «Reacciones» en el muestrario `/dev/ui`, con un botón por emoción que lanza el componente real.
 
 🧪 Correspondencia entre emoción y animación.
 

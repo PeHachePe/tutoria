@@ -1,0 +1,79 @@
+<div class="overflow-x-auto">
+  <table
+    mat-table
+    [dataSource]="rows()"
+    matSort
+    (matSortChange)="changeSort($event)"
+    class="min-w-[32rem]"
+  >
+    <caption class="sr-only">
+      Alumnos de la sesión en vivo
+    </caption>
+
+    <ng-container matColumnDef="name">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        mat-sort-header
+        sortActionDescription="Ordenar por alumno"
+      >
+        Alumno/a
+      </th>
+      <td mat-cell *matCellDef="let student">{{ student.name }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        mat-sort-header
+        sortActionDescription="Ordenar por estado"
+      >
+        Estado
+      </th>
+      <td mat-cell *matCellDef="let student">
+        <span
+          class="inline-flex rounded-full px-3 py-0.5 text-label-medium"
+          [class]="statusClass(student)"
+          >{{ student.status }}</span
+        >
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="minutes">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        mat-sort-header
+        sortActionDescription="Ordenar por tiempo"
+      >
+        Tiempo
+      </th>
+      <td mat-cell *matCellDef="let student">{{ student.minutes }} min</td>
+    </ng-container>
+
+    <ng-container matColumnDef="hints">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        mat-sort-header
+        sortActionDescription="Ordenar por pistas"
+      >
+        Pistas
+      </th>
+      <td mat-cell *matCellDef="let student">{{ student.hints }}</td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="columns"></tr>
+    <tr mat-row *matRowDef="let student; columns: columns"></tr>
+  </table>
+</div>
+
+<mat-paginator
+  [length]="total"
+  [pageSize]="pageSize"
+  [pageIndex]="pageIndex()"
+  (page)="pageIndex.set($event.pageIndex)"
+  hidePageSize
+  aria-label="Páginas de alumnos"
+/>

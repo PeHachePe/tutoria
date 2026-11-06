@@ -1,0 +1,206 @@
+<header>
+  <mat-toolbar class="gap-3">
+    <span class="text-title-large font-bold">TutorIA</span>
+    <span class="hidden text-body-large sm:inline">Muestrario de la interfaz</span>
+    <span class="flex-1"></span>
+    <span class="hidden rounded-full border border-current px-3 py-1 text-label-large sm:inline">
+      2/5 superados
+    </span>
+    <button
+      matIconButton
+      [matMenuTriggerFor]="userMenu"
+      matTooltip="Menú de usuario"
+      aria-label="Menú de usuario"
+    >
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item>
+        <mat-icon>settings</mat-icon>
+        <span>Ajustes</span>
+      </button>
+      <button mat-menu-item>
+        <mat-icon>logout</mat-icon>
+        <span>Cerrar sesión</span>
+      </button>
+    </mat-menu>
+  </mat-toolbar>
+</header>
+
+<main class="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-6">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow">Solo en desarrollo</p>
+      <h1 class="text-headline-medium">Muestrario de la interfaz</h1>
+      <p class="text-body-medium text-on-surface-variant">
+        Componentes de Material y piezas propias con los tokens del tema.
+      </p>
+    </div>
+    <mat-button-toggle-group
+      [value]="theme.mode()"
+      (change)="theme.setMode($event.value)"
+      aria-label="Modo de color"
+      hideSingleSelectionIndicator
+    >
+      @for (mode of modes; track mode.value) {
+        <mat-button-toggle [value]="mode.value">
+          <mat-icon>{{ mode.icon }}</mat-icon>
+          {{ mode.label }}
+        </mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </div>
+
+  <section aria-labelledby="colors-title" class="flex flex-col gap-3">
+    <h2 id="colors-title" class="text-title-large">Colores</h2>
+    <ul class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      @for (role of colorRoles; track role.name) {
+        <li class="rounded-lg p-3 text-label-large" [class]="role.classes">{{ role.name }}</li>
+      }
+    </ul>
+  </section>
+
+  <section aria-labelledby="type-title" class="flex flex-col gap-3">
+    <h2 id="type-title" class="text-title-large">Tipografía</h2>
+    <ul class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+      @for (type of typeScale; track type.name) {
+        <li [class]="type.classes">{{ type.name }} · Suma de los elementos de un vector</li>
+      }
+    </ul>
+  </section>
+
+  <section aria-labelledby="buttons-title" class="flex flex-col gap-3">
+    <h2 id="buttons-title" class="text-title-large">Botones</h2>
+    <div class="flex flex-wrap items-center gap-3 rounded-xl bg-panel p-4 shadow-sm">
+      <button matButton="filled">
+        <mat-icon>play_arrow</mat-icon>
+        Ejecutar pruebas
+      </button>
+      <button matButton="tonal">Pedir pista</button>
+      <button matButton="outlined">Ver código</button>
+      <button matButton>Cancelar</button>
+      <button matButton="elevated">Repasar</button>
+      <button matButton="filled" disabled>Entregar</button>
+      <button matIconButton matTooltip="Silenciar micrófono" aria-label="Silenciar micrófono">
+        <mat-icon>mic_off</mat-icon>
+      </button>
+      <button matIconButton matTooltip="Ayuda" aria-label="Ayuda">
+        <mat-icon>help</mat-icon>
+      </button>
+    </div>
+  </section>
+
+  <section aria-labelledby="pieces-title" class="flex flex-col gap-3">
+    <h2 id="pieces-title" class="text-title-large">Piezas propias con Tailwind</h2>
+    <ul class="flex flex-wrap gap-2" aria-label="Chips de estado">
+      @for (chip of statusChips; track chip.label) {
+        <li class="rounded-full px-3 py-1 text-label-large" [class]="chip.classes">
+          {{ chip.label }}
+        </li>
+      }
+    </ul>
+
+    <article class="flex flex-wrap items-center gap-4 rounded-xl bg-panel p-4 shadow-sm">
+      <span class="w-8 text-center text-headline-small text-primary" aria-hidden="true">3</span>
+      <div class="min-w-0 flex-1">
+        <h3 class="text-title-medium">Suma de los elementos de un vector</h3>
+        <p class="text-body-medium text-on-surface-variant">
+          Vectores · acumulador · 1 pista usada (nivel 1)
+        </p>
+      </div>
+      <span
+        class="rounded-full bg-warning-container px-3 py-1 text-label-large text-on-warning-container"
+      >
+        Media
+      </span>
+      <span
+        class="rounded-full bg-info-container px-3 py-1 text-label-large text-on-info-container"
+      >
+        En curso
+      </span>
+      <button matButton="filled">Continuar</button>
+    </article>
+
+    <div class="grid gap-3 sm:grid-cols-3">
+      <div class="rounded-xl bg-panel p-4 shadow-sm">
+        <p class="text-headline-medium font-bold text-primary">18 min</p>
+        <p class="text-body-medium text-on-surface-variant">Tiempo medio por ejercicio</p>
+      </div>
+      <div class="rounded-xl bg-panel p-4 shadow-sm">
+        <p class="text-headline-medium font-bold text-primary">71 %</p>
+        <p class="text-body-medium text-on-surface-variant">Ejercicios superados</p>
+      </div>
+      <div class="rounded-xl bg-panel p-4 shadow-sm">
+        <p class="text-headline-medium font-bold text-primary">3</p>
+        <p class="text-body-medium text-on-surface-variant">Alumnos con señales de atasco</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="cards-title" class="flex flex-col gap-3">
+    <h2 id="cards-title" class="text-title-large">Tarjetas, pestañas y paneles</h2>
+    <div class="grid gap-4 md:grid-cols-2">
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Proveedor de IA activo</mat-card-title>
+          <mat-card-subtitle>La credencial se guarda en el servidor</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="pt-2">El tutor usa siempre la interfaz propia; aquí se elige el adaptador.</p>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button matButton="tonal">Probar conexión</button>
+          <button matButton="filled">Guardar</button>
+        </mat-card-actions>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-tab-group>
+          <mat-tab label="Enunciado">
+            <p class="p-4">
+              Escribe una función <strong>suma</strong> que reciba un vector de números enteros y
+              devuelva la suma de todos sus elementos.
+            </p>
+          </mat-tab>
+          <mat-tab label="Pruebas">
+            <p class="p-4">3 pruebas visibles y 2 ocultas.</p>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card>
+    </div>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>Tutor</mat-panel-title>
+      </mat-expansion-panel-header>
+      <p>En el móvil, el tutor pasa a un panel plegable bajo el editor.</p>
+    </mat-expansion-panel>
+  </section>
+
+  <section aria-labelledby="form-title" class="flex flex-col gap-3">
+    <h2 id="form-title" class="text-title-large">Formulario con Signal Forms</h2>
+    <div class="rounded-xl bg-panel p-4 shadow-sm">
+      <app-showcase-form />
+    </div>
+  </section>
+
+  <section aria-labelledby="table-title" class="flex flex-col gap-3">
+    <h2 id="table-title" class="text-title-large">Tabla con ordenación y paginación</h2>
+    <div class="overflow-hidden rounded-xl bg-panel shadow-sm">
+      <app-showcase-table />
+    </div>
+  </section>
+
+  <section aria-labelledby="feedback-title" class="flex flex-col gap-3">
+    <h2 id="feedback-title" class="text-title-large">Progreso, avisos y diálogos</h2>
+    <div class="flex flex-col gap-4 rounded-xl bg-panel p-4 shadow-sm">
+      <mat-progress-bar mode="determinate" value="60" aria-label="Pruebas superadas: 3 de 5" />
+      <div class="flex flex-wrap items-center gap-3">
+        <mat-progress-spinner mode="indeterminate" diameter="32" aria-label="Cargando" />
+        <button matButton="outlined" (click)="showSnackBar()">Mostrar aviso</button>
+        <button matButton="filled" (click)="openDialog()">Entregar…</button>
+        <p role="status" class="text-body-medium text-on-surface-variant">{{ dialogResult() }}</p>
+      </div>
+    </div>
+  </section>
+</main>

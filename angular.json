@@ -29,7 +29,12 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": [
+              "@fontsource-variable/roboto/wght.css",
+              "material-symbols/outlined.css",
+              "src/theme.scss",
+              "src/styles.css"
+            ]
           },
           "configurations": {
             "production": {

@@ -1,0 +1,90 @@
+import { HarnessLoader } from '@angular/cdk/testing';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { DOCUMENT } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatButtonHarness } from '@angular/material/button/testing';
+import { MATERIAL_ANIMATIONS } from '@angular/material/core';
+import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
+import { MatDialogHarness } from '@angular/material/dialog/testing';
+import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
+
+import { ThemeService } from '../../core/theme-service';
+import { ShowcasePage } from './showcase-page';
+
+describe('ShowcasePage', () => {
+  let fixture: ComponentFixture<ShowcasePage>;
+  let loader: HarnessLoader;
+  let overlays: HarnessLoader;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [{ provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } }],
+    });
+    fixture = TestBed.createComponent(ShowcasePage);
+    loader = TestbedHarnessEnvironment.loader(fixture);
+    overlays = TestbedHarnessEnvironment.documentRootLoader(fixture);
+    await fixture.whenStable();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  function text(): string {
+    return (fixture.nativeElement as HTMLElement).textContent ?? '';
+  }
+
+  it('shows the page title and one heading per section', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const headings = [...element.querySelectorAll('h2')].map((h) => h.textContent?.trim());
+
+    expect(element.querySelector('h1')?.textContent).toContain('Muestrario de la interfaz');
+    expect(headings).toEqual([
+      'Colores',
+      'Tipografía',
+      'Botones',
+      'Piezas propias con Tailwind',
+      'Tarjetas, pestañas y paneles',
+      'Formulario con Signal Forms',
+      'Tabla con ordenación y paginación',
+      'Progreso, avisos y diálogos',
+    ]);
+  });
+
+  it('switches the colour mode from the toggle group', async () => {
+    const root = TestBed.inject(DOCUMENT).documentElement;
+    const dark = await loader.getHarness(MatButtonToggleHarness.with({ text: /Oscuro/ }));
+
+    await dark.check();
+
+    expect(TestBed.inject(ThemeService).mode()).toBe('dark');
+    expect(root.style.colorScheme).toBe('dark');
+    expect(await dark.isChecked()).toBe(true);
+  });
+
+  it('confirms the submission in the dialog', async () => {
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Entregar…' }))).click();
+    const dialog = await overlays.getHarness(MatDialogHarness);
+
+    expect(await dialog.getTitleText()).toBe('¿Entregar el ejercicio?');
+    await (await dialog.getHarness(MatButtonHarness.with({ text: 'Entregar' }))).click();
+
+    await vi.waitFor(() => expect(text()).toContain('Ejercicio entregado'));
+  });
+
+  it('reports a cancelled submission', async () => {
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Entregar…' }))).click();
+    const dialog = await overlays.getHarness(MatDialogHarness);
+
+    await (await dialog.getHarness(MatButtonHarness.with({ text: 'Cancelar' }))).click();
+
+    await vi.waitFor(() => expect(text()).toContain('Entrega cancelada'));
+  });
+
+  it('shows a snack bar notice', async () => {
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Mostrar aviso' }))).click();
+    const snackBar = await overlays.getHarness(MatSnackBarHarness);
+
+    expect(await snackBar.getMessage()).toBe('Código guardado');
+    expect(await snackBar.getActionDescription()).toBe('Cerrar');
+  });
+});

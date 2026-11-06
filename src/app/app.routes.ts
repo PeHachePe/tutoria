@@ -1,3 +1,5 @@
 import { Routes } from '@angular/router';
 
-export const routes: Routes = [];
+import { environment } from '../environments/environment';
+
+export const routes: Routes = [...environment.devRoutes];

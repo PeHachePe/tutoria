@@ -190,3 +190,39 @@ Plantilla para las siguientes:
 **Consecuencias:** la bitácora del paso resume lo que se pidió, y `eventos.jsonl` solo aporta cuándo. Cambian `docs/PLAN.md` (paso 0.2 y §5.6) y `.claude/hooks/event-entry.mjs`, con su test. Las versiones anteriores de `eventos.jsonl` siguen en el historial de git hasta que se reescriba.
 
 **Aprobación:** el autor (06/11/2026).
+
+## D-013 · Tema: tokens propios y Tailwind limitado a los tokens (06/11/2026)
+
+**Contexto:** los prototipos de la memoria usan colores de estado (superado, en curso, atascado, pendiente) que Material 3 no tiene: solo trae primary, secondary, tertiary y error. Además, con la paleta por defecto de Tailwind nada impide escribir `bg-red-500` y saltarse la regla de «solo tokens» (§4.8).
+
+**Decisión:**
+
+- `src/theme.scss` define tokens propios con `light-dark()`, así que cambian solos con el modo:
+  - `--app-success`, `--app-warning` e `--app-info`, cada uno con su `on-*`, su `*-container` y su `on-*-container`. Salen de paletas tonales generadas con `ng generate @angular/material:theme-color` y siguen los mismos tonos que los roles de Material (40 y 80, 90 y 30, 10 y 90).
+  - `--app-canvas` (fondo de la página) y `--app-panel` (paneles y tarjetas): gris verdoso con paneles blancos en claro y, en oscuro, paneles más claros que el fondo.
+- En claro, `primary` es el verde de marca `#03473A` en lugar del tono 40 generado, más apagado.
+- `src/styles.css` quita la paleta, la escala de tamaños y las familias de fuente de Tailwind (`--color-*: initial`, `--text-*: initial`, `--font-*: initial`). Solo existen las clases enlazadas a los tokens (`bg-primary`, `bg-success-container`, `text-title-medium`…).
+- Ajustes de componentes en el tema: barra superior verde en los dos modos, y tarjetas, tablas, paginador y paneles desplegables con el color de los paneles.
+- En `app.config.ts`: campos de formulario con apariencia `outline`, más cercanos a los prototipos, y textos del paginador en español.
+
+**Alternativas:**
+
+- Usar las paletas que trae Material (`$green-palette`…), demasiado saturadas para los chips.
+- Colores fijos para los chips, sin modo oscuro.
+- Mantener la paleta de Tailwind y confiar en la revisión.
+
+**Consecuencias:** el chip de estado y las piezas propias se pintan solo con tokens, y el modo oscuro no necesita utilidades `dark:`. Si hace falta un tamaño o un color nuevo, se añade como token en `theme.scss` y `styles.css`. Si se aprueba, conviene citar los tokens propios en `docs/PLAN.md` §4.8.
+
+**Aprobación:** pendiente.
+
+## D-014 · Páginas de desarrollo registradas por el entorno (06/11/2026)
+
+**Contexto:** el muestrario `/dev/ui` (y en el 0.5, la barra de desarrollo) solo debe existir en desarrollo. Una condición en `app.routes.ts` dejaría una rama que los tests unitarios, que usan un único entorno, no pueden cubrir al 100 % (D-010).
+
+**Decisión:** cada entorno declara sus rutas de desarrollo en `environment.devRoutes`, igual que declarará sus servicios de datos (§4.4). `environment.development.ts` importa `dev/dev.routes.ts`; `environment.ts` (producción) no importa nada de `dev/`, así que el muestrario no llega a su build. Se comprobó buscando el texto del muestrario en el JavaScript de producción.
+
+**Alternativas:** un indicador `devTools` y una condición en las rutas, que depende de que el minificador elimine el código muerto y deja una rama sin cubrir.
+
+**Consecuencias:** el paso 0.5 puede añadir `devTools` y `dataProviders` a los mismos ficheros de entorno.
+
+**Aprobación:** pendiente.
