@@ -30,10 +30,15 @@ export function countLines(content) {
 
 /**
  * Counts the test cases of a spec file: calls to `it()` and `test()`, also with
- * modifiers such as `it.skip()`.
+ * modifiers such as `it.skip()`. Strings and comments are blanked out first, so
+ * examples written inside them (as in the tests of this very counter) do not count.
  *
  * @param {string} source
  */
 export function countTests(source) {
-  return source.match(/(?<![\w.$])(?:it|test)(?:\.\w+)?\s*\(/g)?.length ?? 0;
+  const code = source.replace(
+    /\/\/.*$|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/gm,
+    '""',
+  );
+  return code.match(/(?<![\w.$])(?:it|test)(?:\.\w+)?\s*\(/g)?.length ?? 0;
 }

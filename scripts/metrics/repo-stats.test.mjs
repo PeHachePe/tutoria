@@ -43,4 +43,15 @@ describe('countTests', () => {
   it('does not count words that only end in it or test', () => {
     assert.equal(countTests('submit(); latest(); contest()'), 0);
   });
+
+  it('ignores calls written inside strings and comments', () => {
+    const source = [
+      "it('real one', () => {",
+      "  const example = `it('fake', () => {})`;",
+      '  const other = "test(\'fake\')";',
+      "  // it('commented out')",
+      '});',
+    ].join('\n');
+    assert.equal(countTests(source), 1);
+  });
 });
