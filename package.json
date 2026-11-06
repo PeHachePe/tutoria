@@ -8,7 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "check": "ng lint && ng test --watch=false",
+    "check": "prettier --check . && ng lint && ng test --watch=false",
     "format": "prettier --write ."
   },
   "private": true,

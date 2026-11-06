@@ -1,3 +1,58 @@
+# TutorIA · instrucciones para el agente
+
+## Proyecto
+
+TutorIA es una aplicación web (Angular 22 + Supabase) de ejercicios de programación autoevaluables, con un tutor de IA que da pistas graduadas sin entregar nunca la solución y un panel docente con analítica formativa. Es un TFM: lo que se construye se documenta en una memoria académica.
+
+Todo está en `docs/`: `PLAN.md` (plan completo; su especificación, en la sección 2, es la fuente de verdad), `screens/` (fichas de pantalla), `DECISIONES.md`, y `REGISTRO.md`, `bitacora/` y `capturas/` para el registro de cada paso.
+
+## Prioridad
+
+En código, estructura y nombres mandan las buenas prácticas de Angular 22: la sección del final de este fichero (la generó `ng new` y no se modifica), `get_best_practices` y la [guía de estilo](https://angular.dev/style-guide). Este bloque y `docs/PLAN.md` solo las amplían. Si algo choca, sigue a Angular, avisa al humano y anótalo en `docs/DECISIONES.md`.
+
+## Reglas innegociables
+
+- **Nunca** ejecutes `git commit`, `git push` ni nada que modifique el historial. Los commits los hace el humano.
+- No toques ficheros `.env*` ni pongas secretos en el cliente. Las claves de IA, Judge0 y `service_role` solo van en los secretos de las Edge Functions.
+- **Un paso cada vez, cada uno en su propia sesión:** lee el paso del plan, las secciones que cita, las reglas transversales (§4.8) y su ficha; propón un plan corto, espera el visto bueno, implementa, cierra el paso (abajo) y **para**. Si en esta sesión ya cerraste uno, pide al humano una sesión nueva.
+- Si el plan, la especificación y el código no coinciden, pregunta antes de decidir.
+- En inglés, todo lo que es código: identificadores, comentarios, nombres de ficheros, carpetas y scripts de npm, y commits. En español, los textos de la interfaz y la documentación de `docs/`.
+
+## Entorno y comandos
+
+El equipo es Windows: los scripts de `package.json` los ejecuta `cmd`, así que nada de comandos de bash (`rm`, `cp`, `export`…). Los scripts auxiliares y los hooks, en Node, con rutas construidas con `path` y `os.homedir()`.
+
+- `npm start`: servidor de desarrollo con datos simulados.
+- `npm run format` y `npm run check` (formato, lint y tests unitarios). El lint hace cumplir buenas prácticas de Angular: no desactives reglas para salir del paso.
+- `npm run e2e`: Playwright (desde el paso 0.6).
+
+## Angular en este proyecto
+
+- **Estado con signals,** sin `@ngrx/signals` ni otras librerías. Se lee con `resource()` (no en `ngOnInit`) y se escribe con métodos `async`. Solo existen los stores previstos en `docs/PLAN.md` §4.5, y exponen su estado como solo lectura (`asReadonly()` o `computed()`).
+- **`effect()`** solo en la frontera con APIs imperativas (CodeMirror, Web Speech, Realtime), justificado en un comentario.
+- **Ante la duda,** `search_documentation` para Angular y los tipos de `node_modules/@angular/material` para Material, cuya API ha cambiado hace poco.
+
+## Arquitectura
+
+Una aplicación Angular normal, sin capas ni patrones extra (`docs/PLAN.md` §4).
+
+- **Estructura:** carpetas por funcionalidad (`auth/`, `student/`, `teacher/`, `admin/`) o por tema (`core/`, `data/`, `shared/`, `dev/`), nunca por tipo.
+- **Datos:** pantallas y stores dependen solo de los servicios de datos (clases abstractas en `src/app/data`), nunca de Supabase ni de los datos simulados.
+- **TDD** en la lógica de stores, servicios simulados y funciones puras: primero el test.
+- **UI:** Material para los componentes y Tailwind para la disposición y las piezas propias. Sin CSS por componente: el aspecto de Material solo se toca en `src/theme.scss`. Colores solo con tokens (nunca directos ni `dark:`), y fuentes e iconos autoalojados, sin Google Fonts.
+- **Tests:** busca los elementos como el usuario, por rol, etiqueta o texto. `data-testid` solo si no hay forma accesible.
+
+## Al cerrar cada paso
+
+1. `npm run format` y después `npm run check` en verde.
+2. Si el paso es una pantalla, cumple su definición de terminado (`docs/PLAN.md` §5.4) y guarda su versión con `npm run screenshots -- <paso> <pantalla>`.
+3. `npm run metrics -- <paso>`.
+4. Escribe la bitácora del paso con `docs/bitacora/_plantilla.md` (sin horas humanas ni validación) y su fila en `docs/REGISTRO.md`.
+5. Si tomaste una decisión técnica, proponla en `docs/DECISIONES.md`.
+6. Resume y espera. En cada iteración posterior, actualiza la bitácora; guarda capturas de la iteración solo si el humano lo pide.
+
+---
+
 You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
 ## TypeScript Best Practices
