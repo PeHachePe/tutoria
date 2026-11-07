@@ -15,6 +15,10 @@ export default defineConfig({
   // the default 5 seconds the first time
   expect: { timeout: 10_000 },
   fullyParallel: true,
+  // Locally, at most 4 browsers: with the default (half the cores) axe on the unminified build
+  // saturates the machine and the heaviest tests go over the timeout, without finishing any
+  // sooner (step 1.1c). Step 1.1e serves an optimized build and revisits it.
+  workers: process.env['CI'] ? undefined : 4,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 1 : 0,
   reporter: process.env['CI'] ? [['list'], ['html', { open: 'never' }]] : 'list',

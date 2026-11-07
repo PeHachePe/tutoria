@@ -19,7 +19,7 @@ import { DEFAULT_LATENCY, LatencyRange, MockNetwork } from '../../data/mock/mock
 import type { AppUser } from '../../data/user';
 import { DEV_PATHS } from '../dev-paths';
 import { describeEvent } from './describe-event';
-import { PageReloader } from './page-reloader';
+import { PageReloader } from '../../core/page-reloader';
 
 interface LatencyOption {
   readonly label: string;

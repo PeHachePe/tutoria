@@ -52,6 +52,12 @@ describe('ShowcasePage', () => {
     ]);
   });
 
+  it('offers the language menu of the app, to see the pieces in each language', () => {
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('button[aria-label="Cambiar el idioma"]')).toBeTruthy();
+  });
+
   it('switches the colour mode from the toggle group', async () => {
     const root = TestBed.inject(DOCUMENT).documentElement;
     const dark = await loader.getHarness(MatButtonToggleHarness.with({ text: /Oscuro/ }));

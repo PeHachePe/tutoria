@@ -13,6 +13,9 @@ const POPUP_REGIONS = 'dialog, [role=dialog], [role=alertdialog], svg, [role=men
  * a readable list of the violations (D-002, 5.4). Every screen e2e calls it.
  */
 export async function expectNoAxeViolations(page: Page): Promise<void> {
+  // axe takes a Material Symbols ligature ("build") for an icon only once its font has loaded;
+  // before that it reads it as visible text and reports label-content-name-mismatch (step 1.1c)
+  await page.evaluate(() => document.fonts.ready);
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     const { violations } = await new AxeBuilder({ page })

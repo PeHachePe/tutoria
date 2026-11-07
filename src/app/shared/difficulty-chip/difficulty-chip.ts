@@ -3,10 +3,10 @@ import { Component, computed, input } from '@angular/core';
 import type { Difficulty } from '../../data/exercise';
 
 const STYLES: Record<Difficulty, { readonly label: string; readonly icon: string }> = {
-  initial: { label: 'Inicial', icon: 'stat_1' },
-  medium: { label: 'Media', icon: 'stat_2' },
-  advanced: { label: 'Avanzada', icon: 'stat_3' },
-  extension: { label: 'Ampliación', icon: 'add_circle' },
+  initial: { label: $localize`:@@difficulty.initial:Inicial`, icon: 'stat_1' },
+  medium: { label: $localize`:@@difficulty.medium:Media`, icon: 'stat_2' },
+  advanced: { label: $localize`:@@difficulty.advanced:Avanzada`, icon: 'stat_3' },
+  extension: { label: $localize`:@@difficulty.extension:Ampliación`, icon: 'add_circle' },
 };
 
 /**

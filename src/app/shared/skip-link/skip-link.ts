@@ -12,6 +12,7 @@ import { Component, DOCUMENT, inject, input } from '@angular/core';
       [href]="'#' + target()"
       class="sr-only z-50 rounded-md bg-surface px-4 py-3 text-label-large text-on-surface shadow-[var(--mat-sys-level2)] focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
       (click)="skip($event)"
+      i18n="@@skipLink"
     >
       Saltar al contenido
     </a>

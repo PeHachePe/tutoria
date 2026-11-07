@@ -11,6 +11,7 @@ import { map } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
+import { APP_NAME } from '../../core/app-title-strategy';
 import type { NavLink } from '../nav-link';
 import { SkipLink } from '../skip-link/skip-link';
 import { UserMenu } from '../user-menu/user-menu';
@@ -21,20 +22,32 @@ interface NavSection {
 }
 
 const TEACHING: NavSection = {
-  label: 'Docencia',
+  label: $localize`:@@staff.teaching:Docencia`,
   links: [
-    { path: APP_PATHS.teacher.live, label: 'En vivo', icon: 'sensors' },
-    { path: APP_PATHS.teacher.history, label: 'Histórico', icon: 'insights' },
-    { path: APP_PATHS.teacher.exercises, label: 'Ejercicios', icon: 'assignment' },
-    { path: APP_PATHS.teacher.groups, label: 'Grupos', icon: 'groups' },
+    { path: APP_PATHS.teacher.live, label: $localize`:@@nav.live:En vivo`, icon: 'sensors' },
+    {
+      path: APP_PATHS.teacher.history,
+      label: $localize`:@@nav.history:Histórico`,
+      icon: 'insights',
+    },
+    {
+      path: APP_PATHS.teacher.exercises,
+      label: $localize`:@@nav.exercises:Ejercicios`,
+      icon: 'assignment',
+    },
+    { path: APP_PATHS.teacher.groups, label: $localize`:@@nav.groups:Grupos`, icon: 'groups' },
   ],
 };
 
 const ADMINISTRATION: NavSection = {
-  label: 'Administración',
+  label: $localize`:@@staff.administration:Administración`,
   links: [
-    { path: APP_PATHS.admin.users, label: 'Usuarios', icon: 'manage_accounts' },
-    { path: APP_PATHS.admin.system, label: 'Sistema', icon: 'tune' },
+    {
+      path: APP_PATHS.admin.users,
+      label: $localize`:@@nav.users:Usuarios`,
+      icon: 'manage_accounts',
+    },
+    { path: APP_PATHS.admin.system, label: $localize`:@@nav.system:Sistema`, icon: 'tune' },
   ],
 };
 
@@ -73,6 +86,8 @@ export class StaffLayout {
   private readonly auth = inject(AuthStore);
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly sidenav = viewChild.required<MatSidenav>('sidenav');
+
+  protected readonly appName = APP_NAME;
 
   /** BreakpointObserver only offers an Observable: it is turned into a signal at once. */
   protected readonly wide = toSignal(

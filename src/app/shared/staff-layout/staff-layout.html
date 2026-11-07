@@ -8,6 +8,7 @@
           matIconButton
           type="button"
           aria-label="Menú de navegación"
+          i18n-aria-label="@@staff.menuButton"
           aria-controls="menu-principal"
           [attr.aria-expanded]="sidenav.opened"
           (click)="toggleMenu()"
@@ -15,7 +16,7 @@
           <mat-icon>menu</mat-icon>
         </button>
       }
-      <span class="flex-1 text-title-large font-bold">TutorIA</span>
+      <span class="flex-1 text-title-large font-bold">{{ appName }}</span>
       <app-user-menu />
     </mat-toolbar>
   </header>
@@ -29,7 +30,7 @@
       [opened]="wide()"
     >
       <!-- mat-nav-list is already a navigation landmark: one for the whole menu, with its name -->
-      <mat-nav-list aria-label="Principal" class="px-3">
+      <mat-nav-list aria-label="Principal" i18n-aria-label="@@nav.main" class="px-3">
         @for (section of sections(); track section.label) {
           <h2 class="eyebrow px-4 pt-4 pb-1">{{ section.label }}</h2>
           @for (link of section.links; track link.path) {

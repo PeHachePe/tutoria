@@ -30,6 +30,7 @@ import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import type { Difficulty } from '../../data/exercise';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
+import { LanguageMenu } from '../../shared/language-menu/language-menu';
 import { Mascot, MascotMood } from '../../shared/mascot/mascot';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { ShowcaseDialog } from './showcase-dialog';
@@ -68,6 +69,7 @@ import { ShowcaseTable } from './showcase-table';
     ShowcaseTable,
     StatusChip,
     DifficultyChip,
+    LanguageMenu,
     Mascot,
   ],
   templateUrl: './showcase-page.html',

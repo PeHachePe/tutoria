@@ -2,8 +2,10 @@
 
 <header>
   <mat-toolbar class="gap-2">
-    <a [routerLink]="catalogPath" class="rounded-md px-1 text-title-large font-bold">TutorIA</a>
-    <nav aria-label="Principal" class="flex-1">
+    <a [routerLink]="catalogPath" class="rounded-md px-1 text-title-large font-bold">{{
+      appName
+    }}</a>
+    <nav aria-label="Principal" i18n-aria-label="@@nav.main" class="flex-1">
       <ul class="flex">
         <li>
           <a
@@ -12,6 +14,7 @@
             [routerLinkActiveOptions]="{ exact: true }"
             ariaCurrentWhenActive="page"
             class="rounded-md px-3 py-2 text-label-large"
+            i18n="@@nav.catalog"
           >
             Ejercicios
           </a>

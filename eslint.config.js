@@ -63,6 +63,38 @@ module.exports = defineConfig([
       '@angular-eslint/template/prefer-ngsrc': 'error',
       '@angular-eslint/template/prefer-class-binding': 'error',
       '@angular-eslint/template/prefer-style-binding': 'error',
+      // Every user-facing text is marked for translation, with a custom ID (step 1.1c, D-023).
+      // Icon ligatures and the technical attributes below are not text for people.
+      '@angular-eslint/template/i18n': [
+        'error',
+        {
+          checkId: true,
+          ignoreTags: ['mat-icon'],
+          ignoreAttributes: [
+            'appearance',
+            'aria-controls',
+            'ariaCurrentWhenActive',
+            'autocomplete',
+            'd',
+            'data-testid',
+            'matButton',
+            'mode',
+            'mood',
+            'patternUnits',
+            'stroke-linecap',
+            'stroke-linejoin',
+            'transform',
+            'xPosition',
+            'yPosition',
+          ],
+        },
+      ],
     },
+  },
+  {
+    // Not translated: the templates of the tests, and the development tools (dev toolbar, showcase
+    // and data explorer), which never reach a production build (D-014, D-023)
+    files: ['**/*.spec.ts/**/*.html', 'src/app/dev/**/*.html', 'src/index.html'],
+    rules: { '@angular-eslint/template/i18n': 'off' },
   },
 ]);

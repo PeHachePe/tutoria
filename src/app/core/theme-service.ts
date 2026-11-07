@@ -12,9 +12,9 @@ export const THEME_OPTIONS: readonly {
   readonly label: string;
   readonly icon: string;
 }[] = [
-  { mode: 'light', label: 'Tema claro', icon: 'light_mode' },
-  { mode: 'dark', label: 'Tema oscuro', icon: 'dark_mode' },
-  { mode: 'system', label: 'Tema del sistema', icon: 'contrast' },
+  { mode: 'light', label: $localize`:@@theme.light:Tema claro`, icon: 'light_mode' },
+  { mode: 'dark', label: $localize`:@@theme.dark:Tema oscuro`, icon: 'dark_mode' },
+  { mode: 'system', label: $localize`:@@theme.system:Tema del sistema`, icon: 'contrast' },
 ];
 
 /** `color-scheme` value for each mode: the Material theme uses `light-dark()`, so this switches it. */

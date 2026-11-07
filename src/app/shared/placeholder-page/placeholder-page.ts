@@ -10,7 +10,7 @@ import { Component, input } from '@angular/core';
   template: `
     <section class="flex flex-col gap-2">
       <h1 class="text-headline-small">{{ heading() }}</h1>
-      <p class="text-body-large text-on-surface-variant">
+      <p class="text-body-large text-on-surface-variant" i18n="@@placeholder.text">
         Esta pantalla se construye en el paso {{ step() }}.
       </p>
     </section>

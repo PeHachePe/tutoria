@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 
 import { SEGMENTS } from '../core/app-paths';
 import { provideFormFieldDefaults } from '../core/form-field-defaults';
-import { provideSpanishPaginator } from '../core/spanish-paginator-intl';
+import { provideLocalizedPaginator } from '../core/localized-paginator-intl';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
 
@@ -12,20 +12,20 @@ export const adminRoutes: Routes = [
     path: '',
     component: StaffLayout,
     // Material defaults of the area, not in app.config.ts (D-021)
-    providers: [provideFormFieldDefaults(), provideSpanishPaginator()],
+    providers: [provideFormFieldDefaults(), provideLocalizedPaginator()],
     children: [
       { path: '', pathMatch: 'full', redirectTo: SEGMENTS.admin.users },
       {
         path: SEGMENTS.admin.users,
-        title: 'Usuarios',
+        title: $localize`:@@route.users.title:Usuarios`,
         component: PlaceholderPage,
-        data: { heading: 'Usuarios', step: '5.1' },
+        data: { heading: $localize`:@@route.users.heading:Usuarios`, step: '5.1' },
       },
       {
         path: SEGMENTS.admin.system,
-        title: 'Sistema',
+        title: $localize`:@@route.system.title:Sistema`,
         component: PlaceholderPage,
-        data: { heading: 'Ajustes del sistema', step: '5.3' },
+        data: { heading: $localize`:@@route.system.heading:Ajustes del sistema`, step: '5.3' },
       },
     ],
   },

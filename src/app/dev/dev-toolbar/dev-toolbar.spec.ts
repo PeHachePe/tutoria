@@ -12,7 +12,7 @@ import { DAW_STUDENT_IDS, TEACHER_ID } from '../../data/mock/fixtures/users';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockNetwork } from '../../data/mock/mock-network';
 import { DevToolbar } from './dev-toolbar';
-import { PageReloader } from './page-reloader';
+import { PageReloader } from '../../core/page-reloader';
 
 describe('DevToolbar', () => {
   let fixture: ComponentFixture<DevToolbar>;

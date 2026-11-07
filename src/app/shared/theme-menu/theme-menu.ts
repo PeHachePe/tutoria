@@ -20,7 +20,9 @@ const ICON_BY_MODE = new Map(THEME_OPTIONS.map((option) => [option.mode, option.
       matIconButton
       type="button"
       aria-label="Cambiar el tema"
+      i18n-aria-label="@@theme.button"
       matTooltip="Tema"
+      i18n-matTooltip="@@theme.group"
       [matMenuTriggerFor]="menu"
     >
       <mat-icon>{{ currentIcon() }}</mat-icon>

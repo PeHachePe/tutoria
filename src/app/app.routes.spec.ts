@@ -8,7 +8,7 @@ import { routes } from './app.routes';
 import { provideSessionOf, restoreSession } from './auth/auth-testing';
 import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
-import { provideSpanishPaginator } from './core/spanish-paginator-intl';
+import { provideLocalizedPaginator } from './core/localized-paginator-intl';
 import type { Role } from './data/user';
 import { studentRoutes } from './student/student.routes';
 import { teacherRoutes } from './teacher/teacher.routes';
@@ -94,7 +94,7 @@ describe('app routes', () => {
   it.each([
     ['teacher', teacherRoutes],
     ['admin', adminRoutes],
-  ])('the %s area shows its paginators in Spanish', (_, areaRoutes) => {
-    expect(areaRoutes[0].providers).toContainEqual(provideSpanishPaginator());
+  ])('the %s area shows its paginators in the language of the interface', (_, areaRoutes) => {
+    expect(areaRoutes[0].providers).toContainEqual(provideLocalizedPaginator());
   });
 });

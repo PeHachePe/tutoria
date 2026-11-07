@@ -17,6 +17,9 @@
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
+      "i18n": {
+        "sourceLocale": "es"
+      },
       "architect": {
         "build": {
           "builder": "@angular/build:application",
@@ -34,7 +37,8 @@
               "material-symbols/outlined.css",
               "src/theme.scss",
               "src/styles.css"
-            ]
+            ],
+            "polyfills": ["@angular/localize/init"]
           },
           "configurations": {
             "production": {
@@ -81,6 +85,7 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
+            "runnerConfig": "vitest-base.config.mts",
             "coverage": true,
             "coverageInclude": ["src/**/*.ts"],
             "coverageExclude": [
@@ -102,6 +107,14 @@
           "builder": "@angular-eslint/builder:lint",
           "options": {
             "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+          }
+        },
+        "extract-i18n": {
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "buildTarget": "tutoria:build:development",
+            "format": "json",
+            "outputPath": "src/locale"
           }
         }
       }

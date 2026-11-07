@@ -11,26 +11,30 @@ interface ChipStyle {
 /** Text, icon and colour tokens of each status: the icon repeats the meaning, never only the colour. */
 const STYLES: Record<AttemptStatus, ChipStyle> = {
   not_started: {
-    label: 'Sin empezar',
+    label: $localize`:@@status.notStarted:Sin empezar`,
     icon: 'radio_button_unchecked',
     classes: 'bg-surface-container-high text-on-surface-variant',
   },
   in_progress: {
-    label: 'En curso',
+    label: $localize`:@@status.inProgress:En curso`,
     icon: 'edit',
     classes: 'bg-info-container text-on-info-container',
   },
   tests_failed: {
-    label: 'Con fallos',
+    label: $localize`:@@status.testsFailed:Con fallos`,
     icon: 'error',
     classes: 'bg-warning-container text-on-warning-container',
   },
   passed: {
-    label: 'Superado',
+    label: $localize`:@@status.passed:Superado`,
     icon: 'check_circle',
     classes: 'bg-success-container text-on-success-container',
   },
-  submitted: { label: 'Entregado', icon: 'task_alt', classes: 'bg-success text-on-success' },
+  submitted: {
+    label: $localize`:@@status.submitted:Entregado`,
+    icon: 'task_alt',
+    classes: 'bg-success text-on-success',
+  },
 };
 
 /** Status of an attempt as a small coloured pill with an icon (catalog, teacher panel, /dev/datos). */

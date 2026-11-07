@@ -14,7 +14,7 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: homeRedirect },
   {
     path: SEGMENTS.login,
-    title: 'Acceso',
+    title: $localize`:@@login.title:Acceso`,
     canMatch: [guestGuard],
     loadComponent: () => import('./auth/login-page/login-page').then((m) => m.LoginPage),
   },
@@ -36,7 +36,7 @@ export const routes: Routes = [
   ...environment.devRoutes,
   {
     path: '**',
-    title: 'Página no encontrada',
+    title: $localize`:@@notFound.title:Página no encontrada`,
     loadComponent: () => import('./not-found/not-found-page').then((m) => m.NotFoundPage),
   },
 ];

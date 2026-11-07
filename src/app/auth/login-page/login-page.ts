@@ -8,7 +8,9 @@ import { MatInput } from '@angular/material/input';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { Router } from '@angular/router';
 
+import { APP_NAME } from '../../core/app-title-strategy';
 import { provideFormFieldDefaults } from '../../core/form-field-defaults';
+import { LanguageMenu } from '../../shared/language-menu/language-menu';
 import { Mascot } from '../../shared/mascot/mascot';
 import { ThemeMenu } from '../../shared/theme-menu/theme-menu';
 import { afterSignInPath } from '../after-sign-in-path';
@@ -39,6 +41,7 @@ import { signInErrorMessage } from '../sign-in-error-message';
     MatMenuItem,
     MatMenuTrigger,
     Mascot,
+    LanguageMenu,
     ThemeMenu,
   ],
   templateUrl: './login-page.html',
@@ -56,6 +59,7 @@ export class LoginPage {
    */
   readonly redirect = input<string>();
 
+  protected readonly appName = APP_NAME;
   protected readonly demoAccounts = inject(DEMO_ACCOUNTS);
   protected readonly passwordVisible = signal(false);
 
@@ -63,9 +67,15 @@ export class LoginPage {
   protected readonly loginForm = form(
     this.model,
     (path) => {
-      required(path.email, { message: 'Introduce tu correo' });
-      email(path.email, { message: 'El correo no es válido' });
-      required(path.password, { message: 'Introduce tu contraseña' });
+      required(path.email, {
+        message: $localize`:@@login.errors.emailRequired:Introduce tu correo`,
+      });
+      email(path.email, {
+        message: $localize`:@@login.errors.emailInvalid:El correo no es válido`,
+      });
+      required(path.password, {
+        message: $localize`:@@login.errors.passwordRequired:Introduce tu contraseña`,
+      });
     },
     {
       submission: {

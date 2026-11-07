@@ -6,7 +6,7 @@ import { MatPaginatorHarness } from '@angular/material/paginator/testing';
 import { MatSortHarness } from '@angular/material/sort/testing';
 import { MatTableHarness } from '@angular/material/table/testing';
 
-import { SpanishPaginatorIntl } from '../../core/spanish-paginator-intl';
+import { LocalizedPaginatorIntl } from '../../core/localized-paginator-intl';
 import { ShowcaseTable } from './showcase-table';
 
 describe('ShowcaseTable', () => {
@@ -14,7 +14,7 @@ describe('ShowcaseTable', () => {
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
-      providers: [{ provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl }],
+      providers: [{ provide: MatPaginatorIntl, useClass: LocalizedPaginatorIntl }],
     });
     const fixture = TestBed.createComponent(ShowcaseTable);
     loader = TestbedHarnessEnvironment.loader(fixture);

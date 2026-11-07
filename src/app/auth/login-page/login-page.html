@@ -7,9 +7,9 @@
     <div class="flex flex-col gap-6 p-6 sm:p-8 lg:p-10">
       <header class="flex items-center gap-4">
         <div class="flex min-w-0 flex-1 flex-col gap-1">
-          <p class="text-title-large font-bold text-primary">TutorIA</p>
-          <h1 class="text-headline-medium lg:text-headline-large">Acceso</h1>
-          <p class="text-body-medium text-on-surface-variant">
+          <p class="text-title-large font-bold text-primary">{{ appName }}</p>
+          <h1 class="text-headline-medium lg:text-headline-large" i18n="@@login.title">Acceso</h1>
+          <p class="text-body-medium text-on-surface-variant" i18n="@@login.intro">
             Entra con la cuenta que te ha dado tu centro.
           </p>
         </div>
@@ -19,7 +19,7 @@
 
       <form [formRoot]="loginForm" class="flex flex-col gap-1">
         <mat-form-field>
-          <mat-label>Correo</mat-label>
+          <mat-label i18n="@@login.email">Correo</mat-label>
           <input matInput type="email" autocomplete="username" [formField]="loginForm.email" />
           @if (loginForm.email().errors()[0]; as error) {
             <mat-error>{{ error.message }}</mat-error>
@@ -27,7 +27,7 @@
         </mat-form-field>
 
         <mat-form-field>
-          <mat-label>Contraseña</mat-label>
+          <mat-label i18n="@@login.password">Contraseña</mat-label>
           <input
             matInput
             autocomplete="current-password"
@@ -39,6 +39,7 @@
             matSuffix
             type="button"
             aria-label="Mostrar contraseña"
+            i18n-aria-label="@@login.showPassword"
             [attr.aria-pressed]="passwordVisible()"
             (click)="togglePassword()"
           >
@@ -60,11 +61,15 @@
         }
 
         <button matButton="filled" type="submit" [disabled]="loginForm().submitting()">
-          {{ loginForm().submitting() ? 'Entrando…' : 'Entrar' }}
+          @if (loginForm().submitting()) {
+            <ng-container i18n="@@login.submitting">Entrando…</ng-container>
+          } @else {
+            <ng-container i18n="@@login.submit">Entrar</ng-container>
+          }
         </button>
       </form>
 
-      <p class="text-body-small text-on-surface-variant">
+      <p class="text-body-small text-on-surface-variant" i18n="@@login.help">
         ¿No tienes cuenta o has olvidado la contraseña? Pídesela a tu docente.
       </p>
     </div>
@@ -75,7 +80,7 @@
     <div data-dev-only>
       <button matButton type="button" [matMenuTriggerFor]="demoMenu">
         <mat-icon>switch_account</mat-icon>
-        Cuentas de demostración
+        <span i18n="@@login.demoAccounts">Cuentas de demostración</span>
       </button>
       <mat-menu #demoMenu="matMenu">
         @for (account of demoAccounts; track account.email) {
@@ -95,6 +100,9 @@
       </mat-menu>
     </div>
   }
-  <!-- No user menu before signing in: the colour mode is chosen here -->
-  <app-theme-menu class="absolute top-2 right-2 sm:top-4 sm:right-4" />
+  <!-- No user menu before signing in: the language and the colour mode are chosen here -->
+  <div class="absolute top-2 right-2 flex sm:top-4 sm:right-4">
+    <app-language-menu />
+    <app-theme-menu />
+  </div>
 </main>

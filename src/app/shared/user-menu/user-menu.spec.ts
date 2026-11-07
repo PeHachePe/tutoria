@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
+import { LanguageService } from '../../core/language-service';
 import { ThemeService } from '../../core/theme-service';
 import { AuthService } from '../../data/auth-service';
 import type { NavLink } from '../nav-link';
@@ -56,6 +57,19 @@ describe('UserMenu', () => {
     await user.click(screen.getByRole('menuitemradio', { name: /Tema oscuro/ }));
 
     expect(TestBed.inject(ThemeService).mode()).toBe('dark');
+  });
+
+  it('changes the language from its submenu, which marks the current one', async () => {
+    const user = await renderMenu();
+    const setLocale = vi.spyOn(TestBed.inject(LanguageService), 'setLocale').mockReturnValue();
+
+    await user.click(screen.getByRole('menuitem', { name: /Idioma/ }));
+    expect(screen.getByRole('menuitemradio', { name: /Español/ }).ariaChecked).toBe('true');
+    const catalan = screen.getByRole('menuitemradio', { name: /Català/ });
+    expect(catalan.getAttribute('lang')).toBe('ca');
+    await user.click(catalan);
+
+    expect(setLocale).toHaveBeenCalledWith('ca');
   });
 
   it('signs out and goes to the login', async () => {
