@@ -436,7 +436,7 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 
 ## D-022 · Mascota: paso 1.1b, colores propios, animaciones junto al componente y favicon (07/11/2026)
 
-**Contexto:** el autor quiere una mascota para TutorIA basada en su perra carlina. El diseño se iteró fuera del repositorio hasta el boceto v14, que aprobó: un SVG de 200 × 200 con sus animaciones CSS y un favicon simplificado. El plan no tenía ningún paso para la mascota, y las reglas del proyecto piden colores solo con tokens del tema, sin CSS por componente y con las animaciones en `src/styles.css` (§4.8). Durante el paso, el autor pidió que diera la bienvenida en el acceso, que reaccionara al ratón (moverse al pasar por encima, sacar la lengua al hacer clic, seguirlo con los ojos) y preguntó si su CSS estaría mejor cerca del componente.
+**Contexto:** el autor quiere una mascota para TutorIA basada en su perra carlina. El diseño se iteró fuera del repositorio hasta el boceto v14, que aprobó: un SVG de 200 × 200 con sus animaciones CSS y un favicon simplificado. El plan no tenía ningún paso para la mascota, y las reglas del proyecto piden colores solo con tokens del tema, sin CSS por componente y con las animaciones en `src/styles.css` (§4.8). Durante el paso, el autor pidió que diera la bienvenida en el acceso, que reaccionara al ratón (moverse al pasar por encima, sacar la lengua al hacer clic, seguirlo con los ojos, un huesecito como cursor) y preguntó si su CSS estaría mejor cerca del componente.
 
 **Decisión:**
 
@@ -453,7 +453,8 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
   - al hacer clic o tocarla, saca la lengua (salvo con el chat abierto, que ya la tiene fuera);
   - los ojos siguen al ratón: `gazeOffset()` (TDD) desplaza iris, pupilas y brillos hasta 3,5 unidades del dibujo, más cuanto más lejos está el puntero;
   - solo con ratón (`pointerType`): en una pantalla táctil, tocarla es un clic, y los ojos se quedarían mirando el último toque;
-  - cada reacción termina con su animación (`animationend`), que el componente reconoce por su nombre.
+  - cada reacción termina con su animación (`animationend`), que el componente reconoce por su nombre;
+  - sobre la mascota, el puntero es un huesecito (un SVG de 32 px en línea en `mascot.css`, con la mano como respaldo), que además avisa de que se puede hacer clic.
 - **Animaciones en un parcial global junto al componente.** `shared/mascot/mascot.css` lleva las clases y los `@keyframes`, y `src/styles.css` lo importa. Sigue siendo CSS global, sin estilos por componente, pero vive con lo que anima, como pide la guía de estilo de Angular. §4.8 lo admite desde ahora para las animaciones de una pieza concreta. Con `prefers-reduced-motion` no se anima nada salvo los ojos, que siguen lo que hace el usuario.
 - **Favicon:** `public/favicon.svg` con la cabeza simplificada y `public/favicon.ico` de respaldo (16, 32 y 48 px) en lugar del de Angular. El `.ico` lo genera `npm run favicon` (`scripts/generate-favicon.mjs`): dibuja el SVG con el Chromium que ya instala Playwright y mete los PNG en el `.ico`, sin dependencias nuevas. El `.ico` va enlazado con `sizes="32x32"` y antes del SVG, para que Chrome prefiera el SVG.
 

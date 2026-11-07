@@ -1001,13 +1001,13 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 - `<app-mascot>` en `shared/mascot/`: SVG en línea, decorativo (`aria-hidden`), con el tamaño que le dé quien lo usa.
 - Estado con `input()`: reposo (parpadea, mueve una oreja y asoma la punta de la lengua), chat abierto (gira la cabeza y saca la lengua de lado; al cerrarlo la recoge), pensando (inclina la cabeza) y alegría (dos saltitos).
 - Accesorios como inputs, para personalizarlos en los ajustes (1.9): auriculares con micro (activados por defecto) y pajarita de cuadros (desactivada).
-- Reacciones al puntero, a petición del autor: los ojos siguen al ratón, al pasarlo por encima hace un movimiento al azar (ladea la cabeza, salta o menea la oreja) y al hacer clic saca la lengua.
+- Reacciones al puntero, a petición del autor: los ojos siguen al ratón, al pasarlo por encima hace un movimiento al azar (ladea la cabeza, salta o menea la oreja) y al hacer clic saca la lengua. Sobre ella, el puntero es un huesecito.
 - Animaciones en `shared/mascot/mascot.css`, importado desde `src/styles.css` (4.8), desactivadas con `prefers-reduced-motion`. Los colores de la perra son fijos, no tokens del tema (D-022).
 - Favicon: `public/favicon.svg` con la cabeza simplificada y `favicon.ico` de respaldo generado con `npm run favicon`, en lugar del de Angular.
 - En la pantalla de acceso, junto a la marca, da la bienvenida con dos saltitos (petición del autor).
 - Sección «Mascota» en el muestrario `/dev/ui`, con un control para cada estado y cada accesorio.
 
-🧪 Clase de cada estado, accesorios, ids únicos y reacciones; elección del movimiento y de la mirada con TDD; e2e de la sección del muestrario con axe, del acceso y del favicon.
+🧪 Clase de cada estado, accesorios, ids únicos y reacciones; elección del movimiento y de la mirada con TDD; e2e de la sección del muestrario con axe, del acceso, del cursor y del favicon.
 
 **1.2 · Catálogo (≈3 h)** · ficha `02-catalogo` · Figuras 7–8 del TFM
 
