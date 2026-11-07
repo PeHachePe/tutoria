@@ -2,12 +2,12 @@
 
 <header>
   <mat-toolbar class="gap-2">
-    <a routerLink="/alumno" class="rounded-md px-1 text-title-large font-bold">TutorIA</a>
+    <a [routerLink]="catalogPath" class="rounded-md px-1 text-title-large font-bold">TutorIA</a>
     <nav aria-label="Principal" class="flex-1">
       <ul class="flex">
         <li>
           <a
-            routerLink="/alumno"
+            [routerLink]="catalogPath"
             routerLinkActive="underline decoration-2 underline-offset-8"
             [routerLinkActiveOptions]="{ exact: true }"
             ariaCurrentWhenActive="page"

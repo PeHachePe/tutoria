@@ -1,0 +1,97 @@
+<main
+  id="contenido"
+  tabindex="-1"
+  class="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-8 outline-none"
+>
+  <mat-card appearance="outlined" class="w-full max-w-md">
+    <div class="flex flex-col gap-6 p-6 sm:p-8">
+      <header class="flex flex-col gap-1">
+        <p class="text-title-large font-bold text-primary">TutorIA</p>
+        <h1 class="text-headline-medium">Acceso</h1>
+        <p class="text-body-medium text-on-surface-variant">
+          Entra con la cuenta que te ha dado tu centro.
+        </p>
+      </header>
+
+      <form [formRoot]="loginForm" class="flex flex-col gap-1">
+        <mat-form-field>
+          <mat-label>Correo</mat-label>
+          <input matInput type="email" autocomplete="username" [formField]="loginForm.email" />
+          @if (loginForm.email().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Contraseña</mat-label>
+          <input
+            matInput
+            autocomplete="current-password"
+            [type]="passwordVisible() ? 'text' : 'password'"
+            [formField]="loginForm.password"
+          />
+          <button
+            matIconButton
+            matSuffix
+            type="button"
+            aria-label="Mostrar contraseña"
+            [attr.aria-pressed]="passwordVisible()"
+            (click)="togglePassword()"
+          >
+            <mat-icon>{{ passwordVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (loginForm.password().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        @if (loginForm().errors()[0]; as error) {
+          <p
+            role="alert"
+            class="mb-4 flex items-start gap-2 rounded-lg bg-error-container p-3 text-body-medium text-on-error-container"
+          >
+            <mat-icon>error</mat-icon>
+            <span>{{ error.message }}</span>
+          </p>
+        }
+
+        <button matButton="filled" type="submit" [disabled]="loginForm().submitting()">
+          {{ loginForm().submitting() ? 'Entrando…' : 'Entrar' }}
+        </button>
+      </form>
+
+      <p class="text-body-small text-on-surface-variant">
+        ¿No tienes cuenta o has olvidado la contraseña? Pídesela a tu docente.
+      </p>
+    </div>
+  </mat-card>
+
+  @if (demoAccounts.length > 0) {
+    <section
+      aria-labelledby="cuentas-demo"
+      data-dev-only
+      class="flex w-full max-w-md flex-col gap-2"
+    >
+      <div class="px-2">
+        <h2 id="cuentas-demo" class="text-title-small">Cuentas de demostración</h2>
+        <p class="text-body-small text-on-surface-variant">
+          Solo en desarrollo: entran con un clic con los datos simulados.
+        </p>
+      </div>
+      <mat-action-list>
+        @for (account of demoAccounts; track account.email) {
+          <button
+            mat-list-item
+            type="button"
+            [disabled]="loginForm().submitting()"
+            (click)="signInAs(account)"
+          >
+            <mat-icon matListItemIcon>{{ account.icon }}</mat-icon>
+            <span matListItemTitle>{{ account.label }}</span>
+            <span matListItemLine>{{ account.detail }}</span>
+          </button>
+        }
+      </mat-action-list>
+    </section>
+  }
+</main>

@@ -1,16 +1,26 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
+import { provideRouter, Router, TitleStrategy, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { screen } from '@testing-library/angular';
 
+import { adminRoutes } from './admin/admin.routes';
 import { routes } from './app.routes';
 import { provideSessionOf, restoreSession } from './auth/auth-testing';
+import { AppTitleStrategy } from './core/app-title-strategy';
+import { provideFormFieldDefaults } from './core/form-field-defaults';
+import { provideSpanishPaginator } from './core/spanish-paginator-intl';
 import type { Role } from './data/user';
+import { studentRoutes } from './student/student.routes';
+import { teacherRoutes } from './teacher/teacher.routes';
 
 describe('app routes', () => {
   async function visit(role: Role | null, url: string) {
     TestBed.configureTestingModule({
-      providers: [provideSessionOf(role), provideRouter(routes, withComponentInputBinding())],
+      providers: [
+        provideSessionOf(role),
+        provideRouter(routes, withComponentInputBinding()),
+        { provide: TitleStrategy, useExisting: AppTitleStrategy },
+      ],
     });
     await restoreSession();
     const harness = await RouterTestingHarness.create();
@@ -69,5 +79,22 @@ describe('app routes', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Página no encontrada' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Ir a mi inicio' }).getAttribute('href')).toBe('/');
     expect(document.title).toBe('Página no encontrada · TutorIA');
+  });
+
+  // The Material defaults live in each lazy area, not in app.config.ts, to keep them out of the
+  // initial bundle (D-021): an area that forgets them would show filled fields or English texts.
+  it.each([
+    ['student', studentRoutes],
+    ['teacher', teacherRoutes],
+    ['admin', adminRoutes],
+  ])('the %s area brings the outlined form fields', (_, areaRoutes) => {
+    expect(areaRoutes[0].providers).toContainEqual(provideFormFieldDefaults());
+  });
+
+  it.each([
+    ['teacher', teacherRoutes],
+    ['admin', adminRoutes],
+  ])('the %s area shows its paginators in Spanish', (_, areaRoutes) => {
+    expect(areaRoutes[0].providers).toContainEqual(provideSpanishPaginator());
   });
 });

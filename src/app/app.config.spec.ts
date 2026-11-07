@@ -1,8 +1,6 @@
 import { ApplicationInitStatus, DOCUMENT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
-import { MatPaginatorIntl } from '@angular/material/paginator';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { screen } from '@testing-library/angular';
@@ -14,7 +12,6 @@ import { AuthStore } from './auth/auth-store';
 import { DAW_STUDENT_IDS } from './data/mock/fixtures/users';
 import { MOCK_SESSION_STORAGE_KEY } from './data/mock/mock-db';
 import { MOCK_NETWORK_STORAGE_KEY } from './data/mock/mock-network';
-import { SpanishPaginatorIntl } from './core/spanish-paginator-intl';
 
 describe('appConfig', () => {
   beforeEach(() => {
@@ -60,13 +57,5 @@ describe('appConfig', () => {
 
   it('uses the self-hosted Material Symbols font for icons', () => {
     expect(TestBed.inject(MAT_ICON_DEFAULT_OPTIONS).fontSet).toBe('material-symbols-outlined');
-  });
-
-  it('shows Material paginators in Spanish', () => {
-    expect(TestBed.inject(MatPaginatorIntl)).toBeInstanceOf(SpanishPaginatorIntl);
-  });
-
-  it('draws form fields with the outline appearance', () => {
-    expect(TestBed.inject(MAT_FORM_FIELD_DEFAULT_OPTIONS).appearance).toBe('outline');
   });
 });

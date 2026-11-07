@@ -14,7 +14,7 @@ test.describe('sin sesión', () => {
     await expectNoAxeViolations(page);
 
     await page.goto('/docente/en-vivo');
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL('/login?redirect=%2Fdocente%2Fen-vivo');
   });
 });
 
@@ -77,7 +77,7 @@ test.describe('alumno', () => {
 
     await expect(page).toHaveURL('/login');
     await page.goto('/alumno');
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL('/login?redirect=%2Falumno');
   });
 });
 

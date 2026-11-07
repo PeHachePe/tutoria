@@ -1,4 +1,7 @@
-import { SpanishPaginatorIntl } from './spanish-paginator-intl';
+import { TestBed } from '@angular/core/testing';
+import { MatPaginatorIntl } from '@angular/material/paginator';
+
+import { provideSpanishPaginator, SpanishPaginatorIntl } from './spanish-paginator-intl';
 
 describe('SpanishPaginatorIntl', () => {
   const intl = new SpanishPaginatorIntl();
@@ -18,5 +21,11 @@ describe('SpanishPaginatorIntl', () => {
     [0, 5, 0, '0 de 0'],
   ])('describes page %i of size %i with %i items as "%s"', (page, size, length, label) => {
     expect(intl.getRangeLabel(page, size, length)).toBe(label);
+  });
+
+  it('replaces the English texts where it is provided', () => {
+    TestBed.configureTestingModule({ providers: [provideSpanishPaginator()] });
+
+    expect(TestBed.inject(MatPaginatorIntl)).toBeInstanceOf(SpanishPaginatorIntl);
   });
 });

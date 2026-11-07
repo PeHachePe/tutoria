@@ -1,5 +1,8 @@
 import { Routes } from '@angular/router';
 
+import { SEGMENTS } from '../core/app-paths';
+import { provideFormFieldDefaults } from '../core/form-field-defaults';
+import { provideSpanishPaginator } from '../core/spanish-paginator-intl';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
 
@@ -8,35 +11,37 @@ export const teacherRoutes: Routes = [
   {
     path: '',
     component: StaffLayout,
+    // Material defaults of the area, not in app.config.ts (D-021)
+    providers: [provideFormFieldDefaults(), provideSpanishPaginator()],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'en-vivo' },
+      { path: '', pathMatch: 'full', redirectTo: SEGMENTS.teacher.live },
       {
-        path: 'en-vivo',
-        title: 'Sesión en vivo · TutorIA',
+        path: SEGMENTS.teacher.live,
+        title: 'Sesión en vivo',
         component: PlaceholderPage,
         data: { heading: 'Sesión en vivo', step: '4.1' },
       },
       {
-        path: 'en-vivo/:attemptId',
-        title: 'Detalle del intento · TutorIA',
+        path: `${SEGMENTS.teacher.live}/:attemptId`,
+        title: 'Detalle del intento',
         component: PlaceholderPage,
         data: { heading: 'Detalle del intento', step: '4.2' },
       },
       {
-        path: 'historico',
-        title: 'Histórico · TutorIA',
+        path: SEGMENTS.teacher.history,
+        title: 'Histórico',
         component: PlaceholderPage,
         data: { heading: 'Histórico', step: '4.4' },
       },
       {
-        path: 'ejercicios',
-        title: 'Ejercicios · TutorIA',
+        path: SEGMENTS.teacher.exercises,
+        title: 'Ejercicios',
         component: PlaceholderPage,
         data: { heading: 'Ejercicios y asignaciones', step: '4.3' },
       },
       {
-        path: 'grupos',
-        title: 'Grupos · TutorIA',
+        path: SEGMENTS.teacher.groups,
+        title: 'Grupos',
         component: PlaceholderPage,
         data: { heading: 'Grupos y matrícula', step: '5.2' },
       },

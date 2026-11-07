@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 
+import { APP_PATHS } from '../core/app-paths';
+
 /**
  * Any address that does not exist, or that belongs to another role: the role guards do not match it
  * (2.2). "Ir a mi inicio" goes to `/`, which redirects to the home of the role or to the login.
@@ -20,8 +22,10 @@ import { RouterLink } from '@angular/router';
       <p class="text-body-large text-on-surface-variant">
         La dirección no existe o no tienes acceso a ella con tu cuenta.
       </p>
-      <a matButton="filled" routerLink="/">Ir a mi inicio</a>
+      <a matButton="filled" [routerLink]="home">Ir a mi inicio</a>
     </main>
   `,
 })
-export class NotFoundPage {}
+export class NotFoundPage {
+  protected readonly home = APP_PATHS.root;
+}

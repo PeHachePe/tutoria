@@ -45,8 +45,14 @@ describe('route guards', () => {
     expect(await navigateAs(null, '/')).toBe('/login');
   });
 
-  it('sends a protected page to the login without a session', async () => {
-    expect(await navigateAs(null, '/docente/en-vivo')).toBe('/login');
+  it('sends a protected page to the login without a session, to come back after signing in', async () => {
+    expect(await navigateAs(null, '/docente/en-vivo')).toBe('/login?redirect=%2Fdocente%2Fen-vivo');
+  });
+
+  it('keeps the query of the page asked for', async () => {
+    expect(await navigateAs(null, '/alumno?sesion=2')).toBe(
+      '/login?redirect=%2Falumno%3Fsesion%3D2',
+    );
   });
 
   it('lets each role into its own pages', async () => {

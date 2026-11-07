@@ -7,6 +7,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../auth/auth-store';
+import { APP_PATHS } from '../../core/app-paths';
 import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { NavLink } from '../nav-link';
 
@@ -55,6 +56,6 @@ export class UserMenu {
 
   protected async signOut(): Promise<void> {
     await this.auth.signOut();
-    await this.router.navigateByUrl('/login');
+    await this.router.navigateByUrl(APP_PATHS.login);
   }
 }

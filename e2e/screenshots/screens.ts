@@ -13,4 +13,4 @@ export interface Screen {
  * Screens with their step closed. Each screen step adds its entry when it closes, so the
  * screenshots of a delivery only show finished screens.
  */
-export const SCREENS: readonly Screen[] = [];
+export const SCREENS: readonly Screen[] = [{ code: '01-acceso', path: '/login', user: null }];

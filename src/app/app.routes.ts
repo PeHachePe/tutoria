@@ -4,6 +4,7 @@ import { environment } from '../environments/environment';
 import { guestGuard } from './auth/guest-guard';
 import { homeRedirect } from './auth/home-path';
 import { roleGuard } from './auth/role-guard';
+import { SEGMENTS } from './core/app-paths';
 
 /**
  * Each role has its own lazily loaded area (2.2). The role guards use `canMatch`: a page of another
@@ -12,30 +13,30 @@ import { roleGuard } from './auth/role-guard';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: homeRedirect },
   {
-    path: 'login',
-    title: 'Acceso · TutorIA',
+    path: SEGMENTS.login,
+    title: 'Acceso',
     canMatch: [guestGuard],
     loadComponent: () => import('./auth/login-page/login-page').then((m) => m.LoginPage),
   },
   {
-    path: 'alumno',
+    path: SEGMENTS.student.area,
     canMatch: [roleGuard('student')],
     loadChildren: () => import('./student/student.routes').then((m) => m.studentRoutes),
   },
   {
-    path: 'docente',
+    path: SEGMENTS.teacher.area,
     canMatch: [roleGuard('teacher', 'admin')],
     loadChildren: () => import('./teacher/teacher.routes').then((m) => m.teacherRoutes),
   },
   {
-    path: 'admin',
+    path: SEGMENTS.admin.area,
     canMatch: [roleGuard('admin')],
     loadChildren: () => import('./admin/admin.routes').then((m) => m.adminRoutes),
   },
   ...environment.devRoutes,
   {
     path: '**',
-    title: 'Página no encontrada · TutorIA',
+    title: 'Página no encontrada',
     loadComponent: () => import('./not-found/not-found-page').then((m) => m.NotFoundPage),
   },
 ];

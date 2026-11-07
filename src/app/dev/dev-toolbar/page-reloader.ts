@@ -1,5 +1,7 @@
 import { DOCUMENT, inject, Service } from '@angular/core';
 
+import { APP_PATHS } from '../../core/app-paths';
+
 /**
  * Loads the page again, so every screen reads the data again after a change of user or a reset.
  * A class of its own so the dev toolbar tests can replace it: jsdom cannot navigate.
@@ -18,6 +20,6 @@ export class PageReloader {
    * role may not have the current page.
    */
   openHome(): void {
-    this.location.assign('/');
+    this.location.assign(APP_PATHS.root);
   }
 }

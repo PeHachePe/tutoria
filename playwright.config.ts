@@ -11,6 +11,9 @@ export default defineConfig({
   testDir: 'e2e',
   // The development build is not minified and axe runs twice per check (light and dark)
   timeout: 60_000,
+  // Same reason: a lazy area served by the dev server to several parallel workers can take over
+  // the default 5 seconds the first time
+  expect: { timeout: 10_000 },
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 1 : 0,
@@ -18,6 +21,9 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     locale: 'es-ES',
+    // Without animations: a click on a Material panel that is still opening (a mat-select scrolling
+    // to its selected option) could land on another option. Material honours this preference.
+    contextOptions: { reducedMotion: 'reduce' },
     trace: 'retain-on-failure',
   },
   projects: [

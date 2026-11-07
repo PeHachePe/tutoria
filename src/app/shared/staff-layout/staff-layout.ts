@@ -10,6 +10,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
+import { APP_PATHS } from '../../core/app-paths';
 import type { NavLink } from '../nav-link';
 import { SkipLink } from '../skip-link/skip-link';
 import { UserMenu } from '../user-menu/user-menu';
@@ -22,18 +23,18 @@ interface NavSection {
 const TEACHING: NavSection = {
   label: 'Docencia',
   links: [
-    { path: '/docente/en-vivo', label: 'En vivo', icon: 'sensors' },
-    { path: '/docente/historico', label: 'Histórico', icon: 'insights' },
-    { path: '/docente/ejercicios', label: 'Ejercicios', icon: 'assignment' },
-    { path: '/docente/grupos', label: 'Grupos', icon: 'groups' },
+    { path: APP_PATHS.teacher.live, label: 'En vivo', icon: 'sensors' },
+    { path: APP_PATHS.teacher.history, label: 'Histórico', icon: 'insights' },
+    { path: APP_PATHS.teacher.exercises, label: 'Ejercicios', icon: 'assignment' },
+    { path: APP_PATHS.teacher.groups, label: 'Grupos', icon: 'groups' },
   ],
 };
 
 const ADMINISTRATION: NavSection = {
   label: 'Administración',
   links: [
-    { path: '/admin/usuarios', label: 'Usuarios', icon: 'manage_accounts' },
-    { path: '/admin/sistema', label: 'Sistema', icon: 'tune' },
+    { path: APP_PATHS.admin.users, label: 'Usuarios', icon: 'manage_accounts' },
+    { path: APP_PATHS.admin.system, label: 'Sistema', icon: 'tune' },
   ],
 };
 

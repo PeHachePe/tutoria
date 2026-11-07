@@ -1,0 +1,92 @@
+import { expect, test, type Page } from '@playwright/test';
+
+import { expectNoAxeViolations } from './support/axe';
+import { startAs } from './support/session';
+
+/** Test password of every seed user (data/mock/fixtures/users.ts). */
+const PASSWORD = 'tutoria';
+
+async function signIn(page: Page, email: string, password: string): Promise<void> {
+  await page.getByLabel('Correo').fill(email);
+  await page.getByLabel('Contraseña', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+}
+
+test.describe('acceso', () => {
+  test.beforeEach(async ({ page }) => {
+    await startAs(page, null);
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { level: 1, name: 'Acceso' })).toBeVisible();
+  });
+
+  for (const [role, email, home] of [
+    ['alumna', 'lucia.martin@tutoria.test', '/alumno'],
+    ['docente', 'marta.ibanez@tutoria.test', '/docente/en-vivo'],
+    ['administración', 'admin@tutoria.test', '/admin/usuarios'],
+  ] as const) {
+    test(`la cuenta de ${role} entra y llega a su inicio`, async ({ page }) => {
+      await signIn(page, email, PASSWORD);
+
+      await expect(page).toHaveURL(home);
+    });
+  }
+
+  test('sin datos no envía y dice qué falta en cada campo', async ({ page }) => {
+    await page.getByRole('button', { name: 'Entrar' }).click();
+
+    await expect(page.getByText('Introduce tu correo')).toBeVisible();
+    await expect(page.getByText('Introduce tu contraseña')).toBeVisible();
+    await expect(page.getByLabel('Correo')).toBeFocused();
+    await expectNoAxeViolations(page);
+  });
+
+  test('una contraseña incorrecta y una cuenta desactivada dan el mismo error', async ({
+    page,
+  }) => {
+    await signIn(page, 'lucia.martin@tutoria.test', 'otra');
+    await expect(page.getByRole('alert')).toHaveText(/Correo o contraseña incorrectos/);
+    await expectNoAxeViolations(page);
+
+    await page.getByLabel('Correo').fill('raul.medina@tutoria.test');
+    await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.getByRole('alert')).toHaveText(/Correo o contraseña incorrectos/);
+    await expect(page).toHaveURL('/login');
+  });
+
+  test('se usa con el teclado: Intro envía el formulario', async ({ page }) => {
+    await page.getByLabel('Correo').fill('lucia.martin@tutoria.test');
+    await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD);
+    await page.getByLabel('Contraseña', { exact: true }).press('Enter');
+
+    await expect(page).toHaveURL('/alumno');
+  });
+
+  test('las cuentas de demostración entran con un clic', async ({ page }) => {
+    await page.getByRole('button', { name: /Docente/ }).click();
+
+    await expect(page).toHaveURL('/docente/en-vivo');
+  });
+
+  test('pasa axe y no tiene scroll horizontal en móvil, tablet y escritorio', async ({ page }) => {
+    for (const width of [375, 768, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `scroll horizontal a ${width} px`).toBe(0);
+    }
+    await expectNoAxeViolations(page);
+  });
+});
+
+test('tras entrar, vuelve a la página que se pidió sin sesión', async ({ page }) => {
+  await startAs(page, null);
+  await page.goto('/docente/historico');
+  await expect(page).toHaveURL('/login?redirect=%2Fdocente%2Fhistorico');
+
+  await signIn(page, 'marta.ibanez@tutoria.test', PASSWORD);
+
+  await expect(page).toHaveURL('/docente/historico');
+  await expect(page.getByRole('heading', { level: 1, name: 'Histórico' })).toBeFocused();
+});

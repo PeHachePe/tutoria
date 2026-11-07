@@ -18,7 +18,7 @@ describe('devRoutes', () => {
     const page = await harness.navigateByUrl('/dev/ui', ShowcasePage);
 
     expect(page).toBeInstanceOf(ShowcasePage);
-    expect(document.title).toBe('Muestrario · TutorIA');
+    expect(document.title).toBe('Muestrario');
   });
 
   it('serves the mock data explorer at /dev/datos with its own title', async () => {
@@ -27,6 +27,6 @@ describe('devRoutes', () => {
     const page = await harness.navigateByUrl('/dev/datos', DataExplorerPage);
 
     expect(page).toBeInstanceOf(DataExplorerPage);
-    expect(document.title).toBe('Datos simulados · TutorIA');
+    expect(document.title).toBe('Datos simulados');
   });
 });

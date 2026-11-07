@@ -1,7 +1,7 @@
-import { Service } from '@angular/core';
+import { Provider, Service } from '@angular/core';
 import { MatPaginatorIntl } from '@angular/material/paginator';
 
-/** Spanish texts for every mat-paginator, provided in app.config.ts. */
+/** Spanish texts of mat-paginator, provided by the areas with tables (provideSpanishPaginator). */
 @Service({ autoProvided: false })
 export class SpanishPaginatorIntl extends MatPaginatorIntl {
   override itemsPerPageLabel = 'Elementos por página';
@@ -18,4 +18,13 @@ export class SpanishPaginatorIntl extends MatPaginatorIntl {
     const end = Math.min(start + pageSize, length);
     return `${start + 1} – ${end} de ${length}`;
   };
+}
+
+/**
+ * Provided in the routes of the areas with tables (teacher, admin and the showcase), not in
+ * app.config.ts: the paginator module pulls in select, form-field, tooltip and forms, and from
+ * app.config.ts they would all end up in the initial bundle (D-021).
+ */
+export function provideSpanishPaginator(): Provider {
+  return { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl };
 }

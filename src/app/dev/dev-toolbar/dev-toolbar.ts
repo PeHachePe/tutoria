@@ -12,10 +12,12 @@ import {
 } from '@angular/material/select';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
+import { provideFormFieldDefaults } from '../../core/form-field-defaults';
 import type { DataErrorKind } from '../../data/data-error';
 import { MockDb } from '../../data/mock/mock-db';
 import { DEFAULT_LATENCY, LatencyRange, MockNetwork } from '../../data/mock/mock-network';
 import type { AppUser } from '../../data/user';
+import { DEV_PATHS } from '../dev-paths';
 import { describeEvent } from './describe-event';
 import { PageReloader } from './page-reloader';
 
@@ -42,8 +44,8 @@ const FAILURE_OPTIONS: readonly { readonly kind: DataErrorKind; readonly label: 
 
 /** The development pages of dev.routes.ts: no screen of the app links to them. */
 const DEV_PAGES = [
-  { path: '/dev/ui', label: 'Muestrario' },
-  { path: '/dev/datos', label: 'Datos simulados' },
+  { path: DEV_PATHS.showcase, label: 'Muestrario' },
+  { path: DEV_PATHS.data, label: 'Datos simulados' },
 ] as const;
 
 const RECENT_EVENT_COUNT = 8;
@@ -74,6 +76,8 @@ const NONE = 'none';
     RouterLinkActive,
   ],
   templateUrl: './dev-toolbar.html',
+  // Drawn outside the routes, so it brings the defaults of its fields itself (D-021)
+  providers: [provideFormFieldDefaults()],
   host: { '(keydown.escape)': 'closeOnEscape()' },
 })
 export class DevToolbar {

@@ -61,8 +61,10 @@ async function capture(
   await page.goto(screen.path);
   await expect(page.locator('main h1')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
-  // The dev toolbar is not part of the app
-  await page.addStyleTag({ content: 'app-dev-toolbar { display: none !important; }' });
+  // The dev toolbar and the dev-only parts of a screen (the demo accounts of the login) are not part of the app
+  await page.addStyleTag({
+    content: 'app-dev-toolbar, [data-dev-only] { display: none !important; }',
+  });
   await page.screenshot({ path, fullPage: true, animations: 'disabled' });
 }
 
