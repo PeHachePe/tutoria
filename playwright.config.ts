@@ -1,24 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/** Its own port, so the e2e tests never reuse a `npm start` left open with other local data. */
+/** Its own port, so the e2e tests never reuse a `npm start` or `npm run serve:demo` left open. */
 const PORT = 4300;
 
 /**
- * End-to-end tests against the simulated data (`ng serve` with environment.development.ts), and the
- * screenshots of `npm run screenshots` (5.6), which reuse the same server and helpers.
+ * End-to-end tests and the screenshots of `npm run screenshots` (5.6) against the `demo` build:
+ * optimized like production and with the simulated data, served as static files (step 1.1e, D-025).
  */
 export default defineConfig({
   testDir: 'e2e',
-  // The development build is not minified and axe runs twice per check (light and dark)
-  timeout: 60_000,
-  // Same reason: a lazy area served by the dev server to several parallel workers can take over
-  // the default 5 seconds the first time
-  expect: { timeout: 10_000 },
   fullyParallel: true,
-  // Locally, at most 4 browsers: with the default (half the cores) axe on the unminified build
-  // saturates the machine and the heaviest tests go over the timeout, without finishing any
-  // sooner (step 1.1c). Step 1.1e serves an optimized build and revisits it.
-  workers: process.env['CI'] ? undefined : 4,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 1 : 0,
   reporter: process.env['CI'] ? [['list'], ['html', { open: 'never' }]] : 'list',
@@ -43,9 +34,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx ng serve --port ${PORT}`,
+    // Built on every run (a few seconds with the cache), and never an already running server, so
+    // the tests never see an old build
+    command: `npm run build:demo && npm run serve:demo -- ${PORT}`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env['CI'],
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 });

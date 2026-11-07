@@ -19,6 +19,32 @@ test.describe('acceso', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Acceso' })).toBeVisible();
   });
 
+  test('accesibilidad: pasa axe en cada estado de su ficha', async ({ page }) => {
+    // «Enviando» only disables the button and changes its text: axe exempts disabled controls
+    test.slow();
+    await expectNoAxeViolations(page, 'inicial');
+
+    // The theme and language menus are the shared ones of the bar: the shells test checks them
+    await page.getByRole('button', { name: 'Cuentas de demostración' }).click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await expectNoAxeViolations(page, 'menú de cuentas de demostración');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.getByText('Introduce tu correo')).toBeVisible();
+    await expectNoAxeViolations(page, 'errores de los campos');
+
+    await signIn(page, 'lucia.martin@tutoria.test', 'otra');
+    await expect(page.getByRole('alert')).toHaveText(/Correo o contraseña incorrectos/);
+    await expectNoAxeViolations(page, 'error del servidor');
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Acceso' })).toBeVisible();
+    await expectNoAxeViolations(page, 'móvil');
+  });
+
   for (const [role, email, home] of [
     ['alumna', 'lucia.martin@tutoria.test', '/alumno'],
     ['docente', 'marta.ibanez@tutoria.test', '/docente/en-vivo'],
@@ -37,7 +63,6 @@ test.describe('acceso', () => {
     await expect(page.getByText('Introduce tu correo')).toBeVisible();
     await expect(page.getByText('Introduce tu contraseña')).toBeVisible();
     await expect(page.getByLabel('Correo')).toBeFocused();
-    await expectNoAxeViolations(page);
   });
 
   test('una contraseña incorrecta y una cuenta desactivada dan el mismo error', async ({
@@ -45,7 +70,6 @@ test.describe('acceso', () => {
   }) => {
     await signIn(page, 'lucia.martin@tutoria.test', 'otra');
     await expect(page.getByRole('alert')).toHaveText(/Correo o contraseña incorrectos/);
-    await expectNoAxeViolations(page);
 
     await page.getByLabel('Correo').fill('raul.medina@tutoria.test');
     await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD);
@@ -65,16 +89,13 @@ test.describe('acceso', () => {
   test('las cuentas de demostración están en un menú y entran con un clic', async ({ page }) => {
     await page.getByRole('button', { name: 'Cuentas de demostración' }).click();
     await expect(page.getByRole('menuitem', { name: /Alumna/ })).toBeVisible();
-    await expectNoAxeViolations(page);
 
     await page.getByRole('menuitem', { name: /Docente/ }).click();
 
     await expect(page).toHaveURL('/docente/en-vivo');
   });
 
-  test('pasa axe y cabe en la pantalla sin scroll en móvil, tablet y escritorio', async ({
-    page,
-  }) => {
+  test('cabe en la pantalla sin scroll en móvil, tablet y escritorio', async ({ page }) => {
     for (const { width, height } of [
       { width: 375, height: 667 },
       { width: 768, height: 1024 },
@@ -90,7 +111,6 @@ test.describe('acceso', () => {
       });
       expect(overflow, `scroll a ${width}×${height} px`).toEqual({ x: 0, y: 0 });
     }
-    await expectNoAxeViolations(page);
   });
 });
 

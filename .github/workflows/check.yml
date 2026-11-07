@@ -27,4 +27,11 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npx playwright install --with-deps chromium
+      # Against the `demo` build, served as static files (step 1.1e, D-025)
       - run: npm run e2e
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

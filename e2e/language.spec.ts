@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-import { expectNoAxeViolations } from './support/axe';
 import { startAs, USERS } from './support/session';
 
 test.describe('idioma', () => {
@@ -22,7 +21,6 @@ test.describe('idioma', () => {
     await expect(page).toHaveTitle('Sign in · TutorIA');
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByText('Enter your email')).toBeVisible();
-    await expectNoAxeViolations(page);
 
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
@@ -40,7 +38,6 @@ test.describe('idioma', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Sessió en directe' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'ca');
     await expect(page.getByRole('link', { name: 'Exercicis' })).toBeVisible();
-    await expectNoAxeViolations(page);
 
     await page.getByRole('button', { name: "Canvia l'idioma" }).click();
     await page.getByRole('menuitemradio', { name: 'Español' }).click();

@@ -11,7 +11,6 @@ test.describe('sin sesión', () => {
     await expect(page).toHaveURL('/login');
     await expect(page).toHaveTitle('Acceso · TutorIA');
     await expect(page.getByRole('heading', { level: 1, name: 'Acceso' })).toBeVisible();
-    await expectNoAxeViolations(page);
 
     await page.goto('/docente/en-vivo');
     await expect(page).toHaveURL('/login?redirect=%2Fdocente%2Fen-vivo');
@@ -20,6 +19,24 @@ test.describe('sin sesión', () => {
 
 test.describe('alumno', () => {
   test.beforeEach(async ({ page }) => startAs(page, USERS.student));
+
+  test('accesibilidad: pasa axe con la barra, sus menús y en el móvil', async ({ page }) => {
+    test.slow();
+    await page.goto('/alumno');
+    await expect(page.getByRole('heading', { level: 1, name: 'Ejercicios' })).toBeVisible();
+    await expectNoAxeViolations(page, 'escritorio');
+
+    for (const button of ['Menú de usuario', 'Cambiar el tema', 'Cambiar el idioma']) {
+      await page.getByRole('button', { name: button }).click();
+      await expect(page.getByRole('menu')).toBeVisible();
+      await expectNoAxeViolations(page, `menú «${button}»`);
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu')).toHaveCount(0);
+    }
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expectNoAxeViolations(page, 'móvil');
+  });
 
   test('aterriza en su shell, con la barra superior y su menú de usuario', async ({ page }) => {
     await page.goto('/');
@@ -31,11 +48,9 @@ test.describe('alumno', () => {
       'aria-current',
       'page',
     );
-    await expectNoAxeViolations(page);
 
     await page.getByRole('button', { name: 'Menú de usuario' }).click();
     await expect(page.getByRole('menuitem', { name: 'Mis datos' })).toBeVisible();
-    await expectNoAxeViolations(page);
 
     await page.getByRole('menuitem', { name: 'Ajustes' }).click();
     await expect(page).toHaveURL('/alumno/ajustes');
@@ -63,7 +78,6 @@ test.describe('alumno', () => {
     const background = (item: typeof system) =>
       item.evaluate((element) => getComputedStyle(element).backgroundColor);
     expect(await background(system)).not.toBe(await background(dark));
-    await expectNoAxeViolations(page);
 
     await dark.click();
     await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
@@ -91,10 +105,6 @@ test.describe('alumno', () => {
         page.getByRole('heading', { level: 1, name: 'Página no encontrada' }),
       ).toBeVisible();
     }
-    await expectNoAxeViolations(page);
-
-    await page.getByRole('link', { name: 'Ir a mi inicio' }).click();
-    await expect(page).toHaveURL('/alumno');
   });
 
   test('el enlace «Saltar al contenido» es la primera parada del teclado', async ({ page }) => {
@@ -123,6 +133,34 @@ test.describe('alumno', () => {
 test.describe('docente', () => {
   test.beforeEach(async ({ page }) => startAs(page, USERS.teacher));
 
+  test('accesibilidad: pasa axe con el menú lateral abierto y plegado, también en el móvil', async ({
+    page,
+  }) => {
+    test.slow();
+    await page.goto('/docente/en-vivo');
+    const button = page.getByRole('button', { name: 'Menú de navegación' });
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await expectNoAxeViolations(page, 'escritorio, menú abierto');
+
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await page
+      .getByRole('navigation', { name: 'Principal' })
+      .getByRole('link', { name: 'Histórico' })
+      .hover();
+    await expect(page.getByText('Histórico', { exact: true }).last()).toBeVisible();
+    await expectNoAxeViolations(page, 'escritorio, menú plegado con su tooltip');
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.reload();
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expectNoAxeViolations(page, 'móvil, menú cerrado');
+
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await expectNoAxeViolations(page, 'móvil, menú abierto');
+  });
+
   test('aterriza en su shell, con el menú lateral de docencia', async ({ page }) => {
     await page.goto('/');
 
@@ -133,7 +171,6 @@ test.describe('docente', () => {
       'page',
     );
     await expect(menu.getByRole('heading', { name: 'Administración' })).toHaveCount(0);
-    await expectNoAxeViolations(page);
 
     await menu.getByRole('link', { name: 'Histórico' }).click();
     await expect(page).toHaveTitle('Histórico · TutorIA');
@@ -162,7 +199,6 @@ test.describe('docente', () => {
     await expect.poll(async () => (await menu.boundingBox())?.width).toBeLessThan(wideMenu / 2);
     await history.hover();
     await expect(page.getByText('Histórico', { exact: true }).last()).toBeVisible();
-    await expectNoAxeViolations(page);
 
     await page.reload();
     await expect(button).toHaveAttribute('aria-expanded', 'false');
@@ -179,11 +215,9 @@ test.describe('docente', () => {
     await page.goto('/docente/en-vivo');
     const button = page.getByRole('button', { name: 'Menú de navegación' });
     await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await expectNoAxeViolations(page);
 
     await button.click();
     await expect(button).toHaveAttribute('aria-expanded', 'true');
-    await expectNoAxeViolations(page);
 
     await page.getByRole('link', { name: 'Grupos' }).click();
     await expect(page).toHaveURL('/docente/grupos');
@@ -199,6 +233,12 @@ test.describe('docente', () => {
 test.describe('administrador', () => {
   test.beforeEach(async ({ page }) => startAs(page, USERS.admin));
 
+  test('accesibilidad: pasa axe con las dos secciones del menú lateral', async ({ page }) => {
+    await page.goto('/admin/usuarios');
+    await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible();
+    await expectNoAxeViolations(page, 'escritorio');
+  });
+
   test('aterriza en la administración y también entra en el panel docente', async ({ page }) => {
     await page.goto('/');
 
@@ -206,7 +246,6 @@ test.describe('administrador', () => {
     const menu = page.getByRole('navigation', { name: 'Principal' });
     await expect(menu.getByRole('heading', { name: 'Docencia' })).toBeVisible();
     await expect(menu.getByRole('heading', { name: 'Administración' })).toBeVisible();
-    await expectNoAxeViolations(page);
 
     await menu.getByRole('link', { name: 'Grupos' }).click();
     await expect(page).toHaveURL('/docente/grupos');

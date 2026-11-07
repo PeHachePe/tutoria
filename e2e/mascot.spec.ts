@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-import { expectNoAxeViolations } from './support/axe';
 import { startAs } from './support/session';
 
 // The mascot is decorative (aria-hidden), so the tests find it by its element and its parts by
@@ -22,8 +21,6 @@ test.describe('mascota', () => {
     await expect(section.getByTestId('mascot-bow-tie')).toHaveCount(2);
     await section.getByRole('switch', { name: 'Auriculares' }).click();
     await expect(section.getByTestId('mascot-headset')).toHaveCount(0);
-
-    await expectNoAxeViolations(page);
   });
 
   test('da la bienvenida en el acceso, oculta a los lectores de pantalla', async ({ page }) => {
