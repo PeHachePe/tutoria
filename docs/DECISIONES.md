@@ -433,3 +433,39 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian §4.1, §4.4 y §4.8 del plan y el paso 1.1. Cada pantalla nueva usa `APP_PATHS` en sus enlaces. Un área nueva tendrá que proveer sus valores por defecto de Material, y el test de rutas lo recuerda.
 
 **Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026). La redirección se propuso en el plan del paso y el autor la aprobó («adelante con todo»). Lo de las constantes lo pidió él.
+
+## D-022 · Mascota: paso 1.1b, colores propios, animaciones junto al componente y favicon (07/11/2026)
+
+**Contexto:** el autor quiere una mascota para TutorIA basada en su perra carlina. El diseño se iteró fuera del repositorio hasta el boceto v14, que aprobó: un SVG de 200 × 200 con sus animaciones CSS y un favicon simplificado. El plan no tenía ningún paso para la mascota, y las reglas del proyecto piden colores solo con tokens del tema, sin CSS por componente y con las animaciones en `src/styles.css` (§4.8). Durante el paso, el autor pidió que diera la bienvenida en el acceso, que reaccionara al ratón (moverse al pasar por encima, sacar la lengua al hacer clic, seguirlo con los ojos) y preguntó si su CSS estaría mejor cerca del componente.
+
+**Decisión:**
+
+- **Paso 1.1b, justo después del acceso** y antes del resto de la fase 1: no depende de nada y lo usan el acceso, el chat (1.7) y los ajustes (1.9). Así no se renumeran los pasos que ya se citan en otros documentos, y el orden del plan coincide con el del registro.
+- **Componente `<app-mascot>` en `shared/mascot/`:**
+  - SVG en línea, decorativo (`aria-hidden` en el host) y con el tamaño que le dé quien lo usa;
+  - estado con `mood` (`idle`, `chat`, `thinking`, `joy`) y accesorios con `headset` (activado) y `bowTie` (desactivado), para que los ajustes del alumno puedan cambiarlos (1.9);
+  - la plantilla va en `mascot.html` y no en línea: son unas 60 líneas de SVG, y así el lint de plantillas la revisa como a las demás;
+  - el patrón de cuadros de la pajarita lleva un `id` numerado por instancia, porque los `id` de un SVG en línea son globales a la página y dos mascotas chocarían;
+  - los accesorios desaparecen con `@if` en lugar de con opacidad: si no se llevan, no se pintan.
+- **Colores propios, no tokens del tema.** La mascota es una ilustración, como una foto: el pelo crema, la máscara negra y la lengua rosa son los de la perra y no cambian con el tema. Van como colores fijos en el SVG. En modo oscuro se comprobó que la cara clara la recorta bien del fondo, y no transmite información, así que no le aplica el contraste de texto de WCAG.
+- **Reacciones al puntero:**
+  - al pasar el ratón en reposo, un movimiento al azar (ladea la cabeza, salta o menea la oreja), nunca el mismo dos veces seguidas: `pickMovement()`, función pura con TDD;
+  - al hacer clic o tocarla, saca la lengua (salvo con el chat abierto, que ya la tiene fuera);
+  - los ojos siguen al ratón: `gazeOffset()` (TDD) desplaza iris, pupilas y brillos hasta 3,5 unidades del dibujo, más cuanto más lejos está el puntero;
+  - solo con ratón (`pointerType`): en una pantalla táctil, tocarla es un clic, y los ojos se quedarían mirando el último toque;
+  - cada reacción termina con su animación (`animationend`), que el componente reconoce por su nombre.
+- **Animaciones en un parcial global junto al componente.** `shared/mascot/mascot.css` lleva las clases y los `@keyframes`, y `src/styles.css` lo importa. Sigue siendo CSS global, sin estilos por componente, pero vive con lo que anima, como pide la guía de estilo de Angular. §4.8 lo admite desde ahora para las animaciones de una pieza concreta. Con `prefers-reduced-motion` no se anima nada salvo los ojos, que siguen lo que hace el usuario.
+- **Favicon:** `public/favicon.svg` con la cabeza simplificada y `public/favicon.ico` de respaldo (16, 32 y 48 px) en lugar del de Angular. El `.ico` lo genera `npm run favicon` (`scripts/generate-favicon.mjs`): dibuja el SVG con el Chromium que ya instala Playwright y mete los PNG en el `.ico`, sin dependencias nuevas. El `.ico` va enlazado con `sizes="32x32"` y antes del SVG, para que Chrome prefiera el SVG.
+
+**Alternativas:**
+
+- Renumerar del 1.7 al 1.10: rompía las referencias a esos pasos en el plan, las decisiones y la bitácora.
+- Colores con tokens del tema: la perra cambiaría de color con el tema o con la paleta.
+- Animaciones en `src/styles.css`: el fichero crecería con cada pieza animada, lejos de su componente.
+- Estilos encapsulados (`styleUrl`): rompen la regla del proyecto, y Angular renombra los `@keyframes` al encapsular, así que el componente no reconocería el final de cada reacción por su nombre.
+- Un PNG o un `.ico` generado con una librería de imágenes (sharp, png-to-ico): una dependencia más para algo que Playwright ya hace.
+- `apple-touch-icon.png`: iOS rellena de negro la transparencia y habría que elegir un fondo. Se deja para el paso de pulido, si el autor lo quiere.
+
+**Consecuencias:** cambian §4.1, §4.8 y la fase 1 del plan (paso 1.1b; los pasos 1.7 y 1.9 la citan). El acceso enseña la mascota (ficha `01-acceso`). Las piezas animadas que vengan, como las reacciones del 1.8, pueden llevar su parcial junto al componente.
+
+**Aprobación:** el autor aprobó el plan del paso («perfecto sigue con todo»). Durante el paso pidió la bienvenida en el acceso, las reacciones al ratón y los ojos que lo siguen, y preguntó por el sitio del CSS. El agente eligió el parcial junto al componente, por la delegación del autor en las decisiones técnicas.

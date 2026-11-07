@@ -16,6 +16,7 @@ Que cualquier usuario entre con su correo y su contraseña y llegue al inicio de
 
 - Una tarjeta centrada en la página, de ancho máximo ≈ 28 rem, igual en escritorio, tablet y móvil (a 375 px ocupa el ancho con el margen de 16 px).
 - Arriba, la marca «TutorIA», el `h1` «Acceso» y una línea: «Entra con la cuenta que te ha dado tu centro».
+- A la derecha de la cabecera, la mascota (`<app-mascot>`, paso 1.1b), que da la bienvenida con dos saltitos al abrir la página. Es decorativa (`aria-hidden`).
 - Campos «Correo» y «Contraseña», cada uno con su error debajo. La contraseña tiene un botón para mostrarla u ocultarla.
 - Error del servidor encima del botón, como error del formulario.
 - Botón «Entrar» a todo el ancho.
