@@ -40,6 +40,19 @@ describe('countTests', () => {
     assert.equal(countTests(source), 3);
   });
 
+  it('skips the groups and hooks of Playwright, which also hang from test', () => {
+    const source = `
+      test.describe('x', () => {
+        test.beforeEach(async () => {});
+        test.afterAll(async () => {});
+        test('a', async () => {});
+        test.only('b', async () => {});
+        test.fixme('c', async () => {});
+      });
+    `;
+    assert.equal(countTests(source), 3);
+  });
+
   it('does not count words that only end in it or test', () => {
     assert.equal(countTests('submit(); latest(); contest()'), 0);
   });

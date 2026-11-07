@@ -30,8 +30,10 @@ export function countLines(content) {
 
 /**
  * Counts the test cases of a spec file: calls to `it()` and `test()`, also with
- * modifiers such as `it.skip()`. Strings and comments are blanked out first, so
- * examples written inside them (as in the tests of this very counter) do not count.
+ * modifiers such as `it.skip()`, but not the groups and hooks that also hang from
+ * them in Playwright (`test.describe()`, `test.beforeEach()`…). Strings and comments
+ * are blanked out first, so examples written inside them (as in the tests of this
+ * very counter) do not count.
  *
  * @param {string} source
  */
@@ -40,5 +42,9 @@ export function countTests(source) {
     /\/\/.*$|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/gm,
     '""',
   );
-  return code.match(/(?<![\w.$])(?:it|test)(?:\.\w+)?\s*\(/g)?.length ?? 0;
+  return (
+    code.match(
+      /(?<![\w.$])(?:it|test)(?:\.(?:skip|only|todo|fixme|fail|failing|each|concurrent|sequential))?\s*\(/g,
+    )?.length ?? 0
+  );
 }
