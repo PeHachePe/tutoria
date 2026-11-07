@@ -806,7 +806,7 @@ Se rellena si se agota el tiempo.
 6. Pasa axe sin ninguna infracción, con todas sus reglas, en modo claro y oscuro. Durante el paso se comprueba en el navegador; los e2e (comportamiento y accesibilidad) no se escriben ni se ejecutan en los pasos: cada paso apunta los suyos en `docs/E2E-PENDIENTES.md` y se hacen en el cierre (7.1, D-026).
 7. Textos en español, marcados para traducir y traducidos al inglés y al catalán (D-023), y sin errores ni avisos en la consola.
 8. Su código tiene tests con una cobertura del 100 % (D-010) y `npm run check` está en verde.
-9. La bitácora del paso y `REGISTRO.md` están actualizados y, si hubo alguna decisión, también `DECISIONES.md`.
+9. La bitácora del paso y `REGISTRO.md` están actualizados y, si hubo alguna decisión, también `DECISIONES.md`. Todo lo que quede por hacer va a `docs/PENDIENTES.md`: lo aplazado o a medias, las consecuencias de una decisión para pasos futuros, las ideas que no se hacen en el momento y lo aceptado «por ahora» (los e2e, a `docs/E2E-PENDIENTES.md`).
 
 ### 5.5 MCP y herramientas del agente
 
@@ -1345,6 +1345,7 @@ Commit: `feat: on-device tutor`.
 
 **7.4 · Versión 1.0**
 
+- `docs/PENDIENTES.md` y `docs/E2E-PENDIENTES.md`, vacíos: todo lo aplazado está hecho.
 - e2e finales de los flujos de alumno, docente y administrador.
 - README con la instalación en local y el despliegue.
 - Despliegue final y cuenta de administración para el tribunal.
