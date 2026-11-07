@@ -528,3 +528,25 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** la barra de los shells tiene tres botones a la derecha, como el acceso. Un e2e comprueba que no se desborda a 320 px. Cambian el paso 1.1d y §4.1 del plan, y la nota del 1.1c.
 
 **Aprobación:** el autor eligió quitar los submenús y preguntó si tenía sentido separar idioma y tema; el agente propuso los dos en la barra y lo aplicó. Lo demás lo decidió el agente por delegación del autor.
+
+## D-025 · e2e contra el build `demo` servido como estáticos y axe más rápido (07/11/2026)
+
+**Contexto:** los e2e corrían contra `ng serve`, sin minificar: la suite tardaba unos 2,5–3 min con 4 navegadores como máximo y plazos de 60 s. Al medirlo en el paso 1.1e se vio que lo más lento no era el build sino axe: `@axe-core/playwright` abre una página en blanco en cada llamada para juntar los resultados, y cada pasada tardaba de 3 a 6 s aunque la página tuviera 41 elementos.
+
+**Decisión:**
+
+- **Build `demo`** (`npm run build:demo`): optimizada, con los presupuestos de producción y con `environment.development.ts` (datos simulados, cuentas de demostración, barra de desarrollo y `/dev/ui`). Sale a `dist/demo` y la publicará el 1.10.
+- **Servidor propio** (`npm run serve:demo`, `scripts/serve-demo.mjs`), en Node y sin dependencias: sirve los ficheros del build, `index.html` para las rutas de la app y un 404 para un fichero que falta, y nunca sale de su carpeta. Playwright compila y sirve en cada ejecución (unos 4 s con la caché) y no reutiliza un servidor ya abierto, para no probar nunca un build viejo.
+- **axe en modo legacy** (`setLegacyMode(true)`): corre dentro de la página, sin la página en blanco, y cada pasada baja a ~1 s. Solo renuncia a los iframes de otro origen, que la app no tiene.
+- **Un test de accesibilidad por pantalla** (acceso, 404, shells y muestrario), que recorre sus estados: axe completo en claro y solo `color-contrast` en oscuro, que es lo único que cambia el tema (~0,2 s). Los tests de comportamiento no pasan axe. Los menús compartidos de tema e idioma se comprueban una vez, en los shells, y los estados efímeros (el aviso de 4 s; «Entrando…», cuyo botón deshabilitado exime axe) no se comprueban. Como encadenan varias pasadas, llevan `test.slow()`.
+- Se quitan el máximo de 4 navegadores y los plazos de 60 s y 10 s: vuelven los de Playwright.
+
+**Alternativas descartadas:**
+
+- **`ng serve` con la configuración optimizada:** sigue siendo el servidor de desarrollo, no lo que se publica.
+- **Un paquete como `serve` o `http-server`:** una dependencia más para 40 líneas.
+- **Axe completo en todos los tests y en los dos modos:** duplica el tiempo sin encontrar en oscuro nada más que el contraste.
+
+**Consecuencias:** la suite pasa de 2,5 min con 31 tests a 1,6 min con 38. El CI hace lo mismo y sube el informe de Playwright si falla. Cambia la nota del 1.1c sobre el límite de navegadores.
+
+**Aprobación:** el autor aprobó el plan del paso y exigió que los e2e y los pasos fueran más rápidos; el modo legacy y el recorte de estados salieron de esa petición.
