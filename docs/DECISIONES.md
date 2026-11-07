@@ -395,3 +395,41 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** el CI instala Chromium y ejecuta `npm run e2e` después de `npm run check`. Cada paso de pantalla añade su e2e con axe y su entrada en `screens.ts`.
 
 **Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026).
+
+## D-021 · Acceso, rutas centralizadas y valores por defecto de Material por área (07/11/2026)
+
+**Contexto:** el paso 1.1 construye la pantalla de acceso. El plan pide accesos rápidos con las cuentas de demostración «en desarrollo», pero no dice cómo evitar que lleguen a producción. Durante el paso, el autor pidió además evitar cadenas y números mágicos, y reutilizar las rutas. Al medir el build de producción, el JavaScript inicial había pasado de 475 kB a 620 kB.
+
+**Decisión:**
+
+- **Volver a la página pedida tras entrar.** Sin sesión, `roleGuard` manda a `/login?redirect=<página>`, y el acceso vuelve ahí al entrar. Como cualquiera puede escribir esa URL, `afterSignInPath()` solo acepta rutas de la propia app (`/…`): ni otro origen (`//host`, `/\host`, `https:`) ni el propio acceso. Si no hay redirección, o no es válida, va a `/`, que lleva al inicio del rol (D-019).
+- **Mensajes de error del acceso** (`signInErrorMessage()`): la contraseña incorrecta, la cuenta desactivada y el correo desconocido dan el mismo mensaje, para no revelar qué cuentas existen. La red caída y el exceso de intentos tienen el suyo.
+- **Cuentas de demostración por token:**
+  - `DEMO_ACCOUNTS` (`auth/demo-accounts.ts`) vale `[]` si nadie lo provee;
+  - `provideDemoAccounts()` (`dev/`) lo llena con una cuenta por rol y la desactivada, y solo lo registra `environment.development.ts`;
+  - el entorno local de Supabase (fase 2) podrá reutilizarlo, porque el seed es el mismo;
+  - el build de producción no contiene ni las cuentas ni la contraseña de prueba (comprobado);
+  - las partes de una pantalla que solo existen en desarrollo llevan `data-dev-only`, y las capturas las ocultan.
+- **Rutas escritas una sola vez:**
+  - `core/app-paths.ts` define `SEGMENTS` (para las configuraciones de rutas) y `APP_PATHS` (rutas absolutas para enlaces, redirecciones y guards; las que llevan un id son funciones);
+  - las páginas de desarrollo tienen las suyas en `dev/dev-paths.ts`, para que producción no las lleve;
+  - los tests siguen escribiendo las URL tal cual, porque son parte del producto (marcadores, enlaces compartidos) y así detectan un cambio accidental.
+- **Títulos de pestaña:** `AppTitleStrategy` (`core/`) añade « · TutorIA» al `title` de cada ruta, en lugar de repetirlo en 16 rutas.
+- **Valores por defecto de Material en cada área, no en `app.config.ts`.**
+  - El paginador en español (`MatPaginatorIntl`) y los campos con contorno (`MAT_FORM_FIELD_DEFAULT_OPTIONS`) se importaban en `app.config.ts`. Mientras ninguna pantalla usaba campos, esbuild descartaba el resto de esos módulos. Con el acceso usándolos, se quedaban enteros en el JavaScript inicial: form-field, Signal Forms, select, tooltip y overlay.
+  - Ahora cada área perezosa los provee en su ruta (`provideFormFieldDefaults()` en todas; `provideSpanishPaginator()` en las que tendrán tablas), y el acceso y la barra de desarrollo en el propio componente.
+  - Un test de `app.routes.spec.ts` comprueba que ningún área los olvide.
+  - Resultado: el JavaScript inicial pasa de 620 kB a 345 kB (de 145 kB a 90 kB comprimido), muy por debajo del presupuesto de 500 kB.
+- **e2e:**
+  - se ejecutan con `prefers-reduced-motion: reduce`, que Material respeta: un clic en un `mat-select` que aún se abría cayó una vez en otra opción;
+  - `expect` espera hasta 10 s, porque un área perezosa servida por el servidor de desarrollo a varios workers puede pasar de los 5 s por defecto.
+
+**Alternativas:**
+
+- Escribir las cuentas de demostración en la plantilla con `isDevMode()`: llegarían al build de producción.
+- `input()` con alias `REDIRECT_PARAM`: Angular solo acepta un literal como alias, así que el input se llama `redirect`, con un comentario que lo enlaza a la constante, y el e2e de la redirección comprueba que coinciden.
+- Subir el presupuesto del bundle a 650 kB: aceptaba descargar 275 kB de más en cada visita.
+
+**Consecuencias:** cambian §4.1, §4.4 y §4.8 del plan y el paso 1.1. Cada pantalla nueva usa `APP_PATHS` en sus enlaces. Un área nueva tendrá que proveer sus valores por defecto de Material, y el test de rutas lo recuerda.
+
+**Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026). La redirección se propuso en el plan del paso y el autor la aprobó («adelante con todo»). Lo de las constantes lo pidió él.

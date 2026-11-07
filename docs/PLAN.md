@@ -391,7 +391,8 @@ src/app/
   teacher/            # teacher.routes.ts, live/, history/, exercises/, groups/
   admin/              # admin.routes.ts, users/, system/
   not-found/          # not-found-page.ts: the 404, also for the pages of another role
-  core/               # app-wide services without a screen: theme-service.ts, heading-focus.ts, error handler, event-logger.ts
+  core/               # app-wide pieces without a screen: app-paths.ts, app-title-strategy.ts, theme-service.ts, heading-focus.ts,
+                      # form-field-defaults.ts, spanish-paginator-intl.ts, error handler, event-logger.ts
   data/
     user.ts  exercise.ts  attempt.ts  process-event.ts  tutor.ts  ai-provider-setting.ts   # data types, one file per concept
     *-service.ts      # data services as abstract classes: exercise-service.ts, attempt-service.ts...
@@ -516,6 +517,8 @@ export const environment = {
 // app.config.ts
 providers: [...environment.dataProviders, ...environment.devProviders /* , ... */],
 ```
+
+`app.config.ts` no importa módulos de Material que usen solo algunas pantallas: los valores por defecto de los campos y el paginador en español los provee cada área perezosa en su ruta, para que no entren en el JavaScript inicial (D-021).
 
 `provideDevToolbar()` registra el componente de la barra en el token `DEV_TOOLBAR` (`core/dev-toolbar-token.ts`), y `App` lo pinta con `NgComponentOutlet` solo si existe. Así producción no importa nada de `dev/` ni de `data/mock/` (D-014, D-018).
 
@@ -707,6 +710,7 @@ Los bloques de plantilla de este documento van marcados como `angular`, no como 
   - accesibilidad: el esqueleto lleva `aria-hidden`, la zona que carga, `aria-busy`, y un texto «Cargando…» para el lector de pantalla; el pulso respeta `prefers-reduced-motion`.
 - **Cobertura del 100 % en la app Angular** (D-010): todo `src/**/*.ts` tiene tests (sentencias, ramas, funciones y líneas), salvo `src/main.ts`, `src/environments/` y los propios tests. Lo que depende de algo externo (Supabase, CodeMirror, Web Speech, la Prompt API) se aísla en una clase pequeña y se prueba con un doble; solo una línea imposible de ejecutar en un test lleva `/* v8 ignore next */`, con un comentario que lo justifique y una nota en la bitácora. No se aplica a los scripts auxiliares (`scripts/`, `.claude/hooks/`), a las Edge Functions ni a SQL, que llevan los tests que indica su paso.
 - **Tests:** se buscan los elementos como lo haría el usuario, por rol, etiqueta o texto (`getByRole('button', { name: 'Entregar' })`). Así también comprueban que cada control tiene un nombre accesible. `data-testid` solo donde no hay forma accesible (el overlay de reacciones, las barras de la gráfica), y nunca clases de Material.
+- **Sin valores mágicos:** lo que se repite o no se explica solo va en una constante con nombre. Las rutas se escriben una vez en `core/app-paths.ts` (`SEGMENTS` para las rutas, `APP_PATHS` para enlaces y redirecciones), y el sufijo « · TutorIA» de los títulos lo pone `AppTitleStrategy` (D-021).
 - Nada sensible en el cliente: el cliente nunca es confiable.
 
 ---
@@ -984,7 +988,8 @@ Commit: `chore: foundations`.
 **1.1 · Acceso (≈2 h)** · ficha `01-acceso`
 
 - Signal Forms (4.6) con errores bajo cada campo, «Entrando…» mientras se envía y el error del servidor como error del formulario.
-- En desarrollo, accesos rápidos con las cuentas de demostración.
+- En desarrollo, accesos rápidos con las cuentas de demostración, que llegan por el token `DEMO_ACCOUNTS` y solo provee el entorno de desarrollo (D-021).
+- Tras entrar, vuelve a la página que se pidió sin sesión (`?redirect=`, solo rutas de la app) o al inicio del rol.
 
 🧪 Component test de las validaciones y test del `AuthStore`.
 
