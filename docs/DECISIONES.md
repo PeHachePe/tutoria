@@ -470,3 +470,36 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian §4.1, §4.8 y la fase 1 del plan (paso 1.1b; los pasos 1.7 y 1.9 la citan). El acceso enseña la mascota (ficha `01-acceso`). Las piezas animadas que vengan, como las reacciones del 1.8, pueden llevar su parcial junto al componente.
 
 **Aprobación:** el autor aprobó el plan del paso («perfecto sigue con todo»). Durante el paso pidió la bienvenida en el acceso, las reacciones al ratón y los ojos que lo siguen, y preguntó por el sitio del CSS. El agente eligió el parcial junto al componente, por la delegación del autor en las decisiones técnicas.
+
+## D-023 · Multiidioma con el i18n nativo de Angular: un solo build y las traducciones cargadas al arrancar (07/11/2026)
+
+**Contexto:** el autor pidió que la aplicación estuviera en español, inglés y catalán, con el español por defecto (paso 1.1c). El plan decía «un build por idioma», que es la forma principal de `@angular/localize`. Pero `ng serve` solo sirve un idioma a la vez, los e2e corren sobre `ng serve` y el despliegue en Vercel necesitaría redirecciones por idioma. El autor dejó la elección técnica y el idioma de origen en manos del agente.
+
+**Decisión:**
+
+- **`@angular/localize`, sin librerías:** marcas `i18n` en las plantillas y `$localize` en el código, con **IDs propios legibles** (`@@login.submit`, `@@route.live.title`). Así los ficheros de traducción no cambian cuando se retoca un texto en español y se leen sin la plantilla al lado.
+- **El español es el idioma de origen** (`sourceLocale: es`): es el idioma en el que el autor escribe las fichas y los textos, el de la memoria y el del público principal. Del español al catalán se traduce mejor que pasando por el inglés, y los tests siguen buscando los elementos por su texto en español. El inglés de origen solo compensaría con traductores profesionales que trabajen desde él.
+- **Un solo build que carga las traducciones antes de arrancar** (`loadTranslations()`, API pública de `@angular/localize`):
+  - `core/locale.ts` decide el idioma: el elegido en el menú (`localStorage`); si no hay, el primero de los del navegador que la app habla (`ca-ES` → catalán); si no, español;
+  - `core/load-locale.ts` descarga la traducción y los datos de formato del idioma, cada idioma en su propio chunk diferido (el español no descarga nada), y fija `$localize.locale`, del que Angular toma `LOCALE_ID`, y el `lang` de `<html>`. Si la descarga falla, arranca en español en lugar de no arrancar;
+  - `main.ts` importa la app solo después: las etiquetas de los menús y los títulos de las rutas llaman a `$localize` al evaluarse su módulo;
+  - cambiar de idioma guarda la elección y recarga la página (`LanguageService`), igual en `npm start`, en los e2e, en el build `demo` y en Vercel.
+- **Selector de idioma** (`shared/language-menu/`) junto al del tema en las páginas sin menú de usuario (el acceso), y un submenú «Idioma» en el menú de usuario, porque se cambia poco y alargaría el menú al doble. Cada idioma aparece en su propia lengua y con su `lang`, para que el lector de pantalla lo pronuncie bien (WCAG 3.1.2).
+- **Material sigue al idioma:** `LocalizedPaginatorIntl` (antes `SpanishPaginatorIntl`) con `$localize`. El `DateAdapter` toma `LOCALE_ID` por sí solo; cuando lleguen el datepicker u otros componentes con textos propios, sus `*Intl` se localizan igual.
+- **Ningún texto sin marcar ni sin traducir:**
+  - la regla `@angular-eslint/template/i18n` en el lint exige que cada texto y atributo visible de una plantilla lleve `i18n` con ID propio (ignora los iconos y los atributos técnicos);
+  - `npm run i18n` extrae los mensajes a `src/locale/messages.json` y comprueba que `messages.en.json` y `messages.ca.json` los tienen todos, sin sobrantes y con los mismos marcadores (`{$start}`). `npm run check` lo ejecuta con `--check`, que además falla si `messages.json` no está al día;
+  - los textos del código (`$localize`) no los puede vigilar el lint: se revisan a mano.
+- **Lo que no se traduce:** las herramientas de desarrollo (barra, muestrario y `/dev/datos`), que nunca llegan a un build de producción (D-014), ni los datos (nombres de personas y grupos). Las etiquetas de las cuentas de demostración sí se traducen, porque salen en el acceso (lo pidió el autor). La marca «TutorIA» va en la constante `APP_NAME`.
+- **Cobertura:** por cada marca `i18n`, el compilador de Angular escribe una rama para Google Closure Compiler que el build reduce a `if (false)` y nunca se ejecuta. Se excluye de la cobertura con `coverage.ignoreNode` en `vitest-base.config.mts` (`runnerConfig` de `angular.json`): es código generado que no depende de nosotros (D-010), y nuestro código no puede tener un `if (false)` porque lo prohíbe el lint.
+
+**Alternativas:**
+
+- **Un build por idioma** (lo que decía el plan): el selector no funcionaría en `npm start`, el e2e del cambio de idioma tendría que esperar al 1.1e y Vercel necesitaría redirecciones. Pasar a él más adelante es sencillo: las marcas y los ficheros son los mismos; se quita la carga de `main.ts`, se añaden los `locales` y `localize` en `angular.json`, el selector navega a `/en/` en lugar de recargar y el despliegue lleva sus redirecciones.
+- **Una librería de traducción en tiempo de ejecución** (Transloco, ngx-translate): permite cambiar sin recargar, pero es una dependencia más, con su propia sintaxis, y deja fuera la extracción de Angular. Cambiar de idioma es raro y recargar es aceptable.
+- **Inglés como idioma de origen:** obligaba a reescribir todos los textos y los tests, y a traducir del inglés al catalán.
+- **Traducir también las herramientas de desarrollo:** unos cien textos que ningún usuario verá.
+
+**Consecuencias:** cada pantalla nueva nace marcada y con sus traducciones en inglés y catalán, o `npm run check` falla; la definición de terminado (§5.4) lo recoge. Cambian el paso 1.1c, §4.1, §4.8 y §5.4 del plan. El arranque hace una espera más en inglés y catalán (un chunk pequeño). El e2e en local usa como máximo 4 navegadores (`playwright.config.ts`): con los 7 por defecto, axe sobre el build sin minificar saturaba el equipo y los tests más pesados pasaban de 60 s. El 1.1e lo revisará con el build `demo`.
+
+**Aprobación:** el autor delegó en el agente la forma de cargar los idiomas y el idioma de origen («la forma que ves mejor», «como veas tú que sería lo mejor o lo más correcto»).

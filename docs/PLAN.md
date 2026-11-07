@@ -392,7 +392,8 @@ src/app/
   admin/              # admin.routes.ts, users/, system/
   not-found/          # not-found-page.ts: the 404, also for the pages of another role
   core/               # app-wide pieces without a screen: app-paths.ts, app-title-strategy.ts, theme-service.ts, heading-focus.ts,
-                      # form-field-defaults.ts, spanish-paginator-intl.ts, error handler, event-logger.ts
+                      # form-field-defaults.ts, localized-paginator-intl.ts, page-reloader.ts, error handler, event-logger.ts,
+                      # locale.ts, load-locale.ts, language-service.ts (languages of the interface, D-023)
   data/
     user.ts  exercise.ts  attempt.ts  process-event.ts  tutor.ts  ai-provider-setting.ts   # data types, one file per concept
     *-service.ts      # data services as abstract classes: exercise-service.ts, attempt-service.ts...
@@ -401,7 +402,7 @@ src/app/
   shared/             # used by more than one feature, one folder or file per concept
     status-chip/  difficulty-chip/  skeleton/  empty-state/  page-header/
     staff-layout/  user-menu/  skip-link/  placeholder-page/   # shells shared by roles (D-019)
-    mascot/  theme-menu/   # the mascot (1.1b) and the theme button of the pages without a user menu
+    theme-menu/  language-menu/   # theme and language buttons of the pages without a user menu (1.1, 1.1c)
     mascot/           # the TutorIA pug: inline SVG with its moods, accessories and animations (mascot.css) (1.1b)
     is-stuck.ts  create-debouncer.ts  nav-link.ts
   dev/                # dev toolbar, /dev/ui showcase and /dev/datos data explorer (development builds only)
@@ -689,6 +690,7 @@ Los bloques de plantilla de este documento van marcados como `angular`, no como 
 ### 4.8 Reglas transversales
 
 - En inglés, todo lo que es código: identificadores, comentarios, nombres de ficheros, carpetas y scripts de npm, y commits. En español, los textos de la interfaz y la documentación de `docs/`.
+- **Multiidioma (D-023):** todo texto de la interfaz se escribe en español y se marca para traducir: `i18n="@@area.name"` en las plantillas y `` $localize`:@@area.name:Texto` `` en el código, siempre con ID propio. Cada texto nuevo lleva su traducción en `src/locale/messages.en.json` y `messages.ca.json`; `npm run i18n` extrae los mensajes y dice cuáles faltan, y `npm run check` falla si queda alguno sin marcar (lint) o sin traducir.
 - Signals primero: `computed()` y `linkedSignal()` para derivar; `effect()` solo en la frontera con APIs imperativas (CodeMirror, Web Speech, Realtime), con un comentario que lo justifique. Nada de `ngOnInit` ni otros hooks de ciclo de vida; para las librerías que tocan el DOM, `afterNextRender` y `DestroyRef`. RxJS, solo si una API ya es Observable y no hay alternativa sencilla.
 - **Buenas prácticas de Angular 22:** las del `CLAUDE.md` que genera `ng new`, las de `get_best_practices` y la guía de estilo oficial. Prevalecen sobre este plan (principio 5), así que aquí solo se añade lo propio del proyecto. `ng lint` hace cumplir las que se pueden comprobar: signals en lugar de decoradores antiguos, `host` en lugar de `@HostBinding`/`@HostListener`, `@Service()`, `NgOptimizedImage`, `class`/`style` en lugar de `ngClass`/`ngStyle`, rutas relativas con `./`, sin `OnPush` explícito y solo APIs estables (`eslint.config.js`).
 - **Accesibilidad:** cada pantalla pasa axe sin ninguna infracción y cumple los mínimos de WCAG AA (foco, contraste y ARIA), como exige el `CLAUDE.md` de Angular (5.4).
@@ -801,7 +803,7 @@ Se rellena si se agota el tiempo.
 4. Se usa entera con teclado, el foco es visible y los diálogos atrapan el foco; el orden de tabulación es lógico. Al llegar a la pantalla, el foco va a su encabezado principal y la pestaña del navegador muestra su título.
 5. Tiene contraste AA en modo claro y oscuro y respeta `prefers-reduced-motion`.
 6. Pasa axe sin ninguna infracción, con todas sus reglas, en modo claro y oscuro. Lo comprueba su test de accesibilidad e2e con `@axe-core/playwright`, que recorre los estados de su ficha (desde el 1.1e: axe completo en claro y solo contraste en oscuro).
-7. Textos en español y sin errores ni avisos en la consola.
+7. Textos en español, marcados para traducir y traducidos al inglés y al catalán (D-023), y sin errores ni avisos en la consola.
 8. Su código tiene tests con una cobertura del 100 % (D-010) y `npm run check` está en verde.
 9. La bitácora del paso y `REGISTRO.md` están actualizados y, si hubo alguna decisión, también `DECISIONES.md`.
 
@@ -1012,11 +1014,12 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 **1.1c · Multiidioma (≈2 h)** · a petición del autor
 
-- `@angular/localize` (el i18n nativo de Angular, sin librerías): marcas `i18n` en las plantillas y `$localize` en el código, con el español como idioma de origen y un segundo idioma (inglés) para comprobarlo.
-- Un build por idioma y selector de idioma junto al de tema; los textos de Material (paginador…) siguen al idioma.
-- Se hace antes del catálogo para que cada pantalla nueva nazca ya marcada; las existentes (acceso, shells, 404, muestrario) se marcan en este paso.
+- `@angular/localize` (el i18n nativo de Angular, sin librerías): marcas `i18n` en las plantillas y `$localize` en el código, con IDs propios. El español es el idioma de origen y por defecto; inglés y catalán, las traducciones (`src/locale/`).
+- Un solo build que carga la traducción antes de arrancar y recarga al cambiar de idioma, en lugar de un build por idioma (D-023): así funciona en `npm start` y en los e2e. Primera visita en el idioma del navegador si la app lo habla.
+- Selector de idioma junto al de tema en el acceso y submenú «Idioma» en el menú de usuario; los textos de Material (paginador…) siguen al idioma.
+- Se hace antes del catálogo para que cada pantalla nueva nazca ya marcada; las existentes (acceso, shells, 404) se marcan en este paso. Las herramientas de desarrollo no se traducen (D-023).
 
-🧪 Extracción de mensajes sin textos sin marcar; e2e del cambio de idioma.
+🧪 Elección del idioma y carga de la traducción con TDD; regla de lint sin textos sin marcar y `npm run i18n` (en `check`) sin mensajes sin traducir; e2e del cambio de idioma en el acceso y en el menú de usuario.
 
 **1.1d · Pulido de los shells (≈2 h)** · a petición del autor
 
