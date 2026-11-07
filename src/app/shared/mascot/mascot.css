@@ -1,7 +1,17 @@
-/* Animations of the TutorIA mascot (step 1.1b, D-022): global CSS, imported from src/styles.css
-   and kept next to its component. Resting, it blinks, twitches an ear and lets the tip of its
-   tongue peek out; each mood and each reaction adds its class on <app-mascot>. The coordinates
-   are those of the drawing (viewBox 0 0 200 200). */
+/* Animations and cursor of the TutorIA mascot (step 1.1b, D-022): global CSS, imported from
+   src/styles.css and kept next to its component. Resting, it blinks, twitches an ear and lets the
+   tip of its tongue peek out; each mood and each reaction adds its class on <app-mascot>. The
+   coordinates are those of the drawing (viewBox 0 0 200 200). */
+
+/* Over the mascot the pointer becomes a little bone, which also hints that it can be clicked
+   (it licks). The hotspot is the upper knob; browsers that cannot show it use the hand. */
+.mascot {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath transform='rotate(45 16 16)' d='M11.43 13.7H20.57A3.6 3.6 0 1 1 25.18 16A3.6 3.6 0 1 1 20.57 18.3H11.43A3.6 3.6 0 1 1 6.82 16A3.6 3.6 0 1 1 11.43 13.7Z' fill='%23FFF8EC' stroke='%235B4B45' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+      7 7,
+    pointer;
+}
+
 .mascot-eyes {
   transform-box: fill-box;
   transform-origin: center;

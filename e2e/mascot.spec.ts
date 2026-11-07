@@ -34,6 +34,15 @@ test.describe('mascota', () => {
     await expect(mascot).toHaveAttribute('aria-hidden', 'true');
   });
 
+  test('el puntero se convierte en un hueso al pasar por encima', async ({ page }) => {
+    await page.goto('/login');
+
+    const cursor = await page
+      .locator('app-mascot')
+      .evaluate((host) => getComputedStyle(host).cursor);
+    expect(cursor).toMatch(/^url\("data:image\/svg\+xml,.+"\) 7 7, pointer$/);
+  });
+
   test('es el favicon, en SVG y con un .ico de respaldo', async ({ page, request }) => {
     await page.goto('/login');
     await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute(
