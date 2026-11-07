@@ -92,11 +92,14 @@
 
   <section aria-labelledby="pieces-title" class="flex flex-col gap-3">
     <h2 id="pieces-title" class="text-title-large">Piezas propias con Tailwind</h2>
-    <ul class="flex flex-wrap gap-2" aria-label="Chips de estado">
-      @for (chip of statusChips; track chip.label) {
-        <li class="rounded-full px-3 py-1 text-label-large" [class]="chip.classes">
-          {{ chip.label }}
-        </li>
+    <ul class="flex flex-wrap gap-2" aria-label="Estados del intento">
+      @for (status of statuses; track status) {
+        <li><app-status-chip [status]="status" /></li>
+      }
+    </ul>
+    <ul class="flex flex-wrap gap-2" aria-label="Dificultades">
+      @for (difficulty of difficulties; track difficulty) {
+        <li><app-difficulty-chip [difficulty]="difficulty" /></li>
       }
     </ul>
 
@@ -108,16 +111,8 @@
           Vectores · acumulador · 1 pista usada (nivel 1)
         </p>
       </div>
-      <span
-        class="rounded-full bg-warning-container px-3 py-1 text-label-large text-on-warning-container"
-      >
-        Media
-      </span>
-      <span
-        class="rounded-full bg-info-container px-3 py-1 text-label-large text-on-info-container"
-      >
-        En curso
-      </span>
+      <app-difficulty-chip difficulty="medium" />
+      <app-status-chip status="in_progress" />
       <button matButton="filled">Continuar</button>
     </article>
 

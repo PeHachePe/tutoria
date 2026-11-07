@@ -26,6 +26,10 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 
 import { ThemeMode, ThemeService } from '../../core/theme-service';
+import type { AttemptStatus } from '../../data/attempt';
+import type { Difficulty } from '../../data/exercise';
+import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
+import { StatusChip } from '../../shared/status-chip/status-chip';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
 import { ShowcaseTable } from './showcase-table';
@@ -59,6 +63,8 @@ import { ShowcaseTable } from './showcase-table';
     MatProgressSpinner,
     ShowcaseForm,
     ShowcaseTable,
+    StatusChip,
+    DifficultyChip,
   ],
   templateUrl: './showcase-page.html',
 })
@@ -104,14 +110,18 @@ export class ShowcasePage {
     { name: 'eyebrow', classes: 'eyebrow' },
   ];
 
-  protected readonly statusChips = [
-    { label: 'Inicial', classes: 'bg-info-container text-on-info-container' },
-    { label: 'Media', classes: 'bg-warning-container text-on-warning-container' },
-    { label: 'Avanzada', classes: 'bg-error-container text-on-error-container' },
-    { label: 'Superado', classes: 'bg-success-container text-on-success-container' },
-    { label: 'En curso', classes: 'bg-info-container text-on-info-container' },
-    { label: 'Atascado', classes: 'bg-warning-container text-on-warning-container' },
-    { label: 'Pendiente', classes: 'bg-surface-container-high text-on-surface-variant' },
+  protected readonly statuses: readonly AttemptStatus[] = [
+    'not_started',
+    'in_progress',
+    'tests_failed',
+    'passed',
+    'submitted',
+  ];
+  protected readonly difficulties: readonly Difficulty[] = [
+    'initial',
+    'medium',
+    'advanced',
+    'extension',
   ];
 
   protected readonly dialogResult = signal<string | undefined>(undefined);

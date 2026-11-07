@@ -1,20 +1,31 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { form, FormField, readonly } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import {
+  MatExpansionPanel,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle,
+} from '@angular/material/expansion';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatTooltip } from '@angular/material/tooltip';
 
 import type { Attempt, AttemptStatus } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import { AuthService } from '../../data/auth-service';
-import type { Difficulty, Exercise } from '../../data/exercise';
+import type { Exercise } from '../../data/exercise';
 import { ExerciseService } from '../../data/exercise-service';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockNetwork } from '../../data/mock/mock-network';
 import type { AppUser, Role } from '../../data/user';
+import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
+import { splitInlineCode } from '../../shared/split-inline-code';
+import { StatusChip } from '../../shared/status-chip/status-chip';
 import { errorMessage } from './error-message';
+import { formatCall, formatValue, isMultilineText } from './format-value';
 import { simulateRun } from './simulate-run';
 
 interface ExerciseEntry {
@@ -25,20 +36,11 @@ interface ExerciseEntry {
   readonly status: AttemptStatus | null;
 }
 
-const STATUS_LABELS: Record<AttemptStatus, string> = {
-  not_started: 'Sin empezar',
-  in_progress: 'En curso',
-  tests_failed: 'Con fallos',
-  passed: 'Superado',
-  submitted: 'Entregado',
-};
-
-const DIFFICULTY_LABELS: Record<Difficulty, string> = {
-  initial: 'Inicial',
-  medium: 'Media',
-  advanced: 'Avanzada',
-  extension: 'Ampliación',
-};
+interface EntryGroup {
+  /** «Sesión N», or null for the teacher's bank, which has no sessions. */
+  readonly label: string | null;
+  readonly entries: ExerciseEntry[];
+}
 
 const ROLE_LABELS: Record<Role, string> = {
   student: 'alumnado',
@@ -48,13 +50,29 @@ const ROLE_LABELS: Record<Role, string> = {
 
 /**
  * Development-only page (/dev/datos) to try the data services by hand: what each user sees, an
- * exercise with its visible tests, and an attempt with its transitions (2.4). It goes through the
- * abstract services, except for two aids that only exist with mock data: the simulated run (until the
- * code runner of step 1.5) and the list of exercises a student was not assigned.
+ * exercise with its examples, and an attempt with its transitions (2.4). It goes through the abstract
+ * services, except for two aids that only exist with mock data: the simulated run (until the code
+ * runner of step 1.5) and the list of exercises a student was not assigned.
  */
 @Component({
   selector: 'app-data-explorer-page',
-  imports: [DatePipe, FormField, MatButton, MatFormField, MatLabel, MatInput, MatProgressBar],
+  imports: [
+    DatePipe,
+    FormField,
+    MatButton,
+    MatIconButton,
+    MatExpansionPanel,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle,
+    MatFormField,
+    MatLabel,
+    MatIcon,
+    MatInput,
+    MatProgressBar,
+    MatTooltip,
+    StatusChip,
+    DifficultyChip,
+  ],
   templateUrl: './data-explorer-page.html',
 })
 export class DataExplorerPage {
@@ -64,10 +82,12 @@ export class DataExplorerPage {
   private readonly db = inject(MockDb);
   private readonly network = inject(MockNetwork);
 
-  protected readonly statusLabels = STATUS_LABELS;
-  protected readonly difficultyLabels = DIFFICULTY_LABELS;
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly errorMessage = errorMessage;
+  protected readonly formatCall = formatCall;
+  protected readonly formatValue = formatValue;
+  protected readonly isMultilineText = isMultilineText;
+  protected readonly splitInlineCode = splitInlineCode;
 
   protected readonly user = resource({ loader: () => this.auth.currentUser() });
 
@@ -77,11 +97,29 @@ export class DataExplorerPage {
     defaultValue: [],
   });
 
+  /** The entries grouped by session, in order; the bank goes in a single group without a label. */
+  protected readonly groups = computed(() => {
+    const groups: EntryGroup[] = [];
+    for (const entry of this.entries.value()) {
+      const label = entry.session === null ? null : `Sesión ${entry.session}`;
+      const last = groups.at(-1);
+      if (last && last.label === label) {
+        last.entries.push(entry);
+      } else {
+        groups.push({ label, entries: [entry] });
+      }
+    }
+    return groups;
+  });
+
   /** Exercises of the bank outside the list: a student can try them and meet the access rule. */
   protected readonly unassigned = computed(() => {
     const listed = new Set(this.entries.value().map((entry) => entry.exercise.id));
     return this.db.tables().exercises.filter((exercise) => !listed.has(exercise.id));
   });
+
+  /** The list can be folded away to give the exercise the whole width. */
+  protected readonly listOpen = signal(true);
 
   protected readonly selectedId = signal<string | undefined>(undefined);
 
@@ -99,6 +137,10 @@ export class DataExplorerPage {
   protected readonly codeForm = form(this.code, (path) => {
     readonly(path, () => this.attemptState()?.status === 'submitted');
   });
+
+  protected toggleList(): void {
+    this.listOpen.update((open) => !open);
+  }
 
   protected select(exerciseId: string): void {
     this.selectedId.set(exerciseId);
@@ -124,15 +166,6 @@ export class DataExplorerPage {
 
   protected runSimulated(attempt: Attempt, passed: boolean): Promise<unknown> {
     return this.perform(() => this.network.request(() => simulateRun(this.db, attempt.id, passed)));
-  }
-
-  /** A test call as the student would write it: `suma([1,2,3])`. */
-  protected call(functionName: string, input: readonly unknown[]): string {
-    return `${functionName}(${input.map((arg) => JSON.stringify(arg)).join(', ')})`;
-  }
-
-  protected json(value: unknown): string {
-    return JSON.stringify(value);
   }
 
   private async loadEntries(user: AppUser): Promise<ExerciseEntry[]> {

@@ -50,7 +50,7 @@ describe('MockAttemptService', () => {
   }
 
   describe('openOrCreate', () => {
-    it('creates an attempt in progress, linked to the assignment, with a starter comment', async () => {
+    it('creates an empty attempt in progress, linked to the assignment', async () => {
       const attempt = await service.openOrCreate(exerciseId(3));
 
       expect(attempt).toEqual({
@@ -58,7 +58,7 @@ describe('MockAttemptService', () => {
         exerciseId: exerciseId(3),
         userId: STUDENT,
         assignmentId: assignmentId(DAW_GROUP_ID, 3),
-        currentCode: '// Escribe aquí la función suma\n',
+        currentCode: '',
         finalCode: null,
         status: 'in_progress',
         startedAt: NOW,

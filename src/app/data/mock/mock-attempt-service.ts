@@ -17,7 +17,7 @@ export class MockAttemptService extends AttemptService {
     return this.network.request(() => {
       const user = this.db.requireUser();
       const tables = this.db.tables();
-      const exercise = findRow(tables.exercises, exerciseId);
+      findRow(tables.exercises, exerciseId);
       const existing = tables.attempts
         .filter((attempt) => attempt.userId === user.id && attempt.exerciseId === exerciseId)
         .at(-1);
@@ -37,7 +37,8 @@ export class MockAttemptService extends AttemptService {
         exerciseId,
         userId: user.id,
         assignmentId: assignment?.id ?? null,
-        currentCode: `// Escribe aquí la función ${exercise.functionName}\n`,
+        // Empty: the editor shows how to start as a placeholder, so there is nothing to delete.
+        currentCode: '',
         finalCode: null,
         status: 'in_progress',
         startedAt: createdAt,
