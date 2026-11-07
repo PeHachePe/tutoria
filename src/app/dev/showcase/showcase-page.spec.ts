@@ -8,7 +8,9 @@ import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing'
 import { MatDialogHarness } from '@angular/material/dialog/testing';
 import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
+import { provideRouter } from '@angular/router';
 
+import { provideSessionOf } from '../../auth/auth-testing';
 import { ThemeService } from '../../core/theme-service';
 import { ShowcasePage } from './showcase-page';
 
@@ -20,7 +22,11 @@ describe('ShowcasePage', () => {
   beforeEach(async () => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [{ provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } }],
+      providers: [
+        { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
+        provideSessionOf(null),
+        provideRouter([]),
+      ],
     });
     fixture = TestBed.createComponent(ShowcasePage);
     loader = TestbedHarnessEnvironment.loader(fixture);
@@ -58,6 +64,14 @@ describe('ShowcasePage', () => {
     expect(element.querySelector('button[aria-label="Cambiar el idioma"]')).toBeTruthy();
   });
 
+  it('shows the brand of the shells in its bar', () => {
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('header a app-mascot')?.parentElement?.textContent).toContain(
+      'TutorIA',
+    );
+  });
+
   it('switches the colour mode from the toggle group', async () => {
     const root = TestBed.inject(DOCUMENT).documentElement;
     const dark = await loader.getHarness(MatButtonToggleHarness.with({ text: /Oscuro/ }));
@@ -71,9 +85,11 @@ describe('ShowcasePage', () => {
 
   it('shows the mascot in each mood and with each accessory', async () => {
     const element = fixture.nativeElement as HTMLElement;
-    const mascots = () => [...element.querySelectorAll('app-mascot')];
+    // Only those of its section: the brand of the bar has another one
+    const section = element.querySelector('[aria-labelledby="mascot-title"]') as HTMLElement;
+    const mascots = () => [...section.querySelectorAll('app-mascot')];
     // The mascot is decorative (aria-hidden), so its accessories are found by data-testid (4.8)
-    const count = (testId: string) => element.querySelectorAll(`[data-testid="${testId}"]`).length;
+    const count = (testId: string) => section.querySelectorAll(`[data-testid="${testId}"]`).length;
 
     expect(mascots()).toHaveLength(2);
     expect(count('mascot-headset')).toBe(2);

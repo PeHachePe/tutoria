@@ -25,6 +25,8 @@ describe('LanguageMenu', () => {
     const catalan = screen.getByRole('menuitemradio', { name: /Català/ });
     expect(spanish.ariaChecked).toBe('true');
     expect(catalan.ariaChecked).toBe('false');
+    expect(spanish.textContent).toContain('check');
+    expect(catalan.textContent).not.toContain('check');
     expect(catalan.getAttribute('lang')).toBe('ca');
     expect(screen.getByRole('menuitemradio', { name: /English/ }).getAttribute('lang')).toBe('en');
   });

@@ -8,9 +8,10 @@ import { LanguageService } from '../../core/language-service';
 import { AppLocale, LANGUAGE_OPTIONS } from '../../core/locale';
 
 /**
- * Language of the interface for the pages without a user menu, such as the login: an icon button
- * that opens the languages, each written in its own language and with its `lang`, so a screen
- * reader pronounces it right (WCAG 3.1.2). Choosing one loads the page again in it (D-023).
+ * Language of the interface, in the bar of the login and of the shells: an icon button that opens
+ * the languages, the current one highlighted and checked (theme.scss). Each is written in its own
+ * language and with its `lang`, so a screen reader pronounces it right (WCAG 3.1.2). Choosing one
+ * loads the page again in it (D-023).
  */
 @Component({
   selector: 'app-language-menu',
@@ -37,8 +38,13 @@ import { AppLocale, LANGUAGE_OPTIONS } from '../../core/locale';
           [attr.aria-checked]="locale === option.locale"
           (click)="setLocale(option.locale)"
         >
-          <mat-icon>{{ locale === option.locale ? 'check' : 'language' }}</mat-icon>
-          <span>{{ option.label }}</span>
+          <mat-icon>language</mat-icon>
+          <span class="flex w-full items-center justify-between gap-4">
+            {{ option.label }}
+            @if (locale === option.locale) {
+              <mat-icon>check</mat-icon>
+            }
+          </span>
         </button>
       }
     </mat-menu>

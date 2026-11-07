@@ -144,6 +144,34 @@ body {
   letter-spacing: var(--mat-sys-body-medium-tracking);
 }
 
+// Menus of choices (theme and language): the current option stands out by its colour and weight,
+// besides its check, so it is seen at a glance (step 1.1d).
+.mat-mdc-menu-item[aria-checked='true'] {
+  background-color: var(--mat-sys-secondary-container);
+  @include mat.menu-overrides(
+    (
+      item-label-text-color: var(--mat-sys-on-secondary-container),
+      item-icon-color: var(--mat-sys-on-secondary-container),
+      item-label-text-weight: 700,
+    )
+  );
+}
+
+// Staff shell: the items of the side menu keep a margin from its edges, as in Material's navigation
+// drawer (a `px-*` utility would lose against the padding of the list). Folded to its icons on wide
+// screens (step 1.1d), it is a rail: 80px wide, with each 56px item and its icon centred.
+.app-side-menu .mat-mdc-nav-list {
+  padding-inline: 12px;
+}
+
+.app-side-menu-rail {
+  @include mat.sidenav-overrides(
+    (
+      container-width: 5rem,
+    )
+  );
+}
+
 // The side menu moves the focus to the current page when it opens (staff-layout). Its focus shade
 // only helps keyboard users: after a tap or a click it would just darken the highlighted item.
 .mat-mdc-nav-list .mdc-list-item:focus:not(:focus-visible) {

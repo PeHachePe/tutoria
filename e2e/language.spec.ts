@@ -28,14 +28,13 @@ test.describe('idioma', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
   });
 
-  test('dentro de la app se cambia desde el menú de usuario, también al catalán y de vuelta', async ({
+  test('dentro de la app se cambia desde el botón de la barra, también al catalán y de vuelta', async ({
     page,
   }) => {
     await startAs(page, USERS.teacher);
     await page.goto('/docente/en-vivo');
 
-    await page.getByRole('button', { name: 'Menú de usuario' }).click();
-    await page.getByRole('menuitem', { name: 'Idioma' }).click();
+    await page.getByRole('button', { name: 'Cambiar el idioma' }).click();
     await page.getByRole('menuitemradio', { name: 'Català' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: 'Sessió en directe' })).toBeVisible();
@@ -43,8 +42,7 @@ test.describe('idioma', () => {
     await expect(page.getByRole('link', { name: 'Exercicis' })).toBeVisible();
     await expectNoAxeViolations(page);
 
-    await page.getByRole('button', { name: "Menú d'usuari" }).click();
-    await page.getByRole('menuitem', { name: 'Idioma' }).click();
+    await page.getByRole('button', { name: "Canvia l'idioma" }).click();
     await page.getByRole('menuitemradio', { name: 'Español' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: 'Sesión en vivo' })).toBeVisible();

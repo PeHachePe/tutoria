@@ -48,6 +48,7 @@
     "placeholder.text": " Esta pantalla se construye en el paso {$INTERPOLATION}. ",
     "skipLink": " Saltar al contenido ",
     "staff.menuButton": "Menú de navegación",
+    "staff.menuTooltip": "Menú de navegación",
     "nav.main": "Principal",
     "staff.teaching": "Docencia",
     "nav.live": "En vivo",

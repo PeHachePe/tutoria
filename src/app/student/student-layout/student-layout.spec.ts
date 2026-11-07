@@ -39,6 +39,8 @@ describe('StudentLayout', () => {
     expect(within(nav).getByRole('link', { name: 'Ejercicios' }).ariaCurrent).toBe('page');
     expect(within(screen.getByRole('main')).getByRole('heading', { name: 'Página' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Saltar al contenido' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cambiar el tema' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cambiar el idioma' })).toBeTruthy();
   });
 
   it('does not mark Ejercicios on the other pages of the area', async () => {

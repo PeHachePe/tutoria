@@ -23,6 +23,13 @@ describe('ThemeMenu', () => {
       'true',
     );
     expect(screen.getByRole('menuitemradio', { name: /Tema oscuro/ }).ariaChecked).toBe('false');
+    // Each option keeps its icon; the current one also has a check at the end
+    expect(screen.getByRole('menuitemradio', { name: /Tema del sistema/ }).textContent).toMatch(
+      /contrast.*check/,
+    );
+    expect(screen.getByRole('menuitemradio', { name: /Tema oscuro/ }).textContent).not.toContain(
+      'check',
+    );
   });
 
   it('changes the mode and shows its icon on the button', async () => {

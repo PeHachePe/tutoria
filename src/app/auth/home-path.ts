@@ -16,8 +16,10 @@ export function homePath(role: Role): string {
   return HOME_PATHS[role];
 }
 
-/** `redirectTo` of the root: the home of the signed-in role, or the login without a session. */
-export const homeRedirect: RedirectFunction = () => {
-  const role = inject(AuthStore).role();
+/** The home of the signed-in role, or the login without a session (the root and the brand). */
+export function homeOrLogin(role: Role | undefined): string {
   return role ? homePath(role) : APP_PATHS.login;
-};
+}
+
+/** `redirectTo` of the root: the home of the signed-in role, or the login without a session. */
+export const homeRedirect: RedirectFunction = () => homeOrLogin(inject(AuthStore).role());

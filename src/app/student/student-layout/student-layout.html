@@ -2,9 +2,7 @@
 
 <header>
   <mat-toolbar class="gap-2">
-    <a [routerLink]="catalogPath" class="rounded-md px-1 text-title-large font-bold">{{
-      appName
-    }}</a>
+    <app-brand />
     <nav aria-label="Principal" i18n-aria-label="@@nav.main" class="flex-1">
       <ul class="flex">
         <li>
@@ -21,10 +19,16 @@
         </li>
       </ul>
     </nav>
+    <app-theme-menu />
+    <app-language-menu />
     <app-user-menu [links]="accountLinks" />
   </mat-toolbar>
 </header>
 
-<main id="contenido" tabindex="-1" class="mx-auto w-full max-w-6xl px-4 py-6 outline-none sm:px-6">
+<main
+  id="contenido"
+  tabindex="-1"
+  class="mx-auto w-full max-w-6xl px-4 py-6 routed-pages outline-none sm:px-6"
+>
   <router-outlet />
 </main>

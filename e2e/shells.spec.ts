@@ -42,6 +42,45 @@ test.describe('alumno', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Ajustes' })).toBeFocused();
   });
 
+  test('la marca de la barra lleva a su inicio', async ({ page }) => {
+    await page.goto('/alumno/ajustes');
+
+    await page.getByRole('link', { name: 'TutorIA' }).click();
+
+    await expect(page).toHaveURL('/alumno');
+    await expect(page.getByRole('heading', { level: 1, name: 'Ejercicios' })).toBeFocused();
+  });
+
+  test('el tema y el idioma están en la barra, con el tema activo resaltado', async ({ page }) => {
+    await page.goto('/alumno');
+    await expect(page.getByRole('button', { name: 'Cambiar el idioma' })).toBeVisible();
+    const themeButton = page.getByRole('button', { name: 'Cambiar el tema' });
+
+    await themeButton.click();
+    const system = page.getByRole('menuitemradio', { name: 'Tema del sistema' });
+    const dark = page.getByRole('menuitemradio', { name: 'Tema oscuro' });
+    await expect(system).toHaveAttribute('aria-checked', 'true');
+    const background = (item: typeof system) =>
+      item.evaluate((element) => getComputedStyle(element).backgroundColor);
+    expect(await background(system)).not.toBe(await background(dark));
+    await expectNoAxeViolations(page);
+
+    await dark.click();
+    await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+    await expect(themeButton).toContainText('dark_mode');
+  });
+
+  test('en el móvil, la barra cabe sin desbordar', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto('/alumno');
+    await expect(page.getByRole('button', { name: 'Menú de usuario' })).toBeInViewport();
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(0);
+  });
+
   test('no puede entrar en el panel docente ni en la administración', async ({ page }) => {
     for (const url of ['/docente/en-vivo', '/admin/usuarios']) {
       await page.goto(url);
@@ -110,6 +149,31 @@ test.describe('docente', () => {
     }
   });
 
+  test('en escritorio, el menú lateral se pliega a sus iconos y lo recuerda', async ({ page }) => {
+    await page.goto('/docente/en-vivo');
+    const button = page.getByRole('button', { name: 'Menú de navegación' });
+    const menu = page.getByRole('navigation', { name: 'Principal' });
+    const history = menu.getByRole('link', { name: 'Histórico' });
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    const wideMenu = (await menu.boundingBox())?.width ?? 0;
+
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expect.poll(async () => (await menu.boundingBox())?.width).toBeLessThan(wideMenu / 2);
+    await history.hover();
+    await expect(page.getByText('Histórico', { exact: true }).last()).toBeVisible();
+    await expectNoAxeViolations(page);
+
+    await page.reload();
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await history.click();
+    await expect(page).toHaveURL('/docente/historico');
+    await expect(page.getByRole('heading', { level: 1, name: 'Histórico' })).toBeFocused();
+
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+  });
+
   test('en el móvil, el menú lateral se pliega y se abre con un botón', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/docente/en-vivo');
@@ -123,6 +187,11 @@ test.describe('docente', () => {
 
     await page.getByRole('link', { name: 'Grupos' }).click();
     await expect(page).toHaveURL('/docente/grupos');
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Escape');
     await expect(button).toHaveAttribute('aria-expanded', 'false');
   });
 });

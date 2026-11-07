@@ -124,6 +124,26 @@
   }
 }
 
+/* Transitions between screens (step 1.1d, D-024): each new page fades in when the router inserts it
+   into the <main> of a shell (`routed-pages`); the bars and the side menu stay still. Only the
+   opacity: a page host may be an inline element, which `translate` would not move. Without the
+   animation for whoever asks for less motion. */
+.routed-pages > :not(router-outlet) {
+  animation: page-in 200ms ease-out both;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .routed-pages > :not(router-outlet) {
+    animation: none;
+  }
+}
+
 /* Section overline used above panels ("CATÁLOGO DE EJERCICIOS") */
 @utility eyebrow {
   font-size: var(--mat-sys-label-small-size);

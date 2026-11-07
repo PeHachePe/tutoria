@@ -78,6 +78,7 @@ module.exports = defineConfig([
             'd',
             'data-testid',
             'matButton',
+            'matTooltipPosition',
             'mode',
             'mood',
             'patternUnits',

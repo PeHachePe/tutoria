@@ -9,8 +9,9 @@ import { THEME_OPTIONS, ThemeMode, ThemeService } from '../../core/theme-service
 const ICON_BY_MODE = new Map(THEME_OPTIONS.map((option) => [option.mode, option.icon]));
 
 /**
- * Light, dark or system mode for the pages without a user menu, such as the login: an icon button
- * that shows the current mode and opens a menu with the three options, the current one checked.
+ * Light, dark or system mode, in the bar of the login and of the shells: an icon button that shows
+ * the current mode and opens a menu with the three options, the current one highlighted and checked
+ * (theme.scss).
  */
 @Component({
   selector: 'app-theme-menu',
@@ -36,8 +37,13 @@ const ICON_BY_MODE = new Map(THEME_OPTIONS.map((option) => [option.mode, option.
           [attr.aria-checked]="mode() === option.mode"
           (click)="setMode(option.mode)"
         >
-          <mat-icon>{{ mode() === option.mode ? 'check' : option.icon }}</mat-icon>
-          <span>{{ option.label }}</span>
+          <mat-icon>{{ option.icon }}</mat-icon>
+          <span class="flex w-full items-center justify-between gap-4">
+            {{ option.label }}
+            @if (mode() === option.mode) {
+              <mat-icon>check</mat-icon>
+            }
+          </span>
         </button>
       }
     </mat-menu>

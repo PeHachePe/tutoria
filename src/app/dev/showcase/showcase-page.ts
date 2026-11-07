@@ -29,6 +29,7 @@ import { firstValueFrom } from 'rxjs';
 import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import type { Difficulty } from '../../data/exercise';
+import { Brand } from '../../shared/brand/brand';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
 import { Mascot, MascotMood } from '../../shared/mascot/mascot';
@@ -69,6 +70,7 @@ import { ShowcaseTable } from './showcase-table';
     ShowcaseTable,
     StatusChip,
     DifficultyChip,
+    Brand,
     LanguageMenu,
     Mascot,
   ],

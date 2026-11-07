@@ -3,37 +3,53 @@
 <div class="flex h-dvh flex-col">
   <header>
     <mat-toolbar class="gap-2">
-      @if (!wide()) {
-        <button
-          matIconButton
-          type="button"
-          aria-label="Menú de navegación"
-          i18n-aria-label="@@staff.menuButton"
-          aria-controls="menu-principal"
-          [attr.aria-expanded]="sidenav.opened"
-          (click)="toggleMenu()"
+      <button
+        matIconButton
+        type="button"
+        aria-label="Menú de navegación"
+        i18n-aria-label="@@staff.menuButton"
+        matTooltip="Menú de navegación"
+        i18n-matTooltip="@@staff.menuTooltip"
+        aria-controls="menu-principal"
+        [attr.aria-expanded]="expanded()"
+        (click)="toggleMenu()"
+      >
+        <!-- The arrow points where the menu goes: it turns over when the menu folds or opens -->
+        <mat-icon
+          class="transition-transform duration-300 motion-reduce:transition-none"
+          [class.rotate-180]="!expanded()"
+          >menu_open</mat-icon
         >
-          <mat-icon>menu</mat-icon>
-        </button>
-      }
-      <span class="flex-1 text-title-large font-bold">{{ appName }}</span>
+      </button>
+      <app-brand />
+      <span class="flex-1"></span>
+      <app-theme-menu />
+      <app-language-menu />
       <app-user-menu />
     </mat-toolbar>
   </header>
 
-  <mat-sidenav-container class="min-h-0 flex-1">
+  <!-- autosize: the content follows the width of the menu when it folds to its icons -->
+  <mat-sidenav-container class="min-h-0 flex-1" autosize>
     <mat-sidenav
-      #sidenav
       id="menu-principal"
+      class="app-side-menu"
+      [class.app-side-menu-rail]="rail()"
       [autoFocus]="menuFocus()"
       [mode]="wide() ? 'side' : 'over'"
-      [opened]="wide()"
+      [opened]="wide() || openOver()"
+      (openedChange)="syncOpenOver($event)"
     >
       <!-- mat-nav-list is already a navigation landmark: one for the whole menu, with its name -->
-      <mat-nav-list aria-label="Principal" i18n-aria-label="@@nav.main" class="px-3">
+      <mat-nav-list aria-label="Principal" i18n-aria-label="@@nav.main">
         @for (section of sections(); track section.label) {
-          <h2 class="eyebrow px-4 pt-4 pb-1">{{ section.label }}</h2>
+          <!-- Folded, the headings are only for screen readers and a line separates the sections -->
+          @if (rail() && !$first) {
+            <mat-divider class="my-2" />
+          }
+          <h2 class="eyebrow px-4 pt-4 pb-1" [class.sr-only]="rail()">{{ section.label }}</h2>
           @for (link of section.links; track link.path) {
+            <!-- The aria-label equals the tooltip, so screen readers do not read the name twice -->
             <a
               mat-list-item
               [routerLink]="link.path"
@@ -41,10 +57,14 @@
               #active="routerLinkActive"
               [activated]="active.isActive"
               ariaCurrentWhenActive="page"
+              [attr.aria-label]="link.label"
+              [matTooltip]="link.label"
+              matTooltipPosition="after"
+              [matTooltipDisabled]="!rail()"
               (click)="closeIfOver()"
             >
               <mat-icon matListItemIcon>{{ link.icon }}</mat-icon>
-              <span matListItemTitle>{{ link.label }}</span>
+              <span matListItemTitle [class.sr-only]="rail()">{{ link.label }}</span>
             </a>
           }
         }
@@ -55,7 +75,7 @@
       <main
         id="contenido"
         tabindex="-1"
-        class="mx-auto w-full max-w-7xl px-4 py-6 outline-none sm:px-6"
+        class="mx-auto w-full max-w-7xl px-4 py-6 routed-pages outline-none sm:px-6"
       >
         <router-outlet />
       </main>

@@ -29,47 +29,8 @@
     <mat-divider />
   }
 
-  <div role="group" aria-label="Tema" i18n-aria-label="@@theme.group">
-    @for (option of themeOptions; track option.mode) {
-      <button
-        mat-menu-item
-        type="button"
-        role="menuitemradio"
-        [attr.aria-checked]="mode() === option.mode"
-        (click)="setMode(option.mode)"
-      >
-        <mat-icon>{{ mode() === option.mode ? 'check' : option.icon }}</mat-icon>
-        <span>{{ option.label }}</span>
-      </button>
-    }
-  </div>
-  <mat-divider />
-
-  <!-- A submenu: the languages are seldom changed and would make the menu twice as long -->
-  <button mat-menu-item type="button" [matMenuTriggerFor]="languageMenu">
-    <mat-icon>translate</mat-icon>
-    <span i18n="@@language.group">Idioma</span>
-  </button>
-  <mat-divider />
-
   <button mat-menu-item type="button" (click)="signOut()">
     <mat-icon>logout</mat-icon>
     <span i18n="@@userMenu.signOut">Cerrar sesión</span>
   </button>
-</mat-menu>
-
-<mat-menu #languageMenu="matMenu" xPosition="before">
-  @for (option of languageOptions; track option.locale) {
-    <button
-      mat-menu-item
-      type="button"
-      role="menuitemradio"
-      [attr.lang]="option.locale"
-      [attr.aria-checked]="locale === option.locale"
-      (click)="setLocale(option.locale)"
-    >
-      <mat-icon>{{ locale === option.locale ? 'check' : 'language' }}</mat-icon>
-      <span>{{ option.label }}</span>
-    </button>
-  }
 </mat-menu>
