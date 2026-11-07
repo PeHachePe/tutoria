@@ -503,3 +503,28 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cada pantalla nueva nace marcada y con sus traducciones en inglés y catalán, o `npm run check` falla; la definición de terminado (§5.4) lo recoge. Cambian el paso 1.1c, §4.1, §4.8 y §5.4 del plan. El arranque hace una espera más en inglés y catalán (un chunk pequeño). El e2e en local usa como máximo 4 navegadores (`playwright.config.ts`): con los 7 por defecto, axe sobre el build sin minificar saturaba el equipo y los tests más pesados pasaban de 60 s. El 1.1e lo revisará con el build `demo`.
 
 **Aprobación:** el autor delegó en el agente la forma de cargar los idiomas y el idioma de origen («la forma que ves mejor», «como veas tú que sería lo mejor o lo más correcto»).
+
+## D-024 · Pulido de los shells: tema e idioma en la barra, fundido entre pantallas sin view transitions y menú lateral plegable (07/11/2026)
+
+**Contexto:** el paso 1.1d recoge los detalles de los shells que propuso el autor en el 1.1. El plan pedía las view transitions del router (`withViewTransitions()`) y el tema activo bien visible en el menú de usuario. Al implementarlo:
+
+- `withViewTransitions()` sigue en developer preview en Angular 22, y el lint del proyecto solo admite APIs estables (`@angular-eslint/no-developer-preview`, §4.8);
+- el autor probó el tema y el idioma como submenús del menú de usuario, con la elección actual en cada entrada («Tema · Oscuro»), y no le gustaron: el segundo submenú se abre encima del primero y queda mal. Antes, con las opciones dentro del menú, el problema era que solo un ✓ marcaba la activa.
+
+**Decisión:**
+
+- **Tema e idioma, botones de la barra** en los shells, los mismos componentes que ya tenía el acceso (`ThemeMenu` y `LanguageMenu`). El botón del tema muestra siempre el icono del modo activo, sin menús anidados y con la misma forma en toda la aplicación. El menú de usuario queda para la cuenta (nombre, enlaces del área y «Cerrar sesión»). Sustituye el submenú «Idioma» de D-023.
+- **La opción activa se resalta**, no solo con su ✓: fondo `secondary-container`, texto en negrita y el ✓ al final, sin perder el icono de cada opción. Una sola regla en `theme.scss` para todo `menuitemradio` marcado, así que los menús de elección futuros lo heredan. No depende solo del color (WCAG 1.4.1).
+- **Fundido entre pantallas con CSS:** cada página que inserta el router en el `<main>` de un shell (`routed-pages`) entra con 200 ms de opacidad; la barra y el menú lateral no se mueven. Solo la opacidad, porque el elemento de una página puede ser `inline` y no se desplazaría. Sin animación con `prefers-reduced-motion`.
+- **Menú lateral plegable en escritorio:** el botón de la barra alterna entre el menú completo y un riel de 80 px con los iconos centrados y un tooltip con el nombre. El nombre de cada enlace sigue siendo su nombre accesible y su `aria-label` coincide con el tooltip, para que no se lea dos veces. La elección se guarda en `localStorage`. El icono (`menu_open`) gira 180° según hacia dónde va el menú. En el móvil sigue deslizándose sobre el contenido, ahora con su estado en una signal.
+- **Marca** (`shared/brand/`): mascota y nombre como enlace a la home del rol; en el móvil, solo la mascota, para que la barra quepa a 320 px.
+
+**Alternativas:**
+
+- **`withViewTransitions()`**, que funde la pantalla saliente con la entrante: es la API prevista, pero desactivar la regla del lint para usarla va contra §4.8. Cuando sea estable, basta con añadirla al router y cambiar el CSS del fundido por los pseudoelementos `::view-transition-*`.
+- **Llamar a `document.startViewTransition()` a mano** desde los eventos del router: más código propio para reproducir lo que hará la API de Angular.
+- **Tema e idioma dentro del menú de usuario** (con o sin submenús): el autor descartó los submenús, y las seis opciones juntas alargaban mucho el menú.
+
+**Consecuencias:** la barra de los shells tiene tres botones a la derecha, como el acceso. Un e2e comprueba que no se desborda a 320 px. Cambian el paso 1.1d y §4.1 del plan, y la nota del 1.1c.
+
+**Aprobación:** el autor eligió quitar los submenús y preguntó si tenía sentido separar idioma y tema; el agente propuso los dos en la barra y lo aplicó. Lo demás lo decidió el agente por delegación del autor.

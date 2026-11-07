@@ -402,7 +402,8 @@ src/app/
   shared/             # used by more than one feature, one folder or file per concept
     status-chip/  difficulty-chip/  skeleton/  empty-state/  page-header/
     staff-layout/  user-menu/  skip-link/  placeholder-page/   # shells shared by roles (D-019)
-    theme-menu/  language-menu/   # theme and language buttons of the pages without a user menu (1.1, 1.1c)
+    theme-menu/  language-menu/   # theme and language buttons of the bars: login and shells (1.1, 1.1c, 1.1d)
+    brand/            # mascot and name of the bars, linking to the home of the role (1.1d)
     mascot/           # the TutorIA pug: inline SVG with its moods, accessories and animations (mascot.css) (1.1b)
     is-stuck.ts  create-debouncer.ts  nav-link.ts
   dev/                # dev toolbar, /dev/ui showcase and /dev/datos data explorer (development builds only)
@@ -1016,19 +1017,20 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 - `@angular/localize` (el i18n nativo de Angular, sin librerías): marcas `i18n` en las plantillas y `$localize` en el código, con IDs propios. El español es el idioma de origen y por defecto; inglés y catalán, las traducciones (`src/locale/`).
 - Un solo build que carga la traducción antes de arrancar y recarga al cambiar de idioma, en lugar de un build por idioma (D-023): así funciona en `npm start` y en los e2e. Primera visita en el idioma del navegador si la app lo habla.
-- Selector de idioma junto al de tema en el acceso y submenú «Idioma» en el menú de usuario; los textos de Material (paginador…) siguen al idioma.
+- Selector de idioma junto al de tema en el acceso y submenú «Idioma» en el menú de usuario (en el 1.1d pasó a la barra, D-024); los textos de Material (paginador…) siguen al idioma.
 - Se hace antes del catálogo para que cada pantalla nueva nazca ya marcada; las existentes (acceso, shells, 404) se marcan en este paso. Las herramientas de desarrollo no se traducen (D-023).
 
 🧪 Elección del idioma y carga de la traducción con TDD; regla de lint sin textos sin marcar y `npm run i18n` (en `check`) sin mensajes sin traducir; e2e del cambio de idioma en el acceso y en el menú de usuario.
 
-**1.1d · Pulido de los shells (≈2 h)** · a petición del autor
+**1.1d · Pulido de los shells (≈2 h)** · a petición del autor · D-024
 
-- La marca de la barra lleva a la home del rol, con la mascota.
-- Tema activo bien visible en el menú de usuario (reutiliza `shared/theme-menu/`, del 1.1).
-- Transiciones entre pantallas con las view transitions del router (`withViewTransitions()`), desactivadas con `prefers-reduced-motion`, y pequeñas animaciones (icono del menú al abrir y cerrar).
-- Menú lateral del docente y del administrador plegable también en escritorio: solo iconos con tooltip.
+- La marca de la barra (`shared/brand/`) lleva a la home del rol, con la mascota; en el móvil, solo la mascota.
+- Tema e idioma como botones en la barra de los shells, los mismos del acceso (`shared/theme-menu/` y `shared/language-menu/`), con la opción activa resaltada y marcada. El menú de usuario queda para la cuenta.
+- Transición entre pantallas: la nueva entra con un fundido corto (CSS), desactivado con `prefers-reduced-motion`; `withViewTransitions()` sigue en developer preview (D-024). Pequeñas animaciones: el icono del menú lateral gira al plegarlo o abrirlo.
+- Menú lateral del docente y del administrador plegable también en escritorio: solo iconos con tooltip, y lo recuerda.
+- Corrección del 1.1b: la mascota del acceso no saltaba al hacer clic tras la bienvenida.
 
-🧪 Navegación, plegado del menú y tema activo; e2e con axe de los shells.
+🧪 Navegación, plegado del menú y tema activo; e2e con axe de los shells, la barra a 320 px y el salto de la mascota.
 
 **1.1e · Build `demo` para los e2e (≈1,5 h)**
 
