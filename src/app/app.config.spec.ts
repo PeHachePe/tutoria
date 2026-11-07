@@ -5,6 +5,7 @@ import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 import { MatPaginatorIntl } from '@angular/material/paginator';
 import { Router } from '@angular/router';
 
+import { environment } from '../environments/environment';
 import { appConfig } from './app.config';
 import { routes } from './app.routes';
 import { SpanishPaginatorIntl } from './core/spanish-paginator-intl';
@@ -16,6 +17,12 @@ describe('appConfig', () => {
 
   it('registers the app routes in the router', () => {
     expect(TestBed.inject(Router).config).toEqual(routes);
+  });
+
+  it('registers the data services and dev tools of the environment', () => {
+    expect(appConfig.providers).toEqual(
+      expect.arrayContaining([...environment.dataProviders, ...environment.devProviders]),
+    );
   });
 
   it('applies the colour mode on start-up', async () => {

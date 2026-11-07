@@ -8,10 +8,11 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "check": "prettier --check . && ng lint && ng test --watch=false && npm run test:scripts",
+    "check": "prettier --check . && ng lint && ng test --watch=false && npm run test:scripts && npm run seed -- --check",
     "format": "prettier --write .",
     "test:scripts": "node --test \".claude/hooks/*.test.mjs\" \"scripts/**/*.test.mjs\"",
-    "metrics": "node scripts/metrics.mjs"
+    "metrics": "node scripts/metrics.mjs",
+    "seed": "node scripts/generate-seed.mjs"
   },
   "private": true,
   "packageManager": "npm@11.17.0",

@@ -32,5 +32,8 @@ export type ClientProcessEvent = Extract<
   { type: 'paste' | 'focus_lost' | 'focus_gained' }
 >;
 
+/** Omit applied to each member of a union, so every `type` keeps its own `detail`. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 /** A client event before it is stored: the database assigns its id. */
-export type NewProcessEvent = Omit<ClientProcessEvent, 'id'>;
+export type NewProcessEvent = DistributiveOmit<ClientProcessEvent, 'id'>;

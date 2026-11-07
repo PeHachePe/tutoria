@@ -1,0 +1,207 @@
+<main class="mx-auto flex min-h-dvh max-w-6xl flex-col gap-6 bg-canvas px-4 py-6 pb-24 sm:px-6">
+  <header class="flex flex-col gap-1">
+    <p class="eyebrow">Solo en desarrollo</p>
+    <h1 class="text-headline-small">Datos simulados</h1>
+    <p class="text-body-medium text-on-surface-variant">
+      Lo que ve cada usuario con los servicios de datos. Cambia de usuario, la latencia o los
+      errores desde la barra de desarrollo (abajo a la izquierda).
+    </p>
+  </header>
+
+  @if (user.error(); as error) {
+    <div class="flex flex-wrap items-center gap-3" role="alert">
+      <p>{{ errorMessage(error) }}</p>
+      <button matButton="outlined" type="button" (click)="user.reload()">Reintentar</button>
+    </div>
+  } @else if (user.isLoading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Cargando la sesión" />
+  } @else if (user.value(); as current) {
+    <p class="text-body-large">
+      Sesión: <span class="font-semibold">{{ current.name }}</span> ({{ roleLabels[current.role] }})
+    </p>
+
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <section aria-labelledby="list-title" class="flex flex-col gap-3 rounded-xl bg-panel p-4">
+        <h2 id="list-title" class="text-title-large">
+          {{ current.role === 'student' ? 'Ejercicios asignados' : 'Banco de ejercicios' }}
+        </h2>
+
+        @if (entries.error(); as error) {
+          <div class="flex flex-wrap items-center gap-3" role="alert">
+            <p>{{ errorMessage(error) }}</p>
+            <button matButton="outlined" type="button" (click)="entries.reload()">
+              Reintentar
+            </button>
+          </div>
+        } @else {
+          @if (entries.isLoading()) {
+            <mat-progress-bar mode="indeterminate" aria-label="Cargando los ejercicios" />
+          }
+          <ul class="flex flex-col gap-2">
+            @for (entry of entries.value(); track entry.key) {
+              <li>
+                <button
+                  type="button"
+                  class="flex w-full flex-col gap-0.5 rounded-lg border border-outline-variant px-3 py-2 text-left hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary aria-[current=true]:border-primary aria-[current=true]:bg-secondary-container aria-[current=true]:text-on-secondary-container"
+                  [attr.aria-current]="selectedId() === entry.exercise.id"
+                  (click)="select(entry.exercise.id)"
+                >
+                  <span class="text-title-small">
+                    @if (entry.session !== null) {
+                      Sesión {{ entry.session }} ·
+                    }
+                    {{ entry.exercise.title }}
+                  </span>
+                  <span class="text-body-small">
+                    {{ difficultyLabels[entry.exercise.difficulty] }}
+                    @if (entry.status !== null) {
+                      · {{ statusLabels[entry.status] }}
+                    }
+                  </span>
+                </button>
+              </li>
+            } @empty {
+              @if (!entries.isLoading()) {
+                <li>No hay ejercicios.</li>
+              }
+            }
+          </ul>
+
+          @if (!entries.isLoading() && unassigned().length > 0) {
+            <h3 class="eyebrow mt-2">No asignados (prueba la regla de acceso)</h3>
+            <ul class="flex flex-col gap-2">
+              @for (exercise of unassigned(); track exercise.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="w-full rounded-lg border border-dashed border-outline-variant px-3 py-2 text-left text-on-surface-variant hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary aria-[current=true]:border-primary"
+                    [attr.aria-current]="selectedId() === exercise.id"
+                    (click)="select(exercise.id)"
+                  >
+                    {{ exercise.title }}
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
+      </section>
+
+      <section aria-labelledby="detail-title" class="flex flex-col gap-4 rounded-xl bg-panel p-4">
+        <h2 id="detail-title" class="text-title-large">Ejercicio</h2>
+
+        @if (selectedId() === undefined) {
+          <p class="text-on-surface-variant">Elige un ejercicio de la lista.</p>
+        } @else if (detail.error(); as error) {
+          <div class="flex flex-wrap items-center gap-3" role="alert">
+            <p>{{ errorMessage(error) }}</p>
+            <button matButton="outlined" type="button" (click)="detail.reload()">Reintentar</button>
+          </div>
+        } @else if (detail.isLoading()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Cargando el ejercicio" />
+        } @else if (detail.value(); as current) {
+          <div class="flex flex-col gap-2">
+            <h3 class="text-title-medium">{{ current.exercise.title }}</h3>
+            <p class="text-body-small text-on-surface-variant">
+              {{ difficultyLabels[current.exercise.difficulty] }} · función
+              <code class="font-mono">{{ current.exercise.functionName }}</code>
+              · tutor proactivo a los {{ current.exercise.maxRepeatedFailures }} fallos o
+              {{ current.exercise.maxIdleMinutes }} min sin actividad
+            </p>
+            <p>{{ current.exercise.statement }}</p>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <h4 class="eyebrow">Pruebas visibles</h4>
+            <ul class="flex flex-col gap-1 font-mono text-body-small">
+              @for (test of current.visibleTests; track test.id) {
+                <li class="break-all">
+                  {{ call(current.exercise.functionName, test.input) }} →
+                  {{ json(test.expectedOutput) }}
+                </li>
+              }
+            </ul>
+            <p class="text-body-small text-on-surface-variant">
+              Pruebas ocultas: {{ current.hiddenTestCount }} (el alumno solo ve si las supera).
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-3">
+            <h4 class="eyebrow">Intento</h4>
+            @if (attempt(); as currentAttempt) {
+              <p>
+                Estado:
+                <span class="font-semibold">{{ statusLabels[currentAttempt.status] }}</span> ·
+                empezado el {{ currentAttempt.startedAt | date: 'dd/MM HH:mm' }} · última
+                actualización el {{ currentAttempt.updatedAt | date: 'dd/MM HH:mm:ss' }}
+              </p>
+              <mat-form-field subscriptSizing="dynamic">
+                <mat-label>Código</mat-label>
+                <textarea matInput rows="9" class="font-mono" [formField]="codeForm"></textarea>
+              </mat-form-field>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  matButton="outlined"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="saveCode(currentAttempt)"
+                >
+                  Guardar código
+                </button>
+                <button
+                  matButton="outlined"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="runSimulated(currentAttempt, true)"
+                >
+                  Simular ejecución superada
+                </button>
+                <button
+                  matButton="outlined"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="runSimulated(currentAttempt, false)"
+                >
+                  Simular ejecución con fallos
+                </button>
+                <button
+                  matButton="filled"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="submit(currentAttempt)"
+                >
+                  Entregar
+                </button>
+              </div>
+              <p class="text-body-small text-on-surface-variant">
+                La ejecución es simulada hasta el paso 1.5: marca el intento como superado o con
+                fallos sin ejecutar el código.
+              </p>
+            } @else {
+              <div>
+                <button
+                  matButton="filled"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="openAttempt(current.exercise.id)"
+                >
+                  Abrir o crear el intento
+                </button>
+              </div>
+            }
+            @if (busy()) {
+              <mat-progress-bar mode="indeterminate" aria-label="Enviando" />
+            }
+            @if (actionError(); as message) {
+              <p role="alert" class="text-error">{{ message }}</p>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  } @else {
+    <p class="text-body-large">
+      Sin sesión: entra como algún usuario desde la barra de desarrollo (abajo a la izquierda).
+    </p>
+  }
+</main>

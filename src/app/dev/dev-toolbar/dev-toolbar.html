@@ -1,0 +1,131 @@
+<aside
+  aria-label="Herramientas de desarrollo"
+  class="fixed bottom-4 left-4 z-50 flex flex-col-reverse items-start gap-2"
+>
+  <button
+    #toggle
+    matMiniFab
+    type="button"
+    aria-label="Herramientas de desarrollo"
+    aria-controls="dev-toolbar-panel"
+    [attr.aria-expanded]="open()"
+    (click)="togglePanel()"
+  >
+    <mat-icon>{{ open() ? 'close' : 'build' }}</mat-icon>
+  </button>
+
+  @if (open()) {
+    <div
+      id="dev-toolbar-panel"
+      class="flex max-h-[calc(100dvh-6rem)] w-[min(24rem,calc(100vw-2rem))] flex-col gap-5 overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-high p-4 text-on-surface shadow-[var(--mat-sys-level3)]"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="text-title-medium">Herramientas de desarrollo</h2>
+        <button
+          matIconButton
+          type="button"
+          aria-label="Cerrar las herramientas de desarrollo"
+          (click)="close()"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <nav aria-labelledby="dev-pages-title" class="flex flex-col gap-2">
+        <h3 id="dev-pages-title" class="eyebrow">Páginas de desarrollo</h3>
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 text-body-medium">
+          @for (page of pages; track page.path) {
+            <li>
+              <a
+                class="text-primary underline underline-offset-2"
+                [routerLink]="page.path"
+                routerLinkActive="font-semibold no-underline"
+                ariaCurrentWhenActive="page"
+              >
+                {{ page.label }}
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+
+      <div class="flex flex-col gap-2">
+        <h3 class="eyebrow">Sesión</h3>
+        <p class="text-body-medium">
+          @if (currentUser(); as user) {
+            {{ user.name }}
+            <span class="text-on-surface-variant">· {{ user.email }}</span>
+          } @else {
+            Sin sesión
+          }
+        </p>
+        <mat-form-field subscriptSizing="dynamic">
+          <mat-label>Entrar como</mat-label>
+          <mat-select
+            [value]="currentUser()?.id ?? none"
+            (selectionChange)="signInAs($event.value)"
+          >
+            <mat-option [value]="none">Sin sesión</mat-option>
+            @for (group of userGroups(); track group.label) {
+              <mat-optgroup [label]="group.label">
+                @for (user of group.users; track user.id) {
+                  <mat-option [value]="user.id">{{ user.name }}</mat-option>
+                }
+              </mat-optgroup>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <h3 class="eyebrow">Red simulada</h3>
+        <mat-button-toggle-group
+          aria-label="Latencia"
+          hideSingleSelectionIndicator
+          [value]="latencyOption()"
+          (change)="setLatency($event.value)"
+        >
+          @for (option of latencyOptions; track option.label) {
+            <mat-button-toggle [value]="option">{{ option.label }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+        <mat-form-field subscriptSizing="dynamic">
+          <mat-label>Fallar la siguiente petición</mat-label>
+          <mat-select [value]="failNext()" (selectionChange)="failNextRequest($event.value)">
+            <mat-option [value]="none">No</mat-option>
+            @for (option of failureOptions; track option.kind) {
+              <mat-option [value]="option.kind">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="flex flex-col items-start gap-2">
+        <h3 class="eyebrow">Datos simulados</h3>
+        <button matButton="outlined" type="button" (click)="resetData()">
+          <mat-icon>restart_alt</mat-icon>
+          Reiniciar datos
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <h3 class="eyebrow">Últimos eventos</h3>
+        <ol class="flex flex-col gap-1 text-body-small">
+          @for (event of recentEvents(); track event.id) {
+            <li class="flex justify-between gap-3">
+              <span>
+                <span class="font-semibold">{{ event.text }}</span>
+                · {{ event.who }}
+              </span>
+              <time class="shrink-0 text-on-surface-variant" [attr.datetime]="event.timestamp">
+                {{ event.timestamp | date: 'dd/MM HH:mm' }}
+              </time>
+            </li>
+          } @empty {
+            <li>Todavía no hay eventos.</li>
+          }
+        </ol>
+      </div>
+    </div>
+  }
+</aside>

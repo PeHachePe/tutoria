@@ -7,4 +7,10 @@ export const devRoutes: Routes = [
     title: 'Muestrario · TutorIA',
     loadComponent: () => import('./showcase/showcase-page').then((m) => m.ShowcasePage),
   },
+  {
+    path: 'dev/datos',
+    title: 'Datos simulados · TutorIA',
+    loadComponent: () =>
+      import('./data-explorer/data-explorer-page').then((m) => m.DataExplorerPage),
+  },
 ];
