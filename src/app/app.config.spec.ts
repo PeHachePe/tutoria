@@ -42,9 +42,9 @@ describe('appConfig', () => {
   it('passes the route data to the screens as inputs', async () => {
     await TestBed.inject(ApplicationInitStatus).donePromise;
 
-    await RouterTestingHarness.create('/alumno');
+    await RouterTestingHarness.create('/alumno/ajustes');
 
-    expect(screen.getByText('Esta pantalla se construye en el paso 1.2.')).toBeTruthy();
+    expect(screen.getByText('Esta pantalla se construye en el paso 1.9.')).toBeTruthy();
   });
 
   it('applies the colour mode on start-up', async () => {

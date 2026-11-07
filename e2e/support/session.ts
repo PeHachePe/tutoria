@@ -5,6 +5,8 @@ import { ADMIN_ID, DAW_STUDENT_IDS, TEACHER_ID } from '../../src/app/data/mock/f
 /** Seed users of each role, the same ones the dev toolbar offers. */
 export const USERS = {
   student: DAW_STUDENT_IDS[0],
+  /** Hugo: exercises in every status and hints asked, for the screenshots of the catalog. */
+  studentHalfway: DAW_STUDENT_IDS[1],
   teacher: TEACHER_ID,
   admin: ADMIN_ID,
 } as const;

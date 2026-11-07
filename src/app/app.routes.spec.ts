@@ -9,6 +9,7 @@ import { provideSessionOf, restoreSession } from './auth/auth-testing';
 import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
 import { provideLocalizedPaginator } from './core/localized-paginator-intl';
+import { ExerciseService } from './data/exercise-service';
 import type { Role } from './data/user';
 import { studentRoutes } from './student/student.routes';
 import { teacherRoutes } from './teacher/teacher.routes';
@@ -20,6 +21,7 @@ describe('app routes', () => {
         provideSessionOf(role),
         provideRouter(routes, withComponentInputBinding()),
         { provide: TitleStrategy, useExisting: AppTitleStrategy },
+        { provide: ExerciseService, useValue: { listAssigned: () => Promise.resolve([]) } },
       ],
     });
     await restoreSession();
@@ -45,6 +47,7 @@ describe('app routes', () => {
   });
 
   it.each<[Role, string, string, string]>([
+    ['student', '/alumno', 'Ejercicios', 'Ejercicios · TutorIA'],
     ['student', '/alumno/ejercicio/abc', 'Ejercicio', 'Ejercicio · TutorIA'],
     ['student', '/alumno/ajustes', 'Ajustes', 'Ajustes · TutorIA'],
     ['student', '/alumno/datos', 'Datos registrados', 'Mis datos · TutorIA'],
@@ -64,9 +67,9 @@ describe('app routes', () => {
   });
 
   it('tells which step builds each placeholder screen', async () => {
-    await visit('student', '/alumno');
+    await visit('student', '/alumno/ajustes');
 
-    expect(screen.getByText('Esta pantalla se construye en el paso 1.2.')).toBeTruthy();
+    expect(screen.getByText('Esta pantalla se construye en el paso 1.9.')).toBeTruthy();
   });
 
   it.each<[Role, string]>([

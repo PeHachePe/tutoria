@@ -1,0 +1,117 @@
+<div class="flex flex-col gap-6" [attr.aria-busy]="entries.isLoading()">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-headline-small" i18n="@@catalog.heading">Ejercicios</h1>
+      <p class="text-body-large text-on-surface-variant" i18n="@@catalog.intro">
+        Elige un ejercicio. Tu progreso se guarda automáticamente.
+      </p>
+    </div>
+    @if (entries.hasValue() && total() > 0) {
+      <div class="flex w-full flex-col gap-2 sm:w-64">
+        <p id="catalog-progress" class="text-title-small" i18n="@@catalog.progress">
+          {{ passed() }}/{{ total() }} superados
+        </p>
+        <mat-progress-bar
+          mode="determinate"
+          [value]="percent()"
+          aria-labelledby="catalog-progress"
+        />
+      </div>
+    }
+  </header>
+
+  @if (entries.error(); as error) {
+    <app-load-error [error]="error" (retry)="entries.reload()" />
+  } @else if (entries.isLoading()) {
+    <app-loading-skeleton label="Cargando los ejercicios…" i18n-label="@@catalog.loading">
+      <div class="flex flex-col gap-3">
+        <app-skeleton class="h-7 w-32" />
+        @for (card of skeletonCards; track card) {
+          <div
+            class="flex flex-col gap-3 rounded-xl bg-panel p-4 sm:flex-row sm:items-center sm:gap-4"
+          >
+            <div class="flex flex-1 flex-col gap-2">
+              <app-skeleton class="h-6 w-3/4 max-w-80" />
+              <app-skeleton class="h-5 w-1/2 max-w-56" />
+            </div>
+            <app-skeleton class="h-10 w-full rounded-full sm:w-72" />
+          </div>
+        }
+      </div>
+    </app-loading-skeleton>
+  } @else if (total() === 0) {
+    <app-empty-state
+      heading="Aún no tienes ejercicios asignados"
+      i18n-heading="@@catalog.empty.heading"
+      text="Cuando tu docente te asigne alguno, aparecerá aquí."
+      i18n-text="@@catalog.empty.text"
+    >
+      <app-mascot class="size-28" />
+    </app-empty-state>
+  } @else {
+    @for (group of sessions(); track group.session) {
+      <section class="flex flex-col gap-3" [attr.aria-labelledby]="'session-' + group.session">
+        <!-- Accordion pattern of the ARIA practices: a heading that holds the toggle button -->
+        <h2>
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 rounded-lg py-1 text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+            [attr.aria-expanded]="!folded().has(group.session)"
+            [attr.aria-controls]="'session-list-' + group.session"
+            (click)="toggle(group.session)"
+          >
+            <mat-icon
+              class="transition-transform duration-200 motion-reduce:transition-none"
+              [class.-rotate-90]="folded().has(group.session)"
+              >expand_more</mat-icon
+            >
+            <span
+              [id]="'session-' + group.session"
+              class="flex-1 text-title-large"
+              i18n="@@catalog.session"
+              >Sesión {{ group.session }}</span
+            >
+            <!-- The space between both texts keeps them apart in the accessible name -->
+            {{ ' ' }}
+            <span class="text-label-large text-on-surface-variant" i18n="@@catalog.sessionProgress"
+              >{{ group.passed }}/{{ group.total }} superados</span
+            >
+          </button>
+        </h2>
+        <ul
+          [id]="'session-list-' + group.session"
+          class="flex flex-col gap-3"
+          [hidden]="folded().has(group.session)"
+        >
+          @for (card of group.cards; track card.key) {
+            <li
+              class="flex flex-col gap-3 rounded-xl bg-panel p-4 sm:flex-row sm:items-center sm:gap-4"
+            >
+              <div class="flex min-w-0 flex-1 flex-col gap-1">
+                <h3 class="text-title-medium">{{ card.title }}</h3>
+                <p class="text-body-medium text-on-surface-variant">{{ card.topics }}</p>
+                @if (card.hintCount > 0) {
+                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                    <mat-icon class="size-4! text-[1rem]!">lightbulb</mat-icon>
+                    <span i18n="@@catalog.hints">{card.hintCount, plural,
+                      =1 {1 pista pedida}
+                      other {{{ card.hintCount }} pistas pedidas}
+                    }</span>
+                    <span i18n="@@catalog.hintLevel">· nivel {{ card.hintLevel }}</span>
+                  </p>
+                }
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <app-difficulty-chip [difficulty]="card.difficulty" />
+                <app-status-chip [status]="card.status" />
+                <a class="ms-auto" [matButton]="card.action.appearance" [routerLink]="card.path">
+                  {{ card.action.label }}<span class="sr-only">: {{ card.title }}</span>
+                </a>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>
