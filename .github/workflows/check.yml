@@ -1,5 +1,6 @@
 # Runs the same checks as `npm run check` on every push to master and every pull request:
-# formatting, lint, app unit tests with 100 % coverage (D-010) and the scripts' tests.
+# formatting, lint, app unit tests with 100 % coverage (D-010) and the scripts' tests; then the
+# end-to-end tests with axe against the simulated data (D-011, step 0.6).
 name: check
 
 on:
@@ -25,3 +26,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e

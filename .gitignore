@@ -45,3 +45,12 @@ Thumbs.db
 
 # Claude Code event log: local only, never published (D-012)
 /docs/bitacora/eventos.jsonl
+
+# Playwright output
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
+# Preview config of the Claude desktop app: local to the author's machine
+/.claude/launch.json
