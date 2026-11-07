@@ -252,4 +252,38 @@
       </div>
     </div>
   </section>
+
+  <section aria-labelledby="states-title" class="flex flex-col gap-3">
+    <h2 id="states-title" class="text-title-large">Carga, vacío y error</h2>
+    <p class="text-body-medium text-on-surface-variant">
+      Los tres estados de cada pantalla (5.4). El esqueleto aparece pasados 300 ms; «Repetir la
+      carga» lo vuelve a crear para ver la espera.
+    </p>
+    <div class="flex flex-col gap-4 rounded-xl bg-panel p-4 shadow-sm">
+      <div class="flex flex-col gap-3">
+        <button matButton="outlined" class="self-start" (click)="replayLoading()">
+          Repetir la carga
+        </button>
+        @for (key of [loadingKey()]; track key) {
+          <app-loading-skeleton label="Cargando el ejemplo…">
+            <div class="flex flex-col gap-3 rounded-xl border border-outline-variant p-4">
+              <app-skeleton class="h-6 w-3/4 max-w-80" />
+              <app-skeleton class="h-5 w-1/2 max-w-56" />
+              <app-skeleton class="h-10 w-full rounded-full sm:w-72" />
+            </div>
+          </app-loading-skeleton>
+        }
+      </div>
+      <app-empty-state
+        heading="Aún no tienes ejercicios asignados"
+        text="Cuando tu docente te asigne alguno, aparecerá aquí."
+      >
+        <app-mascot class="size-28" />
+      </app-empty-state>
+      <app-load-error [error]="sampleError" (retry)="retries.update((n) => n + 1)" />
+      <p role="status" class="text-body-medium text-on-surface-variant">
+        Reintentos: {{ retries() }}
+      </p>
+    </div>
+  </section>
 </main>

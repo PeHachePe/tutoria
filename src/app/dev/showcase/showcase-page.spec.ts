@@ -55,6 +55,7 @@ describe('ShowcasePage', () => {
       'Formulario con Signal Forms',
       'Tabla con ordenación y paginación',
       'Progreso, avisos y diálogos',
+      'Carga, vacío y error',
     ]);
   });
 
@@ -121,6 +122,19 @@ describe('ShowcasePage', () => {
     await (await dialog.getHarness(MatButtonHarness.with({ text: 'Cancelar' }))).click();
 
     await vi.waitFor(() => expect(text()).toContain('Entrega cancelada'));
+  });
+
+  it('shows the loading, empty and error states, and replays the loading', async () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const before = element.querySelector('app-loading-skeleton');
+
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Repetir la carga' }))).click();
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Reintentar' }))).click();
+
+    expect(element.querySelector('app-loading-skeleton')).not.toBe(before);
+    expect(text()).toContain('Aún no tienes ejercicios asignados');
+    expect(text()).toContain('No hay conexión');
+    expect(text()).toContain('Reintentos: 1');
   });
 
   it('shows a snack bar notice', async () => {

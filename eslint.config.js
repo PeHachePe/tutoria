@@ -73,6 +73,7 @@ module.exports = defineConfig([
           ignoreAttributes: [
             'appearance',
             'aria-controls',
+            'aria-labelledby',
             'ariaCurrentWhenActive',
             'autocomplete',
             'd',

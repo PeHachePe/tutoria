@@ -28,11 +28,16 @@ import { firstValueFrom } from 'rxjs';
 
 import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
+import { DataError } from '../../data/data-error';
 import type { Difficulty } from '../../data/exercise';
 import { Brand } from '../../shared/brand/brand';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
+import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
+import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, MascotMood } from '../../shared/mascot/mascot';
+import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
+import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
@@ -73,6 +78,10 @@ import { ShowcaseTable } from './showcase-table';
     Brand,
     LanguageMenu,
     Mascot,
+    EmptyState,
+    LoadError,
+    LoadingSkeleton,
+    Skeleton,
   ],
   templateUrl: './showcase-page.html',
 })
@@ -147,6 +156,15 @@ export class ShowcasePage {
   protected async openDialog(): Promise<void> {
     const confirmed = await firstValueFrom(this.dialog.open(ShowcaseDialog).afterClosed());
     this.dialogResult.set(confirmed ? 'Ejercicio entregado' : 'Entrega cancelada');
+  }
+
+  /** Changing the key creates the loading skeleton again, to replay its wait. */
+  protected readonly loadingKey = signal(0);
+  protected readonly sampleError = new DataError('network');
+  protected readonly retries = signal(0);
+
+  protected replayLoading(): void {
+    this.loadingKey.update((key) => key + 1);
   }
 
   protected showSnackBar(): void {
