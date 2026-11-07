@@ -15,6 +15,7 @@ export interface ExerciseDraft {
   readonly title: string;
   readonly statement: string;
   readonly difficulty: Difficulty;
+  readonly topics: readonly string[];
   readonly functionName: string;
   readonly maxRepeatedFailures: number;
   readonly maxIdleMinutes: number;

@@ -35,6 +35,10 @@ export function sqlLiteral(value, jsonb = false) {
   if (typeof value === 'string') {
     return quote(value);
   }
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    // A text[] column, such as exercise.topics
+    return value.length === 0 ? "'{}'::text[]" : `array[${value.map(quote).join(', ')}]::text[]`;
+  }
   throw new TypeError(`Unexpected value for a non-jsonb column: ${JSON.stringify(value)}`);
 }
 

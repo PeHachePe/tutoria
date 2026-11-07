@@ -7,6 +7,8 @@ const CREATED_AT = '2026-09-28T16:00:00.000Z';
 interface ExerciseFixture {
   readonly title: string;
   readonly difficulty: Difficulty;
+  /** The contents column of 2.5. */
+  readonly topics: readonly string[];
   readonly functionName: string;
   readonly statement: string;
   /** Visible tests, the edge case among them: `[input, expectedOutput]`. */
@@ -24,6 +26,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Contar números pares',
     difficulty: 'initial',
+    topics: ['Bucles', 'rangos', 'condicionales'],
     functionName: 'contarPares',
     statement:
       'Escribe una función `contarPares` que reciba un número entero `n` y devuelva cuántos números pares hay entre 1 y `n`, ambos incluidos. Si `n` es menor que 2, la función debe devolver 0.',
@@ -37,6 +40,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Tabla de multiplicar',
     difficulty: 'initial',
+    topics: ['Bucles anidados', 'salida formateada'],
     functionName: 'tablaMultiplicar',
     statement:
       'Escribe una función `tablaMultiplicar` que reciba un número entero `n` y devuelva su tabla de multiplicar del 1 al 10 como un único texto. Cada línea sigue el formato `n x i = resultado` y las líneas se separan con un salto de línea (`\\n`), sin salto al final. Si `n` es 0, todas las líneas dan 0.',
@@ -50,6 +54,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Suma de los elementos de un vector',
     difficulty: 'medium',
+    topics: ['Vectores', 'acumulador', 'vector vacío'],
     functionName: 'suma',
     statement:
       'Escribe una función `suma` que reciba un vector de números enteros y devuelva la suma de todos sus elementos. Si el vector está vacío, la función debe devolver 0.',
@@ -64,6 +69,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Máximo de un vector',
     difficulty: 'medium',
+    topics: ['Vectores', 'comparación', 'casos límite'],
     functionName: 'maximo',
     statement:
       'Escribe una función `maximo` que reciba un vector de números y devuelva el mayor de sus elementos. Ten en cuenta que todos pueden ser negativos. Si el vector está vacío, la función debe devolver `null`.',
@@ -78,6 +84,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Invertir un vector',
     difficulty: 'advanced',
+    topics: ['Vectores', 'índices', 'intercambio'],
     functionName: 'invertir',
     statement:
       'Escribe una función `invertir` que reciba un vector y devuelva un vector nuevo con los mismos elementos en orden inverso. Resuélvelo recorriendo el vector con índices, sin usar `reverse()`. Si el vector está vacío, devuelve un vector vacío.',
@@ -92,6 +99,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Contar vocales en una cadena',
     difficulty: 'extension',
+    topics: ['Cadenas', 'recorrido y conteo'],
     functionName: 'contarVocales',
     statement:
       'Escribe una función `contarVocales` que reciba un texto y devuelva cuántas vocales contiene, sin distinguir mayúsculas de minúsculas. Las vocales con tilde (á, é, í, ó, ú) también cuentan. Si el texto está vacío, la función debe devolver 0.',
@@ -106,6 +114,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Media de un vector con dos decimales',
     difficulty: 'extension',
+    topics: ['Acumuladores', 'formato de salida'],
     functionName: 'media',
     statement:
       'Escribe una función `media` que reciba un vector de números y devuelva su media como texto con exactamente dos decimales, por ejemplo `"2.50"`. Si el vector está vacío, la función debe devolver `"0.00"`.',
@@ -120,6 +129,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Buscar un valor con parada temprana',
     difficulty: 'extension',
+    topics: ['Condición compuesta', 'bandera'],
     functionName: 'buscar',
     statement:
       'Escribe una función `buscar` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, dejando de recorrer el vector en cuanto lo encuentre. Si el valor no aparece, la función debe devolver -1.',
@@ -148,6 +158,7 @@ export const EXERCISES: readonly Exercise[] = EXERCISE_FIXTURES.map((fixture, in
   title: fixture.title,
   statement: fixture.statement,
   difficulty: fixture.difficulty,
+  topics: fixture.topics,
   language: 'javascript',
   functionName: fixture.functionName,
   maxRepeatedFailures: 3,

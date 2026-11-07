@@ -9,6 +9,7 @@ import type {
   Test,
 } from '../exercise';
 import { ExerciseDraft, ExerciseService, ExerciseWithTests } from '../exercise-service';
+import type { HintLevel, TutorInteraction } from '../tutor';
 import { canManageGroup, enrolledGroupIds, findRow, now } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -30,15 +31,22 @@ export class MockExerciseService extends ExerciseService {
       return tables.assignments
         .filter((assignment) => groupIds.has(assignment.groupId))
         .sort((a, b) => a.session - b.session)
-        .map((assignment) => ({
-          exercise: findRow(tables.exercises, assignment.exerciseId),
-          assignmentId: assignment.id,
-          session: assignment.session,
-          status:
-            tables.attempts
-              .filter((a) => a.userId === userId && a.exerciseId === assignment.exerciseId)
-              .at(-1)?.status ?? 'not_started',
-        }));
+        .map((assignment) => {
+          const attempt = tables.attempts
+            .filter((a) => a.userId === userId && a.exerciseId === assignment.exerciseId)
+            .at(-1);
+          const interactions = attempt
+            ? tables.interactions.filter((i) => i.attemptId === attempt.id)
+            : [];
+          return {
+            exercise: findRow(tables.exercises, assignment.exerciseId),
+            assignmentId: assignment.id,
+            session: assignment.session,
+            status: attempt?.status ?? 'not_started',
+            hintCount: interactions.filter((i) => i.trigger === 'hint').length,
+            hintLevel: highestLevel(interactions),
+          };
+        });
     });
   }
 
@@ -202,7 +210,32 @@ export class MockExerciseService extends ExerciseService {
 }
 
 /** The columns of `exercise` that the teacher edits; the tests go to their own table. */
+/** Highest hint level among the tutor's answers to an attempt, or null without any. */
+function highestLevel(interactions: readonly TutorInteraction[]): HintLevel | null {
+  return interactions.reduce<HintLevel | null>(
+    (level, interaction) =>
+      level === null || interaction.hintLevel > level ? interaction.hintLevel : level,
+    null,
+  );
+}
+
 function exerciseFields(draft: ExerciseDraft) {
-  const { title, statement, difficulty, functionName, maxRepeatedFailures, maxIdleMinutes } = draft;
-  return { title, statement, difficulty, functionName, maxRepeatedFailures, maxIdleMinutes };
+  const {
+    title,
+    statement,
+    difficulty,
+    topics,
+    functionName,
+    maxRepeatedFailures,
+    maxIdleMinutes,
+  } = draft;
+  return {
+    title,
+    statement,
+    difficulty,
+    topics,
+    functionName,
+    maxRepeatedFailures,
+    maxIdleMinutes,
+  };
 }

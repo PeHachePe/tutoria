@@ -1,4 +1,5 @@
 import type { AttemptStatus } from './attempt';
+import type { HintLevel } from './tutor';
 
 export type Difficulty = 'initial' | 'medium' | 'advanced' | 'extension';
 
@@ -18,6 +19,8 @@ export interface Exercise extends StuckThresholds {
   readonly title: string;
   readonly statement: string;
   readonly difficulty: Difficulty;
+  /** What the exercise practises, shown under its title in the catalog («Vectores», «acumulador»). */
+  readonly topics: readonly string[];
   readonly language: Language;
   /** Name of the function the student must write; each test calls it. */
   readonly functionName: string;
@@ -53,6 +56,10 @@ export interface AssignedExercise {
   readonly session: number;
   /** Status of the student's latest attempt, or `not_started`. */
   readonly status: AttemptStatus;
+  /** Hints the student asked for («Pedir pista») in the latest attempt. */
+  readonly hintCount: number;
+  /** Highest hint level the tutor reached in the latest attempt, or null without interactions. */
+  readonly hintLevel: HintLevel | null;
 }
 
 /** What the workspace needs: the exercise and its visible tests, sorted by position. */

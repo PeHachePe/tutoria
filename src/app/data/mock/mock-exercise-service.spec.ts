@@ -22,6 +22,7 @@ const DRAFT: ExerciseDraft = {
   title: 'Producto de un vector',
   statement: 'Escribe una función `producto`…',
   difficulty: 'medium',
+  topics: ['Vectores', 'acumulador'],
   functionName: 'producto',
   maxRepeatedFailures: 2,
   maxIdleMinutes: 5,
@@ -67,12 +68,32 @@ describe('MockExerciseService', () => {
         'not_started',
         'not_started',
       ]);
-      expect(entries[0]).toEqual({
+      expect(entries[0]).toMatchObject({
         exercise: SEED.exercises[0],
         assignmentId: assignmentId(DAW_GROUP_ID, 1),
         session: 1,
         status: 'submitted',
       });
+    });
+
+    it('counts the hints asked in the latest attempt and the highest level reached', async () => {
+      db.setSession(DAW_STUDENT_IDS[1]); // Hugo
+      const attempt = SEED.attempts.find(
+        (a) => a.userId === DAW_STUDENT_IDS[1] && a.exerciseId === exerciseId(6),
+      );
+      const base = { ...SEED.interactions[0], attemptId: attempt?.id ?? '' };
+      db.update('interactions', () => [
+        { ...base, id: 'i1', trigger: 'hint', hintLevel: 1 },
+        { ...base, id: 'i2', trigger: 'question', hintLevel: 2 },
+        { ...base, id: 'i3', trigger: 'hint', hintLevel: 2 },
+        { ...base, id: 'i4', attemptId: 'another-attempt', trigger: 'hint', hintLevel: 3 },
+      ]);
+
+      const entries = await service.listAssigned(DAW_STUDENT_IDS[1]);
+
+      expect(entries[5]).toMatchObject({ hintCount: 2, hintLevel: 2 });
+      expect(entries[0]).toMatchObject({ hintCount: 0, hintLevel: null });
+      expect(entries[7]).toMatchObject({ hintCount: 0, hintLevel: null });
     });
 
     it("does not let a student list another student's exercises", async () => {
@@ -160,6 +181,7 @@ describe('MockExerciseService', () => {
         title: DRAFT.title,
         statement: DRAFT.statement,
         difficulty: 'medium',
+        topics: ['Vectores', 'acumulador'],
         language: 'javascript',
         functionName: 'producto',
         maxRepeatedFailures: 2,

@@ -7,7 +7,7 @@ import { ENROLLMENTS, GROUPS, USERS } from './users';
  * Change it whenever the fixtures change: the mock data saved in a browser with another version is
  * discarded and replaced with the new seed.
  */
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 /** The data both worlds share: the mock data starts from it and `npm run seed` turns it into SQL. */
 export const SEED: MockTables = {

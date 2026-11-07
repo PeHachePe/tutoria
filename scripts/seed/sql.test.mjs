@@ -30,6 +30,15 @@ describe('sqlLiteral', () => {
     assert.equal(sqlLiteral({ text: "it's" }, true), `'{"text":"it''s"}'::jsonb`);
   });
 
+  it('writes a list of texts as a text array', () => {
+    assert.equal(sqlLiteral(['Vectores', "it's"]), "array['Vectores', 'it''s']::text[]");
+    assert.equal(sqlLiteral([]), "'{}'::text[]");
+  });
+
+  it('refuses lists of other values outside a jsonb column', () => {
+    assert.throws(() => sqlLiteral([1, 2]), TypeError);
+  });
+
   it('refuses objects outside a jsonb column', () => {
     assert.throws(() => sqlLiteral({ a: 1 }), TypeError);
   });
