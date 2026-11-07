@@ -560,3 +560,24 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian §5.4 (punto 6) y el 7.1 del plan. El riesgo de que algo se rompa entre pasos lo cubren los tests unitarios, el CI y la revisión en el navegador.
 
 **Aprobación:** decisión del autor.
+
+## D-027 · Catálogo: «superados», contenidos y pistas en los datos, y piezas de estado compartidas (07/11/2026)
+
+**Contexto:** el prototipo del catálogo (figura 16 de la memoria) muestra bajo cada título los contenidos que practica el ejercicio y, en los intentos abiertos, las pistas usadas. El modelo de datos no tenía los contenidos (solo estaban como columna informativa en §2.5), y `listAssigned` no devolvía las pistas. Además, el ejemplo de §4.5 contaba como «superados» solo los entregados.
+
+**Decisión:**
+
+- `exercise.topics` (`text[]` en PostgreSQL, `readonly string[]` en el cliente): los contenidos de cada ejercicio, con los valores de §2.5. El generador de `seed.sql` escribe las listas de textos como `array[...]::text[]`, y la versión del seed pasa a 2 para que los navegadores descarten los datos simulados guardados.
+- `AssignedExercise` añade `hintCount` (pistas pedidas con «Pedir pista» en el último intento) y `hintLevel` (el nivel más alto que alcanzó el tutor, o `null`). Los datos ya existían en `tutor_interaction`, así que se muestran desde ahora; el tutor del 1.7 solo añade interacciones nuevas.
+- «Superados» cuenta los ejercicios superados y los entregados: los dos han pasado todas las pruebas. Lo calcula `isPassed()`, en `student/catalog/catalog-sessions.ts`.
+- Piezas de estado en `shared/`, para todas las pantallas (4.8, 5.4):
+  - `skeleton/`, con `Skeleton` (el bloque) y `LoadingSkeleton`, que muestra los esqueletos y avisa al lector de pantalla solo pasados 300 ms. Usa un temporizador que se limpia con `DestroyRef`, sin `effect()`, porque el componente vive lo mismo que la espera;
+  - `empty-state/`;
+  - `load-error/`, con el mensaje según el tipo de `DataError` y «Reintentar».
+- El lint de i18n ignora `aria-labelledby`, como ya ignoraba `aria-controls`: es una referencia a un id, no un texto.
+
+**Alternativas:** dejar los contenidos y las pistas fuera del catálogo (se descartó porque los datos ya existían o costaban poco); retrasar el esqueleto con un `animation-delay` en CSS (no se puede probar en los tests unitarios ni retrasar el aviso al lector de pantalla).
+
+**Consecuencias:** cambian §2.2, §2.3, §4.2, §4.5 y el paso 1.2 del plan. El back-end (fase 2) añade la columna `topics` y calcula las pistas en la consulta de `listAssigned`. El editor de ejercicios del docente (4.3) incluye los contenidos.
+
+**Aprobación:** el autor, que delegó la decisión en el agente.

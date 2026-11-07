@@ -2,5 +2,7 @@
 
 Los e2e no se escriben ni se ejecutan durante los pasos (D-026). Cada paso apunta aquí los que le tocarían, y todos se hacen en el 7.1.
 
-| Paso | Pantalla o pieza | e2e pendiente |
-| ---- | ---------------- | ------------- |
+| Paso | Pantalla o pieza       | e2e pendiente                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.2  | Catálogo (`/alumno`)   | Accesibilidad: axe completo en claro y contraste en oscuro con datos, cargando (red lenta), vacío y error (fallar la siguiente petición con `network`). Comportamiento: «Empezar», «Continuar» y «Repasar» abren su ejercicio; «Reintentar» recupera la lista; el progreso «n/N superados» cuadra con los estados; las sesiones superadas empiezan plegadas y se pliegan y despliegan con el teclado |
+| 1.2  | Muestrario (`/dev/ui`) | La sección «Carga, vacío y error» pasa axe y «Repetir la carga» vuelve a mostrar el esqueleto pasados 300 ms                                                                                                                                                                                                                                                                                         |

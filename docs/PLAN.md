@@ -95,25 +95,25 @@ TutorIA es una aplicación web educativa para aprender programación en Formaci�
 - **Docente:** sigue a sus grupos en vivo, consulta el histórico, gestiona sus grupos y su matrícula (RF-16) y el banco de ejercicios, sus pruebas, sus umbrales y sus asignaciones.
 - **Administrador:** gestiona usuarios y la configuración del sistema; además puede entrar en todas las pantallas del docente con acceso a todos los grupos, incluida la gestión de grupos y matrícula. La cuenta del tribunal es de administrador.
 
-| Ruta                    | Pantalla                                                                 | Rol             | Capa     | Referencia de diseño  |
-| ----------------------- | ------------------------------------------------------------------------ | --------------- | -------- | --------------------- |
-| `/login`                | Acceso                                                                   | Todos           | 1        | —                     |
-| `/alumno`               | Catálogo de ejercicios                                                   | Alumno          | 1        | Figuras 7–8 del TFM   |
-| `/alumno/ejercicio/:id` | Pantalla de trabajo: enunciado, editor, pruebas y tutor                  | Alumno          | 1, 3 y 4 | Figuras 9–10 del TFM  |
-| `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                            | Alumno          | 1        | —                     |
-| `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve       | Alumno          | 1        | Figuras 14 y 23       |
-| `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId` | Docente y admin | 2        | Figuras 11–12 del TFM |
-| `/docente/historico`    | Histórico del grupo                                                      | Docente y admin | 2        | Figuras 13–14 del TFM |
-| `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                     | Docente y admin | 2        | Figuras 15–16 del TFM |
-| `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos       | Docente y admin | 2        | —                     |
-| `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                | Admin           | —        | —                     |
-| `/admin/sistema`        | Ajustes del sistema: adaptador de IA activo                              | Admin           | —        | —                     |
-| `/dev/ui`               | Muestrario de componentes y temas (solo en desarrollo)                   | —               | —        | —                     |
-| `/dev/datos`            | Explorador de los datos simulados (solo en desarrollo)                   | —               | —        | —                     |
+| Ruta                    | Pantalla                                                                 | Rol             | Capa     | Referencia de diseño   |
+| ----------------------- | ------------------------------------------------------------------------ | --------------- | -------- | ---------------------- |
+| `/login`                | Acceso                                                                   | Todos           | 1        | —                      |
+| `/alumno`               | Catálogo de ejercicios                                                   | Alumno          | 1        | Figuras 7 y 16 del TFM |
+| `/alumno/ejercicio/:id` | Pantalla de trabajo: enunciado, editor, pruebas y tutor                  | Alumno          | 1, 3 y 4 | Figuras 9–10 del TFM   |
+| `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                            | Alumno          | 1        | —                      |
+| `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve       | Alumno          | 1        | Figuras 14 y 23        |
+| `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId` | Docente y admin | 2        | Figuras 11–12 del TFM  |
+| `/docente/historico`    | Histórico del grupo                                                      | Docente y admin | 2        | Figuras 13–14 del TFM  |
+| `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                     | Docente y admin | 2        | Figuras 15–16 del TFM  |
+| `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos       | Docente y admin | 2        | —                      |
+| `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                | Admin           | —        | —                      |
+| `/admin/sistema`        | Ajustes del sistema: adaptador de IA activo                              | Admin           | —        | —                      |
+| `/dev/ui`               | Muestrario de componentes y temas (solo en desarrollo)                   | —               | —        | —                      |
+| `/dev/datos`            | Explorador de los datos simulados (solo en desarrollo)                   | —               | —        | —                      |
 
 Detalle por pantalla:
 
-- **Catálogo:** tarjetas agrupadas por sesión con título, dificultad, chip de estado y botón (Empezar, Continuar o Repasar); progreso «n/N superados», donde N es el número de ejercicios asignados.
+- **Catálogo:** tarjetas agrupadas por sesión con título, contenidos, dificultad, chip de estado, pistas pedidas con su nivel y botón (Empezar, Continuar o Repasar); progreso «n/N superados» global y por sesión, donde N es el número de ejercicios asignados y «superados» cuenta los superados y los entregados (D-027).
 - **Pantalla de trabajo:** enunciado y pruebas visibles; editor; botón para ejecutar las pruebas con resultados ✔ (superada), ✘ (fallida) o ● (error o tiempo agotado); botón Entregar; panel del tutor tipo chat con nivel de pista visible y botón «Pedir pista»; reacciones flotantes.
 - **Sesión en vivo:** tabla por alumno con estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas y la señal derivada «atascado»; detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
 - **Histórico:** gráfica de la media de pistas solicitadas por sesión (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales.
@@ -127,7 +127,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, created_at, updated_at). El nombre evita la palabra reservada `user`.
 - `class_group` (id, name, school_year, teacher_id → app_user)
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
-- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
+- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
 - `exercise_assignment` (id, group_id → class_group, exercise_id → exercise, session; única por terna)
 - `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), current_code, final_code, status, started_at, finished_at, **updated_at**)
@@ -433,17 +433,17 @@ Son clases abstractas con los métodos de acceso a datos. Las pantallas y los st
 - Cada versión lleva `@Service({ autoProvided: false })` y se llama como su clase: `MockExerciseService` en `data/mock/mock-exercise-service.ts` y `SupabaseExerciseService` en `data/supabase/supabase-exercise-service.ts`.
 - `provideMockData()` y `provideSupabaseData()` las registran con `{ provide: ExerciseService, useClass: MockExerciseService }` (4.4).
 
-| Servicio            | Operaciones principales                                                                                    | Versión simulada                                              | Versión con Supabase                              |
-| ------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------- |
-| `AuthService`       | iniciar y cerrar sesión, usuario actual, restaurar sesión                                                  | Usuarios del seed; cambio de rol desde la barra de desarrollo | Supabase Auth                                     |
-| `ExerciseService`   | ejercicios asignados con su último intento, detalle con pruebas visibles, alta, edición, baja y asignación | MockDb                                                        | Tablas `exercise`, `test` y `exercise_assignment` |
-| `AttemptService`    | abrir o crear, guardar código, entregar, historial de un intento                                           | MockDb, que aplica las transiciones de 2.4                    | Tablas y RPC `submit_attempt`                     |
-| `CodeRunnerService` | ejecutar (intento y código) y devolver estado y resultados                                                 | Web Worker                                                    | Edge Function `execute`                           |
-| `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`                                                        | Respuestas guionizadas por nivel                              | Edge Function `tutor`                             |
-| `EventService`      | enviar un lote de eventos                                                                                  | MockDb                                                        | Inserción en `process_event`                      |
-| `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                             | Simulador de alumnos                                          | Supabase Realtime                                 |
-| `StatsService`      | estadísticas del grupo por sesión                                                                          | Cálculo sobre MockDb                                          | RPC `group_session_stats`                         |
-| `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                         | MockDb                                                        | Edge Function `admin-users` y tablas              |
+| Servicio            | Operaciones principales                                                                                                 | Versión simulada                                              | Versión con Supabase                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------- |
+| `AuthService`       | iniciar y cerrar sesión, usuario actual, restaurar sesión                                                               | Usuarios del seed; cambio de rol desde la barra de desarrollo | Supabase Auth                                     |
+| `ExerciseService`   | ejercicios asignados con su último intento y sus pistas, detalle con pruebas visibles, alta, edición, baja y asignación | MockDb                                                        | Tablas `exercise`, `test` y `exercise_assignment` |
+| `AttemptService`    | abrir o crear, guardar código, entregar, historial de un intento                                                        | MockDb, que aplica las transiciones de 2.4                    | Tablas y RPC `submit_attempt`                     |
+| `CodeRunnerService` | ejecutar (intento y código) y devolver estado y resultados                                                              | Web Worker                                                    | Edge Function `execute`                           |
+| `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`                                                                     | Respuestas guionizadas por nivel                              | Edge Function `tutor`                             |
+| `EventService`      | enviar un lote de eventos                                                                                               | MockDb                                                        | Inserción en `process_event`                      |
+| `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                                          | Simulador de alumnos                                          | Supabase Realtime                                 |
+| `StatsService`      | estadísticas del grupo por sesión                                                                                       | Cálculo sobre MockDb                                          | RPC `group_session_stats`                         |
+| `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                                      | MockDb                                                        | Edge Function `admin-users` y tablas              |
 
 Resultado de una ejecución:
 
@@ -569,7 +569,7 @@ export class CatalogPage {
 
   protected readonly total = computed(() => this.entries.value().length);
   protected readonly solved = computed(
-    () => this.entries.value().filter((entry) => entry.status === 'submitted').length,
+    () => this.entries.value().filter((entry) => isPassed(entry.status)).length, // passed or submitted (D-027)
   );
 }
 ```
@@ -1039,12 +1039,13 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 🧪 La suite e2e completa contra el build `demo`, también en el CI.
 
-**1.2 · Catálogo (≈3 h)** · ficha `02-catalogo` · Figuras 7–8 del TFM
+**1.2 · Catálogo (≈3 h)** · ficha `02-catalogo` · Figuras 7 y 16 del TFM
 
 - Componente con `resource()` y `computed()`, sin store (4.5).
 - Tarjetas agrupadas por sesión, con título, dificultad, chip de estado y botón Empezar, Continuar o Repasar; progreso «n/N superados».
 - Estado y dificultad con los componentes compartidos `<app-status-chip>` y `<app-difficulty-chip>` (paso 0.5): color e icono para el estado, y la dificultad en un chip neutro para que no se confundan.
-- Estados de carga, vacío y error. La carga, con esqueletos de las tarjetas: aquí nace `shared/skeleton/`, que se añade al muestrario y siguen las demás pantallas (4.8).
+- Bajo el título, los contenidos del ejercicio (`exercise.topics`) y, si las hay, las pistas pedidas en el último intento con el nivel alcanzado, como en el prototipo (D-027).
+- Estados de carga, vacío y error. La carga, con esqueletos de las tarjetas: aquí nacen `shared/skeleton/`, `shared/empty-state/` y `shared/load-error/`, que se añaden al muestrario y siguen las demás pantallas (4.8).
 
 🧪 Estado derivado de cada tarjeta; el esqueleto solo aparece si la carga pasa del umbral.
 
