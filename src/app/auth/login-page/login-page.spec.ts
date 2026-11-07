@@ -52,6 +52,14 @@ describe('LoginPage', () => {
 
   const currentUrl = () => TestBed.inject(Router).url;
 
+  it('welcomes with the mascot, which is decorative', async () => {
+    await renderLogin();
+
+    const mascot = document.querySelector('app-mascot');
+    expect(mascot?.classList).toContain('mascot-joy');
+    expect(mascot?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('shows what is missing under each field and focuses the first one, without sending', async () => {
     const user = await renderLogin();
 

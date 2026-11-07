@@ -1,0 +1,156 @@
+/* Animations of the TutorIA mascot (step 1.1b, D-022): global CSS, imported from src/styles.css
+   and kept next to its component. Resting, it blinks, twitches an ear and lets the tip of its
+   tongue peek out; each mood and each reaction adds its class on <app-mascot>. The coordinates
+   are those of the drawing (viewBox 0 0 200 200). */
+.mascot-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-blink 5s infinite;
+}
+
+.mascot-ear {
+  transform-box: fill-box;
+  transform-origin: 85% 15%;
+  animation: mascot-ear 7s infinite;
+}
+
+/* The head turns and tilts around the neck */
+.mascot-head {
+  transform-box: view-box;
+  transform-origin: 100px 170px;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mascot-tongue {
+  transform-box: fill-box;
+  transform-origin: 35% 0%;
+  transform: scale(0.6, 0.24);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Chat open: turns its head and sticks its tongue out to the side; closing it pulls it back */
+.mascot-chat .mascot-head {
+  transform: rotate(6deg);
+}
+
+.mascot-chat .mascot-tongue {
+  transform: scale(1) rotate(-10deg);
+}
+
+/* The tutor is thinking: tilts its head */
+.mascot-thinking .mascot-head {
+  animation: mascot-tilt 1.6s ease-in-out infinite;
+}
+
+/* Tests passed or a welcome: two hops */
+.mascot-joy .mascot-head {
+  animation: mascot-hop 0.6s ease-out 2;
+}
+
+/* Reactions to the pointer (each ends with its animation, which the component listens to):
+   passing the mouse over it moves it, clicking it sticks its tongue out and pulls it back */
+.mascot-move-tilt .mascot-head {
+  animation: mascot-curious 0.9s ease-in-out;
+}
+
+.mascot-move-hop .mascot-head {
+  animation: mascot-hop 0.6s ease-out;
+}
+
+.mascot-move-ears .mascot-ear {
+  animation: mascot-ear-wiggle 0.7s ease-in-out;
+}
+
+.mascot-lick .mascot-tongue {
+  animation: mascot-lick 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes mascot-curious {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  45% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes mascot-ear-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-14deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-8deg);
+  }
+}
+
+@keyframes mascot-lick {
+  0%,
+  100% {
+    transform: scale(0.6, 0.24);
+  }
+  30%,
+  70% {
+    transform: scale(1) rotate(-10deg);
+  }
+}
+
+@keyframes mascot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes mascot-ear {
+  0%,
+  88%,
+  100% {
+    transform: rotate(0);
+  }
+  91% {
+    transform: rotate(-12deg);
+  }
+  94% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes mascot-tilt {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-12deg);
+  }
+}
+
+@keyframes mascot-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-18px) rotate(-4deg);
+  }
+}
+
+/* Still poses only: the chat state keeps its tongue out, without moving there */
+@media (prefers-reduced-motion: reduce) {
+  .mascot * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

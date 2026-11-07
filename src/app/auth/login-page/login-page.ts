@@ -15,6 +15,7 @@ import {
 import { Router } from '@angular/router';
 
 import { provideFormFieldDefaults } from '../../core/form-field-defaults';
+import { Mascot } from '../../shared/mascot/mascot';
 import { afterSignInPath } from '../after-sign-in-path';
 import { AuthStore } from '../auth-store';
 import { DEMO_ACCOUNTS, DemoAccount } from '../demo-accounts';
@@ -44,6 +45,7 @@ import { signInErrorMessage } from '../sign-in-error-message';
     MatListItemIcon,
     MatListItemTitle,
     MatListItemLine,
+    Mascot,
   ],
   templateUrl: './login-page.html',
   // Loaded on its own, outside the areas: it brings the defaults of its fields (D-021)

@@ -3,6 +3,9 @@
    or `text-sm` do not exist and dark mode needs no `dark:` utilities. */
 @import 'tailwindcss';
 
+/* Animations of our own pieces, each next to its component (4.8) */
+@import './app/shared/mascot/mascot.css';
+
 @theme inline {
   --color-*: initial;
   --text-*: initial;

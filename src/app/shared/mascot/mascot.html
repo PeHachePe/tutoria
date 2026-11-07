@@ -1,0 +1,116 @@
+<!-- Approved sketch v14 (D-022): drawn as is, only the class names and the accessories change -->
+<svg viewBox="0 0 200 200" class="size-full overflow-visible">
+  @if (bowTie()) {
+    <defs>
+      <pattern [attr.id]="plaidId" width="5" height="5" patternUnits="userSpaceOnUse">
+        <rect width="5" height="5" fill="#86573F" />
+        <path d="M0 2.5H5M2.5 0V5" stroke="#A0705A" stroke-width="0.9" />
+      </pattern>
+    </defs>
+  }
+  <g class="mascot-head">
+    @if (bowTie()) {
+      <g data-testid="mascot-bow-tie">
+        <path d="M100 176 L80 166 Q74 177 80 188 Z" [attr.fill]="plaidFill" />
+        <path d="M100 176 L120 166 Q126 177 120 188 Z" [attr.fill]="plaidFill" />
+        <rect x="94" y="169" width="12" height="14" rx="4" fill="#6F4533" />
+      </g>
+    }
+    @if (headset()) {
+      <path
+        d="M38 104 A62 62 0 0 1 162 104"
+        fill="none"
+        stroke="#3B4A63"
+        stroke-width="7"
+        stroke-linecap="round"
+      />
+    }
+
+    <!-- Ears, head and muzzle -->
+    <path class="mascot-ear" d="M60 56 Q20 42 12 96 Q36 98 66 74 Z" fill="#2B2320" />
+    <path d="M140 56 Q180 42 188 96 Q164 98 134 74 Z" fill="#2B2320" />
+    <ellipse cx="100" cy="110" rx="62" ry="58" fill="#EAD5B2" />
+    <ellipse cx="100" cy="150" rx="50" ry="20" fill="#F3E4CB" />
+
+    <!-- Three wrinkles on the forehead -->
+    <g fill="#BE9C72">
+      <path d="M85 63 Q100 54 115 63 Q100 59 85 63 Z" />
+      <path d="M77 72 Q100 61 123 72 Q100 66 77 72 Z" />
+      <path d="M84 80 Q100 72 116 80 Q100 76.5 84 80 Z" />
+    </g>
+
+    <!-- Black mask -->
+    <circle cx="75" cy="105" r="22" fill="#2E2522" />
+    <circle cx="125" cy="105" r="22" fill="#2E2522" />
+    <ellipse cx="100" cy="132" rx="38" ry="30" fill="#2E2522" />
+
+    <!-- Eyes: brown iris, pupil, highlights and the white corner -->
+    <g class="mascot-eyes">
+      <circle cx="75" cy="104" r="15.5" fill="#0D0908" />
+      <circle cx="125" cy="104" r="15.5" fill="#0D0908" />
+      <g fill="#F1E9E1">
+        <path d="M61.5 110 Q66 118.5 75 119.5 Q67 115 63.5 107.5 Z" />
+        <path d="M138.5 110 Q134 118.5 125 119.5 Q133 115 136.5 107.5 Z" />
+      </g>
+      <!-- Irises, pupils and highlights follow the mouse -->
+      <g data-testid="mascot-irises" [attr.transform]="gaze()">
+        <circle cx="76" cy="104" r="11" fill="#4A2E1F" />
+        <circle cx="126" cy="104" r="11" fill="#4A2E1F" />
+        <circle cx="76" cy="104" r="6.5" fill="#0A0706" />
+        <circle cx="126" cy="104" r="6.5" fill="#0A0706" />
+        <circle cx="70" cy="98" r="5.2" fill="#FFFFFF" />
+        <circle cx="120" cy="98" r="5.2" fill="#FFFFFF" />
+        <circle cx="80.5" cy="109" r="2.2" fill="#FFFFFF" />
+        <circle cx="130.5" cy="109" r="2.2" fill="#FFFFFF" />
+      </g>
+    </g>
+
+    <!-- Nose and mouth, with the tongue coming out at the side -->
+    <ellipse cx="100" cy="121" rx="13" ry="8" fill="#0F0B0A" />
+    <ellipse cx="95" cy="120" rx="2.5" ry="1.6" fill="#3A302C" />
+    <ellipse cx="105" cy="120" rx="2.5" ry="1.6" fill="#3A302C" />
+    <path
+      d="M100 129 L100 136"
+      fill="none"
+      stroke="#5B4B45"
+      stroke-width="2.5"
+      stroke-linecap="round"
+    />
+    <ellipse cx="108" cy="143.5" rx="6" ry="2.8" fill="#120D0C" />
+    <g class="mascot-tongue">
+      <path
+        d="M103 143 Q99 162 104 178 Q110 192 121 189 Q130 185 128 170 Q124 155 113 142 Z"
+        fill="#E8899A"
+      />
+      <path
+        d="M108 147 Q110 168 116 184"
+        fill="none"
+        stroke="#C8667A"
+        stroke-width="2"
+        stroke-linecap="round"
+      />
+    </g>
+    <path
+      d="M86 139 Q100 147 114 139"
+      fill="none"
+      stroke="#5B4B45"
+      stroke-width="2.5"
+      stroke-linecap="round"
+    />
+
+    @if (headset()) {
+      <g data-testid="mascot-headset">
+        <rect x="26" y="94" width="14" height="26" rx="6" fill="#3B4A63" />
+        <rect x="160" y="94" width="14" height="26" rx="6" fill="#3B4A63" />
+        <path
+          d="M34 120 Q42 152 72 152"
+          fill="none"
+          stroke="#3B4A63"
+          stroke-width="3.5"
+          stroke-linecap="round"
+        />
+        <circle cx="74" cy="152" r="4.5" fill="#3B4A63" />
+      </g>
+    }
+  </g>
+</svg>

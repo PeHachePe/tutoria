@@ -14,7 +14,8 @@
     "metrics": "node scripts/metrics.mjs",
     "seed": "node scripts/generate-seed.mjs",
     "e2e": "playwright test --project=e2e",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "favicon": "node scripts/generate-favicon.mjs"
   },
   "private": true,
   "packageManager": "npm@11.17.0",

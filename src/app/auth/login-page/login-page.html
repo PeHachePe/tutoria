@@ -5,12 +5,16 @@
 >
   <mat-card appearance="outlined" class="w-full max-w-md">
     <div class="flex flex-col gap-6 p-6 sm:p-8">
-      <header class="flex flex-col gap-1">
-        <p class="text-title-large font-bold text-primary">TutorIA</p>
-        <h1 class="text-headline-medium">Acceso</h1>
-        <p class="text-body-medium text-on-surface-variant">
-          Entra con la cuenta que te ha dado tu centro.
-        </p>
+      <header class="flex items-center gap-4">
+        <div class="flex min-w-0 flex-1 flex-col gap-1">
+          <p class="text-title-large font-bold text-primary">TutorIA</p>
+          <h1 class="text-headline-medium">Acceso</h1>
+          <p class="text-body-medium text-on-surface-variant">
+            Entra con la cuenta que te ha dado tu centro.
+          </p>
+        </div>
+        <!-- Welcomes with two hops when the page opens (step 1.1b) -->
+        <app-mascot mood="joy" class="size-20 shrink-0 sm:size-24" />
       </header>
 
       <form [formRoot]="loginForm" class="flex flex-col gap-1">

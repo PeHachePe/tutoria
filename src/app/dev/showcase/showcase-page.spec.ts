@@ -6,6 +6,7 @@ import { MatButtonHarness } from '@angular/material/button/testing';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
 import { MatDialogHarness } from '@angular/material/dialog/testing';
+import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 
 import { ThemeService } from '../../core/theme-service';
@@ -43,6 +44,7 @@ describe('ShowcasePage', () => {
       'Tipografía',
       'Botones',
       'Piezas propias con Tailwind',
+      'Mascota',
       'Tarjetas, pestañas y paneles',
       'Formulario con Signal Forms',
       'Tabla con ordenación y paginación',
@@ -59,6 +61,25 @@ describe('ShowcasePage', () => {
     expect(TestBed.inject(ThemeService).mode()).toBe('dark');
     expect(root.style.colorScheme).toBe('dark');
     expect(await dark.isChecked()).toBe(true);
+  });
+
+  it('shows the mascot in each mood and with each accessory', async () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const mascots = () => [...element.querySelectorAll('app-mascot')];
+    // The mascot is decorative (aria-hidden), so its accessories are found by data-testid (4.8)
+    const count = (testId: string) => element.querySelectorAll(`[data-testid="${testId}"]`).length;
+
+    expect(mascots()).toHaveLength(2);
+    expect(count('mascot-headset')).toBe(2);
+    expect(count('mascot-bow-tie')).toBe(0);
+
+    await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Pensando' }))).check();
+    expect(mascots().every((mascot) => mascot.classList.contains('mascot-thinking'))).toBe(true);
+
+    await (await loader.getHarness(MatSlideToggleHarness.with({ label: 'Auriculares' }))).toggle();
+    await (await loader.getHarness(MatSlideToggleHarness.with({ label: 'Pajarita' }))).toggle();
+    expect(count('mascot-headset')).toBe(0);
+    expect(count('mascot-bow-tie')).toBe(2);
   });
 
   it('confirms the submission in the dialog', async () => {

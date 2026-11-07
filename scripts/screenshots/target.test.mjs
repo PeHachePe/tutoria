@@ -23,6 +23,10 @@ describe('parseTarget', () => {
     });
   });
 
+  it('accepts steps added between two others, such as 1.1b', () => {
+    assert.equal(parseTarget(['1.1b', '01-acceso']).folder, 'evolucion/01-acceso/1.1b');
+  });
+
   it('accepts screen codes with a letter, such as 05b-datos', () => {
     assert.equal(parseTarget(['1.9', '05b-datos']).folder, 'evolucion/05b-datos/1.9');
   });

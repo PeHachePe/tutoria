@@ -132,6 +132,57 @@
     </div>
   </section>
 
+  <section aria-labelledby="mascot-title" class="flex flex-col gap-3">
+    <h2 id="mascot-title" class="text-title-large">Mascota</h2>
+    <div class="flex flex-col gap-4 rounded-xl bg-panel p-4 shadow-sm md:flex-row md:items-center">
+      <div class="flex items-end justify-center gap-6">
+        <app-mascot
+          class="size-40"
+          [mood]="mascotMood()"
+          [headset]="mascotHeadset()"
+          [bowTie]="mascotBowTie()"
+        />
+        <app-mascot
+          class="size-12"
+          [mood]="mascotMood()"
+          [headset]="mascotHeadset()"
+          [bowTie]="mascotBowTie()"
+        />
+      </div>
+      <div class="flex min-w-0 flex-col gap-3">
+        <!-- On a phone the four moods do not fit: they scroll sideways instead of wrapping -->
+        <div class="max-w-full overflow-x-auto">
+          <mat-button-toggle-group
+            [value]="mascotMood()"
+            (change)="mascotMood.set($event.value)"
+            aria-label="Estado de la mascota"
+            hideSingleSelectionIndicator
+          >
+            @for (mood of mascotMoods; track mood.value) {
+              <mat-button-toggle [value]="mood.value">{{ mood.label }}</mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+        </div>
+        <div class="flex flex-wrap gap-6">
+          <mat-slide-toggle
+            [checked]="mascotHeadset()"
+            (change)="mascotHeadset.set($event.checked)"
+          >
+            Auriculares
+          </mat-slide-toggle>
+          <mat-slide-toggle [checked]="mascotBowTie()" (change)="mascotBowTie.set($event.checked)">
+            Pajarita
+          </mat-slide-toggle>
+        </div>
+        <p class="text-body-small text-on-surface-variant">
+          Los ojos siguen al ratón; al pasarlo por encima se mueve y al hacer clic saca la lengua.
+          La alegría da dos saltitos al elegirla. Con «reducir movimiento» del sistema, solo se
+          mueven los ojos.
+        </p>
+      </div>
+    </div>
+  </section>
+
   <section aria-labelledby="cards-title" class="flex flex-col gap-3">
     <h2 id="cards-title" class="text-title-large">Tarjetas, pestañas y paneles</h2>
     <div class="grid gap-4 md:grid-cols-2">

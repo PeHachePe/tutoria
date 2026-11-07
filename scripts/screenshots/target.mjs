@@ -1,7 +1,8 @@
 // What `npm run screenshots` captures and where (docs/PLAN.md 5.6), from its arguments.
 
 const DELIVERIES = ['pec3', 'pec4'];
-const STEP = /^\d+\.\d+$/;
+/** A plan step, such as 1.2, or one added between two others, such as 1.1b (D-022). */
+const STEP = /^\d+\.\d+[a-z]?$/;
 const SCREEN = /^\d{2}[a-z]?-[a-z0-9-]+$/;
 const ITERATION = /^iteracion-\d+$/;
 

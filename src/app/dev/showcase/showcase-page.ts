@@ -19,6 +19,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTab, MatTabGroup } from '@angular/material/tabs';
 import { MatToolbar } from '@angular/material/toolbar';
@@ -29,6 +30,7 @@ import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import type { Difficulty } from '../../data/exercise';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
+import { Mascot, MascotMood } from '../../shared/mascot/mascot';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
@@ -61,10 +63,12 @@ import { ShowcaseTable } from './showcase-table';
     MatExpansionPanelTitle,
     MatProgressBar,
     MatProgressSpinner,
+    MatSlideToggle,
     ShowcaseForm,
     ShowcaseTable,
     StatusChip,
     DifficultyChip,
+    Mascot,
   ],
   templateUrl: './showcase-page.html',
 })
@@ -123,6 +127,16 @@ export class ShowcasePage {
     'advanced',
     'extension',
   ];
+
+  protected readonly mascotMoods: { value: MascotMood; label: string }[] = [
+    { value: 'idle', label: 'Reposo' },
+    { value: 'chat', label: 'Chat abierto' },
+    { value: 'thinking', label: 'Pensando' },
+    { value: 'joy', label: 'Alegría' },
+  ];
+  protected readonly mascotMood = signal<MascotMood>('idle');
+  protected readonly mascotHeadset = signal(true);
+  protected readonly mascotBowTie = signal(false);
 
   protected readonly dialogResult = signal<string | undefined>(undefined);
 
