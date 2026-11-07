@@ -1,0 +1,27 @@
+<app-skip-link />
+
+<header>
+  <mat-toolbar class="gap-2">
+    <a routerLink="/alumno" class="rounded-md px-1 text-title-large font-bold">TutorIA</a>
+    <nav aria-label="Principal" class="flex-1">
+      <ul class="flex">
+        <li>
+          <a
+            routerLink="/alumno"
+            routerLinkActive="underline decoration-2 underline-offset-8"
+            [routerLinkActiveOptions]="{ exact: true }"
+            ariaCurrentWhenActive="page"
+            class="rounded-md px-3 py-2 text-label-large"
+          >
+            Ejercicios
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <app-user-menu [links]="accountLinks" />
+  </mat-toolbar>
+</header>
+
+<main id="contenido" tabindex="-1" class="mx-auto w-full max-w-6xl px-4 py-6 outline-none sm:px-6">
+  <router-outlet />
+</main>

@@ -1,0 +1,63 @@
+<app-skip-link />
+
+<div class="flex h-dvh flex-col">
+  <header>
+    <mat-toolbar class="gap-2">
+      @if (!wide()) {
+        <button
+          matIconButton
+          type="button"
+          aria-label="Menú de navegación"
+          aria-controls="menu-principal"
+          [attr.aria-expanded]="sidenav.opened"
+          (click)="toggleMenu()"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="flex-1 text-title-large font-bold">TutorIA</span>
+      <app-user-menu />
+    </mat-toolbar>
+  </header>
+
+  <mat-sidenav-container class="min-h-0 flex-1">
+    <mat-sidenav
+      #sidenav
+      id="menu-principal"
+      [autoFocus]="menuFocus()"
+      [mode]="wide() ? 'side' : 'over'"
+      [opened]="wide()"
+    >
+      <!-- mat-nav-list is already a navigation landmark: one for the whole menu, with its name -->
+      <mat-nav-list aria-label="Principal" class="px-3">
+        @for (section of sections(); track section.label) {
+          <h2 class="eyebrow px-4 pt-4 pb-1">{{ section.label }}</h2>
+          @for (link of section.links; track link.path) {
+            <a
+              mat-list-item
+              [routerLink]="link.path"
+              routerLinkActive
+              #active="routerLinkActive"
+              [activated]="active.isActive"
+              ariaCurrentWhenActive="page"
+              (click)="closeIfOver()"
+            >
+              <mat-icon matListItemIcon>{{ link.icon }}</mat-icon>
+              <span matListItemTitle>{{ link.label }}</span>
+            </a>
+          }
+        }
+      </mat-nav-list>
+    </mat-sidenav>
+
+    <mat-sidenav-content>
+      <main
+        id="contenido"
+        tabindex="-1"
+        class="mx-auto w-full max-w-7xl px-4 py-6 outline-none sm:px-6"
+      >
+        <router-outlet />
+      </main>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

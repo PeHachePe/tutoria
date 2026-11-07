@@ -40,7 +40,7 @@ const FAILURE_OPTIONS: readonly { readonly kind: DataErrorKind; readonly label: 
   { kind: 'unknown', label: 'Error desconocido' },
 ];
 
-/** The development pages of dev.routes.ts: until step 0.6 there is no other way to reach them. */
+/** The development pages of dev.routes.ts: no screen of the app links to them. */
 const DEV_PAGES = [
   { path: '/dev/ui', label: 'Muestrario' },
   { path: '/dev/datos', label: 'Datos simulados' },
@@ -156,10 +156,13 @@ export class DevToolbar {
     }
   }
 
-  /** Changes the session and reloads, so every screen reads its data again as that user. */
+  /**
+   * Changes the session and starts again from the home of the new role: the current page may belong
+   * to another role, and every screen reads its data again as that user.
+   */
   protected signInAs(userId: string): void {
     this.db.setSession(userId === NONE ? null : userId);
-    this.reloader.reload();
+    this.reloader.openHome();
   }
 
   protected setLatency(option: LatencyOption): void {

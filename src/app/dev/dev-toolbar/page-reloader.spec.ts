@@ -4,14 +4,24 @@ import { TestBed } from '@angular/core/testing';
 import { PageReloader } from './page-reloader';
 
 describe('PageReloader', () => {
-  it('reloads the location of the document', () => {
-    const reload = vi.fn();
-    TestBed.configureTestingModule({
-      providers: [{ provide: DOCUMENT, useValue: { location: { reload } } }],
-    });
+  const reload = vi.fn();
+  const assign = vi.fn();
 
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: DOCUMENT, useValue: { location: { reload, assign } } }],
+    });
+  });
+
+  it('reloads the location of the document', () => {
     TestBed.inject(PageReloader).reload();
 
     expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it('loads the root from scratch, which leads to the home of the signed-in role', () => {
+    TestBed.inject(PageReloader).openHome();
+
+    expect(assign).toHaveBeenCalledWith('/');
   });
 });

@@ -1,0 +1,60 @@
+import { Component, inject, input } from '@angular/core';
+import { MatIconButton } from '@angular/material/button';
+import { MatDivider } from '@angular/material/divider';
+import { MatIcon } from '@angular/material/icon';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
+import { MatTooltip } from '@angular/material/tooltip';
+import { Router, RouterLink } from '@angular/router';
+
+import { AuthStore } from '../../auth/auth-store';
+import { ThemeMode, ThemeService } from '../../core/theme-service';
+import type { NavLink } from '../nav-link';
+
+const THEME_OPTIONS: readonly {
+  readonly mode: ThemeMode;
+  readonly label: string;
+  readonly icon: string;
+}[] = [
+  { mode: 'light', label: 'Tema claro', icon: 'light_mode' },
+  { mode: 'dark', label: 'Tema oscuro', icon: 'dark_mode' },
+  { mode: 'system', label: 'Tema del sistema', icon: 'contrast' },
+];
+
+/**
+ * Account menu of the shells: who is signed in, the colour mode (the only place where teachers
+ * and admins can change it) and "Cerrar sesión". Each shell may add its own links on top.
+ */
+@Component({
+  selector: 'app-user-menu',
+  imports: [
+    MatIconButton,
+    MatIcon,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
+    MatDivider,
+    MatTooltip,
+    RouterLink,
+  ],
+  templateUrl: './user-menu.html',
+})
+export class UserMenu {
+  private readonly auth = inject(AuthStore);
+  private readonly theme = inject(ThemeService);
+  private readonly router = inject(Router);
+
+  readonly links = input<readonly NavLink[]>([]);
+
+  protected readonly user = this.auth.user;
+  protected readonly mode = this.theme.mode;
+  protected readonly themeOptions = THEME_OPTIONS;
+
+  protected setMode(mode: ThemeMode): void {
+    this.theme.setMode(mode);
+  }
+
+  protected async signOut(): Promise<void> {
+    await this.auth.signOut();
+    await this.router.navigateByUrl('/login');
+  }
+}

@@ -105,6 +105,16 @@ html {
       container-background-color: var(--app-panel),
     )
   );
+  // Staff shell: side menu as a panel and content on the page colour; square edge when it is
+  // docked beside the content.
+  @include mat.sidenav-overrides(
+    (
+      container-background-color: var(--app-panel),
+      content-background-color: var(--app-canvas),
+      container-shape: 0,
+      container-width: 16rem,
+    )
+  );
 
   // Brand app bar: deep green in both modes.
   @include mat.toolbar-overrides(
@@ -132,6 +142,16 @@ body {
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
   letter-spacing: var(--mat-sys-body-medium-tracking);
+}
+
+// The side menu moves the focus to the current page when it opens (staff-layout). Its focus shade
+// only helps keyboard users: after a tap or a click it would just darken the highlighted item.
+.mat-mdc-nav-list .mdc-list-item:focus:not(:focus-visible) {
+  @include mat.list-overrides(
+    (
+      list-item-focus-state-layer-opacity: 0,
+    )
+  );
 }
 
 // Icon buttons inside the app bar take the bar's text colour.

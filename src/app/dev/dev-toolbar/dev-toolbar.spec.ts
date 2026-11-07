@@ -19,14 +19,16 @@ describe('DevToolbar', () => {
   let loader: HarnessLoader;
   let db: MockDb;
   const reload = vi.fn();
+  const openHome = vi.fn();
 
   beforeEach(async () => {
     localStorage.clear();
     reload.mockReset();
+    openHome.mockReset();
     TestBed.configureTestingModule({
       providers: [
         { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
-        { provide: PageReloader, useValue: { reload } },
+        { provide: PageReloader, useValue: { reload, openHome } },
         provideRouter([]),
       ],
     });
@@ -145,13 +147,14 @@ describe('DevToolbar', () => {
       expect(names).not.toContain('Raúl Medina Cortés');
     });
 
-    it('signs in as the chosen user and reloads the page', async () => {
+    it('signs in as the chosen user and opens the home of their role from scratch', async () => {
       await openPanel();
 
       await (await select('Entrar como')).clickOptions({ text: 'Lucía Martín Gómez' });
 
       expect(db.sessionUserId()).toBe(DAW_STUDENT_IDS[0]);
-      expect(reload).toHaveBeenCalledOnce();
+      expect(openHome).toHaveBeenCalledOnce();
+      expect(reload).not.toHaveBeenCalled();
       expect(element().textContent).toContain('lucia.martin@tutoria.test');
     });
 
@@ -161,7 +164,7 @@ describe('DevToolbar', () => {
       expect(await (await select('Entrar como')).getValueText()).toBe('Sin sesión');
     });
 
-    it('signs out and reloads the page', async () => {
+    it('signs out and opens the home, which leads to the login', async () => {
       db.setSession(TEACHER_ID);
       await openPanel();
       expect(await (await select('Entrar como')).getValueText()).toBe('Marta Ibáñez Soler');
@@ -169,7 +172,7 @@ describe('DevToolbar', () => {
       await (await select('Entrar como')).clickOptions({ text: 'Sin sesión' });
 
       expect(db.sessionUserId()).toBeNull();
-      expect(reload).toHaveBeenCalledOnce();
+      expect(openHome).toHaveBeenCalledOnce();
     });
   });
 

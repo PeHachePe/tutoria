@@ -83,7 +83,12 @@
           "options": {
             "coverage": true,
             "coverageInclude": ["src/**/*.ts"],
-            "coverageExclude": ["src/main.ts", "src/environments/**", "src/**/*.spec.ts"],
+            "coverageExclude": [
+              "src/main.ts",
+              "src/environments/**",
+              "src/**/*.spec.ts",
+              "src/**/*-testing.ts"
+            ],
             "coverageReporters": ["text-summary", "html"],
             "coverageThresholds": {
               "statements": 100,

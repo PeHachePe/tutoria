@@ -1,0 +1,50 @@
+<button
+  matIconButton
+  type="button"
+  aria-label="Menú de usuario"
+  matTooltip="Menú de usuario"
+  [matMenuTriggerFor]="menu"
+>
+  <mat-icon>account_circle</mat-icon>
+</button>
+
+<mat-menu #menu="matMenu" xPosition="before">
+  @if (user(); as user) {
+    <div class="flex flex-col px-4 py-2">
+      <span class="text-title-small">{{ user.name }}</span>
+      <span class="text-body-small text-on-surface-variant">{{ user.email }}</span>
+    </div>
+    <mat-divider />
+  }
+
+  @for (link of links(); track link.path) {
+    <a mat-menu-item [routerLink]="link.path">
+      <mat-icon>{{ link.icon }}</mat-icon>
+      <span>{{ link.label }}</span>
+    </a>
+  }
+  @if (links().length) {
+    <mat-divider />
+  }
+
+  <div role="group" aria-label="Tema">
+    @for (option of themeOptions; track option.mode) {
+      <button
+        mat-menu-item
+        type="button"
+        role="menuitemradio"
+        [attr.aria-checked]="mode() === option.mode"
+        (click)="setMode(option.mode)"
+      >
+        <mat-icon>{{ mode() === option.mode ? 'check' : option.icon }}</mat-icon>
+        <span>{{ option.label }}</span>
+      </button>
+    }
+  </div>
+  <mat-divider />
+
+  <button mat-menu-item type="button" (click)="signOut()">
+    <mat-icon>logout</mat-icon>
+    <span>Cerrar sesión</span>
+  </button>
+</mat-menu>
