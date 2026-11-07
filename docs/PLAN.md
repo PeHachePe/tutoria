@@ -803,7 +803,7 @@ Se rellena si se agota el tiempo.
 3. Es responsive a 375, 768 y 1280 px, sin scroll horizontal. Si su contenido cabe, tampoco tiene scroll vertical a 375×667, 768×1024 y 1280×720: lo largo (listas, tablas, el chat) se desplaza dentro de su propia zona, no la página entera (a petición del autor).
 4. Se usa entera con teclado, el foco es visible y los diálogos atrapan el foco; el orden de tabulación es lógico. Al llegar a la pantalla, el foco va a su encabezado principal y la pestaña del navegador muestra su título.
 5. Tiene contraste AA en modo claro y oscuro y respeta `prefers-reduced-motion`.
-6. Pasa axe sin ninguna infracción, con todas sus reglas, en modo claro y oscuro. Lo comprueba su test de accesibilidad e2e con `@axe-core/playwright`, que recorre los estados de su ficha (desde el 1.1e: axe completo en claro y solo contraste en oscuro).
+6. Pasa axe sin ninguna infracción, con todas sus reglas, en modo claro y oscuro. Durante el paso se comprueba en el navegador; los e2e (comportamiento y accesibilidad) no se escriben ni se ejecutan en los pasos: cada paso apunta los suyos en `docs/E2E-PENDIENTES.md` y se hacen en el cierre (7.1, D-026).
 7. Textos en español, marcados para traducir y traducidos al inglés y al catalán (D-023), y sin errores ni avisos en la consola.
 8. Su código tiene tests con una cobertura del 100 % (D-010) y `npm run check` está en verde.
 9. La bitácora del paso y `REGISTRO.md` están actualizados y, si hubo alguna decisión, también `DECISIONES.md`.
@@ -1327,7 +1327,7 @@ Commit: `feat: on-device tutor`.
 
 **7.1 · Accesibilidad y responsive**
 
-- Repaso final con axe (`@axe-core/playwright`) de todas las pantallas y sus estados (diálogos abiertos, errores, vacío, modo oscuro), sin ninguna infracción. Cada pantalla ya lo pasa desde su paso (5.4); aquí se comprueba que nada se ha roto.
+- e2e de todas las pantallas (D-026): los de comportamiento y un test de accesibilidad por pantalla con `@axe-core/playwright` que recorre sus estados (diálogos abiertos, errores, vacío), completo en claro y solo contraste en oscuro (D-025), sin ninguna infracción.
 - Recorrido completo con teclado y con un lector de pantalla (NVDA en Windows), que encuentra lo que axe no puede comprobar solo.
 - `npm run screenshots -- pec4` como evidencia para la memoria.
 

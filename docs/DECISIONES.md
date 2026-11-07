@@ -550,3 +550,13 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** la suite pasa de 2,5 min con 31 tests a 1,6 min con 38. El CI hace lo mismo y sube el informe de Playwright si falla. Cambia la nota del 1.1c sobre el límite de navegadores.
 
 **Aprobación:** el autor aprobó el plan del paso y exigió que los e2e y los pasos fueran más rápidos; el modo legacy y el recorte de estados salieron de esa petición.
+
+## D-026 · Los e2e, al cierre y no en cada paso (07/11/2026)
+
+**Contexto:** escribir, ejecutar y depurar los e2e alargaba cada paso muy por encima de lo que aportaban; en el 1.1e el paso duró casi una hora, la mayor parte esperando a la suite.
+
+**Decisión:** durante los pasos no se escriben ni se ejecutan e2e. El cierre de cada paso es `npm run check` (formato, lint y tests unitarios al 100 %) y la comprobación en el navegador. Cada paso apunta en `docs/E2E-PENDIENTES.md` los e2e que le tocarían, y todos se escriben y se ejecutan en el 7.1. Los que ya existen se quedan y el CI los sigue ejecutando en cada push, sin bloquear al agente.
+
+**Consecuencias:** cambian §5.4 (punto 6) y el 7.1 del plan. El riesgo de que algo se rompa entre pasos lo cubren los tests unitarios, el CI y la revisión en el navegador.
+
+**Aprobación:** decisión del autor.
