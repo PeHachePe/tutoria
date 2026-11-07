@@ -1,6 +1,6 @@
 # Guía de desarrollo de TutorIA con asistencia de IA
 
-### Plan v4.2 · noviembre de 2026 · Angular 22.2 · desarrollo local primero, pantalla a pantalla
+### Plan v4.3 · noviembre de 2026 · Angular 22.2 · desarrollo local primero, pantalla a pantalla
 
 Este documento es el plan de construcción de TutorIA. Está pensado para ejecutarse con un agente de codificación (Claude Code) bajo supervisión humana y es autocontenido: incluye la especificación funcional, las decisiones técnicas con su justificación, la forma de trabajar con el agente y los pasos con sus criterios de verificación. En el repositorio vive como `docs/PLAN.md`, y es la única fuente de verdad: no hay una copia aparte de la especificación que pueda desincronizarse.
 
@@ -49,6 +49,15 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - Scripts de npm con nombre en inglés, como el resto del código: `metrics` y `screenshots` (antes `metricas`).
 - Los stores de pantalla se destruyen al salir de ella, con `withAutoCleanupInjectors()` en el router (4.5).
 
+**Cambios de la v4.3** (contraste con la memoria del TFM en el paso 0.5; ver D-017 y D-018):
+
+- Pantalla de datos registrados del alumno, `/alumno/datos`, con aviso la primera vez que entra (RF-07, 2.2 y paso 1.9).
+- El docente gestiona sus grupos y su matrícula en `/docente/grupos`, que sustituye a `/admin/grupos` (RF-16, 2.2 y paso 5.2).
+- El tutor proactivo también interviene ante logros (RF-09, 2.7 y paso 6.2).
+- Streaming de las respuestas del tutor (RF-23): se decide en el paso 2.4.
+- Voz del tutor elegible (6.1) y protección del propio rol del administrador (5.1).
+- Datos simulados más realistas: un grupo de 24 alumnos, un segundo grupo con otro docente, un alumno desactivado y servicios simulados que imitan la RLS (4.3).
+
 ---
 
 ## 1. Calendario y alcance
@@ -82,9 +91,9 @@ TutorIA es una aplicación web educativa para aprender programación en Formaci�
 
 ### 2.2 Roles, pantallas y rutas
 
-- **Alumno:** resuelve los ejercicios asignados a sus grupos con ayuda del tutor y ajusta sus preferencias.
-- **Docente:** sigue a sus grupos en vivo, consulta el histórico y gestiona el banco de ejercicios, sus pruebas, sus umbrales y sus asignaciones.
-- **Administrador:** gestiona usuarios, grupos, matrículas y la configuración del sistema; además puede entrar en todas las pantallas del docente con acceso a todos los grupos. La cuenta del tribunal es de administrador.
+- **Alumno:** resuelve los ejercicios asignados a sus grupos con ayuda del tutor, ajusta sus preferencias y consulta qué datos registra la aplicación (RF-07).
+- **Docente:** sigue a sus grupos en vivo, consulta el histórico, gestiona sus grupos y su matrícula (RF-16) y el banco de ejercicios, sus pruebas, sus umbrales y sus asignaciones.
+- **Administrador:** gestiona usuarios y la configuración del sistema; además puede entrar en todas las pantallas del docente con acceso a todos los grupos, incluida la gestión de grupos y matrícula. La cuenta del tribunal es de administrador.
 
 | Ruta                    | Pantalla                                                                 | Rol             | Capa     | Referencia de diseño  |
 | ----------------------- | ------------------------------------------------------------------------ | --------------- | -------- | --------------------- |
@@ -92,13 +101,15 @@ TutorIA es una aplicación web educativa para aprender programación en Formaci�
 | `/alumno`               | Catálogo de ejercicios                                                   | Alumno          | 1        | Figuras 7–8 del TFM   |
 | `/alumno/ejercicio/:id` | Pantalla de trabajo: enunciado, editor, pruebas y tutor                  | Alumno          | 1, 3 y 4 | Figuras 9–10 del TFM  |
 | `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                            | Alumno          | 1        | —                     |
+| `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve       | Alumno          | 1        | Figuras 14 y 23       |
 | `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId` | Docente y admin | 2        | Figuras 11–12 del TFM |
 | `/docente/historico`    | Histórico del grupo                                                      | Docente y admin | 2        | Figuras 13–14 del TFM |
 | `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                     | Docente y admin | 2        | Figuras 15–16 del TFM |
+| `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos       | Docente y admin | 2        | —                     |
 | `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                | Admin           | —        | —                     |
-| `/admin/grupos`         | Grupos y matrícula                                                       | Admin           | —        | —                     |
 | `/admin/sistema`        | Ajustes del sistema: adaptador de IA activo                              | Admin           | —        | —                     |
 | `/dev/ui`               | Muestrario de componentes y temas (solo en desarrollo)                   | —               | —        | —                     |
+| `/dev/datos`            | Explorador de los datos simulados (solo en desarrollo)                   | —               | —        | —                     |
 
 Detalle por pantalla:
 
@@ -106,7 +117,8 @@ Detalle por pantalla:
 - **Pantalla de trabajo:** enunciado y pruebas visibles; editor; botón para ejecutar las pruebas con resultados ✔ (superada), ✘ (fallida) o ● (error o tiempo agotado); botón Entregar; panel del tutor tipo chat con nivel de pista visible y botón «Pedir pista»; reacciones flotantes.
 - **Sesión en vivo:** tabla por alumno con estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas y la señal derivada «atascado»; detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
 - **Histórico:** gráfica de la media de pistas solicitadas por sesión (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales.
-- **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a grupo y sesión.
+- **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a grupo y sesión. Un ejercicio con intentos no se borra, para conservar su historial.
+- **Datos registrados (RF-07):** qué registra la aplicación (tiempos, ejecuciones, pistas, pegados y cambios de pestaña), qué no registra nunca (el audio), con qué finalidad (formativa, no sancionadora), quién lo ve (su docente) y qué servicios externos intervienen (reconocimiento de voz del navegador, proveedor de IA). La primera vez que el alumno entra, un aviso le resume esto con un enlace a la pantalla, antes de empezar a trabajar, como pide el RGPD citado en la memoria.
 
 ### 2.3 Modelo de datos (10 entidades, PostgreSQL en Supabase)
 
@@ -212,7 +224,7 @@ interface TutorRequest {
 }
 ```
 
-**Respuesta:** secuencia de eventos `meta` → `delta`(s) → `done`. En la v1, sin streaming, todos llegan juntos tras la respuesta completa. Cuando se active el streaming, solo cambiarán el servidor y el transporte; el cliente no.
+**Respuesta:** secuencia de eventos `meta` → `delta`(s) → `done`. En la v1, sin streaming, todos llegan juntos tras la respuesta completa. Cuando se active el streaming, solo cambiarán el servidor y el transporte; el cliente no. La memoria lo pide en la capa 1 (RF-23): se decide en el paso 2.4, según lo que cueste validar la respuesta (2.6) a medida que llega (D-017).
 
 ```ts
 type Emotion = 'joy' | 'surprise' | 'encouragement' | 'celebration';
@@ -275,6 +287,7 @@ Los intentos de elusión (`elusion: true`) quedan registrados para su análisis.
   - fallos: la misma prueba falla en las últimas N ejecuciones seguidas, y la cuenta vuelve a cero si la supera;
   - inactividad: N minutos desde la última actividad del alumno (guardar código, ejecutar, entregar, pedir pista, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan);
   - basta con llegar al umbral.
+- **Logros (RF-09 y CU-03 de la memoria):** el tutor también interviene cuando el alumno supera una prueba que llevaba al menos `max_repeated_failures` ejecuciones seguidas fallando. Se comprueba justo después de cada ejecución, con una función pura en `shared/` hermana de `isStuck()`, y la petición proactiva lleva el motivo para que el modelo celebre en lugar de ayudar (D-017).
 - **Cooldown:** hay un tiempo mínimo entre intervenciones.
 - **Llamada:** lleva `kind: 'proactive'`. Si el modelo decide callar (`silent`), la aplicación no muestra nada.
 - El alumno puede desactivar la proactividad en sus ajustes.
@@ -385,7 +398,7 @@ src/app/
   shared/             # used by more than one feature, one folder or file per concept
     status-chip/  empty-state/  page-header/
     is-stuck.ts  create-debouncer.ts
-  dev/                # dev toolbar and /dev/ui showcase (development builds only)
+  dev/                # dev toolbar, /dev/ui showcase and /dev/datos data explorer (development builds only)
 src/environments/     # generated by ng generate environments; each one picks its data services (4.4)
 src/theme.scss        # Material theme: palette, typography, density, overrides (the only place that styles Material)
 src/styles.css        # Tailwind, Tailwind colors mapped to Material variables, global keyframes
@@ -446,23 +459,25 @@ Los servicios de datos lanzan un `DataError` tipado (`network`, `unauthorized`, 
 
 ### 4.3 Datos simulados
 
-- **MockDb:** un `@Service()` con un signal por tabla. Persiste en localStorage con una versión del seed: si cambia el seed, se reinicia. Tiene un método `reset()`.
-- **Fixtures** (`data/mock/fixtures/`):
-  - un administrador, un docente y cuatro alumnos;
-  - el grupo «1.º DAW A», curso 2026/27;
-  - los 8 ejercicios con sus pruebas y sus asignaciones por sesión;
-  - algunos intentos, eventos e interacciones, para que el panel docente no salga vacío.
+- **MockDb:** un `@Service()` con todas las tablas en un único signal inmutable, que se cambia tabla a tabla con `update(tabla, fn)`. Persiste en localStorage con una versión del seed: si cambia el seed, se reinicia. Tiene un método `reset()`. Guarda también el usuario con sesión, que hace de sesión de Supabase Auth y sobrevive a `reset()` (D-018).
+- **Reglas de acceso:** los servicios simulados imitan la RLS de 2.3 (`data/mock/mock-access.ts`): un alumno no ve ejercicios que no tiene asignados ni intentos ajenos (`not_found`), un docente solo gestiona sus grupos (`forbidden`) y una cuenta desactivada no entra (`unauthorized`).
+- **Fixtures** (`data/mock/fixtures/`, identificadores UUID y fechas fijos):
+  - un administrador, dos docentes, un alumno desactivado y dos grupos del curso 2026/27: «1.º DAW A», un grupo real de 24 alumnos (el tamaño que da la memoria), y «1.º DAM B», con 6 alumnos y otro docente, para comprobar que cada docente solo ve los suyos;
+  - los 8 ejercicios con sus pruebas, con una solución y un error típico de ejemplo que un test ejecuta contra las pruebas, y sus asignaciones por sesión;
+  - la actividad de las sesiones pasadas, generada con guiones fijos: cuatro alumnos de 1.º DAW A con historias distintas (autónoma, con dificultades, que mejora y que pega código) y el resto con pocas pistas cada vez, para que el histórico salga descendente.
 
-  Un script genera `supabase/seed.sql` a partir de estas mismas fixtures, así los dos mundos comparten datos.
+  `npm run seed` genera `supabase/seed.sql` a partir de estas mismas fixtures, así los dos mundos comparten datos, y `npm run check` comprueba que está al día. Node ejecuta las fixtures `.ts` directamente, así que solo usan sintaxis que se puede borrar (sin `enum`) e importan los tipos con `import type`.
 
-- **Latencia y errores:** cada operación espera entre 200 y 600 ms, un rango ajustable que también se puede poner a 0. Un interruptor hace fallar la siguiente petición para diseñar los estados de error.
-- **Barra de desarrollo** (solo en builds de desarrollo):
-  - entrar como alumno, docente o administrador;
+- **Latencia y errores:** cada operación espera entre 200 y 600 ms, un rango ajustable que también se puede poner a 0 y que se guarda en localStorage. Un selector hace fallar la siguiente petición con el tipo de `DataError` elegido, para diseñar los estados de error.
+- **Barra de desarrollo** (solo en builds de desarrollo, `dev/dev-toolbar/`):
+  - entrar como cualquier usuario del seed, agrupados por rol y grupo, o sin sesión; recarga la página para que todo se vuelva a leer;
   - latencia;
   - fallar la siguiente petición;
   - reiniciar los datos;
   - visor de los últimos eventos;
+  - enlaces a las páginas de desarrollo;
   - controles del simulador en vivo (fase 4).
+- **Explorador de datos** (`/dev/datos`, solo en desarrollo): lo que ve el usuario de la barra a través de los servicios de datos (ejercicios, detalle con pruebas visibles e intento con sus transiciones), con estados de carga y de error con reintento. Hasta el paso 1.5 incluye una ejecución simulada que marca el intento como superado o con fallos.
 - **Ejecución simulada (Web Worker):**
   - obtiene la función por su nombre a partir del código del alumno y la llama con cada `input`;
   - compara el resultado con `expected_output` por JSON y captura los errores de cada prueba;
@@ -472,7 +487,7 @@ Los servicios de datos lanzan un `DataError` tipado (`network`, `unauthorized`, 
   - emite `meta` → `delta`(s) → `done` con pequeños retardos para simular la escritura;
   - en las proactivas, a veces calla;
   - calcula el nivel igual que el servidor y registra la interacción en MockDb.
-- **Simulador en vivo:** genera la actividad de los cuatro alumnos (ejecuciones, fallos, pistas, pegados, pérdidas de foco), con alguno que acaba «atascado», para construir el panel docente sin varios navegadores.
+- **Simulador en vivo:** genera la actividad de los alumnos de un grupo (ejecuciones, fallos, pistas, pegados, pérdidas de foco), con alguno que acaba «atascado», para construir el panel docente sin varios navegadores.
 
 Las versiones simuladas no llegan al build de producción. Al final del proyecto se pueden retirar las que ya no aporten; en ese caso, los e2e pasan a ejecutarse contra Supabase local, reiniciado con `supabase db reset`. Las del tutor y la ejecución de código conviene conservarlas, para que los tests no gasten cuota de Gemini ni de Judge0.
 
@@ -484,18 +499,22 @@ Cada fichero de entorno importa solo las versiones que usa, así el código simu
 // environment.development.ts — everything simulated (default for `npm start`)
 export const environment = {
   dataProviders: [provideMockData()],
-  devTools: true,
+  devProviders: [provideDevToolbar()],
+  devRoutes,
 };
 
 // environment.local.ts — local Supabase; runner and tutor still simulated until steps 2.3 and 2.4
 export const environment = {
   dataProviders: [provideSupabaseData(SUPABASE_LOCAL), provideMockCodeRunner(), provideMockTutor()],
-  devTools: false,
+  devProviders: [],
+  devRoutes: [],
 };
 
 // app.config.ts
-providers: [...environment.dataProviders /* , ... */],
+providers: [...environment.dataProviders, ...environment.devProviders /* , ... */],
 ```
+
+`provideDevToolbar()` registra el componente de la barra en el token `DEV_TOOLBAR` (`core/dev-toolbar-token.ts`), y `App` lo pinta con `NgComponentOutlet` solo si existe. Así producción no importa nada de `dev/` ni de `data/mock/` (D-014, D-018).
 
 ### 4.5 Estado: en el componente o en un store
 
@@ -930,12 +949,12 @@ Commit: `chore: logbook`.
 **0.5 · Datos simulados y barra de desarrollo (≈3 h)**
 
 - MockDb, fixtures y el script que genera `seed.sql` (4.3).
-- Versiones simuladas de `AuthService`, `ExerciseService`, `AttemptService` y `EventService`. El resto se hace en sus pasos.
+- Versiones simuladas de `AuthService`, `ExerciseService`, `AttemptService` y `EventService`, con las reglas de acceso de la RLS. El resto se hace en sus pasos.
 - Latencia y modo «fallar la siguiente petición».
 - Barra de desarrollo y selección por entorno (4.4).
 
-✅ «Reiniciar datos» restaura el seed y cambiar de rol funciona.
-🧪 El servicio simulado de intentos respeta las transiciones.
+✅ «Reiniciar datos» restaura el seed, cambiar de usuario funciona y el build de producción no contiene nada simulado.
+🧪 El servicio simulado de intentos respeta las transiciones; las fixtures son coherentes (cada solución de ejemplo supera sus pruebas y cada intento cuadra con sus eventos).
 
 **0.6 · Shell, rutas por rol y guards (≈2 h)**
 
@@ -1022,12 +1041,13 @@ Commit: `chore: foundations`.
 
 🧪 Correspondencia entre emoción y animación.
 
-**1.9 · Ajustes del alumno (≈1,5 h)** · ficha `05-ajustes`
+**1.9 · Ajustes del alumno y datos registrados (≈2,5 h)** · fichas `05-ajustes` y `05b-datos` · Figuras 14 y 23
 
 - Tema (claro, oscuro o sistema), animaciones, proactividad (sin efecto hasta el paso 6.2) y voz (deshabilitada hasta el 6.1).
 - Persistidos por usuario en localStorage.
+- Pantalla `/alumno/datos` (RF-07, 2.2), enlazada desde los ajustes, y aviso la primera vez que el alumno entra al catálogo, que se recuerda por usuario.
 
-🧪 Store de ajustes.
+🧪 Store de ajustes; el aviso sale solo la primera vez.
 Commit: `feat: student flow (mock)`.
 
 **1.10 · Publicar el front con datos simulados (opcional y recomendado, ≈1 h)**
@@ -1041,13 +1061,13 @@ Commit: `feat: student flow (mock)`.
 
 - `supabase init` y `supabase start` (requiere Docker; en Windows, Docker Desktop con WSL 2). Si en el equipo no se puede instalar Docker, se usa un proyecto de Supabase en la nube para desarrollo. Los comandos exactos de la versión instalada se comprueban con `supabase --help`.
 - Migraciones:
-  - tipos y tablas de 2.3, con claves foráneas, índices y `updated_at`;
+  - tipos y tablas de 2.3, con claves foráneas, índices y `updated_at`; las mismas reglas de borrado que aplican los servicios simulados: `attempt.assignment_id` con `on delete set null` y un ejercicio con intentos no se puede borrar (`on delete restrict`);
   - funciones auxiliares y políticas RLS;
   - privilegios por columna en `attempt`;
   - trigger que devuelve el intento a `in_progress` cuando cambia el código (solo si el código es distinto);
   - RPC `submit_attempt`;
   - trigger que crea `app_user` con rol `student` al dar de alta un usuario. El rol nunca se toma de los metadatos, que el propio usuario puede editar.
-- `seed.sql`, generado desde las fixtures; las contraseñas de demostración solo existen en local.
+- `seed.sql`, generado desde las fixtures con `npm run seed` (paso 0.5); las contraseñas de demostración solo existen en local. El generador añade aquí las cuentas de `auth.users` con la contraseña de prueba de las fixtures y, como el trigger anterior ya crea cada `app_user`, sus inserciones pasan a `insert … on conflict (id) do update` para fijar nombre, rol y estado (D-018).
 - Tipos con `supabase gen types typescript --local`.
 
 🧪 Tests de políticas con pgTAP (`supabase test db`):
@@ -1185,11 +1205,13 @@ Commit: `feat: teacher panel`.
 **5.1 · Usuarios** · ficha `10-usuarios`
 
 - Lista, alta (nombre, correo, rol y contraseña temporal), cambio de rol y activar o desactivar.
+- El administrador no puede quitarse su propio rol ni desactivarse, para que la aplicación no se quede sin administración (CU-06, flujo 3b); un correo repetido se rechaza (3a).
 - En real, mediante la Edge Function `admin-users`: comprueba que quien llama es administrador y usa la API de administración de Supabase Auth.
 
 **5.2 · Grupos y matrícula** · ficha `11-grupos`
 
-- Crear grupos, asignarles docente y matricular alumnos.
+- En `/docente/grupos` (RF-16): el docente crea sus grupos y matricula alumnos en ellos; el administrador ve todos y además cambia el docente de un grupo. Las cuentas solo las crea el administrador.
+- Las operaciones de grupos y matrícula pasan de `AdminService` a un servicio propio, porque ya no son solo del administrador.
 
 **5.3 · Sistema** · ficha `12-sistema`
 
@@ -1204,6 +1226,7 @@ Commit: `feat: admin`.
 
 - `SpeechService` (abstracción) e implementación con Web Speech, cargada con `injectAsync` solo si el alumno activa la voz.
 - Transcripción editable antes de enviar y síntesis de las respuestas.
+- Selector de la voz del tutor en los ajustes, sin una voz femenina por defecto (perspectiva de género de la memoria).
 - Modo «llamada» sobre el mismo `TutorStore`.
 - Si el navegador no permite reconocimiento, se avisa y se sigue con teclado.
 - Documentar qué motor usa cada navegador.
@@ -1213,10 +1236,11 @@ Commit: `feat: admin`.
 **6.2 · Tutor proactivo (≈6 h)**
 
 - `ProactivityMonitor` de ámbito de pantalla: comprueba cada 15 segundos con `isStuck()` y los umbrales del ejercicio.
+- Logros (2.7): tras cada ejecución, comprueba si se ha superado una prueba atascada y pide una intervención de celebración.
 - Cooldown entre intervenciones; llama con `kind: 'proactive'` y respeta el silencio del modelo.
 - Se puede desactivar en los ajustes.
 
-🧪 Temporizadores simulados: umbrales, cooldown y silencio.
+🧪 Primero los tests de la función de logros, con casos límite; temporizadores simulados: umbrales, cooldown y silencio.
 Commit: `feat: voice and proactive tutor`.
 
 **6.3 · Tutor en el dispositivo con la IA de Chrome (opcional, ≈6 h)**

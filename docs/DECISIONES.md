@@ -286,3 +286,52 @@ Plantilla para las siguientes:
 **Consecuencias:** en el paso 2.1, los tipos generados por Supabase se quedan en `data/supabase/` y se traducen a estos. Cambian `docs/PLAN.md` (§4.1 y paso 0.4).
 
 **Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026).
+
+## D-017 · Ajustes del plan tras contrastarlo con la memoria (07/11/2026)
+
+**Contexto:** al empezar el paso 0.5, el autor pasó la memoria del TFM y pidió proponer mejoras siempre que se vean. Al comparar sus requisitos (RF y casos de uso) con el plan v4.2 aparecieron huecos: cosas que la memoria promete y que el plan no construía.
+
+**Decisión:** el plan pasa a la v4.3 con estos cambios:
+
+- **Datos registrados (RF-07):** pantalla `/alumno/datos` y aviso la primera vez que el alumno entra, antes de trabajar. La memoria la justifica con el RGPD (transparencia e información previa) y tiene boceto y prototipo (figuras 14 y 23). Se añade al paso 1.9.
+- **Grupos del docente (RF-16):** el docente gestiona sus grupos y su matrícula en `/docente/grupos`, que sustituye a `/admin/grupos`; el administrador entra con acceso a todos, como en el resto del área docente. Las cuentas las sigue creando solo el administrador.
+- **Intervenciones ante logros (RF-09, CU-03):** el tutor proactivo celebra cuando el alumno supera una prueba que llevaba `max_repeated_failures` ejecuciones fallando. Es una función pura hermana de `isStuck()`. Los otros dos disparadores del CU-03 («alejamiento sostenido de la solución» y «prueba difícil») no se construyen: no hay forma fiable de medir el primero, y el segundo queda cubierto por este.
+- **Streaming (RF-23):** la memoria lo pone en la capa 1 y el plan lo dejaba fuera de la v1. El cliente ya consume una secuencia de eventos, así que el coste está en el servidor: validar el JSON y la ausencia de código mientras llega. Se decide en el paso 2.4 con la función ya hecha. Si no se activa, se corrige la memoria.
+- **Voz del tutor elegible** (perspectiva de género de la memoria) en el paso 6.1, y **protección del propio rol del administrador** (CU-06, 3b) en el 5.1.
+
+Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA (CU-07, paso 5.3).
+
+**Alternativas:** dejar el plan como estaba y recortar la memoria. Se descarta porque RF-07 y RF-16 tienen prioridad alta en la memoria y RF-07 responde a una obligación legal.
+
+**Consecuencias:** unas 3 horas más entre los pasos 1.9, 5.2 y 6.2. Cambian `docs/PLAN.md` (§2.2, §2.6, §2.7 y pasos 1.9, 5.1, 5.2, 6.1 y 6.2). En la memoria, la nueva ruta del docente y la decisión sobre el streaming se reflejan cuando se tomen.
+
+**Aprobación:** el autor (07/11/2026), que aprobó la propuesta en la sesión del paso 0.5.
+
+## D-018 · Diseño de los datos simulados y de la barra de desarrollo (07/11/2026)
+
+**Contexto:** el paso 0.5 construye MockDb, las fixtures, las versiones simuladas de cuatro servicios, la barra de desarrollo y el script de `seed.sql`. El plan (§4.3 y §4.4) dice qué hacen, pero no cómo.
+
+**Decisión:**
+
+- **Un seed realista:** un grupo de 24 alumnos (el tamaño de aula de la memoria), un segundo grupo con otro docente y un alumno desactivado. La actividad se genera con guiones fijos, sin azar, para que `seed.sql` salga siempre igual. Un test comprueba que es coherente: cada solución de ejemplo supera sus pruebas, cada intento cuadra con sus eventos y las pistas por intento bajan sesión a sesión.
+- **MockDb guarda todas las tablas en un único signal inmutable**, con `update(tabla, fn)`, en lugar de un signal por tabla: cada cambio se guarda entero en localStorage y el tipo es más sencillo. También guarda la sesión, en su propia clave, porque la sesión de Supabase Auth también es independiente de los datos, y así sobrevive a «Reiniciar datos».
+- **Los servicios simulados imitan la RLS** (`mock-access.ts`): lo ajeno da `not_found`, como en Supabase, donde una fila oculta simplemente no aparece; lo que no se puede gestionar da `forbidden`. Las reglas de borrado que tendrá el esquema se aplican ya: un ejercicio con intentos no se borra (`invalid`) y quitar una asignación deja los intentos sin ella.
+- **Un intento nuevo empieza con un comentario** («Escribe aquí la función suma»), no vacío: el editor da una pista del nombre que esperan las pruebas sin escribir código por el alumno.
+- **`MockNetwork`** reúne la latencia, que se guarda en localStorage para que sobreviva a las recargas, y «fallar la siguiente petición», que lanza el tipo de `DataError` elegido.
+- **La barra cambia de usuario y reinicia los datos recargando la página**, en lugar de avisar a cada pantalla: así todo se vuelve a leer como lo haría un usuario real. La recarga está en una clase pequeña (`PageReloader`) que los tests sustituyen. La barra es código de desarrollo y puede hablar con MockDb; las pantallas no.
+- **La barra llega a la app mediante el token `DEV_TOOLBAR`**, que solo provee `environment.development.ts` con `provideDevToolbar()`. `App` lo pinta con `NgComponentOutlet` si existe. Los entornos ganan `dataProviders` y `devProviders`, igual que `devRoutes` (D-014). Se comprobó que el JavaScript de producción no contiene ni las fixtures ni la barra ni el muestrario.
+- **Explorador `/dev/datos`** (iteración 1, a petición del autor, para poder probar los datos a mano antes de que existan las pantallas): usa los servicios abstractos, con sus estados de carga y de error, salvo dos ayudas que solo existen con datos simulados y tocan MockDb: la ejecución simulada, hasta el paso 1.5, y la lista de ejercicios no asignados de un alumno, para probar la regla de acceso. La barra enlaza las dos páginas de desarrollo.
+- **Los controles de la barra no usan Signal Forms:** se aplican al momento y no hay nada que enviar, así que `mat-select` y `mat-button-toggle` llaman a sus métodos.
+- **`npm run seed`** ejecuta las fixtures `.ts` directamente con Node 24 (type stripping) y un hook que resuelve los `import` sin extensión de Angular, sin añadir dependencias como `tsx`. `npm run check` comprueba con `--check` que `seed.sql` está al día. Las cuentas de `auth.users` se añaden en el paso 2.1, cuando haya esquema con el que probarlas.
+- **Corrección del paso 0.4:** `NewProcessEvent` usaba `Omit` sobre una unión, que no se reparte y perdía la relación entre `type` y `detail`. Ahora usa un `Omit` que se reparte por cada tipo.
+
+**Alternativas:**
+
+- Cuatro alumnos, como decía el plan: la tabla en vivo y el histórico no se podrían diseñar con un tamaño realista.
+- Avisar a los stores del cambio de usuario sin recargar: cada store tendría que escuchar a la barra, que es código de desarrollo.
+- Leer `environment.devToolbar` dentro de `App`: no se pueden probar las dos ramas, porque los tests usan un único entorno.
+- Generar `seed.sql` a mano o con `tsx`: el primero se desincroniza y el segundo es una dependencia más para un script.
+
+**Consecuencias:** el paso 2.1 añade `auth.users` al generador y convierte las inserciones de `app_user` en _upserts_, porque el trigger de alta ya crea esas filas. Las fixtures solo pueden usar sintaxis de TypeScript que Node sabe borrar. Cambian `docs/PLAN.md` (§4.3, §4.4 y pasos 0.5 y 2.1).
+
+**Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026).
