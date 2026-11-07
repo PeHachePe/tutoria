@@ -5,17 +5,12 @@ import { MatCard } from '@angular/material/card';
 import { MatError, MatFormField, MatLabel, MatSuffix } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
-import {
-  MatActionList,
-  MatListItem,
-  MatListItemIcon,
-  MatListItemLine,
-  MatListItemTitle,
-} from '@angular/material/list';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { Router } from '@angular/router';
 
 import { provideFormFieldDefaults } from '../../core/form-field-defaults';
 import { Mascot } from '../../shared/mascot/mascot';
+import { ThemeMenu } from '../../shared/theme-menu/theme-menu';
 import { afterSignInPath } from '../after-sign-in-path';
 import { AuthStore } from '../auth-store';
 import { DEMO_ACCOUNTS, DemoAccount } from '../demo-accounts';
@@ -24,7 +19,7 @@ import { signInErrorMessage } from '../sign-in-error-message';
 /**
  * Login (ficha 01-acceso, RF-01): email and password with Signal Forms (4.6). After signing in it
  * goes back to the page asked for without a session, or to the home of the role (D-019, D-021).
- * During development it also offers the demo accounts, which only the dev environments provide.
+ * During development it also offers the demo accounts in a menu; only the dev environments provide them.
  */
 @Component({
   selector: 'app-login-page',
@@ -40,12 +35,11 @@ import { signInErrorMessage } from '../sign-in-error-message';
     MatButton,
     MatIconButton,
     MatIcon,
-    MatActionList,
-    MatListItem,
-    MatListItemIcon,
-    MatListItemTitle,
-    MatListItemLine,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
     Mascot,
+    ThemeMenu,
   ],
   templateUrl: './login-page.html',
   // Loaded on its own, outside the areas: it brings the defaults of its fields (D-021)

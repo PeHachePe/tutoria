@@ -62,19 +62,33 @@ test.describe('acceso', () => {
     await expect(page).toHaveURL('/alumno');
   });
 
-  test('las cuentas de demostración entran con un clic', async ({ page }) => {
-    await page.getByRole('button', { name: /Docente/ }).click();
+  test('las cuentas de demostración están en un menú y entran con un clic', async ({ page }) => {
+    await page.getByRole('button', { name: 'Cuentas de demostración' }).click();
+    await expect(page.getByRole('menuitem', { name: /Alumna/ })).toBeVisible();
+    await expectNoAxeViolations(page);
+
+    await page.getByRole('menuitem', { name: /Docente/ }).click();
 
     await expect(page).toHaveURL('/docente/en-vivo');
   });
 
-  test('pasa axe y no tiene scroll horizontal en móvil, tablet y escritorio', async ({ page }) => {
-    for (const width of [375, 768, 1280]) {
-      await page.setViewportSize({ width, height: 800 });
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow, `scroll horizontal a ${width} px`).toBe(0);
+  test('pasa axe y cabe en la pantalla sin scroll en móvil, tablet y escritorio', async ({
+    page,
+  }) => {
+    for (const { width, height } of [
+      { width: 375, height: 667 },
+      { width: 768, height: 1024 },
+      { width: 1280, height: 720 },
+    ]) {
+      await page.setViewportSize({ width, height });
+      const overflow = await page.evaluate(() => {
+        const root = document.documentElement;
+        return {
+          x: root.scrollWidth - root.clientWidth,
+          y: root.scrollHeight - root.clientHeight,
+        };
+      });
+      expect(overflow, `scroll a ${width}×${height} px`).toEqual({ x: 0, y: 0 });
     }
     await expectNoAxeViolations(page);
   });

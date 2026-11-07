@@ -41,8 +41,8 @@ let nextPatternId = 0;
  * The coat keeps its own colours in both themes instead of using theme tokens (D-022).
  *
  * For fun, it reacts to the pointer: its eyes follow the mouse, passing the mouse over it while
- * resting makes it move (a random movement), and clicking or tapping it makes it stick its tongue
- * out. Each reaction ends with its CSS animation; with reduced motion only the eyes move, because
+ * resting makes it move (a random movement), and clicking or tapping it (giving it the bone) makes
+ * it stick its tongue out and hop. Each reaction ends with its CSS animation; with reduced motion only the eyes move, because
  * they follow what the user does.
  */
 @Component({

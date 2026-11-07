@@ -401,6 +401,7 @@ src/app/
   shared/             # used by more than one feature, one folder or file per concept
     status-chip/  difficulty-chip/  skeleton/  empty-state/  page-header/
     staff-layout/  user-menu/  skip-link/  placeholder-page/   # shells shared by roles (D-019)
+    mascot/  theme-menu/   # the mascot (1.1b) and the theme button of the pages without a user menu
     mascot/           # the TutorIA pug: inline SVG with its moods, accessories and animations (mascot.css) (1.1b)
     is-stuck.ts  create-debouncer.ts  nav-link.ts
   dev/                # dev toolbar, /dev/ui showcase and /dev/datos data explorer (development builds only)
@@ -796,10 +797,10 @@ Se rellena si se agota el tiempo.
 
 1. Cumple su ficha y el humano la ha validado visualmente.
 2. Tiene los estados de carga (skeleton), vacío, error con reintento y con datos.
-3. Es responsive a 375, 768 y 1280 px, sin scroll horizontal.
+3. Es responsive a 375, 768 y 1280 px, sin scroll horizontal. Si su contenido cabe, tampoco tiene scroll vertical a 375×667, 768×1024 y 1280×720: lo largo (listas, tablas, el chat) se desplaza dentro de su propia zona, no la página entera (a petición del autor).
 4. Se usa entera con teclado, el foco es visible y los diálogos atrapan el foco; el orden de tabulación es lógico. Al llegar a la pantalla, el foco va a su encabezado principal y la pestaña del navegador muestra su título.
 5. Tiene contraste AA en modo claro y oscuro y respeta `prefers-reduced-motion`.
-6. Pasa axe sin ninguna infracción, con todas sus reglas, en modo claro y oscuro. Lo comprueba su e2e con `@axe-core/playwright`.
+6. Pasa axe sin ninguna infracción, con todas sus reglas, en modo claro y oscuro. Lo comprueba su test de accesibilidad e2e con `@axe-core/playwright`, que recorre los estados de su ficha (desde el 1.1e: axe completo en claro y solo contraste en oscuro).
 7. Textos en español y sin errores ni avisos en la consola.
 8. Su código tiene tests con una cobertura del 100 % (D-010) y `npm run check` está en verde.
 9. La bitácora del paso y `REGISTRO.md` están actualizados y, si hubo alguna decisión, también `DECISIONES.md`.
@@ -1008,6 +1009,30 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 - Sección «Mascota» en el muestrario `/dev/ui`, con un control para cada estado y cada accesorio.
 
 🧪 Clase de cada estado, accesorios, ids únicos y reacciones; elección del movimiento y de la mirada con TDD; e2e de la sección del muestrario con axe, del acceso, del cursor y del favicon.
+
+**1.1c · Multiidioma (≈2 h)** · a petición del autor
+
+- `@angular/localize` (el i18n nativo de Angular, sin librerías): marcas `i18n` en las plantillas y `$localize` en el código, con el español como idioma de origen y un segundo idioma (inglés) para comprobarlo.
+- Un build por idioma y selector de idioma junto al de tema; los textos de Material (paginador…) siguen al idioma.
+- Se hace antes del catálogo para que cada pantalla nueva nazca ya marcada; las existentes (acceso, shells, 404, muestrario) se marcan en este paso.
+
+🧪 Extracción de mensajes sin textos sin marcar; e2e del cambio de idioma.
+
+**1.1d · Pulido de los shells (≈2 h)** · a petición del autor
+
+- La marca de la barra lleva a la home del rol, con la mascota.
+- Tema activo bien visible en el menú de usuario (reutiliza `shared/theme-menu/`, del 1.1).
+- Transiciones entre pantallas con las view transitions del router (`withViewTransitions()`), desactivadas con `prefers-reduced-motion`, y pequeñas animaciones (icono del menú al abrir y cerrar).
+- Menú lateral del docente y del administrador plegable también en escritorio: solo iconos con tooltip.
+
+🧪 Navegación, plegado del menú y tema activo; e2e con axe de los shells.
+
+**1.1e · Build `demo` para los e2e (≈1,5 h)**
+
+- Configuración de build `demo`: optimizada y con los datos simulados. Los e2e y las capturas se ejecutan contra ella, servida como estáticos, en lugar de contra `ng serve`: más rápidos, estables y parecidos a producción. El CI hace lo mismo y el 1.10 la publica.
+- Un test de accesibilidad por pantalla (5.4): recorre los estados de su ficha y pasa axe completo en claro y solo `color-contrast` en oscuro; los tests de comportamiento no llevan axe. Se reordenan los e2e del acceso y de los shells.
+
+🧪 La suite e2e completa contra el build `demo`, también en el CI.
 
 **1.2 · Catálogo (≈3 h)** · ficha `02-catalogo` · Figuras 7–8 del TFM
 

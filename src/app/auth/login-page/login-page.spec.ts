@@ -180,16 +180,30 @@ describe('LoginPage', () => {
   it('offers no demo accounts unless the environment provides them', async () => {
     await renderLogin();
 
-    expect(screen.queryByRole('heading', { name: 'Cuentas de demostración' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cuentas de demostración' })).toBeNull();
   });
 
-  it('signs in with a demo account in one click', async () => {
+  it('keeps the demo accounts in a menu, so they do not push the login card', async () => {
     const user = await renderLogin({ providers: [{ provide: DEMO_ACCOUNTS, useValue: [DEMO] }] });
 
-    expect(screen.getByRole('heading', { name: 'Cuentas de demostración' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Alumna/ }));
+    expect(screen.queryByRole('menuitem', { name: /Alumna/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Cuentas de demostración' }));
+
+    expect(await screen.findByRole('menuitem', { name: /Lucía Martín Gómez/ })).toBeTruthy();
+  });
+
+  it('signs in with a demo account from the menu', async () => {
+    const user = await renderLogin({ providers: [{ provide: DEMO_ACCOUNTS, useValue: [DEMO] }] });
+
+    await user.click(screen.getByRole('button', { name: 'Cuentas de demostración' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Alumna/ }));
 
     expect(service.signIn).toHaveBeenCalledWith({ email: DEMO.email, password: DEMO.password });
     await waitFor(() => expect(currentUrl()).toBe('/'));
+  });
+  it('lets the visitor change the colour mode before signing in', async () => {
+    await renderLogin();
+
+    expect(screen.getByRole('button', { name: 'Cambiar el tema' })).toBeTruthy();
   });
 });

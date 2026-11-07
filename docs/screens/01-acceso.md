@@ -14,14 +14,15 @@ Que cualquier usuario entre con su correo y su contraseña y llegue al inicio de
 
 ## Contenido y disposición
 
-- Una tarjeta centrada en la página, de ancho máximo ≈ 28 rem, igual en escritorio, tablet y móvil (a 375 px ocupa el ancho con el margen de 16 px).
+- Una tarjeta centrada en la página, de ancho máximo ≈ 28 rem en móvil y tablet, 32 rem desde 1024 px y 36 rem desde 1280 px (iteración 1: más grande si hay espacio). A 375 px ocupa el ancho con el margen de 16 px. Cabe sin scroll a 375×667, 768×1024 y 1280×720.
+- Arriba a la derecha, el botón «Cambiar el tema» (claro, oscuro o sistema), porque antes de entrar no hay menú de usuario (iteración 1).
 - Arriba, la marca «TutorIA», el `h1` «Acceso» y una línea: «Entra con la cuenta que te ha dado tu centro».
 - A la derecha de la cabecera, la mascota (`<app-mascot>`, paso 1.1b), que da la bienvenida con dos saltitos al abrir la página. Es decorativa (`aria-hidden`).
 - Campos «Correo» y «Contraseña», cada uno con su error debajo. La contraseña tiene un botón para mostrarla u ocultarla.
 - Error del servidor encima del botón, como error del formulario.
 - Botón «Entrar» a todo el ancho.
 - Pie: «¿No tienes cuenta o has olvidado la contraseña? Pídesela a tu docente». El registro público no existe (§2.3) y las cuentas las crea el administrador.
-- Solo en desarrollo, debajo de la tarjeta, «Cuentas de demostración»: una lista de acciones con una cuenta por rol (alumna Lucía Martín, docente de 1.º DAW A, administración) y la cuenta desactivada, para ver cómo se rechaza.
+- Solo en desarrollo, debajo de la tarjeta, el botón «Cuentas de demostración», que abre un menú con una cuenta por rol (alumna Lucía Martín, docente de 1.º DAW A, administración) y la cuenta desactivada, para ver cómo se rechaza. Es un menú y no una lista para no descentrar la tarjeta (iteración 1).
 - Sin prototipo en la memoria: sigue la paleta y la tipografía del tema.
 
 ## Interacciones
@@ -61,7 +62,7 @@ Que cualquier usuario entre con su correo y su contraseña y llegue al inicio de
 - [x] Una contraseña incorrecta o una cuenta desactivada muestran «Correo o contraseña incorrectos».
 - [x] Mientras se envía, el botón dice «Entrando…» y no se puede pulsar otra vez.
 - [x] En desarrollo, cada acceso rápido entra con su cuenta; en producción no aparecen.
-- [x] Responsive a 375, 768 y 1280 px, sin scroll horizontal; axe sin infracciones en claro y oscuro.
+- [x] Responsive a 375, 768 y 1280 px, sin scroll horizontal ni vertical; axe sin infracciones en claro y oscuro.
 
 ## Fuera de alcance
 

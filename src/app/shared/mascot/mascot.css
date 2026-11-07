@@ -58,7 +58,7 @@
 }
 
 /* Reactions to the pointer (each ends with its animation, which the component listens to):
-   passing the mouse over it moves it, clicking it sticks its tongue out and pulls it back */
+   passing the mouse over it moves it, clicking it sticks its tongue out and hops */
 .mascot-move-tilt .mascot-head {
   animation: mascot-curious 0.9s ease-in-out;
 }
@@ -73,6 +73,12 @@
 
 .mascot-lick .mascot-tongue {
   animation: mascot-lick 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Given the bone, it also hops happily: two hops that last as long as the lick, which ends the
+   reaction */
+.mascot-lick .mascot-head {
+  animation: mascot-hop 0.5s ease-out 2;
 }
 
 @keyframes mascot-curious {

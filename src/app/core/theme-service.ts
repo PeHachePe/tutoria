@@ -6,6 +6,17 @@ export const THEME_STORAGE_KEY = 'tutoria.theme-mode';
 
 const THEME_MODES: readonly string[] = ['light', 'dark', 'system'] satisfies ThemeMode[];
 
+/** The three modes as the menus offer them: the user menu of the shells and the login (ThemeMenu). */
+export const THEME_OPTIONS: readonly {
+  readonly mode: ThemeMode;
+  readonly label: string;
+  readonly icon: string;
+}[] = [
+  { mode: 'light', label: 'Tema claro', icon: 'light_mode' },
+  { mode: 'dark', label: 'Tema oscuro', icon: 'dark_mode' },
+  { mode: 'system', label: 'Tema del sistema', icon: 'contrast' },
+];
+
 /** `color-scheme` value for each mode: the Material theme uses `light-dark()`, so this switches it. */
 const COLOR_SCHEMES: Record<ThemeMode, string> = {
   light: 'light',

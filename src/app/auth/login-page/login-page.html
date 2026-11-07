@@ -1,20 +1,20 @@
 <main
   id="contenido"
   tabindex="-1"
-  class="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-8 outline-none"
+  class="relative flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-8 outline-none"
 >
-  <mat-card appearance="outlined" class="w-full max-w-md">
-    <div class="flex flex-col gap-6 p-6 sm:p-8">
+  <mat-card appearance="outlined" class="w-full max-w-md lg:max-w-lg xl:max-w-xl">
+    <div class="flex flex-col gap-6 p-6 sm:p-8 lg:p-10">
       <header class="flex items-center gap-4">
         <div class="flex min-w-0 flex-1 flex-col gap-1">
           <p class="text-title-large font-bold text-primary">TutorIA</p>
-          <h1 class="text-headline-medium">Acceso</h1>
+          <h1 class="text-headline-medium lg:text-headline-large">Acceso</h1>
           <p class="text-body-medium text-on-surface-variant">
             Entra con la cuenta que te ha dado tu centro.
           </p>
         </div>
         <!-- Welcomes with two hops when the page opens (step 1.1b) -->
-        <app-mascot mood="joy" class="size-20 shrink-0 sm:size-24" />
+        <app-mascot mood="joy" [bowTie]="true" class="size-24 shrink-0 sm:size-28 lg:size-32" />
       </header>
 
       <form [formRoot]="loginForm" class="flex flex-col gap-1">
@@ -71,31 +71,30 @@
   </mat-card>
 
   @if (demoAccounts.length > 0) {
-    <section
-      aria-labelledby="cuentas-demo"
-      data-dev-only
-      class="flex w-full max-w-md flex-col gap-2"
-    >
-      <div class="px-2">
-        <h2 id="cuentas-demo" class="text-title-small">Cuentas de demostración</h2>
-        <p class="text-body-small text-on-surface-variant">
-          Solo en desarrollo: entran con un clic con los datos simulados.
-        </p>
-      </div>
-      <mat-action-list>
+    <!-- Development only: a menu, so the accounts do not push the login card off centre -->
+    <div data-dev-only>
+      <button matButton type="button" [matMenuTriggerFor]="demoMenu">
+        <mat-icon>switch_account</mat-icon>
+        Cuentas de demostración
+      </button>
+      <mat-menu #demoMenu="matMenu">
         @for (account of demoAccounts; track account.email) {
           <button
-            mat-list-item
+            mat-menu-item
             type="button"
             [disabled]="loginForm().submitting()"
             (click)="signInAs(account)"
           >
-            <mat-icon matListItemIcon>{{ account.icon }}</mat-icon>
-            <span matListItemTitle>{{ account.label }}</span>
-            <span matListItemLine>{{ account.detail }}</span>
+            <mat-icon>{{ account.icon }}</mat-icon>
+            <span class="flex flex-col py-1">
+              <span>{{ account.label }}</span>
+              <span class="text-body-small text-on-surface-variant">{{ account.detail }}</span>
+            </span>
           </button>
         }
-      </mat-action-list>
-    </section>
+      </mat-menu>
+    </div>
   }
+  <!-- No user menu before signing in: the colour mode is chosen here -->
+  <app-theme-menu class="absolute top-2 right-2 sm:top-4 sm:right-4" />
 </main>

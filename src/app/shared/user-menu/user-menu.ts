@@ -8,18 +8,8 @@ import { Router, RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
-import { ThemeMode, ThemeService } from '../../core/theme-service';
+import { THEME_OPTIONS, ThemeMode, ThemeService } from '../../core/theme-service';
 import type { NavLink } from '../nav-link';
-
-const THEME_OPTIONS: readonly {
-  readonly mode: ThemeMode;
-  readonly label: string;
-  readonly icon: string;
-}[] = [
-  { mode: 'light', label: 'Tema claro', icon: 'light_mode' },
-  { mode: 'dark', label: 'Tema oscuro', icon: 'dark_mode' },
-  { mode: 'system', label: 'Tema del sistema', icon: 'contrast' },
-];
 
 /**
  * Account menu of the shells: who is signed in, the colour mode (the only place where teachers
