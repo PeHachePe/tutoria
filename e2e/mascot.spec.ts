@@ -34,6 +34,35 @@ test.describe('mascota', () => {
     await expect(mascot).toHaveAttribute('aria-hidden', 'true');
   });
 
+  test.describe('con movimiento', () => {
+    // The rest of the e2e run with reduced motion (playwright.config.ts), which stops the hops
+    test.use({ contextOptions: { reducedMotion: 'no-preference' } });
+
+    test('en el acceso, tras la bienvenida, un clic la hace saltar y sacar la lengua', async ({
+      page,
+    }) => {
+      await page.goto('/login');
+      const mascot = page.locator('app-mascot');
+      const running = () =>
+        mascot.evaluate((host) =>
+          host
+            .getAnimations({ subtree: true })
+            .filter((animation) => animation.playState === 'running')
+            .map((animation) => (animation as CSSAnimation).animationName),
+        );
+      await expect.poll(running).not.toContain('mascot-hop');
+
+      await mascot.click();
+
+      await expect
+        .poll(running)
+        .toEqual(expect.arrayContaining(['mascot-treat-hop', 'mascot-lick']));
+      // When the lick ends the welcome does not start again
+      await expect(mascot).not.toHaveClass(/mascot-lick/);
+      expect(await running()).not.toContain('mascot-hop');
+    });
+  });
+
   test('el puntero se convierte en un hueso al pasar por encima', async ({ page }) => {
     await page.goto('/login');
 

@@ -76,9 +76,19 @@
 }
 
 /* Given the bone, it also hops happily: two hops that last as long as the lick, which ends the
-   reaction */
+   reaction. Its own animation, not mascot-hop: a browser does not run again an animation that keeps
+   its name, so on the login, where the welcome (joy) has already used mascot-hop, it did not hop
+   (step 1.1d). */
 .mascot-lick .mascot-head {
-  animation: mascot-hop 0.5s ease-out 2;
+  animation: mascot-treat-hop 1s ease-out;
+}
+
+/* With joy, its finished hops stay first in the list: removing them would make the welcome start
+   again when the lick ends */
+.mascot-joy.mascot-lick .mascot-head {
+  animation:
+    mascot-hop 0.6s ease-out 2,
+    mascot-treat-hop 1s ease-out;
 }
 
 @keyframes mascot-curious {
@@ -159,6 +169,18 @@
     transform: translateY(0);
   }
   40% {
+    transform: translateY(-18px) rotate(-4deg);
+  }
+}
+
+@keyframes mascot-treat-hop {
+  0%,
+  50%,
+  100% {
+    transform: translateY(0);
+  }
+  20%,
+  70% {
     transform: translateY(-18px) rotate(-4deg);
   }
 }
