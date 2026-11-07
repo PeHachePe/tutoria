@@ -12,7 +12,7 @@ En código, estructura y nombres mandan las buenas prácticas de Angular 22: la 
 
 ## Reglas innegociables
 
-- **Nunca** ejecutes `git commit`, `git push` ni nada que modifique el historial. Los commits los hace el humano.
+- **Commits:** cuando el humano da el paso por bueno, el agente los prepara y el humano los ejecuta (la configuración global de Claude Code prohíbe `git commit` al agente). El agente deja escrito el mensaje de cada uno en inglés con Conventional Commits, con el paso al final del asunto (`feat(auth): role guards (step 0.6)`) y un cuerpo que explique qué cambia y por qué, y le pasa al humano los comandos `git add` y `git commit -F`. **Nunca** `git push` ni nada que reescriba el historial (`--amend`, `rebase`, `reset`).
 - No toques ficheros `.env*` ni pongas secretos en el cliente. Las claves de IA, Judge0 y `service_role` solo van en los secretos de las Edge Functions.
 - **Un paso cada vez, cada uno en su propia sesión:** lee el paso del plan, las secciones que cita, las reglas transversales (§4.8) y su ficha; propón un plan corto, espera el visto bueno, implementa, cierra el paso (abajo) y **para**. Si en esta sesión ya cerraste uno, pide al humano una sesión nueva.
 - Si el plan, la especificación y el código no coinciden, pregunta antes de decidir.
@@ -48,7 +48,7 @@ Una aplicación Angular normal, sin capas ni patrones extra (`docs/PLAN.md` §4)
 1. `npm run format` y después `npm run check` en verde.
 2. Si el paso es una pantalla, cumple su definición de terminado (`docs/PLAN.md` §5.4) y guarda su versión con `npm run screenshots -- <paso> <pantalla>`.
 3. `npm run metrics -- <paso>`.
-4. Escribe la bitácora del paso con `docs/bitacora/_plantilla.md` y su fila en `docs/REGISTRO.md`, completas: también las horas humanas (estimadas; por defecto, en torno al doble del tiempo de Claude), la validación del humano con sus iteraciones y el commit (el mensaje propuesto hasta que exista; después, su hash).
+4. Escribe la bitácora del paso con `docs/bitacora/_plantilla.md` y su fila en `docs/REGISTRO.md`, completas: también las horas humanas (estimadas; por defecto, en torno al doble del tiempo de Claude), la validación del humano con sus iteraciones y los commits (los mensajes propuestos hasta que existan; después, sus hashes).
 5. Si tomaste una decisión técnica, proponla en `docs/DECISIONES.md`.
 6. Resume y espera. En cada iteración posterior, actualiza la bitácora; guarda capturas de la iteración solo si el humano lo pide.
 

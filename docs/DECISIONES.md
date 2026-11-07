@@ -336,3 +336,62 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** el paso 2.1 añade `auth.users` al generador y convierte las inserciones de `app_user` en _upserts_, porque el trigger de alta ya crea esas filas. Las fixtures solo pueden usar sintaxis de TypeScript que Node sabe borrar. Cambian `docs/PLAN.md` (§4.3, §4.4 y pasos 0.5 y 2.1).
 
 **Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026).
+
+## D-019 · Sesión, guards y shells por rol (07/11/2026)
+
+**Contexto:** el paso 0.6 construye las rutas por rol, los guards, los layouts y la navegación accesible. El plan dice qué hace falta, pero no cómo se conoce el rol a tiempo, qué ve quien entra en una página de otro rol ni cómo se reparten los layouts. Además, la frase del paso «el administrador entra en todo» chocaba con §2.2, que solo le abre las pantallas del docente.
+
+**Decisión:**
+
+- **La sesión se restaura una vez al arrancar** (`provideAppInitializer` con `AuthStore.restore()`), antes de la primera navegación. Así los guards deciden al momento, sin esperar a una promesa. Si la restauración falla, se arranca sin sesión y se va al acceso.
+- **Guards `canMatch`:**
+  - sin sesión, llevan a `/login`;
+  - con otro rol, la ruta no existe para ese usuario y termina en la página 404, con «Ir a mi inicio», que lleva a `/`;
+  - el código de un área nunca se descarga para quien no puede verla.
+
+  `/` lleva al inicio de cada rol (alumno, `/alumno`; docente, `/docente/en-vivo`; administrador, `/admin/usuarios`), y `/login` lleva ahí a quien ya tiene sesión. El login del paso 1.1 solo tendrá que navegar a `/`.
+
+- **El administrador entra en el área docente, no en la del alumno**, como dice §2.2: no está matriculado en ningún grupo, así que las pantallas del alumno no tienen sentido para él. Se corrige la frase del paso 0.6.
+- **Un layout compartido para el docente y el administrador** (`shared/staff-layout/`) en lugar de `teacher-layout/` y `admin-layout/`. El administrador trabaja en las dos áreas y debe ver el mismo menú (Docencia y Administración) esté donde esté; con dos layouts, el código y el menú estarían duplicados. El menú lateral queda fijo desde 1024 px y se abre encima del contenido por debajo de ese ancho; se cierra al elegir una página.
+- **Ajustes y «Mis datos» del alumno van en el menú de usuario**, como en el prototipo (figuras 7–10). La barra deja espacio para el ejercicio y cabe a 375 px sin esconder nada.
+- **El tema se puede cambiar desde el menú de usuario de todos los roles:** el docente y el administrador no tienen pantalla de ajustes.
+- **Accesibilidad de la navegación:**
+  - cada ruta tiene `title`;
+  - tras cada navegación, `HeadingFocus` lleva el foco al `h1` de `<main>`, y le pone `tabindex="-1"` si no lo tiene, para que ninguna pantalla tenga que acordarse; en la primera carga no mueve el foco;
+  - cada shell empieza con el enlace «Saltar al contenido» (WCAG 2.4.1), que mueve el foco por código para que el router no lo convierta en una navegación.
+- **Pantallas de relleno:** un único `PlaceholderPage` que recibe el título y el paso por los datos de la ruta, gracias a `withComponentInputBinding()`. Cada paso de pantalla lo sustituye en su ruta.
+- **Al cambiar de usuario, la barra de desarrollo va a `/`** en lugar de recargar la misma página: la página actual puede ser de otro rol y daría un 404. «Reiniciar datos» sigue recargando la misma página. Lo señaló el autor al probar el paso.
+
+**Alternativas:**
+
+- Guards asíncronos que esperan a la sesión: cada guard tendría que esperar, y una pantalla en blanco mientras se restaura no aporta nada en una aplicación que empieza siempre por el acceso.
+- Redirigir al usuario a su inicio cuando entra en una página de otro rol: oculta el error y confunde si llegó por un enlace guardado. El 404 explica lo que pasa y ofrece el camino de vuelta.
+- Dos layouts que importan los enlaces el uno del otro: duplican la plantilla y se desincronizan.
+
+**Consecuencias:** cambian `docs/PLAN.md` (§4.1 y paso 0.6). En producción todavía no hay servicios de datos (llegan con Supabase en la fase 2), así que la aplicación de producción no arranca hasta entonces (falta el `AuthService` que restaura la sesión); el paso 1.10, si se hace, publica el front con datos simulados.
+
+**Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026). El cambio de la barra de desarrollo lo pidió él.
+
+## D-020 · e2e y capturas con Playwright (07/11/2026)
+
+**Contexto:** el paso 0.6 añade Playwright, axe y Testing Library, el script de capturas y los e2e en el CI. Hay que decidir contra qué se ejecutan, cómo se prepara la sesión y qué se hace con lo que axe señala en los menús de Material.
+
+**Decisión:**
+
+- **Los e2e se ejecutan contra `ng serve` con los datos simulados**, en el puerto 4300, para no reutilizar por error un `npm start` abierto. La sesión y la latencia 0 se escriben en localStorage antes de cargar la página (`e2e/support/session.ts`), con los mismos usuarios del seed que ofrece la barra. Así cada test empieza igual, sin pasar por el formulario de acceso.
+- **Helper de axe** (`e2e/support/axe.ts`): todas las reglas, en modo claro y oscuro, con la lista de infracciones legible si falla. Lo usarán los e2e de todas las pantallas.
+- **Menús y desplegables en la regla `region`:** Material pinta los menús y las opciones de un `mat-select` al final de `<body>`, fuera de toda región. axe ya acepta así los diálogos. El helper le dice que trate igual `role="menu"` y `role="listbox"`, sin desactivar ninguna regla. Solo existen mientras se usan y se llevan el foco, así que nadie los pasa por alto.
+- **Dos infracciones reales corregidas al pasar axe por primera vez:** `mat-nav-list` ya es una región de navegación, y con dos listas (las secciones del administrador) había dos regiones sin nombre. Ahora hay una sola, con nombre («Principal»), y las secciones dentro.
+- **Capturas como un proyecto más de Playwright** (`screenshots`): `npm run screenshots` traduce los argumentos (probados con `node:test`), vacía la carpeta de la entrega si toca y lanza Playwright, que reutiliza el servidor y los helpers. Las pantallas se registran en `e2e/screenshots/screens.ts` al cerrar su paso. La barra de desarrollo se oculta en las capturas. Se acepta un tercer argumento `iteracion-N` para las capturas de una iteración.
+- **Testing Library** para los tests de componente nuevos, que buscan los elementos por rol, nombre o texto. Los dobles de prueba compartidos van en ficheros `*-testing.ts`, que se tratan como tests: fuera del build de la app y de la cobertura.
+- **Corrección del paso 0.2:** el contador de tests de `npm run metrics` contaba como tests `test.describe()` y `test.beforeEach()` de Playwright. Ahora solo cuenta los casos.
+
+**Alternativas:**
+
+- Ejecutar los e2e contra el build de producción servido aparte: no tiene datos hasta la fase 2.
+- Entrar con la barra de desarrollo en cada test: más lento y prueba la barra en lugar de la pantalla.
+- Desactivar la regla `region` o excluir el overlay de Material: dejaría sin comprobar el resto del contenido de las capas.
+
+**Consecuencias:** el CI instala Chromium y ejecuta `npm run e2e` después de `npm run check`. Cada paso de pantalla añade su e2e con axe y su entrada en `screens.ts`.
+
+**Aprobación:** el autor, que delegó la decisión en el agente (07/11/2026).
