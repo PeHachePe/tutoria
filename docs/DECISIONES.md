@@ -611,3 +611,28 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian el paso 1.3 y §2.2 del plan (figuras 8, 15 y 17). La memoria puede citar las pestañas del móvil como evolución del diseño. Los pasos 1.4, 1.5 y 1.7 llenan las zonas.
 
 **Aprobación:** el autor, que delegó la decisión en el agente («siempre haz la mejor decisión, si ves que en móvil o tablets no va a quedar bien pues usa otra opción tipo pestañas»).
+
+## D-029 · Editor de código sin `effect()` y autoguardado que no pierde nada (08/11/2026)
+
+**Contexto:** el paso 1.4 añade el editor y el autoguardado. El plan (§4.7) pedía un `model()` para el código y un `effect()` que copiara a CodeMirror los cambios externos, y un esqueleto como `@placeholder` del `@defer`. Al revisarlo aparecieron fallos: tras cambiar de ejercicio, Ctrl+Z devolvía el código del anterior; un guardado lento podía pisar lo escrito después; si se recargaba antes de los 800 ms, se perdía lo último. Además, el autor pidió evitar los `effect()` siempre que se pueda y dejar abierta la puerta a otros lenguajes y a otros tipos de ejercicio.
+
+**Decisión:**
+
+- **Editor sin `effect()`:** `<app-code-editor>` lee sus entradas (`initialCode`, `label`, `language`, `placeholder`, `readonly`) al crear CodeMirror y desde entonces el código es suyo: avisa de cada cambio con `codeChange`. La pantalla crea un editor nuevo por intento y al pasar a solo lectura (`@if` sobre el intento y sobre `readonly`), lo que además empieza un historial de deshacer limpio. No hay cambios externos que copiar, ni bucles con un modelo, ni saltos del cursor.
+- **Solo los paquetes que se importan:** `@codemirror/view`, `state`, `language`, `commands`, `lang-javascript` y `@lezer/highlight`, sin el paquete `codemirror` (solo trae `basicSetup`, que incluye autocompletado). Las extensiones se eligen una a una.
+- **Accesibilidad:** Tab sangra, como en cualquier editor, y Esc seguido de Tab sale del editor (la salida que trae CodeMirror). Un texto bajo el editor lo explica y el área de texto lo enlaza con `aria-describedby` (WCAG 2.1.2). El área de texto tiene nombre («Código»), `aria-readonly` cuando está entregado, foco visible con el color primario y `tabindex="0"`: ya se podía enfocar, pero axe solo cuenta el `tabindex`.
+- **Colores con tokens:** `EditorView.theme` y un `HighlightStyle` con roles de Material (`primary` para las palabras clave, `tertiary` para las cadenas, `--app-info` para los números y comentarios en cursiva). Es la API de estilos de CodeMirror: con CSS global habría que pelearse con la especificidad de su tema base. Se comprobó con axe en claro y oscuro.
+- **Pegados por la marca `input.paste`** de CodeMirror en lugar del evento `paste` del DOM: cubre el teclado, el menú contextual y el móvil, y mide lo que entra en el código. Lo registra el `EventLogger` del 1.6.
+- **`@defer` como pide Angular:** `on viewport; prefetch on idle`; el `@placeholder` reserva el sitio sin parpadear, el esqueleto va en `@loading (after 300ms; minimum 500ms)` (4.8) y `@error` ofrece recargar si no llega el trozo de CodeMirror.
+- **Autoguardado en `AttemptStore`:** espera 800 ms sin escribir y envía un guardado cada vez; si el alumno escribe mientras tanto, se envía otro al acabar, y la respuesta nunca pisa lo escrito después ni toca otro intento. El estado del indicador (`idle`, `pending`, `saving`, `saved`, `error`) se deriva con `computed()`.
+- **No perder nada:** se guarda al momento al cambiar de ejercicio, al salir de la pantalla (`DestroyRef` del store) y al ocultar la pestaña (`visibilitychange`, que en el móvil es el último aviso fiable). Con cambios sin guardar, el navegador pregunta antes de cerrar (`beforeunload`). Un fallo muestra «No se ha guardado» con `role="alert"` y «Reintentar», y el código sigue en el store. «Guardando…» y «Guardado» no se anuncian: el lector de pantalla los repetiría en cada pausa.
+- **Tests con CodeMirror real en jsdom,** en lugar de aislarlo en una clase con un doble (D-010): funciona con un único _polyfill_ de medidas (`src/jsdom-testing.ts`, `setupFiles` de `ng test`), y así se prueba lo que hace el alumno. La cobertura deja fuera los metadatos que Angular genera para TestBed en los componentes con `@defer` (`ɵsetClassMetadataAsync`), que solo se usan al sobrescribir un componente en un test (`vitest-base.config.mts`).
+- **Puertas abiertas, sin construir aún:**
+  - otros lenguajes: el editor elige el paquete de CodeMirror según `exercise.language` en un mapa; añadir Python o Java ahí es una línea, y lo demás queda en `PENDIENTES.md`;
+  - otros tipos de ejercicio (test, respuesta numérica): la migración de la fase 2 añadirá `exercise.kind` con `code` por defecto, que no cuesta nada mientras no haya otro tipo.
+
+**Alternativas:** `model()` con `effect()` o `afterRenderEffect()` (funciona, pero copia cambios en las dos direcciones y obliga a comparar textos para no mover el cursor); aislar CodeMirror en una clase con un doble (más código y no prueba lo que ve el alumno); el esqueleto como `@placeholder` (parpadea en escritorio, donde la zona se ve al momento); anunciar «Guardado» con `aria-live` (ruido); el paquete `codemirror` con `basicSetup` (trae autocompletado).
+
+**Consecuencias:** cambian §4.5, §4.7 y el paso 1.4 del plan. El 1.5 crea el editor de solo lectura al entregar con el mismo `@if` y, antes de ejecutar, envía el código actual. El 1.6 conecta `pasted` con el `EventLogger`.
+
+**Aprobación:** el autor, que delegó la decisión en el agente («haz todas las mejoras que consideres» y «si puedes evitar en lo posible effects y similares mejor»).

@@ -580,39 +580,39 @@ Ejemplo con store (pantalla de trabajo):
 @Service({ autoProvided: false }) // provided by the workspace route
 export class AttemptStore {
   private readonly attempts = inject(AttemptService);
-  private readonly autosave = createDebouncer(800);
+  private readonly autosave = createDebouncer(AUTOSAVE_DELAY_MS); // 800 ms
 
   private readonly attemptState = signal<Attempt | undefined>(undefined);
+  private readonly savedCodeState = signal(''); // what the server has
   private readonly savingState = signal(false);
 
   readonly attempt = this.attemptState.asReadonly();
-  readonly saving = this.savingState.asReadonly();
   readonly status = computed(() => this.attemptState()?.status ?? 'not_started');
-  readonly canSubmit = computed(() => this.status() === 'passed');
+  readonly hasUnsavedChanges = computed(() => (this.attemptState()?.currentCode ?? '') !== this.savedCodeState());
+  readonly saveStatus = computed<SaveStatus>(() => /* idle, pending, saving, saved or error */);
 
-  async open(exerciseId: string): Promise<void> {
-    this.attemptState.set(await this.attempts.openOrCreate(exerciseId));
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.autosave.flush()); // leaving keeps the last changes
+  }
+
+  async open(exerciseId: string): Promise<Attempt> {
+    this.autosave.flush(); // the previous exercise keeps its last changes
+    // … opens or creates the attempt, ignoring an answer that arrives after another open() (D-028)
   }
 
   updateCode(code: string): void {
-    this.attemptState.update((a) => a && { ...a, currentCode: code, status: 'in_progress' }); // editing invalidates the last run
-    this.autosave.schedule(() => this.save());
+    // editing invalidates the last run, as the server will do (2.4)
+    this.attemptState.update((a) => a && { ...a, currentCode: code, status: 'in_progress' });
+    this.autosave.schedule(() => void this.save());
   }
 
   private async save(): Promise<void> {
-    const attempt = this.attemptState();
-    if (!attempt) return;
-    this.savingState.set(true);
-    try {
-      await this.attempts.saveCode(attempt.id, attempt.currentCode);
-    } finally {
-      this.savingState.set(false);
-    }
+    // one save at a time; the answer never overwrites what the student typed meanwhile (D-029)
   }
 }
 ```
 
-`createDebouncer(ms)` es una utilidad de unas pocas líneas en `shared/create-debouncer.ts` con `schedule`, `flush` y `cancel`. Antes de ejecutar las pruebas o entregar, el store cancela el guardado pendiente, porque esas operaciones envían el código actual.
+`createDebouncer(ms)` es una utilidad de unas pocas líneas en `shared/create-debouncer.ts` con `schedule`, `flush`, `cancel` e `isPending`. El código completo del store, con el guardado en orden y el estado del indicador, está en `student/workspace/attempt-store.ts` (paso 1.4, D-029). Antes de ejecutar las pruebas o entregar, el store cancela el guardado pendiente, porque esas operaciones envían el código actual.
 
 ### 4.6 Formularios con Signal Forms
 
@@ -683,10 +683,12 @@ Los bloques de plantilla de este documento van marcados como `angular`, no como 
 
 ### 4.7 Editor de código
 
-- `<app-code-editor>` con `code = model<string>()`, `readonly = input(false)` y `pasted = output<number>()`, que emite la longitud del texto pegado. Las tres propiedades se declaran `readonly`, como pide la guía de estilo de Angular.
-- La vista de CodeMirror se crea en `afterNextRender`, porque necesita el elemento ya pintado, y se destruye con `DestroyRef`. Los cambios del editor se pasan al modelo desde su `updateListener`. El único `effect()` del componente aplica al editor los cambios externos del modelo (por ejemplo, al cambiar de intento) y lleva un comentario que lo justifica.
-- El tema sale de las variables CSS del tema activo. Sin autocompletado ni sugerencias.
-- En la pantalla de trabajo va dentro de `@defer (on viewport)` con un skeleton como `@placeholder`, de modo que CodeMirror se descarga en un trozo aparte.
+- `<app-code-editor>` con `initialCode = input.required<string>()`, `label`, `language`, `placeholder` y `readonly`, y las salidas `codeChange = output<string>()` y `pasted = output<number>()`, que emite la longitud del texto pegado. Todas se declaran `readonly`, como pide la guía de estilo de Angular.
+- **Sin `effect()` (D-029):** las entradas se leen al crear el editor, y desde entonces el código es del editor, que avisa de cada cambio. Quien lo usa crea uno nuevo para mostrar otro código o cambiar `readonly` (con `@if` sobre el intento), lo que además empieza un historial de deshacer limpio. Así nunca se copian cambios externos a CodeMirror ni hay bucles con el modelo.
+- La vista de CodeMirror se crea en `afterNextRender`, porque mide lo que pinta, y se destruye con `DestroyRef`. Los cambios llegan por su `updateListener`; los pegados, por la marca `input.paste` de CodeMirror (teclado, menú contextual y móvil).
+- El tema sale de las variables CSS del tema activo (`EditorView.theme` y un `HighlightStyle` con roles de Material). Sin autocompletado ni sugerencias: extensiones elegidas una a una, sin `basicSetup`. Tab sangra, y Esc seguido de Tab sale del editor, con un texto que lo explica (WCAG 2.1.2).
+- Cada lenguaje del ejercicio (`Language`) tiene su paquete de CodeMirror en un mapa; hoy, solo JavaScript.
+- En la pantalla de trabajo va dentro de `@defer (on viewport; prefetch on idle)`: el `@placeholder` reserva su sitio, el `@loading (after 300ms; minimum 500ms)` muestra el esqueleto y el `@error` ofrece recargar. CodeMirror se descarga en un trozo aparte.
 
 ### 4.8 Reglas transversales
 
@@ -1059,12 +1061,13 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 ✅ Abrir un ejercicio crea el intento o recupera el que ya existe.
 
-**1.4 · Editor y autoguardado (≈3 h)**
+**1.4 · Editor y autoguardado (≈3 h)** · ficha `03-trabajo` · D-029
 
-- `<app-code-editor>` según 4.7, con `codemirror` y `@codemirror/lang-javascript`: números de línea, resaltado con los colores del tema y altura generosa.
+- `<app-code-editor>` según 4.7, con los paquetes de CodeMirror que usa (`@codemirror/view`, `state`, `language`, `commands`, `lang-javascript` y `@lezer/highlight`): números de línea, resaltado con los colores del tema y altura generosa.
 - Un intento nuevo empieza vacío, con el texto de ayuda «Escribe aquí la función `suma`» como _placeholder_ de CodeMirror, que desaparece al escribir (D-018).
-- Autoguardado a los 800 ms con indicador «Guardando…» / «Guardado».
-- Evento `paste` con la longitud del texto pegado.
+- Autoguardado a los 800 ms con indicador «Guardando…» / «Guardado», y «No se ha guardado» con «Reintentar» si falla (D-029).
+- No se pierde nada: se guarda al ocultar la pestaña, al cambiar de ejercicio y al salir de la pantalla, y el navegador pregunta antes de cerrar con cambios sin guardar.
+- Evento `paste` con la longitud del texto pegado (lo registra el `EventLogger` del 1.6).
 
 ✅ Escribir, recargar y el código sigue ahí.
 🧪 Debounce con temporizadores simulados.
