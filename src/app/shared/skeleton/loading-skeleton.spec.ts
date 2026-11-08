@@ -14,6 +14,16 @@ import { Skeleton } from './skeleton';
 })
 class Host {}
 
+@Component({
+  imports: [LoadingSkeleton, Skeleton],
+  template: `
+    <app-loading-skeleton>
+      <app-skeleton class="h-6" />
+    </app-loading-skeleton>
+  `,
+})
+class SilentHost {}
+
 describe('LoadingSkeleton', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
@@ -46,5 +56,15 @@ describe('LoadingSkeleton', () => {
     fixture.destroy();
 
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('only shows the skeleton when another place already announces the wait', async () => {
+    const { container, fixture } = await render(SilentHost);
+
+    vi.advanceTimersByTime(LOADING_INDICATOR_DELAY_MS);
+    fixture.detectChanges();
+
+    expect(container.querySelector('app-skeleton')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

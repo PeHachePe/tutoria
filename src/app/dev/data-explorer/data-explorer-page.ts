@@ -25,7 +25,7 @@ import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { splitInlineCode } from '../../shared/split-inline-code';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { errorMessage } from './error-message';
-import { formatCall, formatValue, isMultilineText } from './format-value';
+import { formatCall, formatValue, isMultilineText } from '../../shared/format-value';
 import { simulateRun } from './simulate-run';
 
 interface ExerciseEntry {

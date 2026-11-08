@@ -1,5 +1,5 @@
 import { DataError, type DataErrorKind } from '../../data/data-error';
-import { loadErrorMessage } from './load-error-message';
+import { isRetryable, loadErrorMessage } from './load-error-message';
 
 describe('loadErrorMessage', () => {
   it('asks to check the connection when the server cannot be reached', () => {
@@ -30,4 +30,22 @@ describe('loadErrorMessage', () => {
       expect(loadErrorMessage(error)).toBe('No se ha podido cargar. Inténtalo de nuevo.');
     },
   );
+});
+
+describe('isRetryable', () => {
+  it.each<DataErrorKind>(['forbidden', 'not_found'])(
+    'is false without access (%s): trying again would fail the same way',
+    (kind) => {
+      expect(isRetryable(new DataError(kind))).toBe(false);
+    },
+  );
+
+  it.each<unknown>([
+    new DataError('network'),
+    new DataError('rate_limited'),
+    new DataError('unknown'),
+    new Error('boom'),
+  ])('is true for anything else (%s)', (error) => {
+    expect(isRetryable(error)).toBe(true);
+  });
 });

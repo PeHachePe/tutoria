@@ -2,11 +2,12 @@ import { Component, computed, input, output } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 
-import { loadErrorMessage } from './load-error-message';
+import { isRetryable, loadErrorMessage } from './load-error-message';
 
 /**
  * Error state of a screen or a zone that could not load its data: what happened and a button to try
- * again (4.2, 5.4). It is announced as an alert when it appears.
+ * again (4.2, 5.4), or, when the user has no access, the way out the screen projects inside (such as a
+ * link back). It is announced as an alert when it appears.
  */
 @Component({
   selector: 'app-load-error',
@@ -14,9 +15,14 @@ import { loadErrorMessage } from './load-error-message';
   template: `
     <mat-icon>cloud_off</mat-icon>
     <p class="flex-1">{{ message() }}</p>
-    <button matButton="tonal" type="button" (click)="retry.emit()" i18n="@@loadError.retry">
-      Reintentar
-    </button>
+    @if (retryable()) {
+      <button matButton="tonal" type="button" (click)="retry.emit()" i18n="@@loadError.retry">
+        Reintentar
+      </button>
+    } @else {
+      <!-- Without access, trying again fails the same way: the screen projects a way out instead -->
+      <ng-content />
+    }
   `,
   host: {
     role: 'alert',
@@ -29,4 +35,5 @@ export class LoadError {
   readonly retry = output();
 
   protected readonly message = computed(() => loadErrorMessage(this.error()));
+  protected readonly retryable = computed(() => isRetryable(this.error()));
 }

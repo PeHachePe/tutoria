@@ -31,4 +31,12 @@ describe('AppTitleStrategy', () => {
   it('shows the name alone for a route without a title', async () => {
     expect(await visit('/sin-titulo')).toBe('TutorIA');
   });
+
+  it('lets a screen name the tab after what it loaded, with the name of the app', async () => {
+    await visit('/con-titulo');
+
+    TestBed.inject(AppTitleStrategy).setScreenTitle('Suma de los elementos de un vector');
+
+    expect(document.title).toBe('Suma de los elementos de un vector · TutorIA');
+  });
 });

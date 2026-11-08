@@ -13,7 +13,14 @@ export class AppTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
-    const title = this.buildTitle(snapshot);
+    this.setScreenTitle(this.buildTitle(snapshot));
+  }
+
+  /**
+   * For a screen whose title depends on what it loads, such as the exercise of the workspace: it
+   * replaces the generic title of its route once the data arrives. The next navigation sets it again.
+   */
+  setScreenTitle(title: string | undefined): void {
     this.title.setTitle(title ? `${title} · ${APP_NAME}` : APP_NAME);
   }
 }

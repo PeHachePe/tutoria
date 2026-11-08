@@ -11,7 +11,10 @@ export const LOADING_INDICATOR_DELAY_MS = 300;
 @Component({
   selector: 'app-loading-skeleton',
   template: `
-    <p role="status" class="sr-only">{{ visible() ? label() : '' }}</p>
+    <!-- The live region is there from the start, so screen readers notice when its text arrives -->
+    @if (label(); as text) {
+      <p role="status" class="sr-only">{{ visible() ? text : '' }}</p>
+    }
     @if (visible()) {
       <div aria-hidden="true" class="contents"><ng-content /></div>
     }
@@ -19,8 +22,11 @@ export const LOADING_INDICATOR_DELAY_MS = 300;
   host: { class: 'block' },
 })
 export class LoadingSkeleton {
-  /** What screen readers hear, such as «Cargando los ejercicios…». */
-  readonly label = input.required<string>();
+  /**
+   * What screen readers hear, such as «Cargando los ejercicios…». Without it, it only shows the
+   * skeleton: for a second skeleton of a zone whose wait is already announced elsewhere.
+   */
+  readonly label = input<string>();
 
   protected readonly visible = signal(false);
 
