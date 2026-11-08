@@ -127,6 +127,9 @@ export class ShowcasePage {
     { name: 'eyebrow', classes: 'eyebrow' },
   ];
 
+  /** Lines of the scroll-shadows example: more than its height, so it scrolls. */
+  protected readonly scrollLines = [1, 2, 3, 4, 5, 6, 7, 8];
+
   protected readonly statuses: readonly AttemptStatus[] = [
     'not_started',
     'in_progress',

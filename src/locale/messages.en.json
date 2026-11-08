@@ -52,7 +52,6 @@
     "route.attempt.heading": "Attempt detail",
     "route.attempt.title": "Attempt detail",
     "route.catalog.title": "Exercises",
-    "route.exercise.heading": "Exercise",
     "route.exercise.title": "Exercise",
     "route.exercises.heading": "Exercises and assignments",
     "route.exercises.title": "Exercises",
@@ -106,6 +105,24 @@
     "catalog.session": "Session {$INTERPOLATION}",
     "catalog.sessionProgress": "{$INTERPOLATION}/{$INTERPOLATION_1} passed",
     "catalog.hints": "{VAR_PLURAL, plural, =1 {1 hint asked} other {{INTERPOLATION} hints asked}}",
-    "catalog.hintLevel": "· level {$INTERPOLATION}"
+    "catalog.hintLevel": "· level {$INTERPOLATION}",
+    "workspace.back": "Back to the exercises",
+    "workspace.heading": "Exercise",
+    "workspace.backToCatalog": " Back to the exercises ",
+    "workspace.tab.exercise": "Exercise",
+    "workspace.tab.code": "Code",
+    "workspace.tab.tutor": "Tutor",
+    "workspace.statement": "Statement",
+    "workspace.loading": "Loading the exercise…",
+    "workspace.examples": "Examples",
+    "workspace.call": " Call ",
+    "workspace.returns": " Returns ",
+    "workspace.hiddenTests": "{VAR_PLURAL, plural, =1 {And 1 hidden check: you will see whether you pass it, but not its data.} other {And {INTERPOLATION} hidden checks: you will see whether you pass them, but not their data.}}",
+    "workspace.code": " Code ",
+    "workspace.editorSoon": " You will write your code here: the editor arrives in step 1.4. ",
+    "workspace.resultsSoon": " The results of the tests arrive in step 1.5. ",
+    "workspace.tutor": " Tutor ",
+    "workspace.tutorSoon": " You will ask the tutor for hints here: the chat arrives in step 1.7. ",
+    "workspace.backTooltip": "Back to the exercises"
   }
 }

@@ -83,6 +83,7 @@ module.exports = defineConfig([
             'mode',
             'mood',
             'patternUnits',
+            'scope',
             'stroke-linecap',
             'stroke-linejoin',
             'transform',

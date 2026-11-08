@@ -5,6 +5,8 @@ import { provideFormFieldDefaults } from '../core/form-field-defaults';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { CatalogPage } from './catalog/catalog-page';
 import { StudentLayout } from './student-layout/student-layout';
+import { AttemptStore } from './workspace/attempt-store';
+import { WorkspacePage } from './workspace/workspace-page';
 
 /** Student area (2.2), loaded lazily by app.routes.ts once the role guard lets the user in. */
 export const studentRoutes: Routes = [
@@ -21,9 +23,11 @@ export const studentRoutes: Routes = [
       },
       {
         path: `${SEGMENTS.student.exercise}/:id`,
+        // Generic until the exercise loads: then the page names the tab after it
         title: $localize`:@@route.exercise.title:Ejercicio`,
-        component: PlaceholderPage,
-        data: { heading: $localize`:@@route.exercise.heading:Ejercicio`, step: '1.3' },
+        component: WorkspacePage,
+        // The attempt of the exercise, shared by its zones and destroyed on leaving (4.5)
+        providers: [AttemptStore],
       },
       {
         path: SEGMENTS.student.settings,

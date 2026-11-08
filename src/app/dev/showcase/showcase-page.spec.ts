@@ -59,6 +59,15 @@ describe('ShowcasePage', () => {
     ]);
   });
 
+  it('shows a zone with scroll shadows that the keyboard can reach and scroll', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const zone = element.querySelector<HTMLElement>('.scroll-shadows');
+
+    expect(zone?.getAttribute('tabindex')).toBe('0');
+    expect(zone?.getAttribute('aria-label')).toBe('Ejemplo de zona con sombras de desplazamiento');
+    expect(zone?.querySelectorAll('p')).toHaveLength(8);
+  });
+
   it('offers the language menu of the app, to see the pieces in each language', () => {
     const element = fixture.nativeElement as HTMLElement;
 

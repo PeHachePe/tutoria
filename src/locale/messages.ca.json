@@ -52,7 +52,6 @@
     "route.attempt.heading": "Detall de l'intent",
     "route.attempt.title": "Detall de l'intent",
     "route.catalog.title": "Exercicis",
-    "route.exercise.heading": "Exercici",
     "route.exercise.title": "Exercici",
     "route.exercises.heading": "Exercicis i assignacions",
     "route.exercises.title": "Exercicis",
@@ -106,6 +105,24 @@
     "catalog.session": "Sessió {$INTERPOLATION}",
     "catalog.sessionProgress": "{$INTERPOLATION}/{$INTERPOLATION_1} superats",
     "catalog.hints": "{VAR_PLURAL, plural, =1 {1 pista demanada} other {{INTERPOLATION} pistes demanades}}",
-    "catalog.hintLevel": "· nivell {$INTERPOLATION}"
+    "catalog.hintLevel": "· nivell {$INTERPOLATION}",
+    "workspace.back": "Tornar als exercicis",
+    "workspace.heading": "Exercici",
+    "workspace.backToCatalog": " Tornar als exercicis ",
+    "workspace.tab.exercise": "Exercici",
+    "workspace.tab.code": "Codi",
+    "workspace.tab.tutor": "Tutor",
+    "workspace.statement": "Enunciat",
+    "workspace.loading": "S'està carregant l'exercici…",
+    "workspace.examples": "Exemples",
+    "workspace.call": " Crida ",
+    "workspace.returns": " Retorna ",
+    "workspace.hiddenTests": "{VAR_PLURAL, plural, =1 {I 1 comprovació oculta: veuràs si la superes, però no les seves dades.} other {I {INTERPOLATION} comprovacions ocultes: veuràs si les superes, però no les seves dades.}}",
+    "workspace.code": " Codi ",
+    "workspace.editorSoon": " Aquí escriuràs el teu codi: l'editor arriba al pas 1.4. ",
+    "workspace.resultsSoon": " Els resultats de les proves arriben al pas 1.5. ",
+    "workspace.tutor": " Tutor ",
+    "workspace.tutorSoon": " Aquí podràs demanar pistes al tutor: el xat arriba al pas 1.7. ",
+    "workspace.backTooltip": "Tornar als exercicis"
   }
 }

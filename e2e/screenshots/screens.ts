@@ -16,4 +16,10 @@ export interface Screen {
 export const SCREENS: readonly Screen[] = [
   { code: '01-acceso', path: '/login', user: null },
   { code: '02-catalogo', path: '/alumno', user: 'studentHalfway' },
+  // Exercise 3 (Suma de los elementos de un vector), the model of the statements (2.5)
+  {
+    code: '03-trabajo',
+    path: '/alumno/ejercicio/40000000-0000-4000-8000-000000000003',
+    user: 'studentHalfway',
+  },
 ];

@@ -133,6 +133,23 @@
         <p class="text-body-medium text-on-surface-variant">Alumnos con señales de atasco</p>
       </div>
     </div>
+
+    <!-- scroll-shadows (styles.css): the shade marks the edge with more content to see -->
+    <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+      <h3 class="text-title-medium">Zona con sombras de desplazamiento</h3>
+      <div
+        tabindex="0"
+        role="group"
+        aria-label="Ejemplo de zona con sombras de desplazamiento"
+        class="flex h-36 flex-col gap-2 overflow-y-auto scroll-shadows rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        @for (line of scrollLines; track line) {
+          <p class="text-body-medium">
+            Línea {{ line }}: desplázate para ver cómo cambian las sombras.
+          </p>
+        }
+      </div>
+    </div>
   </section>
 
   <section aria-labelledby="mascot-title" class="flex flex-col gap-3">

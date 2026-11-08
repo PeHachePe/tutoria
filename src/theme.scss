@@ -205,3 +205,10 @@ body {
     )
   );
 }
+
+// Tabs that fill the height of their group (the workspace on phones, step 1.3): the body takes the
+// room left under the tab bar, and each tab scrolls inside it instead of the whole page.
+.app-fill-tabs .mat-mdc-tab-body-wrapper {
+  flex: 1;
+  min-height: 0;
+}

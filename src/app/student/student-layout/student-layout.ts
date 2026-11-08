@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { MatToolbar } from '@angular/material/toolbar';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { isActive, Router, RouterLink, RouterOutlet } from '@angular/router';
 
-import { APP_PATHS } from '../../core/app-paths';
+import { APP_PATHS, SEGMENTS } from '../../core/app-paths';
 import { Brand } from '../../shared/brand/brand';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
 import type { NavLink } from '../../shared/nav-link';
@@ -20,13 +20,18 @@ const ACCOUNT_LINKS: readonly NavLink[] = [
   },
 ];
 
+/** Pages to read (catalog, settings): a comfortable line length. */
+export const READING_PAGE_CLASS = 'max-w-6xl';
+
+/** The workspace: the editor needs the room of wide screens, as in the prototype (figure 17). */
+export const WIDE_PAGE_CLASS = 'max-w-[100rem]';
+
 /** Shell of the student area (2.2): brand top bar, as in the prototypes (figures 7–10). */
 @Component({
   selector: 'app-student-layout',
   imports: [
     MatToolbar,
     RouterLink,
-    RouterLinkActive,
     RouterOutlet,
     Brand,
     LanguageMenu,
@@ -37,6 +42,32 @@ const ACCOUNT_LINKS: readonly NavLink[] = [
   templateUrl: './student-layout.html',
 })
 export class StudentLayout {
+  private readonly router = inject(Router);
+
   protected readonly catalogPath = APP_PATHS.student.catalog;
+  protected readonly readingPageClass = READING_PAGE_CLASS;
+  protected readonly widePageClass = WIDE_PAGE_CLASS;
+
+  /** Only the catalog is the current page of the link (`aria-current`). */
+  protected readonly onCatalog = isActive(this.catalogPath, this.router, {
+    paths: 'exact',
+    queryParams: 'ignored',
+    fragment: 'ignored',
+    matrixParams: 'ignored',
+  });
+
+  /** An exercise belongs to «Ejercicios»: the link stays highlighted, so the student knows where they are. */
+  protected readonly onExercise = isActive(
+    `${this.catalogPath}/${SEGMENTS.student.exercise}`,
+    this.router,
+    {
+      paths: 'subset',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    },
+  );
+
+  protected readonly inExercises = computed(() => this.onCatalog() || this.onExercise());
   protected readonly accountLinks = ACCOUNT_LINKS;
 }

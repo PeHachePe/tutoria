@@ -8,9 +8,8 @@
         <li>
           <a
             [routerLink]="catalogPath"
-            routerLinkActive="underline decoration-2 underline-offset-8"
-            [routerLinkActiveOptions]="{ exact: true }"
-            ariaCurrentWhenActive="page"
+            [attr.aria-current]="onCatalog() ? 'page' : null"
+            [class]="inExercises() ? 'underline decoration-2 underline-offset-8' : ''"
             class="rounded-md px-3 py-2 text-label-large"
             i18n="@@nav.catalog"
           >
@@ -28,7 +27,8 @@
 <main
   id="contenido"
   tabindex="-1"
-  class="mx-auto w-full max-w-6xl px-4 py-6 routed-pages outline-none sm:px-6"
+  class="mx-auto w-full px-4 py-6 routed-pages outline-none sm:px-6"
+  [class]="onExercise() ? widePageClass : readingPageClass"
 >
   <router-outlet />
 </main>

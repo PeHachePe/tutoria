@@ -9,6 +9,8 @@ import { provideSessionOf, restoreSession } from './auth/auth-testing';
 import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
 import { provideLocalizedPaginator } from './core/localized-paginator-intl';
+import { AttemptService } from './data/attempt-service';
+import { DataError } from './data/data-error';
 import { ExerciseService } from './data/exercise-service';
 import type { Role } from './data/user';
 import { studentRoutes } from './student/student.routes';
@@ -21,7 +23,17 @@ describe('app routes', () => {
         provideSessionOf(role),
         provideRouter(routes, withComponentInputBinding()),
         { provide: TitleStrategy, useExisting: AppTitleStrategy },
-        { provide: ExerciseService, useValue: { listAssigned: () => Promise.resolve([]) } },
+        {
+          provide: ExerciseService,
+          useValue: {
+            listAssigned: () => Promise.resolve([]),
+            getDetail: () => Promise.reject(new DataError('not_found')),
+          },
+        },
+        {
+          provide: AttemptService,
+          useValue: { openOrCreate: () => Promise.reject(new DataError('not_found')) },
+        },
       ],
     });
     await restoreSession();
