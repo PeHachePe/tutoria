@@ -23,18 +23,34 @@ function attemptOf(exerciseId: string, status: StoredAttemptStatus = 'in_progres
 /** A promise the test resolves when it wants, to control the order of the answers. */
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => (resolve = done));
-  return { promise, resolve };
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+/** What the mock server answers to a save: the code it got, back in `in_progress` (2.4). */
+function savedAs(attempt: Attempt, code: string): Attempt {
+  return {
+    ...attempt,
+    currentCode: code,
+    status: 'in_progress',
+    updatedAt: '2026-11-08T10:05:00.000Z',
+  };
 }
 
 describe('AttemptStore', () => {
   let openOrCreate: ReturnType<typeof vi.fn<AttemptService['openOrCreate']>>;
+  let saveCode: ReturnType<typeof vi.fn<AttemptService['saveCode']>>;
   let store: AttemptStore;
 
   beforeEach(() => {
     openOrCreate = vi.fn<AttemptService['openOrCreate']>();
+    saveCode = vi.fn<AttemptService['saveCode']>();
     TestBed.configureTestingModule({
-      providers: [AttemptStore, { provide: AttemptService, useValue: { openOrCreate } }],
+      providers: [AttemptStore, { provide: AttemptService, useValue: { openOrCreate, saveCode } }],
     });
     store = TestBed.inject(AttemptStore);
   });
@@ -90,5 +106,207 @@ describe('AttemptStore', () => {
     await expect(store.open('exercise-9')).rejects.toEqual(new DataError('not_found'));
 
     expect(store.attempt()).toBeUndefined();
+  });
+
+  describe('autosave', () => {
+    const attempt = attemptOf('exercise-3', 'passed');
+
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      openOrCreate.mockResolvedValue(attempt);
+      saveCode.mockImplementation((_id, code) => Promise.resolve(savedAs(attempt, code)));
+      await store.open('exercise-3');
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('starts with everything saved', () => {
+      expect(store.saveStatus()).toBe('idle');
+      expect(store.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('keeps the code at once and invalidates the last run, as the server will', () => {
+      store.updateCode('function suma() {}');
+
+      expect(store.attempt()?.currentCode).toBe('function suma() {}');
+      expect(store.status()).toBe('in_progress');
+      expect(store.saveStatus()).toBe('pending');
+      expect(store.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('saves the latest code once the student stops typing for 800 ms', async () => {
+      store.updateCode('function');
+      await vi.advanceTimersByTimeAsync(500);
+      store.updateCode('function suma');
+      await vi.advanceTimersByTimeAsync(799);
+      expect(saveCode).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'function suma');
+      expect(store.saveStatus()).toBe('saved');
+      expect(store.hasUnsavedChanges()).toBe(false);
+      expect(store.attempt()?.updatedAt).toBe('2026-11-08T10:05:00.000Z');
+    });
+
+    it('says it is saving while the answer has not arrived', async () => {
+      const answer = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(answer.promise);
+      store.updateCode('x');
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(store.saveStatus()).toBe('saving');
+      expect(store.hasUnsavedChanges()).toBe(true);
+
+      answer.resolve(savedAs(attempt, 'x'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(store.saveStatus()).toBe('saved');
+    });
+
+    it('does not schedule a save when the code does not change', async () => {
+      store.updateCode('');
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(saveCode).not.toHaveBeenCalled();
+      expect(store.status()).toBe('passed');
+    });
+
+    it('keeps what the student typed while a save was on its way', async () => {
+      const answer = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(answer.promise);
+      store.updateCode('first');
+      await vi.advanceTimersByTimeAsync(800);
+
+      store.updateCode('first and more');
+      answer.resolve(savedAs(attempt, 'first'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(store.attempt()?.currentCode).toBe('first and more');
+      expect(store.saveStatus()).toBe('pending');
+    });
+
+    it('sends one save at a time and then the latest code', async () => {
+      const answer = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(answer.promise);
+      store.updateCode('first');
+      await vi.advanceTimersByTimeAsync(800);
+      store.updateCode('second');
+      await vi.advanceTimersByTimeAsync(800);
+      expect(saveCode).toHaveBeenCalledOnce();
+
+      answer.resolve(savedAs(attempt, 'first'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(saveCode).toHaveBeenCalledTimes(2);
+      expect(saveCode).toHaveBeenLastCalledWith(attempt.id, 'second');
+      expect(store.saveStatus()).toBe('saved');
+    });
+
+    it('says the code was not saved, keeps it and saves it again on retry', async () => {
+      saveCode.mockRejectedValueOnce(new DataError('network'));
+      store.updateCode('x');
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(store.saveStatus()).toBe('error');
+      expect(store.hasUnsavedChanges()).toBe(true);
+      expect(store.attempt()?.currentCode).toBe('x');
+
+      await store.retrySave();
+
+      expect(saveCode).toHaveBeenCalledTimes(2);
+      expect(store.saveStatus()).toBe('saved');
+    });
+
+    it('sends nothing on retry when everything is saved', async () => {
+      await store.retrySave();
+
+      expect(saveCode).not.toHaveBeenCalled();
+    });
+
+    it('clears the error when the student keeps typing', async () => {
+      saveCode.mockRejectedValueOnce(new DataError('network'));
+      store.updateCode('x');
+      await vi.advanceTimersByTimeAsync(800);
+
+      store.updateCode('xy');
+
+      expect(store.saveStatus()).toBe('pending');
+    });
+
+    it('saves at once on saveNow, without waiting', async () => {
+      store.updateCode('x');
+
+      store.saveNow();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'x');
+    });
+
+    it('saves the pending code of an exercise before opening another', async () => {
+      store.updateCode('x');
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+
+      await store.open('exercise-4');
+
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'x');
+      expect(store.attempt()?.exerciseId).toBe('exercise-4');
+      expect(store.saveStatus()).toBe('idle');
+    });
+
+    it('does not let a late save of the previous exercise touch the new one', async () => {
+      const answer = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(answer.promise);
+      store.updateCode('x');
+      store.saveNow();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+
+      answer.resolve(savedAs(attempt, 'x'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(store.attempt()?.exerciseId).toBe('exercise-4');
+      expect(store.saveStatus()).toBe('idle');
+    });
+
+    it('does not show a failed save of the previous exercise in the new one', async () => {
+      const answer = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(answer.promise);
+      store.updateCode('x');
+      store.saveNow();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+
+      answer.reject(new DataError('network'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(store.saveStatus()).toBe('idle');
+    });
+
+    it('saves the pending code when the student leaves the screen', () => {
+      store.updateCode('x');
+
+      TestBed.resetTestingModule();
+
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'x');
+    });
+
+    it('does not change a submitted attempt, which is read only', async () => {
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-5', 'submitted'));
+      await store.open('exercise-5');
+
+      store.updateCode('x');
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(store.attempt()?.currentCode).toBe('');
+      expect(store.status()).toBe('submitted');
+      expect(saveCode).not.toHaveBeenCalled();
+    });
+  });
+
+  it('ignores the code while there is no attempt', () => {
+    store.updateCode('x');
+
+    expect(store.attempt()).toBeUndefined();
+    expect(store.saveStatus()).toBe('idle');
   });
 });

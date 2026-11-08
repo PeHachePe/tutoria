@@ -181,23 +181,67 @@
     class="flex min-h-48 flex-1 flex-col gap-3 rounded-xl bg-panel p-4"
     [class.h-full]="compact()"
   >
-    <h2
-      id="code-heading"
-      class="text-title-medium"
-      [class.sr-only]="compact()"
-      i18n="@@workspace.code"
-    >
-      Código
-    </h2>
-    <!-- Stand-ins for the editor (1.4) and the results (1.5) -->
-    <div
-      class="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-outline-variant p-6 text-center text-on-surface-variant"
-    >
-      <mat-icon>code</mat-icon>
-      <p class="text-body-medium" i18n="@@workspace.editorSoon">
-        Aquí escribirás tu código: el editor llega en el paso 1.4.
-      </p>
+    <div class="flex flex-wrap items-center justify-between gap-x-3">
+      <h2
+        id="code-heading"
+        class="text-title-medium"
+        [class.sr-only]="compact()"
+        i18n="@@workspace.code"
+      >
+        Código
+      </h2>
+      @if (!store.readonly()) {
+        <app-save-indicator
+          class="ms-auto"
+          [status]="store.saveStatus()"
+          (retry)="store.retrySave()"
+        />
+      }
     </div>
+    <!-- CodeMirror comes in a chunk of its own, downloaded when the zone shows (4.7) -->
+    @defer (on viewport; prefetch on idle) {
+      <!-- A new editor for each attempt and when it becomes read only: it starts with its code and
+           a clean undo history, so it needs no effect to follow outside changes (D-029) -->
+      @if (editor(); as current) {
+        @if (store.readonly()) {
+          <app-code-editor
+            class="min-h-0 flex-1"
+            [initialCode]="current.code"
+            [label]="editorLabel"
+            [language]="current.language"
+            [readonly]="true"
+          />
+        } @else {
+          <app-code-editor
+            class="min-h-0 flex-1"
+            [initialCode]="current.code"
+            [label]="editorLabel"
+            [language]="current.language"
+            [placeholder]="current.placeholder"
+            (codeChange)="store.updateCode($event)"
+          />
+        }
+      } @else {
+        <ng-container [ngTemplateOutlet]="editorSkeleton" />
+      }
+    } @placeholder {
+      <!-- Same room as the editor, so nothing jumps when it arrives -->
+      <div class="min-h-0 flex-1 rounded-lg border border-outline-variant"></div>
+    } @loading (after 300ms; minimum 500ms) {
+      <ng-container [ngTemplateOutlet]="editorSkeleton" />
+    } @error {
+      <div
+        role="alert"
+        class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-outline-variant p-6 text-center"
+      >
+        <p class="text-body-medium" i18n="@@workspace.editorError">
+          No se ha podido cargar el editor. Comprueba la conexión y recarga la página.
+        </p>
+        <button matButton="tonal" type="button" (click)="reloadPage()" i18n="@@workspace.reload">
+          Recargar
+        </button>
+      </div>
+    }
     <div
       class="flex items-center gap-2 rounded-lg border border-dashed border-outline-variant p-4 text-on-surface-variant"
     >
@@ -207,6 +251,16 @@
       </p>
     </div>
   </section>
+</ng-template>
+
+<ng-template #editorSkeleton>
+  <app-loading-skeleton
+    class="min-h-0 flex-1"
+    label="Cargando el editor…"
+    i18n-label="@@workspace.editorLoading"
+  >
+    <app-skeleton class="h-full min-h-48 w-full" />
+  </app-loading-skeleton>
 </ng-template>
 
 <ng-template #tutorZone>

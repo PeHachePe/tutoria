@@ -9,6 +9,7 @@ import { MatDialogHarness } from '@angular/material/dialog/testing';
 import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 import { provideRouter } from '@angular/router';
+import { within } from '@testing-library/angular';
 
 import { provideSessionOf } from '../../auth/auth-testing';
 import { ThemeService } from '../../core/theme-service';
@@ -55,6 +56,7 @@ describe('ShowcasePage', () => {
       'Formulario con Signal Forms',
       'Tabla con ordenación y paginación',
       'Progreso, avisos y diálogos',
+      'Editor de código',
       'Carga, vacío y error',
     ]);
   });
@@ -66,6 +68,19 @@ describe('ShowcasePage', () => {
     expect(zone?.getAttribute('tabindex')).toBe('0');
     expect(zone?.getAttribute('aria-label')).toBe('Ejemplo de zona con sombras de desplazamiento');
     expect(zone?.querySelectorAll('p')).toHaveLength(8);
+  });
+
+  it('shows the code editor, editable and read only, and the states of the save indicator', () => {
+    const page = within(fixture.nativeElement as HTMLElement);
+    const editable = page.getByRole('textbox', { name: 'Código de ejemplo editable' });
+    const readonly = page.getByRole('textbox', { name: 'Código de ejemplo de solo lectura' });
+
+    expect(editable.textContent).toContain('function suma(vector)');
+    expect(editable.getAttribute('aria-readonly')).toBeNull();
+    expect(readonly.getAttribute('aria-readonly')).toBe('true');
+    expect(text()).toContain('Guardando…');
+    expect(text()).toContain('Guardado');
+    expect(text()).toContain('No se ha guardado');
   });
 
   it('offers the language menu of the app, to see the pieces in each language', () => {
@@ -138,7 +153,11 @@ describe('ShowcasePage', () => {
     const before = element.querySelector('app-loading-skeleton');
 
     await (await loader.getHarness(MatButtonHarness.with({ text: 'Repetir la carga' }))).click();
-    await (await loader.getHarness(MatButtonHarness.with({ text: 'Reintentar' }))).click();
+    const retry = MatButtonHarness.with({
+      text: 'Reintentar',
+      ancestor: '[aria-labelledby="states-title"]',
+    });
+    await (await loader.getHarness(retry)).click();
 
     expect(element.querySelector('app-loading-skeleton')).not.toBe(before);
     expect(text()).toContain('Aún no tienes ejercicios asignados');

@@ -108,6 +108,7 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "runnerConfig": "vitest-base.config.mts",
+            "setupFiles": ["src/jsdom-testing.ts"],
             "coverage": true,
             "coverageInclude": ["src/**/*.ts"],
             "coverageExclude": [

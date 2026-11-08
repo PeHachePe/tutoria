@@ -270,6 +270,38 @@
     </div>
   </section>
 
+  <section aria-labelledby="editor-title" class="flex flex-col gap-3">
+    <h2 id="editor-title" class="text-title-large">Editor de código</h2>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="flex h-72 flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+        <h3 class="text-title-medium">Editable</h3>
+        <app-code-editor
+          class="min-h-0 flex-1"
+          [initialCode]="sampleCode"
+          label="Código de ejemplo editable"
+          placeholder="Escribe aquí la función suma"
+        />
+      </div>
+      <div class="flex h-72 flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+        <h3 class="text-title-medium">Solo lectura (intento entregado)</h3>
+        <app-code-editor
+          class="min-h-0 flex-1"
+          [initialCode]="sampleCode"
+          label="Código de ejemplo de solo lectura"
+          [readonly]="true"
+        />
+      </div>
+    </div>
+    <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+      <h3 class="text-title-medium">Indicador de guardado</h3>
+      <div class="flex flex-wrap items-center gap-x-8 gap-y-2">
+        @for (status of saveStatuses; track status) {
+          <app-save-indicator [status]="status" />
+        }
+      </div>
+    </div>
+  </section>
+
   <section aria-labelledby="states-title" class="flex flex-col gap-3">
     <h2 id="states-title" class="text-title-large">Carga, vacío y error</h2>
     <p class="text-body-medium text-on-surface-variant">

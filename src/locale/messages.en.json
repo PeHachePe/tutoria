@@ -119,10 +119,19 @@
     "workspace.returns": " Returns ",
     "workspace.hiddenTests": "{VAR_PLURAL, plural, =1 {And 1 hidden check: you will see whether you pass it, but not its data.} other {And {INTERPOLATION} hidden checks: you will see whether you pass them, but not their data.}}",
     "workspace.code": " Code ",
-    "workspace.editorSoon": " You will write your code here: the editor arrives in step 1.4. ",
     "workspace.resultsSoon": " The results of the tests arrive in step 1.5. ",
     "workspace.tutor": " Tutor ",
     "workspace.tutorSoon": " You will ask the tutor for hints here: the chat arrives in step 1.7. ",
-    "workspace.backTooltip": "Back to the exercises"
+    "workspace.backTooltip": "Back to the exercises",
+    "workspace.editorError": " The editor could not be loaded. Check your connection and reload the page. ",
+    "workspace.editorLabel": "Code",
+    "workspace.editorLoading": "Loading the editor…",
+    "workspace.editorPlaceholder": "Write the function {$functionName} here",
+    "workspace.reload": " Reload ",
+    "codeEditor.hint": " Tab indents the code. To leave the editor with the keyboard, press Esc and then Tab. ",
+    "saveIndicator.error": "Not saved",
+    "saveIndicator.retry": " Retry ",
+    "saveIndicator.saved": "Saved",
+    "saveIndicator.saving": "Saving…"
   }
 }

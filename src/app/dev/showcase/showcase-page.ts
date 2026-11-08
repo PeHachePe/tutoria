@@ -30,7 +30,10 @@ import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import { DataError } from '../../data/data-error';
 import type { Difficulty } from '../../data/exercise';
+import type { SaveStatus } from '../../student/workspace/attempt-store';
+import { SaveIndicator } from '../../student/workspace/save-indicator';
 import { Brand } from '../../shared/brand/brand';
+import { CodeEditor } from '../../shared/code-editor/code-editor';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
@@ -82,6 +85,8 @@ import { ShowcaseTable } from './showcase-table';
     LoadError,
     LoadingSkeleton,
     Skeleton,
+    CodeEditor,
+    SaveIndicator,
   ],
   templateUrl: './showcase-page.html',
 })
@@ -129,6 +134,19 @@ export class ShowcasePage {
 
   /** Lines of the scroll-shadows example: more than its height, so it scrolls. */
   protected readonly scrollLines = [1, 2, 3, 4, 5, 6, 7, 8];
+  protected readonly sampleCode = [
+    '// Suma de los elementos de un vector',
+    'function suma(vector) {',
+    '  let total = 0;',
+    '  for (const n of vector) {',
+    '    total += n; // acumulador',
+    '  }',
+    '  return total;',
+    '}',
+    '',
+    "const vacio = suma([]) === 0 ? 'sí' : 'no';",
+  ].join('\n');
+  protected readonly saveStatuses: readonly SaveStatus[] = ['saving', 'saved', 'error'];
 
   protected readonly statuses: readonly AttemptStatus[] = [
     'not_started',

@@ -1,8 +1,8 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, input, resource, signal } from '@angular/core';
+import { Component, computed, DOCUMENT, inject, input, resource, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { MatAnchor, MatIconAnchor } from '@angular/material/button';
+import { MatAnchor, MatButton, MatIconAnchor } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTab, MatTabGroup } from '@angular/material/tabs';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -11,7 +11,9 @@ import { map } from 'rxjs';
 
 import { APP_PATHS } from '../../core/app-paths';
 import { AppTitleStrategy } from '../../core/app-title-strategy';
+import { PageReloader } from '../../core/page-reloader';
 import { ExerciseService } from '../../data/exercise-service';
+import { CodeEditor } from '../../shared/code-editor/code-editor';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { formatCall, formatValue, isMultilineText } from '../../shared/format-value';
 import { LoadError } from '../../shared/load-error/load-error';
@@ -21,6 +23,7 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { splitInlineCode } from '../../shared/split-inline-code';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { AttemptStore } from './attempt-store';
+import { SaveIndicator } from './save-indicator';
 
 /**
  * Below this width (Tailwind's `md`) the zones become tabs, one at a time: stacked, they did not fit
@@ -33,8 +36,8 @@ const SKELETON_EXAMPLES = [1, 2, 3];
 
 /**
  * The workspace (/alumno/ejercicio/:id, ficha 03): the statement and its examples, the code and the
- * tutor of one exercise (RF-03 to RF-06). Step 1.3 builds the layout and opens the attempt; the
- * editor (1.4), the results (1.5) and the chat (1.7) fill their zones later.
+ * tutor of one exercise (RF-03 to RF-06). Step 1.3 builds the layout and opens the attempt, step 1.4
+ * adds the editor with its autosave; the results (1.5) and the chat (1.7) fill their zones later.
  */
 @Component({
   selector: 'app-workspace-page',
@@ -42,6 +45,7 @@ const SKELETON_EXAMPLES = [1, 2, 3];
     NgTemplateOutlet,
     RouterLink,
     MatAnchor,
+    MatButton,
     MatIconAnchor,
     MatIcon,
     MatTab,
@@ -53,9 +57,15 @@ const SKELETON_EXAMPLES = [1, 2, 3];
     LoadingSkeleton,
     Skeleton,
     Mascot,
+    CodeEditor,
+    SaveIndicator,
   ],
   templateUrl: './workspace-page.html',
   host: {
+    // The code is saved 800 ms after the last change: these keep the latest changes when the student
+    // hides the tab (phones may close it without warning) or tries to leave with something unsaved.
+    '(document:visibilitychange)': 'saveIfHidden()',
+    '(window:beforeunload)': 'warnIfUnsaved($event)',
     // The screen takes the height left under the app bar and the padding of <main>, so each zone
     // scrolls inside it instead of the whole page (5.4). The bar is 56px on phones, 64px from 600px.
     class:
@@ -68,6 +78,8 @@ export class WorkspacePage {
 
   private readonly exercises = inject(ExerciseService);
   private readonly titles = inject(AppTitleStrategy);
+  private readonly document = inject(DOCUMENT);
+  private readonly pageReloader = inject(PageReloader);
   protected readonly store = inject(AttemptStore);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
@@ -121,6 +133,23 @@ export class WorkspacePage {
     return { exercise, examples, hiddenTestCount };
   });
 
+  protected readonly editorLabel = $localize`:@@workspace.editorLabel:Código`;
+
+  /**
+   * What the editor starts with, once both the attempt and the exercise are there: the help it shows
+   * while the code is empty («Escribe aquí la función `suma`», D-018) is read when it is created.
+   */
+  protected readonly editor = computed(() => {
+    const attempt = this.store.attempt();
+    const exercise = this.content()?.exercise;
+    if (!attempt || !exercise) return undefined;
+    return {
+      code: attempt.currentCode,
+      language: exercise.language,
+      placeholder: $localize`:@@workspace.editorPlaceholder:Escribe aquí la función ${exercise.functionName}:functionName:`,
+    };
+  });
+
   /** The statement folds away on wide screens, so the code gets its room. */
   protected readonly statementOpen = signal(true);
 
@@ -132,5 +161,21 @@ export class WorkspacePage {
   protected retry(): void {
     if (this.detail.error()) this.detail.reload();
     if (this.opening.error()) this.opening.reload();
+  }
+
+  /** Reloads the page when the chunk of the editor could not be downloaded. */
+  protected reloadPage(): void {
+    this.pageReloader.reload();
+  }
+
+  protected saveIfHidden(): void {
+    if (this.document.visibilityState === 'hidden') this.store.saveNow();
+  }
+
+  /** The browser asks before leaving while there are changes the server does not have yet. */
+  protected warnIfUnsaved(event: BeforeUnloadEvent): void {
+    if (!this.store.hasUnsavedChanges()) return;
+    this.store.saveNow();
+    event.preventDefault();
   }
 }

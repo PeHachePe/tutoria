@@ -119,10 +119,19 @@
     "workspace.returns": " Retorna ",
     "workspace.hiddenTests": "{VAR_PLURAL, plural, =1 {I 1 comprovació oculta: veuràs si la superes, però no les seves dades.} other {I {INTERPOLATION} comprovacions ocultes: veuràs si les superes, però no les seves dades.}}",
     "workspace.code": " Codi ",
-    "workspace.editorSoon": " Aquí escriuràs el teu codi: l'editor arriba al pas 1.4. ",
     "workspace.resultsSoon": " Els resultats de les proves arriben al pas 1.5. ",
     "workspace.tutor": " Tutor ",
     "workspace.tutorSoon": " Aquí podràs demanar pistes al tutor: el xat arriba al pas 1.7. ",
-    "workspace.backTooltip": "Tornar als exercicis"
+    "workspace.backTooltip": "Tornar als exercicis",
+    "workspace.editorError": " No s’ha pogut carregar l’editor. Comprova la connexió i torna a carregar la pàgina. ",
+    "workspace.editorLabel": "Codi",
+    "workspace.editorLoading": "Carregant l’editor…",
+    "workspace.editorPlaceholder": "Escriu aquí la funció {$functionName}",
+    "workspace.reload": " Torna a carregar ",
+    "codeEditor.hint": " Tab sagna el codi. Per sortir de l’editor amb el teclat, prem Esc i després Tab. ",
+    "saveIndicator.error": "No s’ha desat",
+    "saveIndicator.retry": " Torna-ho a provar ",
+    "saveIndicator.saved": "Desat",
+    "saveIndicator.saving": "Desant…"
   }
 }
