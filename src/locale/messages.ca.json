@@ -128,7 +128,7 @@
     "workspace.editorLoading": "Carregant l’editor…",
     "workspace.editorPlaceholder": "Escriu aquí la funció {$functionName}",
     "workspace.reload": " Torna a carregar ",
-    "codeEditor.hint": " Tab sagna el codi. Per sortir de l’editor amb el teclat, prem Esc i després Tab. ",
+    "codeEditor.hint": " Tab sagna; per sortir de l’editor, Esc i després Tab. ",
     "saveIndicator.error": "No s’ha desat",
     "saveIndicator.retry": " Torna-ho a provar ",
     "saveIndicator.saved": "Desat",

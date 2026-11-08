@@ -128,7 +128,7 @@
     "workspace.editorLoading": "Loading the editor…",
     "workspace.editorPlaceholder": "Write the function {$functionName} here",
     "workspace.reload": " Reload ",
-    "codeEditor.hint": " Tab indents the code. To leave the editor with the keyboard, press Esc and then Tab. ",
+    "codeEditor.hint": " Tab indents; to leave the editor, Esc and then Tab. ",
     "saveIndicator.error": "Not saved",
     "saveIndicator.retry": " Retry ",
     "saveIndicator.saved": "Saved",

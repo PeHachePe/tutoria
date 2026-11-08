@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { countLines, countTests, parseNumstat } from './repo-stats.mjs';
+import { countLines, countTests, countVitestTests, parseNumstat, stepBase } from './repo-stats.mjs';
 
 describe('parseNumstat', () => {
   it('adds the lines of each changed file', () => {
@@ -66,5 +66,56 @@ describe('countTests', () => {
       '});',
     ].join('\n');
     assert.equal(countTests(source), 1);
+  });
+});
+
+describe('stepBase', () => {
+  // `git log --format=%H %s`, newest first
+  const log = [
+    'c3 docs: record step 1.4 commits (step 1.4)',
+    'c2 feat(workspace): code editor (step 1.4)',
+    'c1 docs: update step 1.3 metrics (step 1.3)',
+    'c0 feat(workspace): layout (step 1.3)',
+  ].join('\n');
+
+  it('starts the step at the commit before its oldest one', () => {
+    assert.equal(stepBase(log, '1.4'), 'c1');
+  });
+
+  it('starts at the last commit while the step has none', () => {
+    assert.equal(stepBase(log, '1.5'), 'c3');
+  });
+
+  it('does not take a step for another that starts the same (1.1 and 1.1b)', () => {
+    const steps = [
+      'b2 fix: mascot (step 1.1b)',
+      'b1 feat: access (step 1.1)',
+      'b0 chore: base',
+    ].join('\n');
+    assert.equal(stepBase(steps, '1.1'), 'b0');
+    assert.equal(stepBase(steps, '1.1b'), 'b1');
+  });
+
+  it('measures from the start of history when every commit is of the step', () => {
+    assert.equal(stepBase('a1 feat: x (step 0.1)\na0 chore: y (step 0.1)', '0.1'), null);
+  });
+
+  it('has no base in a repository without commits', () => {
+    assert.equal(stepBase('', '0.1'), null);
+  });
+});
+
+describe('countVitestTests', () => {
+  it('reads the number of tests Vitest ran from its JSON report', () => {
+    assert.equal(
+      countVitestTests(JSON.stringify({ numTotalTests: 524, numPassedTests: 524 })),
+      524,
+    );
+  });
+
+  it('gives null for a missing or unreadable report', () => {
+    assert.equal(countVitestTests(''), null);
+    assert.equal(countVitestTests('{'), null);
+    assert.equal(countVitestTests('{}'), null);
   });
 });

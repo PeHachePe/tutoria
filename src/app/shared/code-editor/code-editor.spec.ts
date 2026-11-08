@@ -74,7 +74,7 @@ describe('CodeEditor', () => {
   it('explains how to leave the editor with the keyboard', async () => {
     const { textbox } = await renderEditor();
 
-    const hint = screen.getByText(/pulsa Esc y después Tab/);
+    const hint = screen.getByText(/Esc y después Tab/);
     expect(textbox.getAttribute('aria-describedby')).toBe(hint.id);
   });
 
@@ -83,7 +83,7 @@ describe('CodeEditor', () => {
 
     expect(view.state.readOnly).toBe(true);
     expect(textbox.getAttribute('aria-readonly')).toBe('true');
-    expect(screen.queryByText(/pulsa Esc y después Tab/)).toBeNull();
+    expect(screen.queryByText(/Esc y después Tab/)).toBeNull();
   });
 
   it('closes CodeMirror when it is removed', async () => {

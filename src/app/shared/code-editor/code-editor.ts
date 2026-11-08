@@ -57,14 +57,20 @@ function insertedLength(transaction: Transaction): number {
 @Component({
   selector: 'app-code-editor',
   template: `
-    <!-- CodeMirror puts its editor first, above the hint -->
+    <!-- CodeMirror puts its editor first, above the hint. The hint only shows while the editor has
+         the focus, so it does not take a line from the code, and not on touch screens, which have no
+         Tab key; screen readers hear it as the description of the editor even when it is hidden. -->
     @if (!readonly()) {
-      <p [id]="hintId" class="text-body-small text-on-surface-variant" i18n="@@codeEditor.hint">
-        Tab sangra el código. Para salir del editor con el teclado, pulsa Esc y después Tab.
+      <p
+        [id]="hintId"
+        class="hidden text-body-small text-on-surface-variant group-focus-within:block pointer-coarse:hidden"
+        i18n="@@codeEditor.hint"
+      >
+        Tab sangra; para salir del editor, Esc y después Tab.
       </p>
     }
   `,
-  host: { class: 'flex min-h-0 flex-col gap-1' },
+  host: { class: 'group flex min-h-0 flex-col gap-1' },
 })
 export class CodeEditor {
   /** Code when the editor is created. */

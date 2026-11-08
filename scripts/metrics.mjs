@@ -4,8 +4,11 @@
 // docs/bitacora/metricas.csv:
 // - from the local session logs (~/.claude/projects/<project>/<session>.jsonl and its
 //   subagents): duration, model requests, tokens and the equivalent API cost;
-// - from git (changes not yet committed, which are the step's own): lines added and
-//   deleted, files changed and the number of tests.
+// - from git: lines added and deleted and files changed since the commit before the step's
+//   oldest commit (subject ending in "(step <step>)"), so it gives the same figures before and
+//   after committing the step; uncommitted and new files count too;
+// - the unit tests Vitest ran in the last `npm run check` (its JSON report, which counts each row
+//   of it.each), or else the it() calls in the specs; and the e2e tests in the specs.
 // Without --session it measures the session whose log was written last: the current one.
 import { execFileSync } from 'node:child_process';
 import { existsSync, globSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -16,13 +19,23 @@ import { parseArgs } from 'node:util';
 import { upsertCsvRow } from './metrics/csv.mjs';
 import { costUsd } from './metrics/pricing.mjs';
 import { projectDirName } from './metrics/project-dir.mjs';
-import { countLines, countTests, parseNumstat } from './metrics/repo-stats.mjs';
+import {
+  countLines,
+  countTests,
+  countVitestTests,
+  parseNumstat,
+  stepBase,
+} from './metrics/repo-stats.mjs';
 import { emptyUsage, summarizeTranscript } from './metrics/transcript.mjs';
 
 const CSV_FILE = path.join('docs', 'bitacora', 'metricas.csv');
 // Generated or logbook files that would distort the size of the step.
 const EXCLUDED = ['docs/bitacora/eventos.jsonl', 'docs/bitacora/metricas.csv', 'package-lock.json'];
 const UNIT_TESTS = ['src/**/*.spec.ts', 'scripts/**/*.test.mjs', '.claude/hooks/*.test.mjs'];
+// Written by `ng test` (reporters in angular.json); `coverage/` is not in git.
+const VITEST_REPORT = path.join('coverage', 'unit-tests.json');
+// Git's empty tree: the base of a step that goes back to the first commit.
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 const E2E_TESTS = ['e2e/**/*.spec.ts'];
 const COLUMNS = [
   'step',
@@ -66,7 +79,7 @@ function main() {
   const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
   const logsDir = path.join(claudeDir, 'projects', projectDirName(projectDir));
   const sessions = values.session ?? [latestSession(logsDir)];
-  const repo = repoStats();
+  const repo = repoStats(step);
 
   let csv = existsSync(CSV_FILE) ? readFileSync(CSV_FILE, 'utf8') : '';
   for (const session of sessions) {
@@ -139,9 +152,10 @@ function sessionStats(dir, session) {
   };
 }
 
-function repoStats() {
+function repoStats(step) {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
-  const tracked = parseNumstat(git('diff', '--numstat', 'HEAD'), EXCLUDED);
+  const base = stepBase(git('log', '--format=%H %s'), step) ?? EMPTY_TREE;
+  const tracked = parseNumstat(git('diff', '--numstat', base), EXCLUDED);
   const untracked = git('ls-files', '--others', '--exclude-standard')
     .split('\n')
     .filter((file) => file && !EXCLUDED.includes(file));
@@ -154,9 +168,20 @@ function repoStats() {
     lines_added: tracked.added + untrackedLines,
     lines_deleted: tracked.deleted,
     files_changed: tracked.files.length + untracked.length,
-    unit_tests: testCount(UNIT_TESTS),
+    unit_tests: unitTestCount(),
     e2e_tests: testCount(E2E_TESTS),
   };
+}
+
+function unitTestCount() {
+  const ran = existsSync(VITEST_REPORT)
+    ? countVitestTests(readFileSync(VITEST_REPORT, 'utf8'))
+    : null;
+  if (ran !== null) {
+    return ran;
+  }
+  console.warn('Aviso: sin informe de Vitest (npm run check); cuento los it() de los ficheros.');
+  return testCount(UNIT_TESTS);
 }
 
 function testCount(patterns) {

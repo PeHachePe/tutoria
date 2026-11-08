@@ -109,6 +109,7 @@
           "options": {
             "runnerConfig": "vitest-base.config.mts",
             "setupFiles": ["src/jsdom-testing.ts"],
+            "reporters": ["default", ["json", { "outputFile": "coverage/unit-tests.json" }]],
             "coverage": true,
             "coverageInclude": ["src/**/*.ts"],
             "coverageExclude": [

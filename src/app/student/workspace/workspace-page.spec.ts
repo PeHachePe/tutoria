@@ -295,7 +295,7 @@ describe('WorkspacePage', () => {
       await showEditor(fixture);
 
       expect(editorView().state.doc.toString()).toBe('function suma');
-      expect(screen.getByText(/pulsa Esc y después Tab/)).toBeTruthy();
+      expect(screen.getByText(/Esc y después Tab/)).toBeTruthy();
     });
 
     it('starts an empty attempt with the name of the function as help', async () => {
