@@ -1,127 +1,146 @@
-<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-  <h3 class="text-title-small" i18n="@@runResults.heading">Resultados</h3>
-  @if (result().loadError) {
-    <p class="flex items-center gap-1 text-body-medium text-error">
-      <mat-icon class="shrink-0">report</mat-icon>
-      <span i18n="@@runResults.notRun">El código no se ha podido ejecutar</span>
-    </p>
-  } @else if (summary().allPassed) {
-    <p class="flex items-center gap-1 text-body-medium text-success">
-      <mat-icon class="shrink-0">check_circle</mat-icon>
-      <span i18n="@@runResults.allPassed"
-        >Todas superadas ({{ summary().passed }} de {{ summary().total }})</span
+<!-- Accordion pattern of the ARIA practices, as the statement: the summary stays in sight while
+     folded, and a new run unfolds it again -->
+<h3>
+  <button
+    type="button"
+    class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-lg text-start outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="bodyId"
+    (click)="toggle()"
+  >
+    <span class="flex items-center gap-1 text-title-small">
+      <mat-icon
+        class="transition-transform duration-200 motion-reduce:transition-none"
+        [class.-rotate-90]="!open()"
+        >expand_more</mat-icon
+      >
+      <span i18n="@@runResults.heading">Resultados</span>
+    </span>
+    @if (result().loadError) {
+      <span class="flex items-center gap-1 text-body-medium text-error">
+        <mat-icon class="shrink-0">report</mat-icon>
+        <span i18n="@@runResults.notRun">El código no se ha podido ejecutar</span>
+      </span>
+    } @else if (summary().allPassed) {
+      <span class="flex items-center gap-1 text-body-medium text-success">
+        <mat-icon class="shrink-0">check_circle</mat-icon>
+        <span i18n="@@runResults.allPassed"
+          >Todas superadas ({{ summary().passed }} de {{ summary().total }})</span
+        >
+      </span>
+    } @else {
+      <span class="flex items-center gap-1 text-body-medium">
+        <mat-icon class="shrink-0 text-error">cancel</mat-icon>
+        <span i18n="@@runResults.somePassed"
+          >{{ summary().passed }} de {{ summary().total }} superadas</span
+        >
+      </span>
+    }
+  </button>
+</h3>
+
+<div [id]="bodyId" class="flex flex-col gap-3" [hidden]="!open()">
+  @if (outdated()) {
+    <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+      <mat-icon class="shrink-0">history</mat-icon>
+      <span i18n="@@runResults.outdated"
+        >Has cambiado el código: estos resultados son de la versión anterior.</span
       >
     </p>
+  }
+
+  @if (result().loadError; as loadError) {
+    <div class="flex flex-col gap-2 rounded-lg bg-error-container p-3 text-on-error-container">
+      @if (loadError.kind === 'missing_function') {
+        <p class="text-body-medium" i18n="@@runResults.missingFunction">
+          No se encuentra la función
+          <code class="font-mono">{{ functionName() }}</code
+          >. Comprueba que se llama exactamente así.
+        </p>
+      } @else {
+        <p class="text-body-medium" i18n="@@runResults.invalidCode">
+          El código tiene un error y no se ha podido ejecutar ninguna prueba:
+        </p>
+        <pre class="font-mono text-body-small whitespace-pre-wrap">{{ loadError.message }}</pre>
+      }
+    </div>
   } @else {
-    <p class="flex items-center gap-1 text-body-medium">
-      <mat-icon class="shrink-0 text-error">cancel</mat-icon>
-      <span i18n="@@runResults.somePassed"
-        >{{ summary().passed }} de {{ summary().total }} superadas</span
-      >
-    </p>
+    <ul class="flex flex-col">
+      @for (example of examples(); track example.key) {
+        <li class="flex gap-2 border-t border-outline-variant py-2 first:border-t-0">
+          <mat-icon class="shrink-0" [class]="states[example.state].colour">{{
+            states[example.state].icon
+          }}</mat-icon>
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <p class="font-mono text-body-medium break-all">
+              <span class="sr-only">{{ states[example.state].label }}: </span>{{ example.call }}
+            </p>
+            <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-body-small text-on-surface-variant">
+              <p class="flex flex-wrap items-baseline gap-x-1">
+                <span i18n="@@runResults.expected">Esperado:</span>
+                <ng-container
+                  [ngTemplateOutlet]="value"
+                  [ngTemplateOutletContext]="{ $implicit: example.expected }"
+                />
+              </p>
+              <p class="flex flex-wrap items-baseline gap-x-1">
+                @switch (example.state) {
+                  @case ('timeout') {
+                    <span class="text-error" i18n="@@runResults.timeoutShort">Tiempo agotado</span>
+                  }
+                  @case ('notRun') {
+                    <span i18n="@@runResults.notRunShort">No ha llegado a ejecutarse</span>
+                  }
+                  @case ('error') {
+                    <span i18n="@@runResults.thrown">Error:</span>
+                    <span class="font-mono break-all text-error">{{ example.error }}</span>
+                  }
+                  @default {
+                    <span i18n="@@runResults.actual">Obtenido:</span>
+                    <ng-container
+                      [ngTemplateOutlet]="value"
+                      [ngTemplateOutletContext]="{ $implicit: example.actual }"
+                    />
+                  }
+                }
+              </p>
+            </div>
+          </div>
+        </li>
+      }
+    </ul>
+
+    @if (hiddenChecks().length > 0) {
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p class="text-body-small text-on-surface-variant" i18n="@@runResults.hiddenChecks">
+          Comprobaciones ocultas:
+        </p>
+        <ul class="flex flex-wrap gap-3">
+          @for (check of hiddenChecks(); track check.key) {
+            <li class="flex items-center gap-1 text-body-small">
+              <mat-icon class="shrink-0" [class]="states[check.state].colour">{{
+                states[check.state].icon
+              }}</mat-icon>
+              <span aria-hidden="true">{{ check.number }}</span>
+              <span class="sr-only" i18n="@@runResults.hiddenCheck"
+                >Comprobación oculta {{ check.number }}: {{ states[check.state].label }}</span
+              >
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (summary().anyTimeout) {
+      <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+        <mat-icon class="shrink-0">lightbulb</mat-icon>
+        <span i18n="@@runResults.timeoutHint"
+          >Alguna prueba no ha terminado a tiempo: revisa si hay un bucle que no acaba nunca.</span
+        >
+      </p>
+    }
   }
 </div>
-
-@if (outdated()) {
-  <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
-    <mat-icon class="shrink-0">history</mat-icon>
-    <span i18n="@@runResults.outdated"
-      >Has cambiado el código: estos resultados son de la versión anterior.</span
-    >
-  </p>
-}
-
-@if (result().loadError; as loadError) {
-  <div class="flex flex-col gap-2 rounded-lg bg-error-container p-3 text-on-error-container">
-    @if (loadError.kind === 'missing_function') {
-      <p class="text-body-medium" i18n="@@runResults.missingFunction">
-        No se encuentra la función
-        <code class="font-mono">{{ functionName() }}</code
-        >. Comprueba que se llama exactamente así.
-      </p>
-    } @else {
-      <p class="text-body-medium" i18n="@@runResults.invalidCode">
-        El código tiene un error y no se ha podido ejecutar ninguna prueba:
-      </p>
-      <pre class="font-mono text-body-small whitespace-pre-wrap">{{ loadError.message }}</pre>
-    }
-  </div>
-} @else {
-  <ul class="flex flex-col">
-    @for (example of examples(); track example.key) {
-      <li class="flex gap-2 border-t border-outline-variant py-2 first:border-t-0">
-        <mat-icon class="shrink-0" [class]="states[example.state].colour">{{
-          states[example.state].icon
-        }}</mat-icon>
-        <div class="flex min-w-0 flex-col gap-0.5">
-          <p class="font-mono text-body-medium break-all">
-            <span class="sr-only">{{ states[example.state].label }}: </span>{{ example.call }}
-          </p>
-          <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-body-small text-on-surface-variant">
-            <p class="flex flex-wrap items-baseline gap-x-1">
-              <span i18n="@@runResults.expected">Esperado:</span>
-              <ng-container
-                [ngTemplateOutlet]="value"
-                [ngTemplateOutletContext]="{ $implicit: example.expected }"
-              />
-            </p>
-            <p class="flex flex-wrap items-baseline gap-x-1">
-              @switch (example.state) {
-                @case ('timeout') {
-                  <span class="text-error" i18n="@@runResults.timeoutShort">Tiempo agotado</span>
-                }
-                @case ('notRun') {
-                  <span i18n="@@runResults.notRunShort">No ha llegado a ejecutarse</span>
-                }
-                @case ('error') {
-                  <span i18n="@@runResults.thrown">Error:</span>
-                  <span class="font-mono break-all text-error">{{ example.error }}</span>
-                }
-                @default {
-                  <span i18n="@@runResults.actual">Obtenido:</span>
-                  <ng-container
-                    [ngTemplateOutlet]="value"
-                    [ngTemplateOutletContext]="{ $implicit: example.actual }"
-                  />
-                }
-              }
-            </p>
-          </div>
-        </div>
-      </li>
-    }
-  </ul>
-
-  @if (hiddenChecks().length > 0) {
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <p class="text-body-small text-on-surface-variant" i18n="@@runResults.hiddenChecks">
-        Comprobaciones ocultas:
-      </p>
-      <ul class="flex flex-wrap gap-3">
-        @for (check of hiddenChecks(); track check.key) {
-          <li class="flex items-center gap-1 text-body-small">
-            <mat-icon class="shrink-0" [class]="states[check.state].colour">{{
-              states[check.state].icon
-            }}</mat-icon>
-            <span aria-hidden="true">{{ check.number }}</span>
-            <span class="sr-only" i18n="@@runResults.hiddenCheck"
-              >Comprobación oculta {{ check.number }}: {{ states[check.state].label }}</span
-            >
-          </li>
-        }
-      </ul>
-    </div>
-  }
-
-  @if (summary().anyTimeout) {
-    <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
-      <mat-icon class="shrink-0">lightbulb</mat-icon>
-      <span i18n="@@runResults.timeoutHint"
-        >Alguna prueba no ha terminado a tiempo: revisa si hay un bucle que no acaba nunca.</span
-      >
-    </p>
-  }
-}
 
 <ng-template #value let-value>
   @if (value.block) {

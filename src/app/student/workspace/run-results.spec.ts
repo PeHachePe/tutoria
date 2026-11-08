@@ -99,6 +99,48 @@ describe('RunResults', () => {
   });
 });
 
+describe('RunResults folding', () => {
+  const FAILED: RunResult = {
+    status: 'tests_failed',
+    results: [
+      { testId: 't1', passed: false, timeout: false, input: [[1]], expected: 1, actual: 2 },
+    ],
+  };
+
+  it('folds to the summary and unfolds again, as an accordion', async () => {
+    const { fixture } = await render(RunResults, {
+      inputs: { result: FAILED, functionName: 'suma' },
+    });
+    const toggle = screen.getByRole('button', { name: /Resultados/ });
+    const body = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(text(toggle)).toContain('0 de 1 superadas');
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(body?.hidden).toBe(true);
+    toggle.click();
+    fixture.detectChanges();
+    expect(body?.hidden).toBe(false);
+  });
+
+  it('unfolds by itself when a new run arrives', async () => {
+    const { fixture } = await render(RunResults, {
+      inputs: { result: FAILED, functionName: 'suma' },
+    });
+    const toggle = screen.getByRole('button', { name: /Resultados/ });
+    toggle.click();
+    fixture.detectChanges();
+
+    fixture.componentRef.setInput('result', { ...FAILED });
+    fixture.detectChanges();
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
 describe('testStates', () => {
   it('tells how each test ended, and which ones never started after one ran out of time', () => {
     expect(

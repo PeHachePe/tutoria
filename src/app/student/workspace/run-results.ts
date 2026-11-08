@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, linkedSignal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 
 import type { RunResult, TestResult } from '../../data/attempt';
@@ -50,6 +50,8 @@ const STATES: Record<TestState, StateStyle> = {
  * The state of each test, in order. Only the first one out of time is the one that did not end:
  * the ones after it never started, so «Tiempo agotado» would point at the wrong test.
  */
+let nextId = 0;
+
 export function testStates(results: readonly TestResult[]): TestState[] {
   let timedOut = false;
   return results.map((result) => {
@@ -73,7 +75,8 @@ function shown(value: unknown): { readonly text: string; readonly block: boolean
 /**
  * The results of the last run (2.5, figure 17): the summary, and then each example with its call,
  * the expected value and what the code returned, the error it threw or that it ran out of time;
- * the hidden checks, only whether they passed. If the code did not load, only why.
+ * the hidden checks, only whether they passed. If the code did not load, only why. It folds to the
+ * summary.
  */
 @Component({
   selector: 'app-run-results',
@@ -89,6 +92,17 @@ export class RunResults {
   readonly outdated = input(false);
 
   protected readonly states = STATES;
+  protected readonly bodyId = `app-run-results-body-${nextId++}`;
+
+  /**
+   * Folded, only the summary shows and the editor gets the room. Each new run unfolds it, so the
+   * student sees what changed: derived from the result, it needs no effect.
+   */
+  protected readonly open = linkedSignal({ source: this.result, computation: () => true });
+
+  protected toggle(): void {
+    this.open.update((open) => !open);
+  }
 
   protected readonly summary = computed(() => {
     const { results, loadError } = this.result();

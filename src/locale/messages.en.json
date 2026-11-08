@@ -177,6 +177,9 @@
     "workspace.runAnnouncement.allPassed": "All tests passed. You can submit now.",
     "workspace.runAnnouncement.somePassed": "{$passed} of {$total} tests passed.",
     "runResults.notRunShort": "It never got to run",
-    "runResults.state.notRun": "Not run"
+    "runResults.state.notRun": "Not run",
+    "workspace.expandCode": "Expand the code",
+    "workspace.expandCodeTooltip": "Expand the code",
+    "workspace.collapseCodeTooltip": "Back to the normal view"
   }
 }

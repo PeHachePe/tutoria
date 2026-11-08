@@ -662,6 +662,8 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 
 **Alternativas:** un Worker reutilizado (más rápido, pero arrastra estado y un bucle infinito obliga a recrearlo igualmente); comparar dentro del Worker (el código del alumno podría alterar `JSON.stringify`); dejar `NaN` como `null`, como haría JSON (el alumno vería `null` sin entender por qué falla); `showProgress` de los botones de Material (texto «Ejecutando…» en su lugar, como pide §4.8); un separador de una librería externa (no hay ninguno en Angular Material y el propio cabe en un componente pequeño).
 
+- **Más sitio para el código, sin ventanas encima** (iteración 1, a propuesta del autor): un botón «Ampliar el código» deja la pantalla entera a la zona de código, sin el enunciado ni el tutor, y los resultados se pliegan a su resumen como un acordeón y se despliegan solos con cada ejecución (`linkedSignal` del resultado, sin `effect()`). No es un modal: un modal obligaría a un segundo CodeMirror sincronizado con el primero (justo lo que evita D-029) y taparía el código mientras se leen los resultados. El estado ampliado no se recuerda; el plegado tampoco.
+
 **Consecuencias:** cambian §4.2 (`RunResult.loadError`), §4.3 (explorador y runner) y el paso 1.5 del plan. El 2.3 tiene que hacer lo mismo en el servidor: transportar `undefined`, `NaN` e `±Infinity` en el JSON, informar de `loadError`, escribir el resultado de cada prueba en cuanto acaba y comparar con las claves ordenadas (anotado en `PENDIENTES.md`).
 
 **Aprobación:** el autor, que pidió revisar el paso, aplicar las mejoras propuestas («Adelante con tus ideas») y hacer el separador en este paso.

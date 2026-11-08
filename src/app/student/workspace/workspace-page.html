@@ -56,28 +56,41 @@
     </mat-tab>
   </mat-tab-group>
 } @else {
-  <!-- As in the prototype (figure 17): the statement over the code, the tutor in its own column -->
+  <!-- As in the prototype (figure 17): the statement over the code, the tutor in its own column.
+       Expanded, the code takes the whole screen; it is the same editor, never created again. -->
   <div
-    class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_17rem] gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
+    class="grid min-h-0 flex-1 gap-4"
+    [class]="
+      codeExpanded()
+        ? 'grid-cols-1'
+        : 'grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_22rem]'
+    "
   >
     <!-- The splitter moves the boundary between the open statement and the code (ficha 03) -->
-    <div class="flex min-h-0 flex-col" [class]="statementOpen() ? 'gap-1' : 'gap-4'">
-      <ng-container [ngTemplateOutlet]="statementZone" />
-      @if (statementOpen()) {
-        <app-splitter
-          label="Tamaño del enunciado"
-          i18n-label="@@workspace.statementSize"
-          controls="statement-zone"
-          [min]="statementShareLimits.min"
-          [max]="statementShareLimits.max"
-          [defaultValue]="statementShareLimits.default"
-          [(value)]="statementShare"
-          (changeEnd)="keepStatementShare($event)"
-        />
+    <div
+      class="flex min-h-0 flex-col"
+      [class]="statementOpen() && !codeExpanded() ? 'gap-1' : 'gap-4'"
+    >
+      @if (!codeExpanded()) {
+        <ng-container [ngTemplateOutlet]="statementZone" />
+        @if (statementOpen()) {
+          <app-splitter
+            label="Tamaño del enunciado"
+            i18n-label="@@workspace.statementSize"
+            controls="statement-zone"
+            [min]="statementShareLimits.min"
+            [max]="statementShareLimits.max"
+            [defaultValue]="statementShareLimits.default"
+            [(value)]="statementShare"
+            (changeEnd)="keepStatementShare($event)"
+          />
+        }
       }
       <ng-container [ngTemplateOutlet]="codeZone" />
     </div>
-    <ng-container [ngTemplateOutlet]="tutorZone" />
+    @if (!codeExpanded()) {
+      <ng-container [ngTemplateOutlet]="tutorZone" />
+    }
   </div>
 }
 
@@ -206,13 +219,26 @@
       >
         Código
       </h2>
-      @if (!store.readonly()) {
-        <app-save-indicator
-          class="ms-auto"
-          [status]="store.saveStatus()"
-          (retry)="store.retrySave()"
-        />
-      }
+      <div class="ms-auto flex items-center gap-1">
+        @if (!store.readonly()) {
+          <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
+        }
+        <!-- A toggle button: same name, and aria-pressed says whether the code is expanded. On
+             phones each zone already takes the whole screen. -->
+        @if (!compact()) {
+          <button
+            matIconButton
+            type="button"
+            aria-label="Ampliar el código"
+            i18n-aria-label="@@workspace.expandCode"
+            [attr.aria-pressed]="codeExpanded()"
+            [matTooltip]="codeExpanded() ? collapseCodeTooltip : expandCodeTooltip"
+            (click)="toggleCodeExpanded()"
+          >
+            <mat-icon>{{ codeExpanded() ? 'close_fullscreen' : 'open_in_full' }}</mat-icon>
+          </button>
+        }
+      </div>
     </div>
     <!-- CodeMirror comes in a chunk of its own, downloaded when the zone shows (4.7) -->
     @defer (on viewport; prefetch on idle) {
@@ -336,7 +362,7 @@
         role="group"
         aria-label="Resultados de las pruebas"
         i18n-aria-label="@@workspace.results"
-        class="relative max-h-[40%] min-h-16 overflow-y-auto scroll-shadows rounded-lg border border-outline-variant p-3 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+        class="relative max-h-[40%] min-h-12 overflow-y-auto scroll-shadows rounded-lg border border-outline-variant p-3 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
         [attr.aria-busy]="store.running()"
         [result]="run"
         [functionName]="content()?.exercise?.functionName ?? ''"

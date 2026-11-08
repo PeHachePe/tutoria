@@ -39,6 +39,8 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - **Ejecutar pruebas** (o Ctrl + Intro desde el editor): envía el código actual, dice «Ejecutando…» y muestra los resultados; el estado pasa a «Superado» o «Con fallos». Un bucle infinito acaba a los 2 s en «Tiempo agotado» sin colgar la pestaña. Si falla, un aviso con «Reintentar».
 - **Entregar:** solo con el intento superado; pide confirmación («Seguir revisando» o «Entregar») y después el código queda en solo lectura. Antes de superar, el botón se puede enfocar y su tooltip explica por qué no se puede.
 - **Separador:** se arrastra o se mueve con las flechas, Inicio y Fin; doble clic vuelve al 45 %. Se recuerda para el alumno.
+- **Ampliar el código** (escritorio y tableta): el botón ⤢ del encabezado «Código» deja la pantalla entera para el código y los resultados, sin el enunciado ni el tutor; el mismo botón vuelve a la vista normal. Es el mismo editor: no se pierde nada de lo escrito ni el historial de deshacer.
+- **Plegar los resultados:** su encabezado, con el resumen, los pliega o los despliega; cada ejecución nueva los vuelve a desplegar.
 
 ## Estados
 
@@ -63,6 +65,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - Los botones que se deshabilitan siguen enfocables (`disabledInteractive`); tras entregar, el foco va a la nota de entregado.
 - El diálogo de entrega atrapa el foco y empieza en «Seguir revisando».
 - El separador es un `separator` con su valor (`aria-valuenow`, en porcentaje) y `aria-controls` al enunciado.
+- «Ampliar el código» es un botón de alternar: mismo nombre y `aria-pressed`. Los resultados plegables siguen el patrón de acordeón, como el enunciado.
 
 ## Criterios de aceptación
 
@@ -76,6 +79,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - [ ] Un intento entregado se ve en solo lectura y sin indicador de guardado.
 - [ ] El ejercicio 3 se resuelve y se entrega, y un bucle infinito acaba en tiempo agotado sin colgar la pestaña (paso 1.5).
 - [ ] El separador cambia el reparto con el ratón y con el teclado, y se recuerda al volver.
+- [ ] «Ampliar el código» deja la pantalla entera al código sin perder lo escrito, y los resultados se pliegan al resumen (iteración 1 del 1.5).
 
 ## Fuera de alcance
 

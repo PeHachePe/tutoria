@@ -654,6 +654,38 @@ describe('WorkspacePage', () => {
     });
   });
 
+  describe('expanding the code', () => {
+    it('gives the code the whole screen with the same editor, and goes back', async () => {
+      const { fixture } = await renderPage();
+      await showEditor(fixture);
+      const view = editorView();
+      const toggle = screen.getByRole('button', { name: 'Ampliar el código' });
+      expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+      await userEvent.setup().click(toggle);
+
+      expect(toggle.getAttribute('aria-pressed')).toBe('true');
+      expect(screen.queryByRole('region', { name: 'Enunciado' })).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+      expect(screen.queryByRole('separator')).toBeNull();
+      // The same CodeMirror: nothing typed nor its undo history is lost
+      expect(editorView()).toBe(view);
+
+      await userEvent.setup().click(toggle);
+
+      expect(toggle.getAttribute('aria-pressed')).toBe('false');
+      expect(screen.getByRole('region', { name: 'Enunciado' })).toBeTruthy();
+      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
+      expect(editorView()).toBe(view);
+    });
+
+    it('is not offered on a phone, where each zone already takes the screen', async () => {
+      await renderPage({ compact: true });
+
+      expect(screen.queryByRole('button', { name: 'Ampliar el código' })).toBeNull();
+    });
+  });
+
   describe('splitter', () => {
     afterEach(() => localStorage.clear());
 

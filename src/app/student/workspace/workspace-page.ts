@@ -187,6 +187,18 @@ export class WorkspacePage {
     this.statementOpen.update((open) => !open);
   }
 
+  /**
+   * Wide screens: the code takes the whole screen, without the statement and the tutor, and goes
+   * back with the same button. Not remembered: the screen opens again with its three zones.
+   */
+  protected readonly codeExpanded = signal(false);
+  protected readonly expandCodeTooltip = $localize`:@@workspace.expandCodeTooltip:Ampliar el código`;
+  protected readonly collapseCodeTooltip = $localize`:@@workspace.collapseCodeTooltip:Volver a la vista normal`;
+
+  protected toggleCodeExpanded(): void {
+    this.codeExpanded.update((expanded) => !expanded);
+  }
+
   protected keepStatementShare(share: number): void {
     saveStatementShare(this.userId(), share);
   }

@@ -177,6 +177,9 @@
     "workspace.runAnnouncement.allPassed": "Totes les proves superades. Ja pots lliurar.",
     "workspace.runAnnouncement.somePassed": "{$passed} de {$total} proves superades.",
     "runResults.notRunShort": "No s'ha arribat a executar",
-    "runResults.state.notRun": "Sense executar"
+    "runResults.state.notRun": "Sense executar",
+    "workspace.expandCode": "Ampliar el codi",
+    "workspace.expandCodeTooltip": "Ampliar el codi",
+    "workspace.collapseCodeTooltip": "Tornar a la vista normal"
   }
 }
