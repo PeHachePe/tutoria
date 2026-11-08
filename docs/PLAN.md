@@ -449,17 +449,22 @@ Resultado de una ejecución:
 
 ```ts
 interface RunResult {
-  status: AttemptStatus; // decided by the server (or by the mock adapter)
-  results: TestResult[];
+  status: StoredAttemptStatus; // decided by the server (or by the mock service)
+  results: TestResult[]; // one per test, in order
+  loadError?: RunLoadError; // the code did not load: no test ran (D-030)
+}
+interface RunLoadError {
+  kind: 'invalid_code' | 'missing_function';
+  message?: string; // JavaScript error, for invalid_code
 }
 interface TestResult {
   testId: string;
   passed: boolean;
-  timeout: boolean;
-  error?: string; // runtime error message, if any
-  input?: unknown; // input, expected and actual: visible tests only
+  timeout: boolean; // did not end in time, or never started after one that did not (D-030)
+  error?: string; // runtime error message, if any (visible tests only)
+  input?: unknown[]; // input, expected and actual: visible tests only
   expected?: unknown;
-  actual?: unknown;
+  actual?: unknown; // keeps undefined, NaN and ±Infinity (D-030)
 }
 ```
 
@@ -485,11 +490,12 @@ Los servicios de datos lanzan un `DataError` tipado (`network`, `unauthorized`, 
   - visor de los últimos eventos;
   - enlaces a las páginas de desarrollo;
   - controles del simulador en vivo (fase 4).
-- **Explorador de datos** (`/dev/datos`, solo en desarrollo): lo que ve el usuario de la barra a través de los servicios de datos (ejercicios agrupados por sesión con su chip de estado, en una lista plegable; detalle con sus ejemplos; intento con sus transiciones), con estados de carga y de error con reintento. Hasta el paso 1.5 incluye una ejecución simulada que marca el intento como superado o con fallos.
-- **Ejecución simulada (Web Worker):**
-  - obtiene la función por su nombre a partir del código del alumno y la llama con cada `input`;
-  - compara el resultado con `expected_output` por JSON y captura los errores de cada prueba;
-  - el hilo principal termina el Worker a los 2 segundos: las pruebas pendientes quedan como tiempo agotado y la pestaña nunca se cuelga.
+- **Explorador de datos** (`/dev/datos`, solo en desarrollo): lo que ve el usuario de la barra a través de los servicios de datos (ejercicios agrupados por sesión con su chip de estado, en una lista plegable; detalle con sus ejemplos; intento con sus transiciones), con estados de carga y de error con reintento. Ejecuta con el runner simulado la solución o el error típico de cada ejercicio del seed (paso 1.5).
+- **Ejecución simulada (Web Worker, D-030):**
+  - un Worker nuevo por ejecución, que solo recibe el código y las entradas: obtiene la función por su nombre, la llama con cada `input` y envía el resultado o el error de cada prueba en cuanto acaba;
+  - la página compara con `expected_output` por JSON, con las claves ordenadas y sin confundir `undefined`, `NaN` o `Infinity` con `null`;
+  - el hilo principal termina el Worker 2 segundos después de que empiecen las pruebas: las pendientes quedan como tiempo agotado y la pestaña nunca se cuelga;
+  - como hará `execute`, guarda el código, fija el estado y registra `run`.
 - **Tutor guionizado:**
   - respuestas por nivel y tipo (pregunta, pista o proactiva);
   - emite `meta` → `delta`(s) → `done` con pequeños retardos para simular la escritura;
@@ -1072,15 +1078,16 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 ✅ Escribir, recargar y el código sigue ahí.
 🧪 Debounce con temporizadores simulados.
 
-**1.5 · Ejecutar pruebas y entregar (≈3 h)**
+**1.5 · Ejecutar pruebas y entregar (≈3 h)** · ficha `03-trabajo` · D-030
 
-- `CodeRunnerService` simulado con Web Worker (4.3).
-- Panel de resultados: los ejemplos muestran la llamada, el resultado esperado y el obtenido; las comprobaciones ocultas, solo el icono (2.5).
-- Transiciones a través del servicio de intentos.
-- «Entregar», solo en `passed` y con diálogo de confirmación; después, solo lectura.
+- `CodeRunnerService` simulado con un Web Worker por ejecución (4.3).
+- Panel de resultados: los ejemplos muestran la llamada, el resultado esperado y el obtenido, el error o el tiempo agotado; las comprobaciones ocultas, solo el icono (2.5); el código que no carga o sin la función, una sola vez. El chip de estado añade cuántas pruebas se superan («Con fallos · 3/5»).
+- El runner fija `passed` o `tests_failed` y el servicio de intentos hace la entrega (2.4).
+- «Ejecutar pruebas», también con Ctrl + Intro desde el editor; «Entregar», solo en `passed` y con diálogo de confirmación; después, solo lectura y el foco en la nota de entregado.
+- Separador entre el enunciado y el código en escritorio y tableta, recordado por usuario.
 
 ✅ El ejercicio 3 se resuelve y se entrega, y un bucle infinito acaba en tiempo agotado sin colgar la pestaña.
-🧪 Comparación y normalización; e2e del flujo resolver y entregar.
+🧪 Comparación y normalización, el runner con un Worker falso y el store. El e2e del flujo resolver y entregar, en `E2E-PENDIENTES.md` (D-026).
 
 **1.6 · Señales del navegador (≈1,5 h)**
 

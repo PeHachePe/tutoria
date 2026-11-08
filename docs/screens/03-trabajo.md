@@ -1,6 +1,6 @@
 # 03 · Pantalla de trabajo
 
-`/alumno/ejercicio/:id` · Alumno · Capas 1, 3 y 4 · 2 h la disposición (paso 1.3) y 3 h el editor (1.4); se completa del 1.5 al 1.8
+`/alumno/ejercicio/:id` · Alumno · Capas 1, 3 y 4 · 2 h la disposición (paso 1.3), 3 h el editor (1.4) y 3 h las pruebas y la entrega (1.5); se completa del 1.6 al 1.8
 
 ## Objetivo
 
@@ -12,16 +12,19 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - Abre el intento con `AttemptStore.open(id)`, que llama a `AttemptService.openOrCreate`: recupera el último intento del alumno o crea uno en `in_progress` (2.4). El store se provee en la ruta y lo comparten el editor, los resultados, «Entregar» y el tutor (4.5).
 - Si el alumno no tiene el ejercicio asignado, los dos servicios responden `not_found`.
 - El código se guarda con `AttemptService.saveCode` 800 ms después del último cambio (paso 1.4, D-029).
+- Las pruebas se ejecutan con `CodeRunnerService.run`, que guarda el código y fija `passed` o `tests_failed`, y se entrega con `AttemptService.submit` (paso 1.5, D-030). Los resultados viven en el store mientras se está en la pantalla: no se guardan.
+- El reparto entre enunciado y código se recuerda por usuario en `localStorage`.
 
 ## Contenido y disposición
 
 - Referencia: boceto (figura 8 de la memoria), versión móvil y tableta (figura 15) y prototipo (figura 17).
-- Cabecera: volver a «Ejercicios», el `h1` con el título del ejercicio y los chips de dificultad y de estado del intento.
+- Cabecera: volver a «Ejercicios», el `h1` con el título del ejercicio y los chips de dificultad y de estado del intento; tras ejecutar, el de estado añade las pruebas superadas («Con fallos · 3/5»), como el contador de la figura 17.
 - Tres zonas:
   - **Enunciado:** el texto, con el código en monoespaciada; «Ejemplos» como tabla de llamadas y resultados esperados (`suma([1, 2, 3])` → `6`) y «Y N comprobaciones ocultas» (2.5). Se puede plegar.
-  - **Código:** el editor (1.4), con el indicador de guardado junto al encabezado, y debajo los resultados (1.5). Es la zona principal y se lleva el espacio que sobre. Un intento nuevo empieza vacío, con «Escribe aquí la función `suma`» como texto de ayuda (D-018); uno entregado solo muestra su código.
+  - **Código:** el editor (1.4), con el indicador de guardado junto al encabezado; debajo, «Ejecutar pruebas» y «Entregar», y los resultados (1.5), que se desplazan por dentro y ocupan como mucho el 40 % de la zona. Es la zona principal y se lleva el espacio que sobre. Un intento nuevo empieza vacío, con «Escribe aquí la función `suma`» como texto de ayuda (D-018); uno entregado solo muestra su código y, en lugar de los botones, «Entregado el …» con «Volver a los ejercicios».
+  - **Resultados** (figura 17): el resumen («3 de 5 superadas» o «Todas superadas»); cada ejemplo con su llamada, el esperado y el obtenido, el error o «Tiempo agotado»; las pruebas que no llegaron a empezar tras un tiempo agotado, como «Sin ejecutar»; las comprobaciones ocultas, solo con su icono; si el código no carga o no tiene la función, solo eso, una vez. Si el código cambia después de ejecutar, una nota avisa de que son de la versión anterior. Antes de la primera ejecución, una línea invita a ejecutar.
   - **Tutor:** el chat (1.7).
-- Escritorio y tableta (desde 768 px), como en el prototipo: dos columnas. A la izquierda, el enunciado encima del código; a la derecha, el tutor con ancho fijo. La pantalla ocupa el alto de la ventana y cada zona se desplaza por dentro.
+- Escritorio y tableta (desde 768 px), como en el prototipo: dos columnas. A la izquierda, el enunciado encima del código, con un separador entre los dos (el enunciado ocupa del 15 al 70 % de la columna; 45 % al empezar); a la derecha, el tutor con ancho fijo. La pantalla ocupa el alto de la ventana y cada zona se desplaza por dentro.
 - Móvil (menos de 768 px): pestañas «Ejercicio», «Código» y «Tutor», cada una a pantalla completa. Cambia la figura 15, que apilaba los bloques con el tutor plegable debajo: a 375 × 667 no cabían y la página entera se desplazaba (5.4).
 
 ## Interacciones
@@ -33,6 +36,9 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - **Escribir código:** el estado pasa a «En curso» y el indicador dice «Guardando…» y, al llegar la respuesta, «Guardado». Tab sangra; Esc y después Tab salen del editor.
 - **Reintentar el guardado:** si falla, «No se ha guardado» ofrece «Reintentar» y el código no se pierde.
 - **Salir o recargar:** lo pendiente se guarda al ocultar la pestaña, al cambiar de ejercicio y al salir de la pantalla; con cambios sin guardar, el navegador pregunta antes de cerrar.
+- **Ejecutar pruebas** (o Ctrl + Intro desde el editor): envía el código actual, dice «Ejecutando…» y muestra los resultados; el estado pasa a «Superado» o «Con fallos». Un bucle infinito acaba a los 2 s en «Tiempo agotado» sin colgar la pestaña. Si falla, un aviso con «Reintentar».
+- **Entregar:** solo con el intento superado; pide confirmación («Seguir revisando» o «Entregar») y después el código queda en solo lectura. Antes de superar, el botón se puede enfocar y su tooltip explica por qué no se puede.
+- **Separador:** se arrastra o se mueve con las flechas, Inicio y Fin; doble clic vuelve al 45 %. Se recuerda para el alumno.
 
 ## Estados
 
@@ -40,6 +46,9 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - **Sin acceso:** un ejercicio que no existe o no está asignado muestra «No tienes acceso a este contenido» con «Volver a los ejercicios», no «Reintentar».
 - **Error:** mensaje según el tipo de error y «Reintentar».
 - **Editor:** reserva su sitio hasta que la zona se ve; si su descarga pasa de 300 ms, un esqueleto; si falla, «Recargar».
+- **Ejecutando o entregando:** el botón lo dice («Ejecutando…», «Entregando…») y no se puede repetir la acción.
+- **Fallo al ejecutar o entregar:** aviso según el tipo de error (sin conexión, demasiadas ejecuciones, sesión caducada) con «Reintentar»; el código no se pierde (CU-01, 4b).
+- **Entregado:** el código en solo lectura y la nota con la fecha.
 - **Con datos:** las tres zonas.
 
 ## Accesibilidad
@@ -50,6 +59,10 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - Los ejemplos son una tabla con encabezados de columna.
 - El editor es un área de texto llamada «Código», con el texto de cómo salir con el teclado enlazado (`aria-describedby`) y `aria-readonly` si está entregado. «No se ha guardado» se anuncia (`role="alert"`); «Guardando…» y «Guardado» no, para no repetirse en cada pausa.
 - En «Ejercicios» de la barra, el enlace sigue resaltado dentro de un ejercicio, pero `aria-current="page"` solo lo lleva en el catálogo.
+- El resumen de cada ejecución se anuncia (`aria-live="polite"`), porque los resultados aparecen lejos del botón; los fallos al ejecutar o entregar, con `role="alert"`. Cada resultado dice su estado con texto, además del icono y el color.
+- Los botones que se deshabilitan siguen enfocables (`disabledInteractive`); tras entregar, el foco va a la nota de entregado.
+- El diálogo de entrega atrapa el foco y empieza en «Seguir revisando».
+- El separador es un `separator` con su valor (`aria-valuenow`, en porcentaje) y `aria-controls` al enunciado.
 
 ## Criterios de aceptación
 
@@ -61,10 +74,12 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - [ ] axe sin infracciones en claro y oscuro.
 - [ ] Escribir, recargar y el código sigue ahí (paso 1.4).
 - [ ] Un intento entregado se ve en solo lectura y sin indicador de guardado.
+- [ ] El ejercicio 3 se resuelve y se entrega, y un bucle infinito acaba en tiempo agotado sin colgar la pestaña (paso 1.5).
+- [ ] El separador cambia el reparto con el ratón y con el teclado, y se recuerda al volver.
 
 ## Fuera de alcance
 
-- Las pruebas y «Entregar» (1.5), el chat (1.7) y las reacciones (1.8): sus zonas muestran qué llegará.
+- El chat (1.7) y las reacciones (1.8): su zona muestra qué llegará.
 - El registro del pegado: el editor ya lo detecta, y lo envía el `EventLogger` del 1.6.
 - La lista de ejercicios dentro de la pantalla: el plan la dejaba opcional y basta con volver al catálogo.
 

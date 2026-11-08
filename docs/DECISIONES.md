@@ -636,3 +636,32 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian §4.5, §4.7 y el paso 1.4 del plan. El 1.5 crea el editor de solo lectura al entregar con el mismo `@if` y, antes de ejecutar, envía el código actual. El 1.6 conecta `pasted` con el `EventLogger`.
 
 **Aprobación:** el autor, que delegó la decisión en el agente («haz todas las mejoras que consideres» y «si puedes evitar en lo posible effects y similares mejor»).
+
+## D-030 · Ejecutar y entregar: runner en un Worker por ejecución, resultados honestos y separador del enunciado (08/11/2026)
+
+**Contexto:** el paso 1.5 añade la ejecución de las pruebas con un Web Worker (datos simulados) y la entrega. Al revisar el paso a petición del autor salieron desajustes del plan (las transiciones no pasan todas por el servicio de intentos, el e2e del paso ya no toca por D-026, el explorador seguía con su ejecución simulada) y riesgos: el límite de 2 s contado desde la descarga del Worker, la comparación por JSON sensible al orden de las claves y ciega a `NaN` o `undefined`, el foco perdido al entregar y un guardado en curso que podía llegar después de la ejecución. El autor pidió además las mejoras de UX que propuso Claude, el separador entre enunciado y código y el recuento de pruebas en el chip.
+
+**Decisión:**
+
+- **Un Worker nuevo por ejecución** (`data/mock/code-runner/`, configurado con `ng generate web-worker`): ninguna ejecución ve lo que dejó la anterior, y terminarlo corta un bucle infinito sin colgar la pestaña. El Worker solo recibe el código y las entradas, nunca los valores esperados: compara la página (`buildRunResult`), como hará `execute` (2.3). El servicio simulado guarda el código, fija `passed` o `tests_failed` y registra `run` con las pruebas falladas, ocultas incluidas (las necesita `isStuck()`).
+- **El límite de 2 s empieza cuando el Worker avisa de que empieza** (`started`), no al crearlo: en un equipo lento, descargar el Worker no le quita tiempo al código. El Worker envía el resultado de cada prueba en cuanto acaba, así que las anteriores a un bucle infinito conservan el suyo.
+- **Resultados honestos:**
+  - se comparan como JSON con las claves ordenadas (`{a, b}` = `{b, a}`) y `undefined`, `NaN` e `±Infinity` solo son iguales a sí mismos; el valor obtenido los conserva, porque son los errores típicos de principiante (`let total;` da `NaN`) y el alumno debe verlos tal cual;
+  - si el código no carga (error de sintaxis o fuera de la función) o no tiene la función del ejercicio, `RunResult.loadError` lo dice una vez, en lugar del mismo fallo repetido en cada prueba;
+  - tras un tiempo agotado, solo la primera prueba sin resultado sale como «Tiempo agotado»: las siguientes no llegaron a empezar y salen como «Sin ejecutar»;
+  - las comprobaciones ocultas solo dicen si se superan, sin el mensaje de error.
+- **`AttemptStore`:** `run()` cancela el autoguardado y espera al guardado en curso antes de enviar el código; lo escrito durante la ejecución deja el intento en `in_progress`; un fallo queda en `actionError` con su reintento y vuelve a programar el guardado; `submit()` solo desde `passed`. Las respuestas tardías de otro ejercicio se ignoran. Los resultados no se guardan: tras recargar, la zona invita a ejecutar.
+- **UX de la zona de código:**
+  - «Ejecutar pruebas» y «Entregar» con `disabledInteractive`: un botón que se deshabilita conserva el foco y su tooltip explica por qué; «Entregar» pasa a botón principal cuando el intento está superado;
+  - Ctrl + Intro (o ⌘ + Intro) ejecuta desde el editor, con prioridad sobre el atajo de CodeMirror que insertaba una línea;
+  - la entrega pide confirmación en un diálogo («Seguir revisando» tiene el foco) y después el foco va a la nota «Entregado el …», con «Volver a los ejercicios» (WCAG 2.4.3);
+  - una región `aria-live` anuncia el resumen de cada ejecución, porque los resultados aparecen lejos del botón;
+  - el chip de estado añade «· 3/5» tras ejecutar (`testCount`), como el contador de la figura 17, y en el móvil se ve también desde las pestañas «Ejercicio» y «Tutor».
+- **Separador entre enunciado y código** (`shared/splitter/`, patrón _window splitter_ de ARIA): se arrastra con ratón, dedo o lápiz y se mueve con las flechas, Inicio y Fin; doble clic vuelve al 45 %. El reparto (15–70 %) se recuerda por usuario en `localStorage`, como comodidad. No aparece con el enunciado plegado ni en el móvil, donde cada zona es una pestaña. Ni Material ni el CDK traen uno.
+- **El explorador `/dev/datos`** ejecuta con el runner de verdad la solución o el error típico de cada ejercicio del seed, en lugar de marcar el intento como superado o con fallos.
+
+**Alternativas:** un Worker reutilizado (más rápido, pero arrastra estado y un bucle infinito obliga a recrearlo igualmente); comparar dentro del Worker (el código del alumno podría alterar `JSON.stringify`); dejar `NaN` como `null`, como haría JSON (el alumno vería `null` sin entender por qué falla); `showProgress` de los botones de Material (texto «Ejecutando…» en su lugar, como pide §4.8); un separador de una librería externa (no hay ninguno en Angular Material y el propio cabe en un componente pequeño).
+
+**Consecuencias:** cambian §4.2 (`RunResult.loadError`), §4.3 (explorador y runner) y el paso 1.5 del plan. El 2.3 tiene que hacer lo mismo en el servidor: transportar `undefined`, `NaN` e `±Infinity` en el JSON, informar de `loadError`, escribir el resultado de cada prueba en cuanto acaba y comparar con las claves ordenadas (anotado en `PENDIENTES.md`).
+
+**Aprobación:** el autor, que pidió revisar el paso, aplicar las mejoras propuestas («Adelante con tus ideas») y hacer el separador en este paso.
