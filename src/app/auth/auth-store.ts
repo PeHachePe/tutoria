@@ -18,6 +18,8 @@ export class AuthStore {
   private readonly auth = inject(AuthService);
 
   private readonly userState = signal<AppUser | null>(null);
+  /** Not state: nothing is drawn from it, so a plain set instead of a signal. */
+  private readonly beforeSignOutTasks = new Set<() => Promise<void>>();
 
   readonly user = this.userState.asReadonly();
   /** `undefined` without a session, so a `resource()` keyed on it stays idle. */
@@ -44,8 +46,23 @@ export class AuthStore {
     }
   }
 
-  /** Forgets the user even if the server cannot be reached: the device must not stay signed in. */
+  /**
+   * Registers work that must reach the server while the session still exists, such as the code not
+   * saved yet or the queued events. Returns the function that removes it, for its owner's DestroyRef.
+   */
+  beforeSignOut(task: () => Promise<void>): () => void {
+    this.beforeSignOutTasks.add(task);
+    return () => {
+      this.beforeSignOutTasks.delete(task);
+    };
+  }
+
+  /**
+   * Waits for the work registered with beforeSignOut() and then forgets the user, even if that work
+   * or the server fail: the device must not stay signed in.
+   */
   async signOut(): Promise<void> {
+    await Promise.allSettled([...this.beforeSignOutTasks].map((task) => task()));
     try {
       await this.auth.signOut();
     } catch {

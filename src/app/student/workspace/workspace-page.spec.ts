@@ -8,15 +8,18 @@ import { of } from 'rxjs';
 
 import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
 import type { Attempt, RunResult, StoredAttemptStatus } from '../../data/attempt';
+import { EventLogger } from '../../core/event-logger';
 import { PageReloader } from '../../core/page-reloader';
 import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
 import { DataError } from '../../data/data-error';
+import { EventService } from '../../data/event-service';
 import type { ExerciseDetail } from '../../data/exercise';
 import { ExerciseService } from '../../data/exercise-service';
 import { buildRunResult } from '../../data/mock/code-runner/build-run-result';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { AttemptStore } from './attempt-store';
+import { BrowserSignals } from './browser-signals';
 import { statementShareKey } from './statement-share';
 import { WorkspacePage } from './workspace-page';
 
@@ -102,6 +105,7 @@ describe('WorkspacePage', () => {
     const save = vi.fn(saveCode);
     const submitAttempt = vi.fn(submit);
     const runTests = vi.fn(run);
+    const sendEvents = vi.fn<EventService['send']>(() => Promise.resolve());
     TestBed.configureTestingModule({
       // The editor is deferred: each test chooses the state of the block, since jsdom has no viewport.
       deferBlockBehavior: DeferBlockBehavior.Manual,
@@ -109,6 +113,8 @@ describe('WorkspacePage', () => {
         { provide: PageReloader, useValue: { reload } },
         provideRouter([]),
         AttemptStore,
+        BrowserSignals,
+        { provide: EventService, useValue: { send: sendEvents } },
         { provide: ExerciseService, useValue: { getDetail: vi.fn(getDetail) } },
         {
           provide: AttemptService,
@@ -131,7 +137,7 @@ describe('WorkspacePage', () => {
     } else {
       fixture.detectChanges();
     }
-    return { fixture, reload, save, submitAttempt, runTests };
+    return { fixture, reload, save, submitAttempt, runTests, sendEvents };
   }
 
   /** Renders the deferred editor block in a state, and waits for the page to settle. */
@@ -437,6 +443,70 @@ describe('WorkspacePage', () => {
         'true',
       );
       expect(screen.queryByText(/Guard/)).toBeNull();
+    });
+  });
+
+  describe('browser signals', () => {
+    const attemptId = `attempt-${SUM.exercise.id}`;
+
+    /** Sends what the logger has queued, as its timer would. */
+    function sendQueuedEvents(): Promise<void> {
+      return TestBed.inject(EventLogger).flush();
+    }
+
+    it('records a paste from outside the code with its length', async () => {
+      const { fixture, sendEvents } = await renderPage();
+      await showEditor(fixture);
+
+      editorView().dispatch({
+        changes: { from: 0, insert: 'return 42;' },
+        userEvent: 'input.paste',
+      });
+      await sendQueuedEvents();
+
+      expect(sendEvents).toHaveBeenCalledExactlyOnceWith([
+        expect.objectContaining({ attemptId, type: 'paste', detail: { length: 10 } }),
+      ]);
+    });
+
+    it('records leaving the window for another tab and coming back, with the time away', async () => {
+      const { sendEvents } = await renderPage();
+
+      window.dispatchEvent(new Event('blur'));
+      hideTab();
+      await vi.waitFor(() => expect(sendEvents).toHaveBeenCalled());
+      hideTab('visible');
+      window.dispatchEvent(new Event('focus'));
+      await sendQueuedEvents();
+
+      expect(sendEvents.mock.calls.flat(2)).toEqual([
+        expect.objectContaining({ attemptId, type: 'focus_lost', detail: null }),
+        expect.objectContaining({
+          attemptId,
+          type: 'focus_gained',
+          detail: { awayMs: expect.any(Number) },
+        }),
+      ]);
+    });
+
+    it('takes the tab shown again with the focus as a return, as some browsers fire no focus', async () => {
+      const { sendEvents } = await renderPage();
+      const hasFocus = vi.spyOn(document, 'hasFocus');
+
+      hideTab();
+      await vi.waitFor(() => expect(sendEvents).toHaveBeenCalled());
+      hasFocus.mockReturnValue(false);
+      hideTab('visible');
+      await sendQueuedEvents();
+      expect(sendEvents).toHaveBeenCalledOnce();
+      hasFocus.mockReturnValue(true);
+      hideTab('visible');
+      await sendQueuedEvents();
+
+      expect(sendEvents.mock.calls.flat(2).map((event) => event.type)).toEqual([
+        'focus_lost',
+        'focus_gained',
+      ]);
     });
   });
 

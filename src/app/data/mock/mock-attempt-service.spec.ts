@@ -187,7 +187,13 @@ describe('MockAttemptService', () => {
       const attempt = await service.openOrCreate(exerciseId(3));
       const base = { attemptId: attempt.id, detail: null };
       db.update('events', () => [
-        { ...base, id: 'e2', type: 'focus_gained', timestamp: '2026-11-10T09:40:00.000Z' },
+        {
+          ...base,
+          id: 'e2',
+          type: 'focus_gained',
+          timestamp: '2026-11-10T09:40:00.000Z',
+          detail: { awayMs: 300_000 },
+        },
         { ...base, id: 'e1', type: 'focus_lost', timestamp: '2026-11-10T09:35:00.000Z' },
         { ...base, id: 'other', attemptId: 'other', type: 'focus_lost', timestamp: NOW },
       ]);

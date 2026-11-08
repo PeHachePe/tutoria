@@ -11,6 +11,7 @@ import { provideFormFieldDefaults } from './core/form-field-defaults';
 import { provideLocalizedPaginator } from './core/localized-paginator-intl';
 import { AttemptService } from './data/attempt-service';
 import { CodeRunnerService } from './data/code-runner-service';
+import { EventService } from './data/event-service';
 import { DataError } from './data/data-error';
 import { ExerciseService } from './data/exercise-service';
 import type { Role } from './data/user';
@@ -38,6 +39,7 @@ describe('app routes', () => {
           useValue: { openOrCreate: () => Promise.reject(new DataError('not_found')) },
         },
         { provide: CodeRunnerService, useValue: {} },
+        { provide: EventService, useValue: {} },
       ],
     });
     await restoreSession();

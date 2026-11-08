@@ -14,8 +14,17 @@ export function describeEvent(event: ProcessEvent): string {
     case 'paste':
       return `Pegado de ${event.detail.length} caracteres`;
     case 'focus_lost':
-      return 'Sale de la pestaña';
+      return 'Sale de la ventana';
     case 'focus_gained':
-      return 'Vuelve a la pestaña';
+      return `Vuelve tras ${describeDuration(event.detail.awayMs)}`;
   }
+}
+
+/** A time away in seconds or minutes, rounded to the second: «45 s», «1 min 20 s». */
+function describeDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds} s`;
+  return seconds === 0 ? `${minutes} min` : `${minutes} min ${seconds} s`;
 }

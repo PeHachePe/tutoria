@@ -102,5 +102,40 @@ describe('AuthStore', () => {
 
       expect(store.signedIn()).toBe(false);
     });
+
+    it('first waits for the work that needs the session, such as unsaved code', async () => {
+      const order: string[] = [];
+      store.beforeSignOut(async () => {
+        await Promise.resolve();
+        order.push('saved');
+      });
+      service.signOut.mockImplementation(() => {
+        order.push('signed out');
+        return Promise.resolve();
+      });
+
+      await store.signOut();
+
+      expect(order).toEqual(['saved', 'signed out']);
+    });
+
+    it('signs out even if that work fails', async () => {
+      store.beforeSignOut(() => Promise.reject(new DataError('network')));
+
+      await store.signOut();
+
+      expect(service.signOut).toHaveBeenCalled();
+      expect(store.signedIn()).toBe(false);
+    });
+
+    it('forgets the work whose owner removed it', async () => {
+      const task = vi.fn(() => Promise.resolve());
+      const remove = store.beforeSignOut(task);
+      remove();
+
+      await store.signOut();
+
+      expect(task).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 
+import { AuthStore } from '../../auth/auth-store';
 import type { Attempt, RunResult } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
@@ -96,8 +97,13 @@ export class AttemptStore {
   readonly canSubmit = computed(() => this.status() === 'passed' && !this.busy());
 
   constructor() {
-    // Leaving the screen does not lose what the student typed in the last 800 ms.
-    inject(DestroyRef).onDestroy(() => this.autosave.flush());
+    // Neither leaving the screen nor signing out loses what the student typed in the last 800 ms:
+    // signing out waits for the save, as without a session it would fail.
+    const removeTask = inject(AuthStore).beforeSignOut(() => this.saveBeforeLeaving());
+    inject(DestroyRef).onDestroy(() => {
+      removeTask();
+      this.autosave.flush();
+    });
   }
 
   /** Opens the student's attempt at the exercise, or creates it in `in_progress` (2.4). */
@@ -200,6 +206,12 @@ export class AttemptStore {
     } finally {
       if (this.submittingIdState() === attempt.id) this.submittingIdState.set(undefined);
     }
+  }
+
+  /** Sends the pending code now and waits for every save on its way. */
+  private saveBeforeLeaving(): Promise<void> {
+    this.autosave.flush();
+    return this.saving;
   }
 
   private isCurrent(attemptId: string | undefined): boolean {

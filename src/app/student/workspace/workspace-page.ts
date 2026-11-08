@@ -39,6 +39,7 @@ import { splitInlineCode } from '../../shared/split-inline-code';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { actionErrorMessage } from './action-error-message';
 import { AttemptStore } from './attempt-store';
+import { BrowserSignals } from './browser-signals';
 import { RunResults } from './run-results';
 import { SaveIndicator } from './save-indicator';
 import { readStatementShare, saveStatementShare, STATEMENT_SHARE } from './statement-share';
@@ -56,8 +57,8 @@ const SKELETON_EXAMPLES = [1, 2, 3];
 /**
  * The workspace (/alumno/ejercicio/:id, ficha 03): the statement and its examples, the code and the
  * tutor of one exercise (RF-03 to RF-06). Step 1.3 builds the layout and opens the attempt, step 1.4
- * adds the editor with its autosave and step 1.5 runs the tests and submits (CU-01); the chat (1.7)
- * fills its zone later.
+ * adds the editor with its autosave, step 1.5 runs the tests and submits (CU-01) and step 1.6 records
+ * pastes and absences; the chat (1.7) fills its zone later.
  */
 @Component({
   selector: 'app-workspace-page',
@@ -87,8 +88,11 @@ const SKELETON_EXAMPLES = [1, 2, 3];
   host: {
     // The code is saved 800 ms after the last change: these keep the latest changes when the student
     // hides the tab (phones may close it without warning) or tries to leave with something unsaved.
-    '(document:visibilitychange)': 'saveIfHidden()',
+    '(document:visibilitychange)': 'onVisibilityChange()',
     '(window:beforeunload)': 'warnIfUnsaved($event)',
+    // Absences from the window, another tab or another app (2.8)
+    '(window:blur)': 'signals.left()',
+    '(window:focus)': 'signals.returned()',
     // The screen takes the height left under the app bar and the padding of <main>, so each zone
     // scrolls inside it instead of the whole page (5.4). The bar is 56px on phones, 64px from 600px.
     class:
@@ -107,6 +111,8 @@ export class WorkspacePage {
   private readonly injector = inject(Injector);
   private readonly userId = inject(AuthStore).userId;
   protected readonly store = inject(AttemptStore);
+  /** Pastes and absences, recorded for the attempt open for changes (2.8). */
+  protected readonly signals = inject(BrowserSignals);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
   protected readonly skeletonExamples = SKELETON_EXAMPLES;
@@ -269,8 +275,18 @@ export class WorkspacePage {
     this.pageReloader.reload();
   }
 
-  protected saveIfHidden(): void {
-    if (this.document.visibilityState === 'hidden') this.store.saveNow();
+  /**
+   * A hidden tab saves the code and records the absence at once: it may never come back. Shown again
+   * with the focus, the student is back: some browsers and phones fire no window focus on switching
+   * tabs or apps.
+   */
+  protected onVisibilityChange(): void {
+    if (this.document.visibilityState === 'hidden') {
+      this.store.saveNow();
+      this.signals.hidden();
+    } else if (this.document.hasFocus()) {
+      this.signals.returned();
+    }
   }
 
   /** The browser asks before leaving while there are changes the server does not have yet. */

@@ -64,6 +64,15 @@ describe('CodeEditor', () => {
     expect(codeChange).toHaveBeenCalledExactlyOnceWith('return 1;\nreturn 2;');
   });
 
+  it('reports nothing as pasted when the text was already in the code, such as a copied line', async () => {
+    const { view, codeChange, pasted } = await renderEditor({ initialCode: 'total += x;\n' });
+
+    view.dispatch({ changes: { from: 12, insert: 'total += x;' }, userEvent: 'input.paste' });
+
+    expect(codeChange).toHaveBeenCalledExactlyOnceWith('total += x;\ntotal += x;');
+    expect(pasted).not.toHaveBeenCalled();
+  });
+
   it('reports nothing when only the selection moves', async () => {
     const { view, codeChange } = await renderEditor({ initialCode: 'abc' });
 

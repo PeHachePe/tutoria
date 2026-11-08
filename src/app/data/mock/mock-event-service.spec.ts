@@ -77,7 +77,7 @@ describe('MockEventService', () => {
       attemptId: 'missing',
       type: 'focus_gained',
       timestamp: '2026-11-10T09:30:00.000Z',
-      detail: null,
+      detail: { awayMs: 30_000 },
     };
 
     await expect(service.send([event])).rejects.toMatchObject({ kind: 'not_found' });

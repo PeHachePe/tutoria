@@ -256,7 +256,9 @@ describe('DevToolbar', () => {
       ]);
       await fixture.whenStable();
 
-      expect(items()[0]).toMatch(/^Pegado de 12 caracteres · Intento desconocido 01\/12 \d\d:00$/);
+      expect(items()[0]).toMatch(
+        /^Pegado de 12 caracteres · Intento desconocido 01\/12 \d\d:00:00$/,
+      );
     });
 
     it('says when there are no events', async () => {

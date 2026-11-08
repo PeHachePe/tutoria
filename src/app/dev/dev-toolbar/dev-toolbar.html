@@ -118,7 +118,7 @@
                 · {{ event.who }}
               </span>
               <time class="shrink-0 text-on-surface-variant" [attr.datetime]="event.timestamp">
-                {{ event.timestamp | date: 'dd/MM HH:mm' }}
+                {{ event.timestamp | date: 'dd/MM HH:mm:ss' }}
               </time>
             </li>
           } @empty {

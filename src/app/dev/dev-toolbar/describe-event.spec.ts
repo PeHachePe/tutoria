@@ -20,8 +20,11 @@ describe('describeEvent', () => {
       'Intervención proactiva (calla)',
     ],
     [{ ...base, type: 'paste', detail: { length: 240 } }, 'Pegado de 240 caracteres'],
-    [{ ...base, type: 'focus_lost', detail: null }, 'Sale de la pestaña'],
-    [{ ...base, type: 'focus_gained', detail: null }, 'Vuelve a la pestaña'],
+    [{ ...base, type: 'focus_lost', detail: null }, 'Sale de la ventana'],
+    [{ ...base, type: 'focus_gained', detail: { awayMs: 2_400 } }, 'Vuelve tras 2 s'],
+    [{ ...base, type: 'focus_gained', detail: { awayMs: 59_600 } }, 'Vuelve tras 1 min'],
+    [{ ...base, type: 'focus_gained', detail: { awayMs: 80_000 } }, 'Vuelve tras 1 min 20 s'],
+    [{ ...base, type: 'focus_gained', detail: { awayMs: 3_600_000 } }, 'Vuelve tras 60 min'],
   ])('describes %o', (event, text) => {
     expect(describeEvent(event)).toBe(text);
   });

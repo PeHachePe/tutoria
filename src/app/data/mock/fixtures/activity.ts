@@ -495,7 +495,7 @@ function addAttempt(
           attemptId,
           type: 'focus_gained',
           timestamp: iso(clock),
-          detail: null,
+          detail: { awayMs: minutes(step.minutes) },
         });
         lastActivity = clock;
         break;

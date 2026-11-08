@@ -43,6 +43,8 @@ function event(
       return { ...base, type, detail: { silent: false } };
     case 'hint_requested':
       return { ...base, type, detail: { level: 1 } };
+    case 'focus_gained':
+      return { ...base, type, detail: { awayMs: 60_000 } };
     default:
       return { ...base, type, detail: null };
   }

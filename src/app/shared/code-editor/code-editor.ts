@@ -36,11 +36,16 @@ const LANGUAGES: Record<Language, () => LanguageSupport> = {
 
 let nextId = 0;
 
-/** Characters an edit puts in the code, such as the text a paste brings. */
-function insertedLength(transaction: Transaction): number {
+/**
+ * Characters a paste brought from outside the code. Text that was already there, such as a line the
+ * student copied to repeat it, is not a paste the teacher needs to see (2.8).
+ */
+function pastedFromOutside(transaction: Transaction): number {
+  const before = transaction.startState.doc.toString();
   let length = 0;
   transaction.changes.iterChanges((_fromA, _toA, _fromB, _toB, inserted) => {
-    length += inserted.length;
+    const text = inserted.toString();
+    if (!before.includes(text)) length += text.length;
   });
   return length;
 }
@@ -84,7 +89,7 @@ export class CodeEditor {
 
   /** The code after each change. */
   readonly codeChange = output<string>();
-  /** Length of the text the student pasted (event `paste`, 2.8). */
+  /** Length of the text the student pasted from outside the code (event `paste`, 2.8). */
   readonly pasted = output<number>();
   /** Ctrl + Enter (or ⌘ + Enter): run the tests without leaving the editor. */
   readonly runShortcut = output();
@@ -156,7 +161,7 @@ export class CodeEditor {
     // CodeMirror marks every paste, from the keyboard, the context menu or a phone (2.8).
     const pastedLength = update.transactions
       .filter((transaction) => transaction.isUserEvent('input.paste'))
-      .reduce((total, transaction) => total + insertedLength(transaction), 0);
+      .reduce((total, transaction) => total + pastedFromOutside(transaction), 0);
     if (pastedLength > 0) this.pasted.emit(pastedLength);
   }
 }

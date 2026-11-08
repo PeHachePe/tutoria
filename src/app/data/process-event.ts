@@ -15,7 +15,9 @@ export type ProcessEvent =
   | ProcessEventBase<'hint_requested', { readonly level: HintLevel }>
   | ProcessEventBase<'proactive_intervention', { readonly silent: boolean }>
   | ProcessEventBase<'paste', { readonly length: number }>
-  | ProcessEventBase<'focus_lost' | 'focus_gained', null>;
+  | ProcessEventBase<'focus_lost', null>
+  /** `awayMs`: how long the student was out of the window, since its `focus_lost`. */
+  | ProcessEventBase<'focus_gained', { readonly awayMs: number }>;
 
 export type ProcessEventType = ProcessEvent['type'];
 

@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 
+import { AuthStore } from '../../auth/auth-store';
+import { FakeAuthService } from '../../auth/auth-testing';
+import { AuthService } from '../../data/auth-service';
 import type { Attempt, RunResult, StoredAttemptStatus } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
@@ -48,8 +51,10 @@ describe('AttemptStore', () => {
   let submit: ReturnType<typeof vi.fn<AttemptService['submit']>>;
   let run: ReturnType<typeof vi.fn<CodeRunnerService['run']>>;
   let store: AttemptStore;
+  let authService: FakeAuthService;
 
   beforeEach(() => {
+    authService = new FakeAuthService();
     openOrCreate = vi.fn<AttemptService['openOrCreate']>();
     saveCode = vi.fn<AttemptService['saveCode']>();
     submit = vi.fn<AttemptService['submit']>();
@@ -59,6 +64,7 @@ describe('AttemptStore', () => {
         AttemptStore,
         { provide: AttemptService, useValue: { openOrCreate, saveCode, submit } },
         { provide: CodeRunnerService, useValue: { run } },
+        { provide: AuthService, useValue: authService },
       ],
     });
     store = TestBed.inject(AttemptStore);
@@ -297,6 +303,34 @@ describe('AttemptStore', () => {
       TestBed.resetTestingModule();
 
       expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'x');
+    });
+
+    it('saves the pending code before signing out, while the session still exists', async () => {
+      const answer = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(answer.promise);
+      store.updateCode('x');
+      let signedOut = false;
+      const signingOut = TestBed.inject(AuthStore)
+        .signOut()
+        .then(() => (signedOut = true));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'x');
+      expect(signedOut).toBe(false);
+      answer.resolve(savedAs(attempt, 'x'));
+      await signingOut;
+      expect(authService.signOut).toHaveBeenCalled();
+    });
+
+    it('no longer holds the sign-out once the student left the screen', async () => {
+      store.updateCode('x');
+      const auth = TestBed.inject(AuthStore);
+      TestBed.resetTestingModule(); // which saves the pending code, as leaving the screen does
+      saveCode.mockClear();
+
+      await auth.signOut();
+
+      expect(saveCode).not.toHaveBeenCalled();
     });
 
     it('does not change a submitted attempt, which is read only', async () => {

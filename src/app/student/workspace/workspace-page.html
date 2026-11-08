@@ -255,6 +255,7 @@
             [language]="current.language"
             [placeholder]="current.placeholder"
             (codeChange)="store.updateCode($event)"
+            (pasted)="signals.pasted($event)"
             (runShortcut)="store.run()"
           />
         }
