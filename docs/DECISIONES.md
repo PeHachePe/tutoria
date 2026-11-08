@@ -581,3 +581,33 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian §2.2, §2.3, §4.2, §4.5 y el paso 1.2 del plan. El back-end (fase 2) añade la columna `topics` y calcula las pistas en la consulta de `listAssigned`. El editor de ejercicios del docente (4.3) incluye los contenidos.
 
 **Aprobación:** el autor, que delegó la decisión en el agente.
+
+## D-028 · Pantalla de trabajo: dos columnas como en la memoria, pestañas en el móvil y apertura del intento (08/11/2026)
+
+**Contexto:** el paso 1.3 del plan pedía tres columnas en escritorio, dos en tableta y pestañas en el móvil. La memoria de la PEC2 propone otra cosa: el prototipo (figura 17) pone el enunciado encima del editor y el tutor a la derecha, «al considerarse más natural la lectura vertical enunciado-código», y la figura 15 apila los bloques en el móvil con el tutor plegable debajo. Hacía falta además decidir cómo se abre el intento sin `ngOnInit` ni `effect()`.
+
+**Decisión:**
+
+- **Escritorio y tableta (desde 768 px), dos columnas como en la memoria:** el enunciado (plegable) encima del código y el tutor con ancho fijo a la derecha (17 rem en tableta, 22 rem desde 1024 px). Con tres columnas, a 1280 px el editor se quedaba en unos 500 px.
+- **Móvil, pestañas como en el plan** («Ejercicio», «Código» y «Tutor», con `mat-tab-group`). Apilados como en la figura 15 no cabían en 375 × 667 sin desplazar la página entera (5.4). Es una evolución del diseño respecto a la memoria.
+- **Cada zona se escribe una vez** (`ng-template`) y se coloca en las columnas o en las pestañas según `BreakpointObserver`. Al cruzar el ancho de 768 px las zonas se vuelven a crear, y su estado vive en los stores.
+- **La pantalla ocupa el alto de la ventana** menos la barra (56 o 64 px, tokens de Material) y el relleno de `<main>`, y cada zona se desplaza por dentro. El enunciado, que se desplaza solo, se puede enfocar con el teclado (`tabindex="0"`, regla `scrollable-region-focusable` de axe).
+- **Apertura del intento:** `AttemptStore.open()` es un método `async` (4.5) que la pantalla llama desde un `resource()` con el id del ejercicio. Así la pantalla tiene carga, error y reintento sin `effect()`, y el store guarda el intento para todas las zonas. Si el alumno cambia de ejercicio antes de que llegue la respuesta, el store la ignora.
+- **Sin recursos de ruta:** Angular 22 permite declarar la carga en la ruta (`resources`, con `nonBlocking()`), pero está en _developer preview_ y el lint prohíbe esas APIs. Aquí no aportaría nada, porque la ruta padre no carga datos. Queda en `PENDIENTES.md` para cuando sea estable.
+- **Mejoras de paso:**
+  - el título de la pestaña lleva el nombre del ejercicio (`AppTitleStrategy.setScreenTitle()`, WCAG 2.4.2), salvo que el alumno ya se haya ido;
+  - `LoadError`, sin acceso (`forbidden` o `not_found`), muestra la salida que le da la pantalla en lugar de «Reintentar», que fallaría igual (`isRetryable()`);
+  - «Ejercicios» de la barra sigue resaltado dentro de un ejercicio, con `isActive()` del router (estable desde Angular 21.1), pero `aria-current="page"` solo lo lleva el catálogo;
+  - `format-value.ts` pasa de `dev/` a `shared/`, porque producción no puede importar nada de `dev/`;
+  - el lint de i18n ignora `scope`, un atributo de tabla que no se traduce.
+- **Iteración 1, mejoras que propuso Claude al revisar la pantalla:**
+  - la pantalla de trabajo usa hasta 100 rem (1600 px) de ancho, y las demás del alumno siguen en 1152 px, cómodos para leer: el layout lo decide con el mismo `isActive()` de la barra;
+  - el enunciado muestra una sombra suave en el borde con más contenido por ver (utilidad `scroll-shadows` en `styles.css`, solo CSS y con tokens), para que el alumno sepa que se desplaza;
+  - en el móvil, el título usa `title-medium` y como mucho dos líneas, y el contenido empieza más arriba;
+  - mientras carga, el título muestra un esqueleto (pasados 300 ms) y el lector de pantalla oye «Ejercicio»; `LoadingSkeleton` acepta no anunciar nada cuando otra zona ya anuncia la espera.
+
+**Alternativas:** tres columnas (editor estrecho); apilar en el móvil (la página entera se desplaza); dos plantillas distintas para escritorio y móvil (las zonas se escribirían dos veces); abrir el intento con un `effect()` (prohibido fuera de las APIs imperativas, 4.8).
+
+**Consecuencias:** cambian el paso 1.3 y §2.2 del plan (figuras 8, 15 y 17). La memoria puede citar las pestañas del móvil como evolución del diseño. Los pasos 1.4, 1.5 y 1.7 llenan las zonas.
+
+**Aprobación:** el autor, que delegó la decisión en el agente («siempre haz la mejor decisión, si ves que en móvil o tablets no va a quedar bien pues usa otra opción tipo pestañas»).
