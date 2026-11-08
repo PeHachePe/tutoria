@@ -20,7 +20,7 @@ En código, estructura y nombres mandan las buenas prácticas de Angular 22: la 
 
 ## Entorno y comandos
 
-El equipo es Windows: los scripts de `package.json` los ejecuta `cmd`, así que nada de comandos de bash (`rm`, `cp`, `export`…). Los scripts auxiliares y los hooks, en Node, con rutas construidas con `path` y `os.homedir()`.
+Se desarrolla en macOS (zsh) y, alguna vez, en Windows. Todo tiene que funcionar en los dos: los scripts de `package.json` los ejecuta `sh` en el Mac y `cmd` en Windows, así que nada de comandos propios de un sistema (`rm`, `cp`, `export`, `set`…). Los scripts auxiliares y los hooks, en Node, con rutas construidas con `path` y `os.homedir()`. En la terminal del agente (zsh) sí valen los comandos de Unix.
 
 - `npm start`: servidor de desarrollo con datos simulados.
 - `npm run format` y `npm run check` (formato, lint y tests unitarios). El lint hace cumplir buenas prácticas de Angular: no desactives reglas para salir del paso.

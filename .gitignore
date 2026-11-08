@@ -54,3 +54,6 @@ Thumbs.db
 
 # Preview config of the Claude desktop app: local to the author's machine
 /.claude/launch.json
+
+# Personal Claude Code permissions, local to each machine (the global gitignore of the Mac does not reach Prettier)
+/.claude/settings.local.json
