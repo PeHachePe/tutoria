@@ -118,7 +118,7 @@ Detalle por pantalla:
 - **Sesión en vivo:** tabla por alumno con estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas y la señal derivada «atascado»; detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
 - **Histórico:** gráfica de la media de pistas solicitadas por sesión (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales.
 - **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a grupo y sesión. Un ejercicio con intentos no se borra, para conservar su historial.
-- **Datos registrados (RF-07):** qué registra la aplicación (tiempos, ejecuciones, pistas, pegados y cambios de pestaña), qué no registra nunca (el audio), con qué finalidad (formativa, no sancionadora), quién lo ve (su docente) y qué servicios externos intervienen (reconocimiento de voz del navegador, proveedor de IA). La primera vez que el alumno entra, un aviso le resume esto con un enlace a la pantalla, antes de empezar a trabajar, como pide el RGPD citado en la memoria.
+- **Datos registrados (RF-07):** qué registra la aplicación (tiempos, ejecuciones, pistas, pegados y salidas a otra ventana o pestaña, con su duración), qué no registra nunca (el audio), con qué finalidad (formativa, no sancionadora), quién lo ve (su docente) y qué servicios externos intervienen (reconocimiento de voz del navegador, proveedor de IA). La primera vez que el alumno entra, un aviso le resume esto con un enlace a la pantalla, antes de empezar a trabajar, como pide el RGPD citado en la memoria.
 
 ### 2.3 Modelo de datos (10 entidades, PostgreSQL en Supabase)
 
@@ -295,14 +295,15 @@ Los intentos de elusión (`elusion: true`) quedan registrados para su análisis.
 
 ### 2.8 Eventos de proceso
 
-| Tipo                          | Quién lo registra           | `detail`                                                                  |
-| ----------------------------- | --------------------------- | ------------------------------------------------------------------------- |
-| `run`                         | Servidor (`execute`)        | Número de pruebas superadas y falladas; identificadores de las que fallan |
-| `submit`                      | Servidor (`submit_attempt`) | —                                                                         |
-| `hint_requested`              | Servidor (`tutor`)          | Nivel                                                                     |
-| `proactive_intervention`      | Servidor (`tutor`)          | Si el modelo calló                                                        |
-| `paste`                       | Cliente                     | Longitud del texto pegado                                                 |
-| `focus_lost` / `focus_gained` | Cliente                     | —                                                                         |
+| Tipo                     | Quién lo registra           | `detail`                                                                   |
+| ------------------------ | --------------------------- | -------------------------------------------------------------------------- |
+| `run`                    | Servidor (`execute`)        | Número de pruebas superadas y falladas; identificadores de las que fallan  |
+| `submit`                 | Servidor (`submit_attempt`) | —                                                                          |
+| `hint_requested`         | Servidor (`tutor`)          | Nivel                                                                      |
+| `proactive_intervention` | Servidor (`tutor`)          | Si el modelo calló                                                         |
+| `paste`                  | Cliente                     | Longitud del texto pegado de fuera del código                              |
+| `focus_lost`             | Cliente                     | — (la hora es la de salida; solo ausencias de 2 s o más, o pestaña oculta) |
+| `focus_gained`           | Cliente                     | Tiempo fuera en milisegundos (`awayMs`)                                    |
 
 Lo que pasa por el servidor se registra allí, porque es más fiable y evita duplicados. El cliente solo registra lo que únicamente conoce el navegador. Con datos simulados, los servicios simulados registran también los eventos «de servidor».
 
@@ -1091,8 +1092,9 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 **1.6 · Señales del navegador (≈1,5 h)**
 
-- `EventLogger` en `core/`: cola y envío por lotes cada 5 segundos o cada 20 eventos, y también al ocultar la pestaña.
-- Registra `paste`, `focus_lost` y `focus_gained`.
+- `EventLogger` en `core/`: cola y envío por lotes cada 5 segundos o cada 20 eventos, y también al ocultar la pestaña y antes de cerrar sesión; un lote que falla por la red vuelve a la cola (D-031).
+- Registra `paste` (solo el texto que no estaba ya en el código), `focus_lost` y `focus_gained` con el tiempo fuera: salidas a otra ventana o pestaña (RF-20), sin las de menos de 2 segundos (D-031).
+- Cerrar sesión espera antes al código sin guardar y a los eventos en cola.
 
 ✅ Dos minutos de trabajo dejan la traza esperada en el visor de eventos de la barra.
 🧪 Envío por lotes.

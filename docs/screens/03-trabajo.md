@@ -41,6 +41,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - **Separador:** se arrastra o se mueve con las flechas, Inicio y Fin; doble clic vuelve al 45 %. Se recuerda para el alumno.
 - **Ampliar el código** (escritorio y tableta): el botón ⤢ del encabezado «Código» oculta el enunciado y le da su altura al código y a los resultados; el tutor sigue en su columna. El mismo botón vuelve a la vista normal. Es el mismo editor: no se pierde nada de lo escrito ni el historial de deshacer.
 - **Plegar los resultados:** su encabezado, con el resumen, los pliega o los despliega; cada ejecución nueva los vuelve a desplegar.
+- **Señales del navegador** (paso 1.6, D-031): en un intento sin entregar se registran, sin nada visible para el alumno, los pegados de texto de fuera del código y las salidas a otra ventana o pestaña de 2 s o más, con su duración. Cerrar sesión espera a guardar el código y a enviar los eventos. La pantalla de datos registrados (1.9) lo explica.
 
 ## Estados
 

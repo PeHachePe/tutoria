@@ -667,3 +667,27 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian §4.2 (`RunResult.loadError`), §4.3 (explorador y runner) y el paso 1.5 del plan. El 2.3 tiene que hacer lo mismo en el servidor: transportar `undefined`, `NaN` e `±Infinity` en el JSON, informar de `loadError`, escribir el resultado de cada prueba en cuanto acaba y comparar con las claves ordenadas (anotado en `PENDIENTES.md`).
 
 **Aprobación:** el autor, que pidió revisar el paso, aplicar las mejoras propuestas («Adelante con tus ideas») y hacer el separador en este paso.
+
+## D-031 · Señales del navegador: lotes, ausencias con duración y cerrar sesión sin perder nada (08/11/2026)
+
+**Contexto:** el paso 1.6 añade el `EventLogger` y los eventos que solo conoce el navegador (§2.8). Al revisarlo aparecieron huecos: cerrar sesión borraba la sesión antes de enviar lo pendiente (también el código de los últimos 800 ms, un fallo del 1.4); el plan hablaba de «cambios de pestaña» y la memoria (RF-20) de «cambios de ventana»; pulsar la barra de direcciones o abrir las herramientas de desarrollo quita el foco un instante y llenaría de ruido el panel docente; copiar una línea del propio código contaba como pegado; y el recuento de salidas no decía nada de cuánto duraban.
+
+**Decisión:**
+
+- **`EventLogger` en `core/`** (`@Service()`): una cola que envía cuando pasan 5 s desde el primer evento, en cuanto hay 20, al ocultar la pestaña y antes de cerrar sesión. Un solo envío a la vez. Si falla por la red o por exceso de peticiones, el lote vuelve al principio de la cola y se reintenta a los 5 s; con cualquier otro error se descarta, porque reintentar no lo arreglaría.
+- **Cerrar sesión sin perder nada:** `AuthStore.beforeSignOut(task)` registra trabajo que necesita la sesión, y `signOut()` lo espera antes de borrarla, aunque falle. Lo usan el `EventLogger` y `AttemptStore` (el guardado pendiente); cada uno lo quita con su `DestroyRef`. Así `AuthStore` no depende de ninguno de los dos.
+- **Ausencias de la ventana,** no solo de la pestaña: `blur` y `focus` de la ventana cubren otra pestaña y otra aplicación (RF-20). Una ausencia solo se registra si dura 2 s o más (`MIN_AWAY_MS`) o si la pestaña se oculta, que se registra y se envía al momento porque la página puede no volver. `focus_lost` lleva la hora en que salió y `focus_gained`, el tiempo fuera (`detail.awayMs`). Una vuelta sin salida registrada (una página abierta en segundo plano) no se registra. Volver a mostrar la pestaña con el foco también cuenta como vuelta: hay navegadores que no disparan `focus` al cambiar de pestaña.
+- **`BrowserSignals`** (`student/workspace/`, provisto en la ruta junto a `AttemptStore`): decide qué se registra y solo para el intento abierto y sin entregar. La pantalla le pasa los eventos de la ventana y del editor.
+- **Pegados de fuera del código:** el editor no avisa de un pegado cuyo texto ya estaba en el código (duplicar una línea propia).
+- **Barra de desarrollo:** la hora con segundos y «Sale de la ventana» / «Vuelve tras 1 min 20 s».
+
+**Alternativas:**
+
+- Registrar `focus_lost` al momento, sin umbral: más simple, pero cada clic en la barra de direcciones sería una «pérdida de foco» para el docente.
+- Solo `visibilitychange`: no ve al alumno que tiene otra aplicación o ventana delante sin ocultar la pestaña, que es justo lo que pide RF-20.
+- Que `AuthStore` inyecte el `EventLogger` y el `AttemptStore`: acopla la sesión a piezas de pantalla, y el store de la ruta no existe fuera de ella.
+- Marcar los pegados internos (`detail.internal`) en lugar de no registrarlos: el docente solo necesita lo que viene de fuera.
+
+**Consecuencias:** cambian §2.2, §2.8 y el paso 1.6 del plan, el tipo `ProcessEvent`, las fixtures y `seed.sql` (versión 3 del seed: los datos simulados guardados en el navegador se reinician). Una vuelta muy rápida tras ocultar la pestaña llega con un `awayMs` pequeño: el panel docente (4.1) puede ignorar las ausencias de menos de 2 s con ese dato. Con Supabase, el envío al ocultar la pestaña necesita `fetch` con `keepalive` (2.2).
+
+**Aprobación:** el autor, que aprobó el plan corregido del paso («Adelante»).
