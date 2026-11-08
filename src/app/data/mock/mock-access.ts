@@ -1,3 +1,4 @@
+import type { Attempt } from '../attempt';
 import { DataError } from '../data-error';
 import type { AppUser, ClassGroup } from '../user';
 import type { MockTables } from './mock-tables';
@@ -38,6 +39,15 @@ export function canSeeStudentData(tables: MockTables, user: AppUser, studentId: 
   }
   const groupIds = enrolledGroupIds(tables, studentId);
   return tables.groups.some((group) => groupIds.has(group.id) && canManageGroup(user, group));
+}
+
+/** The user's own attempt; anybody else's is `not_found`, as row level security hides it. */
+export function findOwnAttempt(tables: MockTables, user: AppUser, attemptId: string): Attempt {
+  const attempt = findRow(tables.attempts, attemptId);
+  if (attempt.userId !== user.id) {
+    throw new DataError('not_found');
+  }
+  return attempt;
 }
 
 export function now(): string {

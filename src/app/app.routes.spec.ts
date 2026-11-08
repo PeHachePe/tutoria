@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, TitleStrategy, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { screen } from '@testing-library/angular';
@@ -10,6 +10,7 @@ import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
 import { provideLocalizedPaginator } from './core/localized-paginator-intl';
 import { AttemptService } from './data/attempt-service';
+import { CodeRunnerService } from './data/code-runner-service';
 import { DataError } from './data/data-error';
 import { ExerciseService } from './data/exercise-service';
 import type { Role } from './data/user';
@@ -19,6 +20,8 @@ import { teacherRoutes } from './teacher/teacher.routes';
 describe('app routes', () => {
   async function visit(role: Role | null, url: string) {
     TestBed.configureTestingModule({
+      // jsdom has no viewport: the deferred editor of the workspace stays as its placeholder
+      deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
         provideSessionOf(role),
         provideRouter(routes, withComponentInputBinding()),
@@ -34,6 +37,7 @@ describe('app routes', () => {
           provide: AttemptService,
           useValue: { openOrCreate: () => Promise.reject(new DataError('not_found')) },
         },
+        { provide: CodeRunnerService, useValue: {} },
       ],
     });
     await restoreSession();

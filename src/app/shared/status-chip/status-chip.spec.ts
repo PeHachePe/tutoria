@@ -25,4 +25,16 @@ describe('StatusChip', () => {
     expect(chip.classList).toContain(background);
     expect(chip.classList).toContain('rounded-full');
   });
+
+  it('adds the tests passed in the last run, read aloud in words', () => {
+    const fixture = TestBed.createComponent(StatusChip);
+    fixture.componentRef.setInput('status', 'tests_failed');
+    fixture.componentRef.setInput('testCount', { passed: 3, total: 5 });
+    fixture.detectChanges();
+    const chip = fixture.nativeElement as HTMLElement;
+
+    const [, visible] = chip.querySelectorAll('[aria-hidden="true"]');
+    expect(visible.textContent?.trim()).toBe('· 3/5');
+    expect(chip.querySelector('.sr-only')?.textContent?.trim()).toBe(', 3 de 5 pruebas superadas');
+  });
 });

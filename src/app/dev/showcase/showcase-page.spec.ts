@@ -57,6 +57,7 @@ describe('ShowcasePage', () => {
       'Tabla con ordenación y paginación',
       'Progreso, avisos y diálogos',
       'Editor de código',
+      'Resultados de las pruebas',
       'Carga, vacío y error',
     ]);
   });

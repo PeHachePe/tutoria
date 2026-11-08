@@ -30,7 +30,10 @@ import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import { DataError } from '../../data/data-error';
 import type { Difficulty } from '../../data/exercise';
+import type { RunResult } from '../../data/attempt';
+import { Splitter } from '../../shared/splitter/splitter';
 import type { SaveStatus } from '../../student/workspace/attempt-store';
+import { RunResults } from '../../student/workspace/run-results';
 import { SaveIndicator } from '../../student/workspace/save-indicator';
 import { Brand } from '../../shared/brand/brand';
 import { CodeEditor } from '../../shared/code-editor/code-editor';
@@ -87,6 +90,8 @@ import { ShowcaseTable } from './showcase-table';
     Skeleton,
     CodeEditor,
     SaveIndicator,
+    RunResults,
+    Splitter,
   ],
   templateUrl: './showcase-page.html',
 })
@@ -147,6 +152,65 @@ export class ShowcasePage {
     "const vacio = suma([]) === 0 ? 'sí' : 'no';",
   ].join('\n');
   protected readonly saveStatuses: readonly SaveStatus[] = ['saving', 'saved', 'error'];
+
+  /** The results panel of the workspace (step 1.5) in its cases, with exercise 3. */
+  protected readonly runSamples: readonly { title: string; result: RunResult }[] = [
+    {
+      title: 'Con fallos: valor, error y tiempo agotado',
+      result: {
+        status: 'tests_failed',
+        results: [
+          {
+            testId: 's1',
+            passed: true,
+            timeout: false,
+            input: [[1, 2, 3]],
+            expected: 6,
+            actual: 6,
+          },
+          { testId: 's2', passed: false, timeout: false, input: [[]], expected: 0, actual: NaN },
+          {
+            testId: 's3',
+            passed: false,
+            timeout: false,
+            input: [[5]],
+            expected: 5,
+            error: "TypeError: Cannot read properties of undefined (reading 'length')",
+          },
+          { testId: 's4', passed: false, timeout: true, input: [[-2, 2, 10]], expected: 10 },
+          { testId: 's5', passed: false, timeout: true },
+        ],
+      },
+    },
+    {
+      title: 'Todas superadas',
+      result: {
+        status: 'passed',
+        results: [
+          {
+            testId: 'p1',
+            passed: true,
+            timeout: false,
+            input: [[1, 2, 3]],
+            expected: 6,
+            actual: 6,
+          },
+          { testId: 'p2', passed: true, timeout: false, input: [[]], expected: 0, actual: 0 },
+          { testId: 'p3', passed: true, timeout: false },
+        ],
+      },
+    },
+    {
+      title: 'Sin la función',
+      result: {
+        status: 'tests_failed',
+        results: [{ testId: 'm1', passed: false, timeout: false }],
+        loadError: { kind: 'missing_function' },
+      },
+    },
+  ];
+
+  protected readonly splitShare = signal(45);
 
   protected readonly statuses: readonly AttemptStatus[] = [
     'not_started',

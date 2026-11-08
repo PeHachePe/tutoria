@@ -3,7 +3,7 @@ import { inject, Service } from '@angular/core';
 import type { Attempt, AttemptHistory } from '../attempt';
 import { AttemptService } from '../attempt-service';
 import { DataError } from '../data-error';
-import { canSeeStudentData, enrolledGroupIds, findRow, now } from './mock-access';
+import { canSeeStudentData, enrolledGroupIds, findOwnAttempt, findRow, now } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 
@@ -116,14 +116,8 @@ export class MockAttemptService extends AttemptService {
     });
   }
 
-  /** The signed-in user's attempt; anybody else's is `not_found`, as row level security hides it. */
   private ownAttempt(attemptId: string): Attempt {
-    const user = this.db.requireUser();
-    const attempt = findRow(this.db.tables().attempts, attemptId);
-    if (attempt.userId !== user.id) {
-      throw new DataError('not_found');
-    }
-    return attempt;
+    return findOwnAttempt(this.db.tables(), this.db.requireUser(), attemptId);
   }
 
   private replace(attempt: Attempt): Attempt {

@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 
-import type { Attempt, StoredAttemptStatus } from '../../data/attempt';
+import type { Attempt, RunResult, StoredAttemptStatus } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
+import { CodeRunnerService } from '../../data/code-runner-service';
 import { DataError } from '../../data/data-error';
 import { AttemptStore } from './attempt-store';
 
@@ -44,13 +45,21 @@ function savedAs(attempt: Attempt, code: string): Attempt {
 describe('AttemptStore', () => {
   let openOrCreate: ReturnType<typeof vi.fn<AttemptService['openOrCreate']>>;
   let saveCode: ReturnType<typeof vi.fn<AttemptService['saveCode']>>;
+  let submit: ReturnType<typeof vi.fn<AttemptService['submit']>>;
+  let run: ReturnType<typeof vi.fn<CodeRunnerService['run']>>;
   let store: AttemptStore;
 
   beforeEach(() => {
     openOrCreate = vi.fn<AttemptService['openOrCreate']>();
     saveCode = vi.fn<AttemptService['saveCode']>();
+    submit = vi.fn<AttemptService['submit']>();
+    run = vi.fn<CodeRunnerService['run']>();
     TestBed.configureTestingModule({
-      providers: [AttemptStore, { provide: AttemptService, useValue: { openOrCreate, saveCode } }],
+      providers: [
+        AttemptStore,
+        { provide: AttemptService, useValue: { openOrCreate, saveCode, submit } },
+        { provide: CodeRunnerService, useValue: { run } },
+      ],
     });
     store = TestBed.inject(AttemptStore);
   });
@@ -308,5 +317,344 @@ describe('AttemptStore', () => {
 
     expect(store.attempt()).toBeUndefined();
     expect(store.saveStatus()).toBe('idle');
+  });
+
+  describe('running the tests', () => {
+    const attempt = attemptOf('exercise-3');
+    const passing: RunResult = {
+      status: 'passed',
+      results: [
+        { testId: 't1', passed: true, timeout: false },
+        { testId: 't2', passed: true, timeout: false },
+      ],
+    };
+    const failing: RunResult = {
+      status: 'tests_failed',
+      results: [
+        { testId: 't1', passed: true, timeout: false },
+        { testId: 't2', passed: false, timeout: true },
+      ],
+    };
+
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      openOrCreate.mockResolvedValue(attempt);
+      saveCode.mockImplementation((_id, code) => Promise.resolve(savedAs(attempt, code)));
+      await store.open('exercise-3');
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('starts without results, ready to run and not to submit', () => {
+      expect(store.lastRun()).toBeUndefined();
+      expect(store.testCount()).toBeUndefined();
+      expect(store.canRun()).toBe(true);
+      expect(store.canSubmit()).toBe(false);
+    });
+
+    it('runs the current code instead of waiting for the autosave, which it drops', async () => {
+      run.mockResolvedValue(failing);
+      store.updateCode('code');
+
+      await store.run();
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(run).toHaveBeenCalledExactlyOnceWith(attempt.id, 'code');
+      expect(saveCode).not.toHaveBeenCalled();
+      expect(store.lastRun()).toEqual(failing);
+      expect(store.status()).toBe('tests_failed');
+      expect(store.testCount()).toEqual({ passed: 1, total: 2 });
+      // The runner saved the code, as the server does
+      expect(store.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('says it is running and lets nothing else start meanwhile', async () => {
+      const answer = deferred<RunResult>();
+      run.mockReturnValueOnce(answer.promise);
+      store.updateCode('code');
+
+      const running = store.run();
+      expect(store.running()).toBe(true);
+      expect(store.canRun()).toBe(false);
+      await store.run();
+      expect(run).toHaveBeenCalledOnce();
+
+      answer.resolve(passing);
+      await running;
+      expect(store.running()).toBe(false);
+      expect(store.canSubmit()).toBe(true);
+    });
+
+    it('waits for a save on its way before running', async () => {
+      const save = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(save.promise);
+      run.mockResolvedValue(passing);
+      store.updateCode('first');
+      await vi.advanceTimersByTimeAsync(800);
+      store.updateCode('second');
+
+      const running = store.run();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(run).not.toHaveBeenCalled();
+
+      save.resolve(savedAs(attempt, 'first'));
+      await running;
+      expect(run).toHaveBeenCalledExactlyOnceWith(attempt.id, 'second');
+      expect(store.status()).toBe('passed');
+    });
+
+    it('marks the results as outdated once the student changes the code', async () => {
+      run.mockResolvedValue(passing);
+      await store.run();
+      expect(store.runOutdated()).toBe(false);
+
+      store.updateCode('changed');
+
+      expect(store.runOutdated()).toBe(true);
+      expect(store.testCount()).toBeUndefined();
+      expect(store.status()).toBe('in_progress');
+      expect(store.canSubmit()).toBe(false);
+    });
+
+    it('keeps the attempt in progress when the student typed during the run', async () => {
+      const answer = deferred<RunResult>();
+      run.mockReturnValueOnce(answer.promise);
+      store.updateCode('ran');
+      const running = store.run();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(run).toHaveBeenCalledExactlyOnceWith(attempt.id, 'ran');
+      store.updateCode('ran and more');
+
+      answer.resolve(passing);
+      await running;
+
+      expect(store.status()).toBe('in_progress');
+      expect(store.runOutdated()).toBe(true);
+      expect(store.saveStatus()).toBe('pending');
+      await vi.advanceTimersByTimeAsync(800);
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'ran and more');
+    });
+
+    it('keeps the error, and the code to save, when the run fails', async () => {
+      const error = new DataError('network');
+      run.mockRejectedValueOnce(error);
+      store.updateCode('code');
+
+      await store.run();
+
+      expect(store.actionError()).toEqual({ action: 'run', error });
+      expect(store.status()).toBe('in_progress');
+      expect(store.running()).toBe(false);
+      await vi.advanceTimersByTimeAsync(800);
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'code');
+
+      run.mockResolvedValueOnce(passing);
+      await store.run();
+      expect(store.actionError()).toBeUndefined();
+    });
+
+    it('does not run once the student opened another exercise while a save was on its way', async () => {
+      const save = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(save.promise);
+      store.updateCode('first');
+      await vi.advanceTimersByTimeAsync(800);
+      const running = store.run();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+
+      save.resolve(savedAs(attempt, 'first'));
+      await running;
+
+      expect(run).not.toHaveBeenCalled();
+      expect(store.lastRun()).toBeUndefined();
+    });
+
+    it('keeps saying it is running the attempt now open when an earlier run ends', async () => {
+      const first = deferred<RunResult>();
+      const second = deferred<RunResult>();
+      run.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+      const runningFirst = store.run();
+      await vi.advanceTimersByTimeAsync(0);
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+      const runningSecond = store.run();
+
+      first.resolve(passing);
+      await runningFirst;
+
+      expect(store.running()).toBe(true);
+      second.resolve(failing);
+      await runningSecond;
+      expect(store.running()).toBe(false);
+      expect(store.status()).toBe('tests_failed');
+    });
+
+    it('has nothing to save after a failed run of saved code', async () => {
+      run.mockRejectedValueOnce(new DataError('network'));
+
+      await store.run();
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(store.actionError()?.action).toBe('run');
+      expect(saveCode).not.toHaveBeenCalled();
+    });
+
+    it('ignores the answer of a run once the student opened another exercise', async () => {
+      const answer = deferred<RunResult>();
+      run.mockReturnValueOnce(answer.promise);
+      const running = store.run();
+      await vi.advanceTimersByTimeAsync(0);
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+      expect(store.running()).toBe(false);
+
+      answer.resolve(passing);
+      await running;
+
+      expect(store.lastRun()).toBeUndefined();
+      expect(store.status()).toBe('in_progress');
+    });
+
+    it('ignores the error of a run once the student opened another exercise', async () => {
+      const answer = deferred<RunResult>();
+      run.mockReturnValueOnce(answer.promise);
+      const running = store.run();
+      await vi.advanceTimersByTimeAsync(0);
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+
+      answer.reject(new DataError('network'));
+      await running;
+
+      expect(store.actionError()).toBeUndefined();
+    });
+
+    it('forgets the results when it opens another exercise', async () => {
+      run.mockResolvedValue(failing);
+      await store.run();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+
+      await store.open('exercise-4');
+
+      expect(store.lastRun()).toBeUndefined();
+      expect(store.runOutdated()).toBe(false);
+    });
+
+    it('does not run without an attempt or once submitted', async () => {
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-5', 'submitted'));
+      await store.open('exercise-5');
+
+      await store.run();
+
+      expect(store.canRun()).toBe(false);
+      expect(run).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('submitting', () => {
+    const attempt = attemptOf('exercise-3', 'passed');
+    const submitted: Attempt = {
+      ...attempt,
+      currentCode: 'done',
+      finalCode: 'done',
+      status: 'submitted',
+      finishedAt: '2026-11-08T10:30:00.000Z',
+    };
+
+    beforeEach(async () => {
+      openOrCreate.mockResolvedValue(attempt);
+      await store.open('exercise-3');
+    });
+
+    it('submits a passed attempt, which becomes read only', async () => {
+      submit.mockResolvedValue(submitted);
+
+      await expect(store.submit()).resolves.toBe(true);
+
+      expect(submit).toHaveBeenCalledExactlyOnceWith(attempt.id);
+      expect(store.attempt()).toEqual(submitted);
+      expect(store.readonly()).toBe(true);
+      expect(store.canRun()).toBe(false);
+      expect(store.canSubmit()).toBe(false);
+    });
+
+    it('says it is submitting meanwhile', async () => {
+      const answer = deferred<Attempt>();
+      submit.mockReturnValueOnce(answer.promise);
+
+      const submitting = store.submit();
+      expect(store.submitting()).toBe(true);
+      expect(store.canSubmit()).toBe(false);
+      expect(store.canRun()).toBe(false);
+
+      answer.resolve(submitted);
+      await submitting;
+      expect(store.submitting()).toBe(false);
+    });
+
+    it('keeps the error when it fails, and the attempt as it was', async () => {
+      const error = new DataError('network');
+      submit.mockRejectedValueOnce(error);
+
+      await expect(store.submit()).resolves.toBe(false);
+
+      expect(store.actionError()).toEqual({ action: 'submit', error });
+      expect(store.status()).toBe('passed');
+      expect(store.submitting()).toBe(false);
+    });
+
+    it('only submits a passed attempt', async () => {
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4', 'tests_failed'));
+      await store.open('exercise-4');
+
+      await expect(store.submit()).resolves.toBe(false);
+
+      expect(submit).not.toHaveBeenCalled();
+    });
+
+    it('ignores the answer once the student opened another exercise', async () => {
+      const answer = deferred<Attempt>();
+      submit.mockReturnValueOnce(answer.promise);
+      const submitting = store.submit();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+
+      answer.resolve(submitted);
+
+      await expect(submitting).resolves.toBe(false);
+      expect(store.status()).toBe('in_progress');
+      expect(store.submitting()).toBe(false);
+    });
+
+    it('keeps saying it is submitting the attempt now open when an earlier one answers', async () => {
+      const first = deferred<Attempt>();
+      const second = deferred<Attempt>();
+      submit.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+      const submittingFirst = store.submit();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4', 'passed'));
+      await store.open('exercise-4');
+      const submittingSecond = store.submit();
+
+      first.resolve(submitted);
+      await submittingFirst;
+
+      expect(store.submitting()).toBe(true);
+      second.resolve({ ...attemptOf('exercise-4', 'submitted') });
+      await expect(submittingSecond).resolves.toBe(true);
+      expect(store.submitting()).toBe(false);
+    });
+
+    it('ignores the error once the student opened another exercise', async () => {
+      const answer = deferred<Attempt>();
+      submit.mockReturnValueOnce(answer.promise);
+      const submitting = store.submit();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+
+      answer.reject(new DataError('network'));
+
+      await expect(submitting).resolves.toBe(false);
+      expect(store.actionError()).toBeUndefined();
+    });
   });
 });

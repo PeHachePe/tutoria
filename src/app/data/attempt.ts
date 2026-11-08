@@ -36,11 +36,24 @@ export interface TestResult {
   readonly actual?: unknown;
 }
 
+/**
+ * Why the code could not run any test: it does not load (a syntax error, or an error in the code
+ * outside the function), or it loads without the function the exercise asks for. The screen shows
+ * it once, instead of the same failure in every test.
+ */
+export interface RunLoadError {
+  readonly kind: 'invalid_code' | 'missing_function';
+  /** Message of the JavaScript error, for `invalid_code`. */
+  readonly message?: string;
+}
+
 /** Result of running every test of an attempt. */
 export interface RunResult {
   /** Decided by the server (or by the mock service). */
   readonly status: StoredAttemptStatus;
+  /** One per test, in their order; with a load error, all failed and without details. */
   readonly results: readonly TestResult[];
+  readonly loadError?: RunLoadError;
 }
 
 /** What the timeline of an attempt shows. */

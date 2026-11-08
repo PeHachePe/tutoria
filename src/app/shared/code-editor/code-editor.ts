@@ -11,7 +11,7 @@ import {
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { javascript } from '@codemirror/lang-javascript';
 import { bracketMatching, indentOnInput, type LanguageSupport } from '@codemirror/language';
-import { EditorState, type Transaction } from '@codemirror/state';
+import { EditorState, Prec, type Transaction } from '@codemirror/state';
 import {
   drawSelection,
   EditorView,
@@ -66,7 +66,7 @@ function insertedLength(transaction: Transaction): number {
         class="hidden text-body-small text-on-surface-variant group-focus-within:block pointer-coarse:hidden"
         i18n="@@codeEditor.hint"
       >
-        Tab sangra; para salir del editor, Esc y después Tab.
+        Tab sangra; Ctrl + Intro ejecuta las pruebas; para salir del editor, Esc y después Tab.
       </p>
     }
   `,
@@ -86,6 +86,8 @@ export class CodeEditor {
   readonly codeChange = output<string>();
   /** Length of the text the student pasted (event `paste`, 2.8). */
   readonly pasted = output<number>();
+  /** Ctrl + Enter (or ⌘ + Enter): run the tests without leaving the editor. */
+  readonly runShortcut = output();
 
   protected readonly hintId = `app-code-editor-hint-${nextId++}`;
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
@@ -119,6 +121,15 @@ export class CodeEditor {
       // Tab indents, as in any code editor; Esc and then Tab leave the editor (CodeMirror's escape
       // hatch), which the hint below explains so keyboard users are not trapped (WCAG 2.1.2).
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      // Before the default keymap, whose Mod-Enter would insert a blank line instead; Ctrl too on a
+      // Mac, where Mod is ⌘, as many code playgrounds do
+      Prec.highest(
+        keymap.of(
+          readonly
+            ? []
+            : ['Mod-Enter', 'Ctrl-Enter'].map((key) => ({ key, run: () => this.requestRun() })),
+        ),
+      ),
       placeholder(this.placeholder()),
       EditorState.readOnly.of(readonly),
       EditorView.contentAttributes.of({
@@ -132,6 +143,11 @@ export class CodeEditor {
       EditorView.editorAttributes.of({ class: 'font-mono text-body-medium' }),
       EditorView.updateListener.of((update) => this.report(update)),
     ];
+  }
+
+  private requestRun(): boolean {
+    this.runShortcut.emit();
+    return true;
   }
 
   private report(update: ViewUpdate): void {

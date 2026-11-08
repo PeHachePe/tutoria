@@ -1,15 +1,29 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, DOCUMENT, inject, input, resource, signal } from '@angular/core';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DOCUMENT,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  resource,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatAnchor, MatButton, MatIconAnchor } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatTab, MatTabGroup } from '@angular/material/tabs';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 
 import { APP_PATHS } from '../../core/app-paths';
+import { AuthStore } from '../../auth/auth-store';
 import { AppTitleStrategy } from '../../core/app-title-strategy';
 import { PageReloader } from '../../core/page-reloader';
 import { ExerciseService } from '../../data/exercise-service';
@@ -20,10 +34,15 @@ import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot } from '../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
+import { Splitter } from '../../shared/splitter/splitter';
 import { splitInlineCode } from '../../shared/split-inline-code';
 import { StatusChip } from '../../shared/status-chip/status-chip';
+import { actionErrorMessage } from './action-error-message';
 import { AttemptStore } from './attempt-store';
+import { RunResults } from './run-results';
 import { SaveIndicator } from './save-indicator';
+import { readStatementShare, saveStatementShare, STATEMENT_SHARE } from './statement-share';
+import { SubmitDialog } from './submit-dialog';
 
 /**
  * Below this width (Tailwind's `md`) the zones become tabs, one at a time: stacked, they did not fit
@@ -37,11 +56,13 @@ const SKELETON_EXAMPLES = [1, 2, 3];
 /**
  * The workspace (/alumno/ejercicio/:id, ficha 03): the statement and its examples, the code and the
  * tutor of one exercise (RF-03 to RF-06). Step 1.3 builds the layout and opens the attempt, step 1.4
- * adds the editor with its autosave; the results (1.5) and the chat (1.7) fill their zones later.
+ * adds the editor with its autosave and step 1.5 runs the tests and submits (CU-01); the chat (1.7)
+ * fills its zone later.
  */
 @Component({
   selector: 'app-workspace-page',
   imports: [
+    DatePipe,
     NgTemplateOutlet,
     RouterLink,
     MatAnchor,
@@ -59,6 +80,8 @@ const SKELETON_EXAMPLES = [1, 2, 3];
     Mascot,
     CodeEditor,
     SaveIndicator,
+    RunResults,
+    Splitter,
   ],
   templateUrl: './workspace-page.html',
   host: {
@@ -80,6 +103,9 @@ export class WorkspacePage {
   private readonly titles = inject(AppTitleStrategy);
   private readonly document = inject(DOCUMENT);
   private readonly pageReloader = inject(PageReloader);
+  private readonly dialog = inject(MatDialog);
+  private readonly injector = inject(Injector);
+  private readonly userId = inject(AuthStore).userId;
   protected readonly store = inject(AttemptStore);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
@@ -153,8 +179,69 @@ export class WorkspacePage {
   /** The statement folds away on wide screens, so the code gets its room. */
   protected readonly statementOpen = signal(true);
 
+  /** Share of the column the open statement takes, which the splitter changes (wide screens). */
+  protected readonly statementShare = signal(readStatementShare(this.userId()));
+  protected readonly statementShareLimits = STATEMENT_SHARE;
+
   protected toggleStatement(): void {
     this.statementOpen.update((open) => !open);
+  }
+
+  protected keepStatementShare(share: number): void {
+    saveStatementShare(this.userId(), share);
+  }
+
+  /** The note that replaces the buttons once submitted, which takes the focus then. */
+  private readonly submittedNote = viewChild<ElementRef<HTMLElement>>('submittedNote');
+
+  protected readonly actionErrorMessage = computed(() => {
+    const failure = this.store.actionError();
+    return failure && actionErrorMessage(failure);
+  });
+
+  /**
+   * Read aloud once a run ends, as the results appear away from the button that started it. The
+   * summary of the results only says it again for those who look.
+   */
+  protected readonly runAnnouncement = computed(() => {
+    const run = this.store.lastRun();
+    if (!run) return '';
+    if (run.loadError) {
+      return $localize`:@@workspace.runAnnouncement.notRun:El código no se ha podido ejecutar.`;
+    }
+    const passed = run.results.filter((result) => result.passed).length;
+    const total = run.results.length;
+    return passed === total
+      ? $localize`:@@workspace.runAnnouncement.allPassed:Todas las pruebas superadas. Ya puedes entregar.`
+      : $localize`:@@workspace.runAnnouncement.somePassed:${passed}:passed: de ${total}:total: pruebas superadas.`;
+  });
+
+  /** «Entregar» asks first: once submitted, the code cannot change (2.4). */
+  protected async confirmSubmit(): Promise<void> {
+    if (!this.store.canSubmit()) return;
+    const confirmed = await firstValueFrom(this.dialog.open(SubmitDialog).afterClosed());
+    if (confirmed) await this.submit();
+  }
+
+  /** Tries again the run or the submission that failed. */
+  protected retryAction(): void {
+    if (this.store.actionError()?.action === 'submit') {
+      void this.submit();
+    } else {
+      void this.store.run();
+    }
+  }
+
+  /**
+   * The buttons give way to the note that says it is submitted: the focus goes there, instead of
+   * being lost with the button that had it (WCAG 2.4.3).
+   */
+  private async submit(): Promise<void> {
+    if (await this.store.submit()) {
+      afterNextRender(() => this.submittedNote()?.nativeElement.focus(), {
+        injector: this.injector,
+      });
+    }
   }
 
   /** Reloads only what failed. */

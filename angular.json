@@ -38,7 +38,8 @@
               "src/theme.scss",
               "src/styles.css"
             ],
-            "polyfills": ["@angular/localize/init"]
+            "polyfills": ["@angular/localize/init"],
+            "webWorkerTsConfig": "tsconfig.worker.json"
           },
           "configurations": {
             "production": {

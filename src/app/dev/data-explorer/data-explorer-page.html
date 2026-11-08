@@ -275,33 +275,42 @@
                   <mat-icon>save</mat-icon>
                   Guardar
                 </button>
-                <div
-                  role="group"
-                  aria-labelledby="simulate-label"
-                  class="flex flex-wrap items-center gap-2"
+                <button
+                  matButton="tonal"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="runCode(currentAttempt)"
                 >
-                  <span id="simulate-label" class="ms-2 text-label-large text-on-surface-variant">
-                    Simular ejecución:
-                  </span>
-                  <button
-                    matButton="tonal"
-                    type="button"
-                    [disabled]="busy()"
-                    (click)="runSimulated(currentAttempt, true)"
+                  <mat-icon>play_arrow</mat-icon>
+                  Ejecutar
+                </button>
+                @if (sampleCode(); as sample) {
+                  <div
+                    role="group"
+                    aria-labelledby="sample-label"
+                    class="flex flex-wrap items-center gap-2"
                   >
-                    <mat-icon>check</mat-icon>
-                    Superada
-                  </button>
-                  <button
-                    matButton="tonal"
-                    type="button"
-                    [disabled]="busy()"
-                    (click)="runSimulated(currentAttempt, false)"
-                  >
-                    <mat-icon>close</mat-icon>
-                    Con fallos
-                  </button>
-                </div>
+                    <span id="sample-label" class="ms-2 text-label-large text-on-surface-variant">
+                      Código de ejemplo:
+                    </span>
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="busy() || currentAttempt.status === 'submitted'"
+                      (click)="loadSample(sample.solved)"
+                    >
+                      Solución
+                    </button>
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="busy() || currentAttempt.status === 'submitted'"
+                      (click)="loadSample(sample.partial)"
+                    >
+                      Error típico
+                    </button>
+                  </div>
+                }
                 <span class="flex-1"></span>
                 <button
                   matButton="filled"
@@ -313,10 +322,12 @@
                   Entregar
                 </button>
               </div>
+              @if (runSummary(); as summary) {
+                <p role="status" class="text-body-medium">{{ summary }}</p>
+              }
               <p class="text-body-small text-on-surface-variant">
-                La ejecución es simulada hasta el paso 1.5: marca el intento como superado o con
-                fallos sin ejecutar el código. El editor de verdad (CodeMirror) llega en el paso
-                1.4.
+                «Ejecutar» pasa el código por el runner simulado (un Web Worker, 4.3), que lo guarda
+                y fija el estado. El editor de verdad está en la pantalla de trabajo.
               </p>
             } @else {
               <div>

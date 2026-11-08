@@ -2,6 +2,12 @@ import { Component, computed, input } from '@angular/core';
 
 import type { AttemptStatus } from '../../data/attempt';
 
+/** Tests passed out of the total in the last run. */
+export interface TestCount {
+  readonly passed: number;
+  readonly total: number;
+}
+
 interface ChipStyle {
   readonly label: string;
   readonly icon: string;
@@ -37,7 +43,11 @@ const STYLES: Record<AttemptStatus, ChipStyle> = {
   },
 };
 
-/** Status of an attempt as a small coloured pill with an icon (catalog, teacher panel, /dev/datos). */
+/**
+ * Status of an attempt as a small coloured pill with an icon (catalog, teacher panel, /dev/datos).
+ * The workspace adds how many tests passed in the last run («Con fallos · 3/5»), which a phone also
+ * sees from the tabs without the results (figure 17).
+ */
 @Component({
   selector: 'app-status-chip',
   template: `
@@ -45,6 +55,12 @@ const STYLES: Record<AttemptStatus, ChipStyle> = {
       {{ style().icon }}
     </span>
     {{ style().label }}
+    @if (testCount(); as count) {
+      <span aria-hidden="true">· {{ count.passed }}/{{ count.total }}</span>
+      <span class="sr-only" i18n="@@status.testCount"
+        >, {{ count.passed }} de {{ count.total }} pruebas superadas</span
+      >
+    }
   `,
   host: {
     class:
@@ -54,6 +70,7 @@ const STYLES: Record<AttemptStatus, ChipStyle> = {
 })
 export class StatusChip {
   readonly status = input.required<AttemptStatus>();
+  readonly testCount = input<TestCount>();
 
   protected readonly style = computed(() => STYLES[this.status()]);
 }

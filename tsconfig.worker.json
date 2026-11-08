@@ -1,0 +1,11 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* Web Workers (4.3): their own library of globals instead of the DOM. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/worker",
+    "lib": ["ES2022", "webworker"],
+    "types": []
+  },
+  "include": ["src/**/*.worker.ts"]
+}

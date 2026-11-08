@@ -4,6 +4,7 @@ import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { AuthService } from '../../data/auth-service';
 import { DataError } from '../../data/data-error';
 import { ExerciseService } from '../../data/exercise-service';
+import { provideInThreadCodeRunner } from '../../data/mock/code-runner/code-runner-testing';
 import { DAM_STUDENT_IDS, DAW_STUDENT_IDS, TEACHER_ID } from '../../data/mock/fixtures/users';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockNetwork } from '../../data/mock/mock-network';
@@ -19,6 +20,7 @@ describe('DataExplorerPage', () => {
     TestBed.configureTestingModule({
       providers: [
         provideMockData(),
+        provideInThreadCodeRunner(),
         { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
       ],
     });
@@ -307,11 +309,15 @@ describe('DataExplorerPage', () => {
       await click('Guardar');
       expect(attemptChip()).toBe('En curso');
 
-      await click('Con fallos');
-      expect(attemptChip()).toBe('Con fallos');
+      await click('Error típico');
+      await click('Ejecutar');
+      await vi.waitFor(() => expect(attemptChip()).toBe('Con fallos'));
+      expect(text()).toContain('Última ejecución: 0 de 5 superadas');
 
-      await click('Superada');
-      expect(attemptChip()).toBe('Superado');
+      await click('Solución');
+      await click('Ejecutar');
+      await vi.waitFor(() => expect(attemptChip()).toBe('Superado'));
+      expect(text()).toContain('Última ejecución: 5 de 5 superadas');
       expect(clean(button('Suma de los elementos de un vector').textContent)).toContain('Superado');
 
       await click('Entregar');
@@ -323,12 +329,22 @@ describe('DataExplorerPage', () => {
       expect(alertText()).toBe('La operación no está permitida en el estado actual. (invalid)');
     });
 
-    it('labels the simulated run buttons as a group', async () => {
+    it('labels the sample code buttons as a group', async () => {
       await click('Abrir o crear el intento');
 
       const group = element().querySelector('[role="group"]');
       const label = element().querySelector(`#${group?.getAttribute('aria-labelledby')}`);
-      expect(clean(label?.textContent)).toBe('Simular ejecución:');
+      expect(clean(label?.textContent)).toBe('Código de ejemplo:');
+    });
+
+    it('sums up a run whose code does not load', async () => {
+      await click('Abrir o crear el intento');
+
+      textarea()!.value = 'function sum() {}';
+      textarea()!.dispatchEvent(new Event('input'));
+      await click('Ejecutar');
+
+      await vi.waitFor(() => expect(text()).toContain('No se ha ejecutado: missing_function'));
     });
 
     it('does not submit an attempt that has not passed', async () => {

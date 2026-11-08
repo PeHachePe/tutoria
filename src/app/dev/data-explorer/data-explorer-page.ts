@@ -13,20 +13,21 @@ import { MatInput } from '@angular/material/input';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatTooltip } from '@angular/material/tooltip';
 
-import type { Attempt, AttemptStatus } from '../../data/attempt';
+import type { Attempt, AttemptStatus, RunResult } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import { AuthService } from '../../data/auth-service';
+import { CodeRunnerService } from '../../data/code-runner-service';
 import type { Exercise } from '../../data/exercise';
 import { ExerciseService } from '../../data/exercise-service';
+import { SAMPLE_CODE } from '../../data/mock/fixtures/activity';
+import { SEED } from '../../data/mock/fixtures/seed';
 import { MockDb } from '../../data/mock/mock-db';
-import { MockNetwork } from '../../data/mock/mock-network';
 import type { AppUser, Role } from '../../data/user';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { splitInlineCode } from '../../shared/split-inline-code';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { errorMessage } from './error-message';
 import { formatCall, formatValue, isMultilineText } from '../../shared/format-value';
-import { simulateRun } from './simulate-run';
 
 interface ExerciseEntry {
   readonly key: string;
@@ -51,8 +52,9 @@ const ROLE_LABELS: Record<Role, string> = {
 /**
  * Development-only page (/dev/datos) to try the data services by hand: what each user sees, an
  * exercise with its examples, and an attempt with its transitions (2.4). It goes through the abstract
- * services, except for two aids that only exist with mock data: the simulated run (until the code
- * runner of step 1.5) and the list of exercises a student was not assigned.
+ * services, except for two aids that only exist with mock data: the sample code of each seed exercise
+ * (its solution and a typical mistake), to run it, and the list of exercises a student was not
+ * assigned.
  */
 @Component({
   selector: 'app-data-explorer-page',
@@ -79,8 +81,8 @@ export class DataExplorerPage {
   private readonly auth = inject(AuthService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly attemptService = inject(AttemptService);
+  private readonly runner = inject(CodeRunnerService);
   private readonly db = inject(MockDb);
-  private readonly network = inject(MockNetwork);
 
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly errorMessage = errorMessage;
@@ -134,6 +136,23 @@ export class DataExplorerPage {
   protected readonly actionError = signal<string | null>(null);
 
   protected readonly code = signal('');
+  protected readonly lastRun = signal<RunResult | null>(null);
+
+  /** The solution and the typical mistake of the selected exercise, if it comes from the seed. */
+  protected readonly sampleCode = computed(
+    (): (typeof SAMPLE_CODE)[number] | undefined =>
+      // Exercises are numbered from 1 in the seed: one that is not there finds nothing at 0
+      SAMPLE_CODE[SEED.exercises.findIndex((exercise) => exercise.id === this.selectedId()) + 1],
+  );
+
+  /** What the last run gave, in one line. */
+  protected readonly runSummary = computed(() => {
+    const run = this.lastRun();
+    if (!run) return null;
+    if (run.loadError) return `No se ha ejecutado: ${run.loadError.kind}`;
+    const passed = run.results.filter((result) => result.passed).length;
+    return `Última ejecución: ${passed} de ${run.results.length} superadas`;
+  });
   protected readonly codeForm = form(this.code, (path) => {
     readonly(path, () => this.attemptState()?.status === 'submitted');
   });
@@ -147,6 +166,7 @@ export class DataExplorerPage {
     this.attemptState.set(null);
     this.actionError.set(null);
     this.code.set('');
+    this.lastRun.set(null);
   }
 
   protected async openAttempt(exerciseId: string): Promise<void> {
@@ -164,8 +184,16 @@ export class DataExplorerPage {
     return this.perform(() => this.attemptService.submit(attempt.id));
   }
 
-  protected runSimulated(attempt: Attempt, passed: boolean): Promise<unknown> {
-    return this.perform(() => this.network.request(() => simulateRun(this.db, attempt.id, passed)));
+  protected loadSample(code: string): void {
+    this.code.set(code);
+  }
+
+  /** Runs the code in the box with the real (mock) runner, and reads the attempt it left. */
+  protected runCode(attempt: Attempt): Promise<unknown> {
+    return this.perform(async () => {
+      this.lastRun.set(await this.runner.run(attempt.id, this.code()));
+      return this.attemptService.openOrCreate(attempt.exerciseId);
+    });
   }
 
   private async loadEntries(user: AppUser): Promise<ExerciseEntry[]> {

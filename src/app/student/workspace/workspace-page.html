@@ -31,7 +31,7 @@
     <div class="flex w-full flex-wrap items-center gap-2 ps-12 sm:w-auto sm:ps-0">
       <app-difficulty-chip [difficulty]="current.exercise.difficulty" />
       @if (store.attempt()) {
-        <app-status-chip [status]="store.status()" />
+        <app-status-chip [status]="store.status()" [testCount]="store.testCount()" />
       }
     </div>
   }
@@ -60,8 +60,21 @@
   <div
     class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_17rem] gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
   >
-    <div class="flex min-h-0 flex-col gap-4">
+    <!-- The splitter moves the boundary between the open statement and the code (ficha 03) -->
+    <div class="flex min-h-0 flex-col" [class]="statementOpen() ? 'gap-1' : 'gap-4'">
       <ng-container [ngTemplateOutlet]="statementZone" />
+      @if (statementOpen()) {
+        <app-splitter
+          label="Tamaño del enunciado"
+          i18n-label="@@workspace.statementSize"
+          controls="statement-zone"
+          [min]="statementShareLimits.min"
+          [max]="statementShareLimits.max"
+          [defaultValue]="statementShareLimits.default"
+          [(value)]="statementShare"
+          (changeEnd)="keepStatementShare($event)"
+        />
+      }
       <ng-container [ngTemplateOutlet]="codeZone" />
     </div>
     <ng-container [ngTemplateOutlet]="tutorZone" />
@@ -69,10 +82,13 @@
 }
 
 <ng-template #statementZone>
+  <!-- Open on a wide screen, it takes the share the splitter sets and shrinks before the code -->
   <section
+    id="statement-zone"
     aria-labelledby="statement-heading"
-    class="flex min-h-0 shrink-0 flex-col gap-3 rounded-xl bg-panel p-4"
-    [class]="compact() ? 'h-full' : 'max-h-[45%]'"
+    class="flex min-h-0 flex-col gap-3 rounded-xl bg-panel p-4"
+    [class]="compact() ? 'h-full' : statementOpen() ? 'min-h-24 grow-0' : 'shrink-0'"
+    [style.flex-basis.%]="!compact() && statementOpen() ? statementShare() : null"
     [attr.aria-busy]="detail.isLoading()"
   >
     @if (compact()) {
@@ -205,7 +221,7 @@
       @if (editor(); as current) {
         @if (store.readonly()) {
           <app-code-editor
-            class="min-h-0 flex-1"
+            class="min-h-24 flex-1"
             [initialCode]="current.code"
             [label]="editorLabel"
             [language]="current.language"
@@ -213,12 +229,13 @@
           />
         } @else {
           <app-code-editor
-            class="min-h-0 flex-1"
+            class="min-h-24 flex-1"
             [initialCode]="current.code"
             [label]="editorLabel"
             [language]="current.language"
             [placeholder]="current.placeholder"
             (codeChange)="store.updateCode($event)"
+            (runShortcut)="store.run()"
           />
         }
       } @else {
@@ -242,14 +259,98 @@
         </button>
       </div>
     }
-    <div
-      class="flex items-center gap-2 rounded-lg border border-dashed border-outline-variant p-4 text-on-surface-variant"
-    >
-      <mat-icon>checklist</mat-icon>
-      <p class="text-body-medium" i18n="@@workspace.resultsSoon">
-        Los resultados de las pruebas llegan en el paso 1.5.
+    @if (store.attempt(); as attempt) {
+      @if (store.readonly()) {
+        <!-- Takes the focus once submitted, as the buttons that had it are gone -->
+        <div
+          #submittedNote
+          tabindex="-1"
+          class="flex flex-wrap items-center gap-3 rounded-lg bg-success-container p-3 text-on-success-container outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          <mat-icon class="shrink-0">task_alt</mat-icon>
+          <p class="min-w-48 flex-1 text-body-medium" i18n="@@workspace.submittedNote">
+            Entregado el {{ attempt.finishedAt | date: 'longDate' }}. El código ya no se puede
+            cambiar.
+          </p>
+          <a matButton="filled" [routerLink]="catalogPath" i18n="@@workspace.submittedBack">
+            Volver a los ejercicios
+          </a>
+        </div>
+      } @else {
+        <!-- disabledInteractive: a button that gets disabled keeps the focus and says why -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            [matButton]="store.canSubmit() ? 'tonal' : 'filled'"
+            disabledInteractive
+            [disabled]="!store.canRun()"
+            matTooltip="También con Ctrl + Intro desde el editor"
+            i18n-matTooltip="@@workspace.runTooltip"
+            (click)="store.run()"
+          >
+            <mat-icon>{{ store.running() ? 'hourglass_top' : 'play_arrow' }}</mat-icon>
+            @if (store.running()) {
+              <span i18n="@@workspace.running">Ejecutando…</span>
+            } @else {
+              <span i18n="@@workspace.run">Ejecutar pruebas</span>
+            }
+          </button>
+          <button
+            type="button"
+            [matButton]="store.canSubmit() ? 'filled' : 'outlined'"
+            disabledInteractive
+            [disabled]="!store.canSubmit()"
+            matTooltip="Supera todas las pruebas para poder entregar"
+            i18n-matTooltip="@@workspace.submitTooltip"
+            [matTooltipDisabled]="store.canSubmit() || store.submitting()"
+            (click)="confirmSubmit()"
+          >
+            <mat-icon>send</mat-icon>
+            @if (store.submitting()) {
+              <span i18n="@@workspace.submitting">Entregando…</span>
+            } @else {
+              <span i18n="@@workspace.submit">Entregar</span>
+            }
+          </button>
+        </div>
+      }
+    }
+    @if (actionErrorMessage(); as message) {
+      <div
+        role="alert"
+        class="flex flex-wrap items-center gap-2 rounded-lg bg-error-container p-3 text-on-error-container"
+      >
+        <mat-icon class="shrink-0">error</mat-icon>
+        <p class="min-w-48 flex-1 text-body-medium">{{ message }}</p>
+        <button matButton type="button" (click)="retryAction()" i18n="@@workspace.retryAction">
+          Reintentar
+        </button>
+      </div>
+    }
+    <!-- Always in the page, so screen readers hear each new summary -->
+    <p class="sr-only" aria-live="polite">{{ runAnnouncement() }}</p>
+    @if (store.lastRun(); as run) {
+      <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1) -->
+      <app-run-results
+        tabindex="0"
+        role="group"
+        aria-label="Resultados de las pruebas"
+        i18n-aria-label="@@workspace.results"
+        class="relative max-h-[40%] min-h-16 overflow-y-auto scroll-shadows rounded-lg border border-outline-variant p-3 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+        [attr.aria-busy]="store.running()"
+        [result]="run"
+        [functionName]="content()?.exercise?.functionName ?? ''"
+        [outdated]="store.runOutdated()"
+      />
+    } @else if (store.attempt() && !store.readonly()) {
+      <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+        <mat-icon class="shrink-0">checklist</mat-icon>
+        <span i18n="@@workspace.noResults"
+          >Ejecuta las pruebas para comprobar tu código con los ejemplos y las comprobaciones
+          ocultas.</span
+        >
       </p>
-    </div>
+    }
   </section>
 </ng-template>
 

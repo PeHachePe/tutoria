@@ -1,4 +1,4 @@
-import { EditorView } from '@codemirror/view';
+import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { render, screen } from '@testing-library/angular';
 
 import { CodeEditor } from './code-editor';
@@ -16,16 +16,17 @@ async function renderEditor({
 }: Options = {}) {
   const codeChange = vi.fn<(code: string) => void>();
   const pasted = vi.fn<(length: number) => void>();
+  const runShortcut = vi.fn<() => void>();
   const result = await render(CodeEditor, {
     inputs: { initialCode, label: 'Código', placeholder, readonly },
-    on: { codeChange, pasted },
+    on: { codeChange, pasted, runShortcut },
   });
   const textbox = screen.getByRole('textbox', { name: 'Código' });
   // Typing into a contenteditable does not reach CodeMirror in jsdom: edits go through its view,
   // marked as CodeMirror marks what the student types or pastes.
   const view = EditorView.findFromDOM(textbox);
   if (!view) throw new Error('CodeMirror view not found');
-  return { ...result, textbox, view, codeChange, pasted };
+  return { ...result, textbox, view, codeChange, pasted, runShortcut };
 }
 
 describe('CodeEditor', () => {
@@ -76,6 +77,29 @@ describe('CodeEditor', () => {
 
     const hint = screen.getByText(/Esc y después Tab/);
     expect(textbox.getAttribute('aria-describedby')).toBe(hint.id);
+  });
+
+  it('asks to run the tests with Ctrl + Enter, instead of adding a line', async () => {
+    // jsdom is not a Mac: there Mod is Ctrl, and ⌘ + Enter is the same binding on a Mac
+    const { view, runShortcut, codeChange } = await renderEditor({ initialCode: 'abc' });
+
+    const handled = runScopeHandlers(
+      view,
+      new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true }),
+      'editor',
+    );
+
+    expect(handled).toBe(true);
+    expect(runShortcut).toHaveBeenCalledOnce();
+    expect(codeChange).not.toHaveBeenCalled();
+  });
+
+  it('does not ask to run a read-only code', async () => {
+    const { view, runShortcut } = await renderEditor({ readonly: true });
+
+    runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true }), 'editor');
+
+    expect(runShortcut).not.toHaveBeenCalled();
   });
 
   it('only shows the code when it is read only', async () => {

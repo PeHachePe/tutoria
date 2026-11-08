@@ -302,6 +302,49 @@
     </div>
   </section>
 
+  <section aria-labelledby="results-title" class="flex flex-col gap-3">
+    <h2 id="results-title" class="text-title-large">Resultados de las pruebas</h2>
+    <div class="flex flex-wrap items-center gap-2">
+      <app-status-chip status="tests_failed" [testCount]="{ passed: 3, total: 5 }" />
+      <app-status-chip status="passed" [testCount]="{ passed: 5, total: 5 }" />
+    </div>
+    <div class="grid gap-4 lg:grid-cols-3">
+      @for (sample of runSamples; track sample.title) {
+        <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+          <p class="text-label-large text-on-surface-variant">{{ sample.title }}</p>
+          <app-run-results
+            class="rounded-lg border border-outline-variant p-3"
+            [result]="sample.result"
+            functionName="suma"
+            [outdated]="$first"
+          />
+        </div>
+      }
+    </div>
+    <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+      <h3 class="text-title-medium">Separador entre enunciado y código</h3>
+      <div class="flex h-72 flex-col gap-1">
+        <div
+          id="split-demo-top"
+          class="flex min-h-0 grow-0 items-center justify-center rounded-lg bg-surface-container"
+          [style.flex-basis.%]="splitShare()"
+        >
+          Enunciado ({{ splitShare() }} %)
+        </div>
+        <app-splitter
+          label="Tamaño del panel de arriba"
+          controls="split-demo-top"
+          [(value)]="splitShare"
+        />
+        <div
+          class="flex min-h-0 flex-1 items-center justify-center rounded-lg bg-surface-container"
+        >
+          Código
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section aria-labelledby="states-title" class="flex flex-col gap-3">
     <h2 id="states-title" class="text-title-large">Carga, vacío y error</h2>
     <p class="text-body-medium text-on-surface-variant">
