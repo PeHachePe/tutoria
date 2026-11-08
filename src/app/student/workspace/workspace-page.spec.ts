@@ -655,7 +655,7 @@ describe('WorkspacePage', () => {
   });
 
   describe('expanding the code', () => {
-    it('gives the code the whole screen with the same editor, and goes back', async () => {
+    it('gives the code the room of the statement with the same editor, and goes back', async () => {
       const { fixture } = await renderPage();
       await showEditor(fixture);
       const view = editorView();
@@ -666,8 +666,9 @@ describe('WorkspacePage', () => {
 
       expect(toggle.getAttribute('aria-pressed')).toBe('true');
       expect(screen.queryByRole('region', { name: 'Enunciado' })).toBeNull();
-      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
       expect(screen.queryByRole('separator')).toBeNull();
+      // The tutor stays in sight: the student can still ask, and see it step in (6.2)
+      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
       // The same CodeMirror: nothing typed nor its undo history is lost
       expect(editorView()).toBe(view);
 

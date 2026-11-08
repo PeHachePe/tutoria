@@ -188,8 +188,10 @@ export class WorkspacePage {
   }
 
   /**
-   * Wide screens: the code takes the whole screen, without the statement and the tutor, and goes
-   * back with the same button. Not remembered: the screen opens again with its three zones.
+   * Wide screens: the code takes the room of the statement, which gives it its height, and goes
+   * back with the same button. The tutor stays in sight, to ask and to see it step in (6.2); its
+   * column only gave width, which the code does not lack. Not remembered: the screen opens again
+   * with its three zones.
    */
   protected readonly codeExpanded = signal(false);
   protected readonly expandCodeTooltip = $localize`:@@workspace.expandCodeTooltip:Ampliar el código`;

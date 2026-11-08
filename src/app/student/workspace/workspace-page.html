@@ -57,14 +57,10 @@
   </mat-tab-group>
 } @else {
   <!-- As in the prototype (figure 17): the statement over the code, the tutor in its own column.
-       Expanded, the code takes the whole screen; it is the same editor, never created again. -->
+       Expanded, the code takes the statement's height and the tutor stays in sight; it is the same
+       editor, never created again. -->
   <div
-    class="grid min-h-0 flex-1 gap-4"
-    [class]="
-      codeExpanded()
-        ? 'grid-cols-1'
-        : 'grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_22rem]'
-    "
+    class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_17rem] gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
   >
     <!-- The splitter moves the boundary between the open statement and the code (ficha 03) -->
     <div
@@ -88,9 +84,7 @@
       }
       <ng-container [ngTemplateOutlet]="codeZone" />
     </div>
-    @if (!codeExpanded()) {
-      <ng-container [ngTemplateOutlet]="tutorZone" />
-    }
+    <ng-container [ngTemplateOutlet]="tutorZone" />
   </div>
 }
 
