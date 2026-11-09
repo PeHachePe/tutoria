@@ -22,7 +22,7 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - Autoguardado sin `debounced()` ni `effect()`; el editor se carga con `@defer`.
 - Ejecución de código: Web Worker durante el desarrollo y Edge Function con Judge0 alojado en real (sin Judge0 en Docker local).
 - Un único adaptador de IA compatible con la API de OpenAI; durante el desarrollo, el plan gratuito de Gemini. La IA integrada en Chrome queda como paso opcional.
-- Rol de administrador, rutas por rol y modelo de datos con los cambios de la PEC2 (10 entidades).
+- Rol de administrador, rutas por rol y modelo de datos con los cambios de la PEC2 (11 entidades, D-034).
 - El estado del intento lo decide el servidor.
 - Pruebas visibles (con entrada, esperado y obtenido) y ocultas.
 - Calendario con los hitos de la PEC3 y la PEC4.
@@ -119,14 +119,14 @@ TutorIA es una aplicación web educativa para aprender programación en Formaci�
 
 Detalle por pantalla:
 
-- **Catálogo:** tarjetas agrupadas por sesión con título, contenidos, dificultad, chip de estado, pistas pedidas con su nivel y botón (Empezar, Continuar o Repasar); progreso «n/N superados» global y por sesión, donde N es el número de ejercicios asignados y «superados» cuenta los superados y los entregados (D-027).
+- **Catálogo:** ejercicios agrupados por sesión (con su título, si lo tiene) con título, contenidos, dificultad, chip de estado, pistas pedidas con su nivel y botón (Empezar, Continuar o Repasar); progreso «n/N superados» global y por sesión, donde N es el número de ejercicios asignados y «superados» cuenta los superados y los entregados (D-027), con cuántos están listos para entregar; la tarjeta «Continúa donde lo dejaste» y, con todo entregado, la enhorabuena con la mascota (D-034).
 - **Pantalla de trabajo:** enunciado y pruebas visibles; editor; botón para ejecutar las pruebas con resultados ✔ (superada), ✘ (fallida) o ● (error o tiempo agotado); botón Entregar; panel del tutor tipo chat con nivel de pista visible y botón «Pedir pista»; reacciones flotantes.
 - **Sesión en vivo:** tabla por alumno con estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas y la señal derivada «atascado»; detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
 - **Histórico:** gráfica de la media de pistas solicitadas por sesión (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales.
 - **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a grupo y sesión. Un ejercicio con intentos no se borra, para conservar su historial.
 - **Datos registrados (RF-07):** qué registra la aplicación (tiempos, ejecuciones, pistas, pegados y salidas a otra ventana o pestaña, con su duración), qué no registra nunca (el audio), con qué finalidad (formativa, no sancionadora), quién lo ve (su docente) y qué servicios externos intervienen (reconocimiento de voz del navegador, proveedor de IA). La primera vez que el alumno entra, un aviso le resume esto con un enlace a la pantalla, antes de empezar a trabajar, como pide el RGPD citado en la memoria.
 
-### 2.3 Modelo de datos (10 entidades, PostgreSQL en Supabase)
+### 2.3 Modelo de datos (11 entidades, PostgreSQL en Supabase)
 
 En **negrita**, lo que cambia respecto al modelo de la memoria.
 
@@ -135,7 +135,8 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
 - `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
-- `exercise_assignment` (id, group_id → class_group, exercise_id → exercise, session; única por terna)
+- **`class_session`** (id, group_id → class_group, number, title (opcional); única por grupo y número, D-034): las sesiones de clase de cada grupo, con el título que les da el docente («Vectores»); sin título se muestran como «Sesión N».
+- `exercise_assignment` (id, group_id → class_group, exercise_id → exercise, session; única por terna; `(group_id, session)` → `class_session (group_id, number)`)
 - `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), current_code, final_code, status, started_at, finished_at, **updated_at**)
 - `tutor_interaction` (id, attempt_id → attempt, trigger `question`/`hint`/`proactive`, hint_level 1–3, **student_message**, transcript, emotion, intensity, **elusion**, **prompt_version**, **created_at**)
 - `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`)
@@ -443,17 +444,17 @@ Son clases abstractas con los métodos de acceso a datos. Las pantallas y los st
 - Cada versión lleva `@Service({ autoProvided: false })` y se llama como su clase: `MockExerciseService` en `data/mock/mock-exercise-service.ts` y `SupabaseExerciseService` en `data/supabase/supabase-exercise-service.ts`.
 - `provideMockData()` y `provideSupabaseData()` las registran con `{ provide: ExerciseService, useClass: MockExerciseService }` (4.4).
 
-| Servicio            | Operaciones principales                                                                                                 | Versión simulada                                              | Versión con Supabase                              |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------- |
-| `AuthService`       | iniciar y cerrar sesión, usuario actual, restaurar sesión                                                               | Usuarios del seed; cambio de rol desde la barra de desarrollo | Supabase Auth                                     |
-| `ExerciseService`   | ejercicios asignados con su último intento y sus pistas, detalle con pruebas visibles, alta, edición, baja y asignación | MockDb                                                        | Tablas `exercise`, `test` y `exercise_assignment` |
-| `AttemptService`    | abrir o crear, guardar código, entregar, historial de un intento                                                        | MockDb, que aplica las transiciones de 2.4                    | Tablas y RPC `submit_attempt`                     |
-| `CodeRunnerService` | ejecutar (intento y código) y devolver estado y resultados                                                              | Web Worker                                                    | Edge Function `execute`                           |
-| `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`                                                                     | Respuestas guionizadas por nivel                              | Edge Function `tutor`                             |
-| `EventService`      | enviar un lote de eventos                                                                                               | MockDb                                                        | Inserción en `process_event`                      |
-| `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                                          | Simulador de alumnos                                          | Supabase Realtime                                 |
-| `StatsService`      | estadísticas del grupo por sesión                                                                                       | Cálculo sobre MockDb                                          | RPC `group_session_stats`                         |
-| `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                                      | MockDb                                                        | Edge Function `admin-users` y tablas              |
+| Servicio            | Operaciones principales                                                                                                 | Versión simulada                                              | Versión con Supabase                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `AuthService`       | iniciar y cerrar sesión, usuario actual, restaurar sesión                                                               | Usuarios del seed; cambio de rol desde la barra de desarrollo | Supabase Auth                                                      |
+| `ExerciseService`   | ejercicios asignados con su último intento y sus pistas, detalle con pruebas visibles, alta, edición, baja y asignación | MockDb                                                        | Tablas `exercise`, `test`, `exercise_assignment` y `class_session` |
+| `AttemptService`    | abrir o crear, guardar código, entregar, historial de un intento                                                        | MockDb, que aplica las transiciones de 2.4                    | Tablas y RPC `submit_attempt`                                      |
+| `CodeRunnerService` | ejecutar (intento y código) y devolver estado y resultados                                                              | Web Worker                                                    | Edge Function `execute`                                            |
+| `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`                                                                     | Respuestas guionizadas por nivel                              | Edge Function `tutor`                                              |
+| `EventService`      | enviar un lote de eventos                                                                                               | MockDb                                                        | Inserción en `process_event`                                       |
+| `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                                          | Simulador de alumnos                                          | Supabase Realtime                                                  |
+| `StatsService`      | estadísticas del grupo por sesión                                                                                       | Cálculo sobre MockDb                                          | RPC `group_session_stats`                                          |
+| `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                                      | MockDb                                                        | Edge Function `admin-users` y tablas                               |
 
 Resultado de una ejecución:
 
@@ -1069,6 +1070,16 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 🧪 Estado derivado de cada tarjeta; el esqueleto solo aparece si la carga pasa del umbral.
 
+**1.2b · Pulido del catálogo (≈2,5 h)** · ficha `02-catalogo` · D-034 · a petición del autor, antes de reentregar la PEC2
+
+- Sesiones con título (`class_session`): «Sesión 2» encima del título y, sin título, solo «Sesión 2».
+- Resumen con el progreso y contadores por estado; «Listo para entregar» en los ejercicios superados sin entregar, y solo se pliegan al llegar las sesiones entregadas enteras.
+- Tarjeta «Continúa donde lo dejaste» (el intento abierto que cambió el último) o «Tu siguiente ejercicio» (el primero sin empezar), y la enhorabuena con la mascota cuando todo está entregado.
+- Cada sesión es un bloque con un punto por ejercicio en su cabecera, y cada ejercicio una fila con su número o ✓ en un círculo del color de su estado.
+- De paso, en la pantalla de trabajo: con el panel del enunciado ancho (tutor flotante), los ejemplos van a la derecha del texto.
+
+🧪 Siguiente ejercicio, contadores y plegado por «entregado»; títulos de sesión en el servicio simulado y en las fixtures.
+
 **1.3 · Pantalla de trabajo: disposición (≈2 h)** · ficha `03-trabajo` · Figuras 8, 15 y 17 del TFM · D-028
 
 - Tres zonas: enunciado y ejemplos; código (editor y resultados); tutor.
@@ -1274,7 +1285,7 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
 - Lista de ejercicios.
 - Formulario con Signal Forms: título, enunciado, dificultad, función, umbrales con slider y pruebas con `applyEach` (entrada, esperado, oculta).
-- Asignación a grupo y sesión.
+- Asignación a grupo y sesión. Asignar a una sesión nueva crea su fila de `class_session`, y el título de cada sesión se edita en su cabecera (opcional, D-034).
 
 🧪 Validaciones del esquema del formulario.
 

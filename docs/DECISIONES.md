@@ -783,3 +783,33 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 - El tutor proactivo (6.2) usará el bocadillo de la mascota cuando el tutor esté plegado.
 
 **Aprobación:** el autor, que aprobó el plan con todas las mejoras propuestas («Sí, todo») y la iteración 1 («Sí, termínalo»).
+
+## D-034 · Catálogo: sesiones con título, «entregado» frente a «superado» y por dónde seguir (09/11/2026)
+
+**Contexto:** el autor veía el catálogo «un poco pobre» y preguntó si «Sesión 1» podía ser cualquier texto, como «Tema 1: Bucles». La sesión era solo un número en `exercise_assignment.session`. Además, el catálogo plegaba al llegar las sesiones superadas enteras, de modo que Lucía, con el último ejercicio superado pero sin entregar, veía «8/8 superados» y cuatro sesiones plegadas: la pantalla invitaba a irse sin entregar (anotado en `PENDIENTES.md` desde el 1.6). Antes de reentregar la PEC2 con el código, el catálogo tenía que lucir.
+
+**Decisión:**
+
+- **Tabla `class_session`** (id, group_id, number, title opcional; única por grupo y número). `exercise_assignment` sigue guardando el número de la sesión y apunta a ella con una clave ajena compuesta `(group_id, session)` → `class_session (group_id, number)`. El modelo pasa a 11 entidades. El catálogo muestra «Sesión 2» en pequeño encima del título («Vectores») y, si la sesión no tiene título, solo «Sesión 2».
+- `AssignedExercise` añade `sessionTitle` (el título o `null`) y `updatedAt` (cuándo cambió el último intento, o `null` sin intento). El servidor ya tenía los dos datos.
+- **«Entregado» manda en el plegado:** al llegar, solo se pliegan las sesiones entregadas enteras. «Superados» sigue contando superados y entregados (D-027), pero el resumen y el ejercicio avisan de lo que está «listo para entregar».
+- **Por dónde seguir:** una tarjeta destacada con el intento abierto (en curso, con fallos o superado sin entregar) que cambió el último, «Continúa donde lo dejaste»; sin ninguno abierto, el primero sin empezar, «Tu siguiente ejercicio»; con todo entregado, la enhorabuena con la mascota. Lo decide `nextExercise()`, una función pura en `catalog-sessions.ts`, con `countByStatus()` para los contadores.
+- **Aspecto:** cada sesión es una superficie propia con un punto por ejercicio del color de su estado, y los ejercicios son filas separadas por líneas con un círculo (número o ✓) del color de su estado. El color siempre se repite con texto (chip de estado) y los adornos van con `aria-hidden`.
+- **Pantalla de trabajo, de paso:** el panel del enunciado es un contenedor (`@container` de Tailwind) y, desde 896 px de panel, pone los ejemplos a la derecha del texto, que no pasa de su ancho de lectura. Depende del ancho del panel y no de la ventana, porque el mismo ancho de ventana da paneles muy distintos con el tutor fijo o flotante.
+
+**Alternativas:**
+
+- Un título por fila en `exercise_assignment`: sin tabla nueva, pero la misma sesión tiene varias filas y cada una podría llevar un título distinto.
+- Cambiar `exercise_assignment.session` por un `session_id`: más normalizado, pero obliga a crear la sesión antes de asignar y cambia más código y fixtures; con la clave compuesta, el número sigue sirviendo para ordenar.
+- La fecha de cada clase en `class_session`: la usaría el histórico (4.4), pero hoy nadie la necesita; las fixtures ya la tienen en `activity.ts` si hace falta.
+- Toda la fila del ejercicio como enlace (patrón de enlace extendido con `::after`): los botones de Material tienen `position: relative`, así que solo se podría cambiando sus estilos desde fuera, contra las reglas de 4.8.
+- Filtros «Pendientes / Todos» y «Desplegar todo»: con 8 ejercicios no compensan.
+
+**Consecuencias:**
+
+- Cambian §1, §2.2, §2.3 y el paso 4.3 del plan, se añade el paso 1.2b y cambian las fichas 02 y 03.
+- El seed pasa a la versión 4 y `supabase/seed.sql` incluye `class_session` (6 sesiones, una sin título).
+- El esquema (2.1) crea `class_session` con su RLS (el alumno lee las de sus grupos y el docente gestiona las suyas), y `listAssigned` de Supabase (2.2) devuelve el título y `updated_at`.
+- El editor de asignaciones (4.3) crea la sesión al asignar a una nueva y edita su título.
+
+**Aprobación:** el autor, tras ver la demo («Sí, ciérralo todo»).
