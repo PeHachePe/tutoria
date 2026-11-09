@@ -1,6 +1,6 @@
 # 03 · Pantalla de trabajo
 
-`/alumno/ejercicio/:id` · Alumno · Capas 1, 3 y 4 · 2 h la disposición (paso 1.3), 3 h el editor (1.4), 3 h las pruebas y la entrega (1.5) y 3 h el chat del tutor (1.7, ficha 04); se completa con el 1.8
+`/alumno/ejercicio/:id` · Alumno · Capas 1, 3 y 4 · 2 h la disposición (paso 1.3), 3 h el editor (1.4), 3 h las pruebas y la entrega (1.5), 3 h el chat del tutor (1.7, ficha 04) y 1,5 h las reacciones (1.8, ficha 04)
 
 ## Objetivo
 
@@ -88,7 +88,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 
 ## Fuera de alcance
 
-- Las reacciones (1.8). El chat tiene su propia ficha (04).
+- El chat tiene su propia ficha (04), que describe también las reacciones flotantes (1.8).
 - El registro del pegado: el editor ya lo detecta, y lo envía el `EventLogger` del 1.6.
 - La lista de ejercicios dentro de la pantalla: el plan la dejaba opcional y basta con volver al catálogo.
 

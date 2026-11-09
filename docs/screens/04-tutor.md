@@ -1,6 +1,6 @@
 # 04 · Tutor
 
-Zona del tutor de `/alumno/ejercicio/:id` · Alumno · Capa 1 (las capas 3 y 4 añaden la voz y las intervenciones proactivas) · 3 h (paso 1.7) · D-033
+Zona del tutor de `/alumno/ejercicio/:id` · Alumno · Capa 1 (las capas 3 y 4 añaden la voz y las intervenciones proactivas) · 3 h (paso 1.7) y 1,5 h las reacciones (1.8) · D-033 y D-035
 
 ## Objetivo
 
@@ -30,6 +30,16 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Escritorio:** columna a la derecha del código, de ancho ajustable con un separador vertical (nunca baja de 16rem), o flotante si el alumno lo elige.
 - **Flotante** (con el código ampliado, en la tableta o por elección del alumno, D-033): la mascota abajo a la derecha. Al pulsarla, el tutor se abre en un panel sobre la esquina del código (24rem de ancho) y la mascota saca la lengua; en su cabecera están «Fijar el tutor a la derecha» (no en la tableta) y «Minimizar el tutor». Plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
+- **Reacciones flotantes (1.8, D-035):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos su emoción en una capa sobre la pantalla:
+  - un icono protagonista en el centro y el resto alrededor, en un sitio distinto cada vez, con una paleta viva propia y confeti;
+  - alegría: corazones, caras sonrientes, flores y soles que suben balanceándose;
+  - sorpresa: «!», rayos y bombillas que estallan con una sacudida;
+  - ánimo: pulgares, cohetes, fuego y estrellas que suben a saltos;
+  - celebración: un trofeo, medallas y estrellas que explotan con confeti;
+  - la intensidad (1 a 3) da más piezas y más grandes;
+  - la mascota del panel (o la flotante) se mueve con ellas: ladea la cabeza, menea las orejas, salta o da dos saltos;
+  - salen por el lado del tutor; en el móvil, a todo el ancho;
+  - las respuestas del historial, las que fallan a mitad y las intervenciones que el tutor decide callar no reaccionan.
 
 ## Interacciones
 
@@ -55,6 +65,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 
 ## Accesibilidad
 
+- Las reacciones son decorativas: `aria-hidden` y sin capturar el puntero; la respuesta ya se anuncia por escrito. Se pueden reducir a un solo icono pequeño o desactivar (RF-10, CU-03 4a), y con `prefers-reduced-motion` un solo icono aparece y se desvanece sin moverse.
 - La zona es una sección con su `h2` «Tutor» (en el móvil la nombra la pestaña).
 - La conversación es un grupo «Conversación con el tutor» que se puede enfocar para desplazarlo con el teclado.
 - Cada burbuja empieza con «Tú:» o «Tutor:» para el lector de pantalla.
@@ -76,11 +87,12 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] En el móvil, el punto de la pestaña «Tutor» aparece con una respuesta nueva y se va al abrirla.
 - [ ] El tutor pasa de fijo a flotante y de vuelta, y se recuerda al recargar; flotante, se abre con el foco en la pregunta y se minimiza con el botón, la mascota o Esc, con el foco de vuelta en la mascota.
 - [ ] Plegado, una respuesta nueva asoma en el bocadillo, se anuncia y abre el tutor.
+- [ ] Cada respuesta nueva lanza la reacción de su emoción y mueve la mascota; reducidas, un solo icono; desactivadas, nada; con «reducir movimiento», un icono que se desvanece sin moverse.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 
 ## Fuera de alcance
 
-- Las reacciones flotantes con la emoción de cada respuesta (1.8).
+- El ajuste de las reacciones en la pantalla de ajustes (1.9): hasta entonces se cambia en el muestrario.
 - La voz (6.1) y las intervenciones proactivas (6.2); la conversación ya muestra las de las fixtures.
 - El streaming real (2.4, D-017): el tutor simulado ya escribe poco a poco y el cliente no cambiará.
 

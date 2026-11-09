@@ -813,3 +813,54 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 - El editor de asignaciones (4.3) crea la sesión al asignar a una nueva y edita su título.
 
 **Aprobación:** el autor, tras ver la demo («Sí, ciérralo todo»).
+
+## D-035 · Reacciones flotantes: al llegar la respuesta, tres niveles, paleta viva y la mascota con ellas (09/11/2026)
+
+**Contexto:** el paso 1.8 añade las reacciones afectivas del tutor (RF-10, capa 4 de la memoria). El plan pedía un overlay que leyera el evento `meta`, una animación de 2 a 3 segundos en una posición variable, poder desactivarlas y respetar `prefers-reduced-motion`. Al contrastarlo con la memoria salieron tres huecos:
+
+- RF-10 y el flujo 4a de CU-03 piden poder **reducirlas o** desactivarlas, no solo desactivarlas;
+- el `meta` llega antes del texto, así que reaccionar a él haría reaccionar también a una respuesta que falla a mitad o a una intervención que el tutor decide callar (`silent`, 2.7);
+- `SettingsStore`, donde vive ese ajuste, era del paso 1.9.
+
+Al ver la primera versión, con los colores del tema, el autor pidió reacciones «más exageradas y grandes», con colores «mucho más vistosos» y más variedad de iconos.
+
+**Decisión:**
+
+- **Cuándo:** `TutorStore.reaction` da la emoción y la intensidad de la última respuesta nueva cuando llega completa. Las respuestas del historial, las que fallan y las silenciosas no reaccionan. Cada reacción lleva el id de su turno, así que la misma emoción dos veces se vuelve a lanzar.
+- **Componente:** `<app-reaction-overlay>` en `shared/reactions/`, que recibe la reacción, el modo y la zona como entradas y no sabe nada del alumno; así el muestrario usa el componente real.
+  - Es una capa fija con `aria-hidden`, sin capturar el puntero y con `data-testid` para los tests (4.8). Ocupa el lado del tutor (hasta 40rem) o todo el ancho en el móvil.
+  - Una función pura, `reactionParticles()`, decide las piezas con un generador de azar inyectado, y se probó con TDD.
+  - Cada pieza es un elemento nuevo con su sitio y su recorrido en variables CSS (`--x`, `--drift`, `--spin`, `--size`, `--delay`, `--duration`), así que la animación arranca sola al insertarse. Las animaciones van en el parcial `reactions.css` junto al componente (D-022).
+  - La pieza que termina la última limpia la capa con su `animationend`.
+  - Sin `effect()`: un `linkedSignal` sobre la reacción, que no repite la que ya estaba al crearse el componente.
+- **Aspecto:**
+  - un icono protagonista enorme en el centro, con rebote y bamboleo, y el resto alrededor; cada emoción tiene su movimiento (subir balanceándose, estallar con sacudida, subir a saltos o explotar desde un punto) y de 6 a 7 iconos;
+  - los iconos son de Material Symbols, autoalojados y rellenos, y no emojis, que cambian entre sistemas;
+  - colores de una paleta viva propia de 8 tonos, `--app-reaction-*` en `theme.scss` y `bg-reaction-*` / `text-reaction-*` en Tailwind, igual en claro y en oscuro, con un brillo de su color;
+  - confeti en tres formas, siempre al celebrar y en las intensidades 2 y 3 de las demás emociones;
+  - la intensidad da 5, 9 o 14 iconos, cada vez más grandes.
+- **Tres niveles,** guardados por usuario en un `SettingsStore` mínimo (`student/settings/`) que el 1.9 amplía:
+  - completas;
+  - reducidas: un solo icono pequeño;
+  - desactivadas: nada, tampoco la mascota.
+- **Movimiento reducido:** con `prefers-reduced-motion`, que se lee con `MediaMatcher` del CDK en cada reacción, un solo icono aparece y se desvanece sin moverse. Así el alumno no pierde el gesto y no hay desplazamiento.
+- **La mascota se une:** la de la cabecera del tutor y la flotante ladean la cabeza (alegría), menean las orejas (sorpresa), saltan (ánimo) o dan dos saltos (celebración, con una animación propia, `mascot-cheer`).
+- **De paso, en el muestrario:** el editor de código ensanchaba su columna hasta la línea más larga y desplazaba la página de lado en el móvil. El componente lleva ahora `contain-inline-size`, así que ninguna pantalla puede volver a desplazarse por él. Se retiró el panel desplegable «Tutor» del muestrario, un resto del 0.3 con un texto ya falso que la app no usa, y su ajuste en `theme.scss`.
+
+**Alternativas:**
+
+- Reaccionar al llegar el `meta`, como decía el plan: antes, pero reaccionaría a respuestas que nunca se ven.
+- Emojis del sistema, como dice la memoria: cambian entre el Mac, Windows y Linux, y en algunos equipos no se ven.
+- Los colores del tema (primary, tertiary, warning…): cumplen la regla de los tokens, pero están pensados para el texto y se veían apagados.
+- Un `effect()` o la Web Animations API para lanzar cada reacción: código imperativo que no hace falta, porque los elementos nuevos ya arrancan su animación CSS.
+- Quitar la reacción con movimiento reducido: se perdería el gesto; un fundido sin desplazamiento es aceptable.
+- Un ajuste rápido en la cabecera del tutor: más botones en una cabecera que ya tiene dos; el sitio del ajuste es la pantalla de ajustes (1.9).
+
+**Consecuencias:**
+
+- Cambian el paso 1.8 (y el 1.9, que añade el ajuste a su pantalla), §4.1 y §4.8 del plan, y las fichas 03 y 04.
+- `TutorTurn` guarda la intensidad. La mascota acepta `reaction`.
+- El tutor proactivo (6.2) solo tiene que dar respuestas con emoción para reaccionar.
+- Una comprobación e2e de «ninguna pantalla se desplaza de lado a 375 px» queda en `E2E-PENDIENTES.md`.
+
+**Aprobación:** el autor aprobó el plan con las tres mejoras («dale pues con lo que consideras»), pidió las reacciones más vistosas, señaló el desplazamiento lateral y el panel «Tutor» del muestrario, y cerró el paso («Sí, ciérralo»).
