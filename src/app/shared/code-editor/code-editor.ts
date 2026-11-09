@@ -75,7 +75,9 @@ function pastedFromOutside(transaction: Transaction): number {
       </p>
     }
   `,
-  host: { class: 'group flex min-h-0 flex-col gap-1' },
+  // Inline-size containment: a long line scrolls inside the editor instead of widening its column,
+  // which on a phone pushed the whole page sideways
+  host: { class: 'group flex min-h-0 flex-col gap-1 contain-inline-size' },
 })
 export class CodeEditor {
   /** Code when the editor is created. */
