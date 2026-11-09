@@ -12,17 +12,24 @@ import type { HintLevel } from '../../data/tutor';
 import { LOADING_INDICATOR_DELAY_MS } from '../../shared/skeleton/loading-skeleton';
 import { CatalogPage } from './catalog-page';
 
+const SESSION_TITLES: Record<number, string | null> = {
+  1: 'Bucles y condicionales',
+  2: 'Vectores',
+  3: null,
+};
+
 function entry(
   index: number,
   session: number,
   status: AttemptStatus,
-  hintCount = 0,
-  hintLevel: HintLevel | null = null,
+  { hintCount = 0, hintLevel = null as HintLevel | null, updatedAt = null as string | null } = {},
 ): AssignedExercise {
   return {
     exercise: SEED.exercises[index],
     assignmentId: `assignment-${index}`,
     session,
+    sessionTitle: SESSION_TITLES[session],
+    updatedAt,
     status,
     hintCount,
     hintLevel,
@@ -30,10 +37,11 @@ function entry(
 }
 
 const ENTRIES = [
-  entry(0, 1, 'submitted'),
-  entry(1, 1, 'passed', 1, 1),
-  entry(2, 2, 'in_progress', 2, 3),
-  entry(3, 2, 'not_started'),
+  entry(0, 1, 'submitted', { updatedAt: '2026-10-06T08:20:00.000Z' }),
+  entry(1, 1, 'submitted', { hintCount: 1, hintLevel: 1, updatedAt: '2026-10-06T08:40:00.000Z' }),
+  entry(2, 2, 'in_progress', { hintCount: 2, hintLevel: 3, updatedAt: '2026-10-13T08:20:00.000Z' }),
+  entry(3, 2, 'passed', { updatedAt: '2026-10-13T08:50:00.000Z' }),
+  entry(4, 3, 'not_started'),
 ];
 
 function text(element: Element | null | undefined): string {
@@ -51,6 +59,11 @@ async function unfold(session: number): Promise<void> {
 
 function cardOf(title: string): HTMLElement {
   return screen.getByRole('heading', { level: 3, name: title }).closest('li') as HTMLElement;
+}
+
+/** The region of the page labelled by the heading with that name. */
+function regionOf(name: string | RegExp): HTMLElement {
+  return screen.getByRole('heading', { level: 2, name }).closest('section') as HTMLElement;
 }
 
 describe('CatalogPage', () => {
@@ -71,27 +84,71 @@ describe('CatalogPage', () => {
     return result;
   }
 
-  it("lists the student's exercises by session with their progress", async () => {
+  it("lists the student's exercises by session, with their titles and progress", async () => {
     const listAssigned = vi.fn(() => Promise.resolve(ENTRIES));
     await renderLoaded(listAssigned);
 
     expect(listAssigned).toHaveBeenCalledWith('student-1');
     expect(screen.getByRole('heading', { level: 1, name: 'Ejercicios' })).toBeTruthy();
-    const progress = screen.getByRole('progressbar', { name: '2/4 superados' });
-    expect(progress.getAttribute('aria-valuenow')).toBe('50');
+    expect(screen.getByText('Hola, Usuario.')).toBeTruthy();
+    const progress = screen.getByRole('progressbar', { name: 'Ejercicios superados' });
+    expect(progress.getAttribute('aria-valuenow')).toBe('60');
+    expect(screen.getByRole('region', { name: '3/5 superados' })).toBeTruthy();
 
-    const [first, second] = screen
-      .getAllByRole('heading', { level: 2 })
-      .map((heading) => heading.closest('section') as HTMLElement);
-    expect(within(first).getByRole('heading', { name: 'Sesión 1 2/2 superados' })).toBeTruthy();
-    expect(within(second).getByRole('heading', { name: 'Sesión 2 0/2 superados' })).toBeTruthy();
-    expect(within(second).getAllByRole('heading', { level: 3 }).map(text)).toEqual([
-      'Suma de los elementos de un vector',
-      'Máximo de un vector',
+    expect(sessionToggle(1).textContent?.replace(/\s+/g, ' ').trim()).toContain(
+      'Bucles y condicionales',
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Sesión 1 Bucles y condicionales 2/2 superados' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sesión 2 Vectores 1/2 superados' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sesión 3 0/1 superados' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Sesión 2 Vectores' })).toBeTruthy();
+    expect(
+      within(regionOf(/^Sesión 2 /))
+        .getAllByRole('heading', { level: 3 })
+        .map(text),
+    ).toEqual(['Suma de los elementos de un vector', 'Máximo de un vector']);
+  });
+
+  it('counts the exercises by status, ready to submit among them', async () => {
+    await renderLoaded(() => Promise.resolve(ENTRIES));
+
+    const counters = within(screen.getByRole('region', { name: '3/5 superados' }));
+    expect(counters.getAllByRole('listitem').map(text)).toEqual([
+      'outbox1 listo para entregar',
+      'edit1 en curso',
+      'task_alt2 entregados',
     ]);
   });
 
-  it('folds away the complete sessions at first, and folds or unfolds any of them', async () => {
+  it('resumes the open attempt changed last', async () => {
+    await renderLoaded(() => Promise.resolve(ENTRIES));
+
+    const next = regionOf('Continúa donde lo dejaste');
+    expect(within(next).getByText('Máximo de un vector')).toBeTruthy();
+    expect(text(next)).toContain('Sesión 2 · Vectores · Vectores · comparación · casos límite');
+    const link = within(next).getByRole('link', { name: 'Continuar: Máximo de un vector' });
+    expect(link.getAttribute('href')).toBe(`/alumno/ejercicio/${SEED.exercises[3].id}`);
+  });
+
+  it('suggests the next exercise when none is open', async () => {
+    await renderLoaded(() => Promise.resolve([ENTRIES[0], ENTRIES[4]]));
+
+    const next = regionOf('Tu siguiente ejercicio');
+    expect(text(next)).toContain('Sesión 3 · Vectores · índices · intercambio');
+    expect(within(next).getByRole('link', { name: 'Empezar: Invertir un vector' })).toBeTruthy();
+  });
+
+  it('congratulates the student when everything is submitted', async () => {
+    await renderLoaded(() => Promise.resolve([ENTRIES[0], ENTRIES[1]]));
+
+    expect(screen.getByRole('heading', { level: 2, name: '¡Enhorabuena, Usuario!' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /Continúa|siguiente/ })).toBeNull();
+    expect(sessionToggle(1).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('folds away the sessions with everything submitted at first, and folds or unfolds any of them', async () => {
     await renderLoaded(() => Promise.resolve(ENTRIES));
 
     expect(sessionToggle(1).getAttribute('aria-expanded')).toBe('false');
@@ -104,12 +161,14 @@ describe('CatalogPage', () => {
     expect(sessionToggle(1).getAttribute('aria-expanded')).toBe('true');
     expect(screen.getByRole('heading', { level: 3, name: 'Contar números pares' })).toBeTruthy();
     expect(sessionToggle(2).getAttribute('aria-expanded')).toBe('false');
-    expect(screen.queryByRole('heading', { level: 3, name: 'Máximo de un vector' })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { level: 3, name: 'Suma de los elementos de un vector' }),
+    ).toBeNull();
     const list = document.getElementById(sessionToggle(2).getAttribute('aria-controls') ?? '');
     expect(list?.hidden).toBe(true);
   });
 
-  it('shows the contents, the chips and the hints asked of each exercise', async () => {
+  it('shows the contents, the chips, the hints asked and what is ready to submit', async () => {
     await renderLoaded(() => Promise.resolve(ENTRIES));
     await unfold(1);
 
@@ -119,22 +178,33 @@ describe('CatalogPage', () => {
     expect(within(card).getByText('En curso')).toBeTruthy();
     expect(within(card).getByText('2 pistas pedidas')).toBeTruthy();
     expect(within(card).getByText('· nivel 3')).toBeTruthy();
+    expect(text(card)).not.toContain('Listo para entregar');
     expect(within(cardOf('Tabla de multiplicar')).getByText('1 pista pedida')).toBeTruthy();
     expect(text(cardOf('Contar números pares'))).not.toContain('pista');
+    expect(within(cardOf('Máximo de un vector')).getByText('Listo para entregar')).toBeTruthy();
+  });
+
+  it('marks each exercise with its number in the session, or a tick once passed', async () => {
+    await renderLoaded(() => Promise.resolve(ENTRIES));
+
+    const markerOf = (title: string) => cardOf(title).querySelector('[aria-hidden="true"]');
+    expect(text(markerOf('Suma de los elementos de un vector'))).toBe('1');
+    expect(text(markerOf('Máximo de un vector'))).toBe('check');
   });
 
   it('offers to start, continue or review each exercise, naming it', async () => {
     await renderLoaded(() => Promise.resolve(ENTRIES));
     await unfold(1);
 
-    const links = screen.getAllByRole('link');
+    const links = [...document.querySelectorAll('[id^="session-list-"] a')];
     expect(links.map(text)).toEqual([
       'Repasar: Contar números pares',
-      'Continuar: Tabla de multiplicar',
+      'Repasar: Tabla de multiplicar',
       'Continuar: Suma de los elementos de un vector',
-      'Empezar: Máximo de un vector',
+      'Continuar: Máximo de un vector',
+      'Empezar: Invertir un vector',
     ]);
-    expect(links[3].getAttribute('href')).toBe(`/alumno/ejercicio/${SEED.exercises[3].id}`);
+    expect(links[4].getAttribute('href')).toBe(`/alumno/ejercicio/${SEED.exercises[4].id}`);
   });
 
   it('shows the skeletons and announces the wait only past the threshold', async () => {
@@ -177,6 +247,6 @@ describe('CatalogPage', () => {
     await fixture.whenStable();
 
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^Sesión / })).toHaveLength(3);
   });
 });

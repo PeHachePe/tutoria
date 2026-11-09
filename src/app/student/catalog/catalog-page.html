@@ -1,42 +1,33 @@
 <div class="flex flex-col gap-6" [attr.aria-busy]="entries.isLoading()">
-  <header class="flex flex-wrap items-end justify-between gap-4">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-headline-small" i18n="@@catalog.heading">Ejercicios</h1>
-      <p class="text-body-large text-on-surface-variant" i18n="@@catalog.intro">
-        Elige un ejercicio. Tu progreso se guarda automáticamente.
-      </p>
-    </div>
-    @if (entries.hasValue() && total() > 0) {
-      <div class="flex w-full flex-col gap-2 sm:w-64">
-        <p id="catalog-progress" class="text-title-small" i18n="@@catalog.progress">
-          {{ passed() }}/{{ total() }} superados
-        </p>
-        <mat-progress-bar
-          mode="determinate"
-          [value]="percent()"
-          aria-labelledby="catalog-progress"
-        />
-      </div>
-    }
+  <header class="flex flex-col gap-1">
+    <h1 class="text-headline-medium" i18n="@@catalog.heading">Ejercicios</h1>
+    <p class="text-body-large text-on-surface-variant">
+      @if (firstName()) {
+        <span i18n="@@catalog.greeting">Hola, {{ firstName() }}.</span>{{ ' ' }}
+      }
+      <span i18n="@@catalog.intro">Elige un ejercicio. Tu progreso se guarda automáticamente.</span>
+    </p>
   </header>
 
   @if (entries.error(); as error) {
     <app-load-error [error]="error" (retry)="entries.reload()" />
   } @else if (entries.isLoading()) {
     <app-loading-skeleton label="Cargando los ejercicios…" i18n-label="@@catalog.loading">
-      <div class="flex flex-col gap-3">
-        <app-skeleton class="h-7 w-32" />
-        @for (card of skeletonCards; track card) {
-          <div
-            class="flex flex-col gap-3 rounded-xl bg-panel p-4 sm:flex-row sm:items-center sm:gap-4"
-          >
-            <div class="flex flex-1 flex-col gap-2">
-              <app-skeleton class="h-6 w-3/4 max-w-80" />
-              <app-skeleton class="h-5 w-1/2 max-w-56" />
+      <div class="flex flex-col gap-4">
+        <app-skeleton class="h-28 w-full rounded-2xl" />
+        <div class="flex flex-col gap-3 rounded-2xl bg-panel p-4">
+          <app-skeleton class="h-7 w-48" />
+          @for (card of skeletonCards; track card) {
+            <div class="flex items-center gap-4 py-2">
+              <app-skeleton class="size-10 shrink-0 rounded-full" />
+              <div class="flex flex-1 flex-col gap-2">
+                <app-skeleton class="h-6 w-3/4 max-w-80" />
+                <app-skeleton class="h-5 w-1/2 max-w-56" />
+              </div>
+              <app-skeleton class="hidden h-10 w-64 rounded-full sm:block" />
             </div>
-            <app-skeleton class="h-10 w-full rounded-full sm:w-72" />
-          </div>
-        }
+          }
+        </div>
       </div>
     </app-loading-skeleton>
   } @else if (total() === 0) {
@@ -49,64 +40,219 @@
       <app-mascot class="size-28" />
     </app-empty-state>
   } @else {
+    <!-- Summary: global progress and what is left, by status -->
+    <section
+      class="grid gap-4 rounded-2xl bg-panel p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+      aria-labelledby="catalog-progress"
+    >
+      <div class="flex flex-col gap-3">
+        <p id="catalog-progress" class="flex items-baseline gap-2">
+          <span class="text-display-small text-primary">{{ passed() }}/{{ total() }}</span>
+          {{ ' ' }}
+          <span class="text-title-medium" i18n="@@catalog.progressLabel">superados</span>
+        </p>
+        <mat-progress-bar
+          class="rounded-full"
+          mode="determinate"
+          [value]="percent()"
+          aria-label="Ejercicios superados"
+          i18n-aria-label="@@catalog.progressBar"
+        />
+      </div>
+      <ul class="flex flex-wrap gap-2 md:max-w-sm md:justify-end">
+        @if (counts().passed > 0) {
+          <li
+            class="inline-flex items-center gap-1 rounded-full bg-success-container py-1 ps-2 pe-3 text-label-large text-on-success-container"
+          >
+            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">outbox</mat-icon>
+            <span i18n="@@catalog.count.ready">{counts().passed, plural,
+              =1 {1 listo para entregar}
+              other {{{ counts().passed }} listos para entregar}
+            }</span>
+          </li>
+        }
+        @if (counts().tests_failed > 0) {
+          <li
+            class="inline-flex items-center gap-1 rounded-full bg-warning-container py-1 ps-2 pe-3 text-label-large text-on-warning-container"
+          >
+            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">error</mat-icon>
+            <span i18n="@@catalog.count.failing">{counts().tests_failed, plural,
+              =1 {1 con fallos}
+              other {{{ counts().tests_failed }} con fallos}
+            }</span>
+          </li>
+        }
+        @if (counts().in_progress > 0) {
+          <li
+            class="inline-flex items-center gap-1 rounded-full bg-info-container py-1 ps-2 pe-3 text-label-large text-on-info-container"
+          >
+            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">edit</mat-icon>
+            <span i18n="@@catalog.count.inProgress">{counts().in_progress, plural,
+              =1 {1 en curso}
+              other {{{ counts().in_progress }} en curso}
+            }</span>
+          </li>
+        }
+        @if (counts().submitted > 0) {
+          <li
+            class="inline-flex items-center gap-1 rounded-full bg-surface-container-high py-1 ps-2 pe-3 text-label-large text-on-surface-variant"
+          >
+            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">task_alt</mat-icon>
+            <span i18n="@@catalog.count.submitted">{counts().submitted, plural,
+              =1 {1 entregado}
+              other {{{ counts().submitted }} entregados}
+            }</span>
+          </li>
+        }
+      </ul>
+    </section>
+
+    @if (next(); as next) {
+      <!-- Where to pick up: the open attempt changed last or, without one, the next exercise -->
+      <section
+        class="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-primary-container p-5 text-on-primary-container sm:flex-row sm:items-center sm:gap-5"
+        aria-labelledby="catalog-next"
+      >
+        <app-mascot class="hidden size-20 shrink-0 sm:block" />
+        <div class="flex min-w-0 flex-1 flex-col gap-1">
+          <h2 id="catalog-next" class="text-label-large font-bold uppercase tracking-wider">
+            @if (next.kind === 'resume') {
+              <ng-container i18n="@@catalog.next.resume">Continúa donde lo dejaste</ng-container>
+            } @else {
+              <ng-container i18n="@@catalog.next.start">Tu siguiente ejercicio</ng-container>
+            }
+          </h2>
+          <p class="text-title-large">{{ next.title }}</p>
+          <p class="text-body-medium">
+            <span i18n="@@catalog.session">Sesión {{ next.session }}</span>
+            @if (next.sessionTitle) {
+              · {{ next.sessionTitle }}
+            }
+            · {{ next.topics }}
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <app-status-chip [status]="next.status" />
+          <a matButton="filled" class="ms-auto" [routerLink]="next.path">
+            {{ next.action.label }}<span class="sr-only">: {{ next.title }}</span>
+            <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
+          </a>
+        </div>
+      </section>
+    } @else {
+      <!-- Nothing left to pick up: everything is submitted -->
+      <section
+        class="flex flex-col items-center gap-4 rounded-2xl bg-success-container p-6 text-center text-on-success-container sm:flex-row sm:text-start"
+        aria-labelledby="catalog-done"
+      >
+        <app-mascot class="size-28 shrink-0" mood="joy" />
+        <div class="flex flex-col gap-1">
+          <h2 id="catalog-done" class="text-headline-small" i18n="@@catalog.done.heading">
+            ¡Enhorabuena, {{ firstName() }}!
+          </h2>
+          <p class="text-body-large" i18n="@@catalog.done.text">
+            Has entregado todos los ejercicios. Puedes repasarlos cuando quieras.
+          </p>
+        </div>
+      </section>
+    }
+
     @for (group of sessions(); track group.session) {
-      <section class="flex flex-col gap-3" [attr.aria-labelledby]="'session-' + group.session">
+      <section
+        class="flex flex-col overflow-hidden rounded-2xl bg-panel"
+        [attr.aria-labelledby]="'session-' + group.session"
+      >
         <!-- Accordion pattern of the ARIA practices: a heading that holds the toggle button -->
         <h2>
           <button
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg py-1 text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+            class="flex w-full items-center gap-3 p-4 text-start outline-offset-[-2px] hover:bg-on-surface/5 focus-visible:outline-2 focus-visible:outline-primary"
             [attr.aria-expanded]="!folded().has(group.session)"
             [attr.aria-controls]="'session-list-' + group.session"
             (click)="toggle(group.session)"
           >
             <mat-icon
-              class="transition-transform duration-200 motion-reduce:transition-none"
+              class="shrink-0 text-on-surface-variant transition-transform duration-200 motion-reduce:transition-none"
               [class.-rotate-90]="folded().has(group.session)"
               >expand_more</mat-icon
             >
-            <span
-              [id]="'session-' + group.session"
-              class="flex-1 text-title-large"
-              i18n="@@catalog.session"
-              >Sesión {{ group.session }}</span
-            >
+            <span [id]="'session-' + group.session" class="flex min-w-0 flex-1 flex-col">
+              @if (group.title) {
+                <span class="eyebrow" i18n="@@catalog.session">Sesión {{ group.session }}</span>
+                {{ ' ' }}
+                <span class="text-title-medium sm:text-title-large">{{ group.title }}</span>
+              } @else {
+                <span class="text-title-large" i18n="@@catalog.session"
+                  >Sesión {{ group.session }}</span
+                >
+              }
+            </span>
             <!-- The space between both texts keeps them apart in the accessible name -->
             {{ ' ' }}
-            <span class="text-label-large text-on-surface-variant" i18n="@@catalog.sessionProgress"
-              >{{ group.passed }}/{{ group.total }} superados</span
-            >
+            <span class="flex shrink-0 flex-col items-end gap-1.5">
+              <span class="flex gap-1" aria-hidden="true">
+                @for (dot of group.dots; track dot.key) {
+                  <span class="size-2.5 rounded-full" [class]="dot.classes"></span>
+                }
+              </span>
+              <span
+                class="text-label-large text-on-surface-variant"
+                i18n="@@catalog.sessionProgress"
+                >{{ group.passed }}/{{ group.total }} superados</span
+              >
+            </span>
           </button>
         </h2>
         <ul
           [id]="'session-list-' + group.session"
-          class="flex flex-col gap-3"
+          class="flex flex-col divide-y divide-outline-variant border-t border-outline-variant"
           [hidden]="folded().has(group.session)"
         >
           @for (card of group.cards; track card.key) {
-            <li
-              class="flex flex-col gap-3 rounded-xl bg-panel p-4 sm:flex-row sm:items-center sm:gap-4"
-            >
-              <div class="flex min-w-0 flex-1 flex-col gap-1">
-                <h3 class="text-title-medium">{{ card.title }}</h3>
-                <p class="text-body-medium text-on-surface-variant">{{ card.topics }}</p>
-                @if (card.hintCount > 0) {
-                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
-                    <mat-icon class="size-4! text-[1rem]!">lightbulb</mat-icon>
-                    <span i18n="@@catalog.hints">{card.hintCount, plural,
-                      =1 {1 pista pedida}
-                      other {{{ card.hintCount }} pistas pedidas}
-                    }</span>
-                    <span i18n="@@catalog.hintLevel">· nivel {{ card.hintLevel }}</span>
-                  </p>
+            <li class="flex gap-4 p-4">
+              <span
+                class="grid size-10 shrink-0 place-items-center rounded-full text-title-medium"
+                [class]="card.marker"
+                aria-hidden="true"
+              >
+                @if (card.done) {
+                  <mat-icon>check</mat-icon>
+                } @else {
+                  {{ card.number }}
                 }
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <app-difficulty-chip [difficulty]="card.difficulty" />
-                <app-status-chip [status]="card.status" />
-                <a class="ms-auto" [matButton]="card.action.appearance" [routerLink]="card.path">
-                  {{ card.action.label }}<span class="sr-only">: {{ card.title }}</span>
-                </a>
+              </span>
+              <div class="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
+                <div class="flex min-w-0 flex-1 flex-col gap-1">
+                  <h3 class="text-title-medium">{{ card.title }}</h3>
+                  <p class="text-body-medium text-on-surface-variant">{{ card.topics }}</p>
+                  @if (card.ready) {
+                    <p class="flex items-center gap-1 text-label-large text-primary">
+                      <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">outbox</mat-icon>
+                      <span i18n="@@catalog.ready">Listo para entregar</span>
+                    </p>
+                  }
+                  @if (card.hintCount > 0) {
+                    <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                      <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">lightbulb</mat-icon>
+                      <span i18n="@@catalog.hints">{card.hintCount, plural,
+                        =1 {1 pista pedida}
+                        other {{{ card.hintCount }} pistas pedidas}
+                      }</span>
+                      <span i18n="@@catalog.hintLevel">· nivel {{ card.hintLevel }}</span>
+                    </p>
+                  }
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <app-difficulty-chip [difficulty]="card.difficulty" />
+                  <app-status-chip [status]="card.status" />
+                  <a
+                    class="ms-auto min-w-28"
+                    [matButton]="card.action.appearance"
+                    [routerLink]="card.path"
+                  >
+                    {{ card.action.label }}<span class="sr-only">: {{ card.title }}</span>
+                  </a>
+                </div>
               </div>
             </li>
           }

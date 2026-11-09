@@ -14,8 +14,24 @@ import { Mascot } from '../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
+import type { AttemptStatus } from '../../data/attempt';
 import { catalogAction } from './catalog-action';
-import { groupBySession, isPassed } from './catalog-sessions';
+import { countByStatus, groupBySession, isPassed, nextExercise } from './catalog-sessions';
+
+/** Colour tokens of the marker in front of each exercise and of the dots of each session. */
+const STATUS_TONES: Record<AttemptStatus, { readonly marker: string; readonly dot: string }> = {
+  not_started: {
+    marker: 'border-2 border-outline-variant text-on-surface-variant',
+    dot: 'border border-outline',
+  },
+  in_progress: { marker: 'bg-info-container text-on-info-container', dot: 'bg-info' },
+  tests_failed: { marker: 'bg-warning-container text-on-warning-container', dot: 'bg-warning' },
+  passed: {
+    marker: 'bg-success-container text-on-success-container',
+    dot: 'bg-success-container border border-success',
+  },
+  submitted: { marker: 'bg-success text-on-success', dot: 'bg-success' },
+};
 
 /** Cards drawn while the catalog loads: about one session's worth. */
 const SKELETON_CARDS = [1, 2, 3];
@@ -55,13 +71,22 @@ export class CatalogPage {
 
   /** Sessions with their cards, ready for the template. */
   protected readonly sessions = computed(() =>
-    groupBySession(this.entries.value()).map(({ session, entries, passed, complete }) => ({
+    groupBySession(this.entries.value()).map(({ session, title, entries, passed, complete }) => ({
       session,
+      title,
       passed,
       complete,
       total: entries.length,
-      cards: entries.map(({ exercise, assignmentId, status, hintCount, hintLevel }) => ({
+      dots: entries.map(({ assignmentId, status }) => ({
         key: assignmentId,
+        classes: STATUS_TONES[status].dot,
+      })),
+      cards: entries.map(({ exercise, assignmentId, status, hintCount, hintLevel }, index) => ({
+        key: assignmentId,
+        number: index + 1,
+        marker: STATUS_TONES[status].marker,
+        done: isPassed(status),
+        ready: status === 'passed',
         title: exercise.title,
         topics: exercise.topics.join(' · '),
         difficulty: exercise.difficulty,
@@ -88,6 +113,29 @@ export class CatalogPage {
   protected readonly passed = computed(
     () => this.entries.value().filter((entry) => isPassed(entry.status)).length,
   );
+  /** Exercises by status, for the counters of the summary. */
+  protected readonly counts = computed(() => countByStatus(this.entries.value()));
+
+  /** First name for the greeting: the seed and the admin store the full name. */
+  protected readonly firstName = computed(() => this.auth.user()?.name.split(' ')[0] ?? '');
+
+  /** The card «Continúa donde lo dejaste» or «Tu siguiente ejercicio»; null once all is submitted. */
+  protected readonly next = computed(() => {
+    const next = nextExercise(this.entries.value());
+    if (!next) return null;
+    const { entry, kind } = next;
+    return {
+      kind,
+      title: entry.exercise.title,
+      topics: entry.exercise.topics.join(' · '),
+      session: entry.session,
+      sessionTitle: entry.sessionTitle,
+      status: entry.status,
+      action: catalogAction(entry.status),
+      path: APP_PATHS.student.exercise(entry.exercise.id),
+    };
+  });
+
   protected toggle(session: number): void {
     this.folded.update((folded) => {
       const next = new Set(folded);
