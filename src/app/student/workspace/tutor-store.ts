@@ -106,6 +106,21 @@ export class TutorStore {
    * comes first, but it plays at the end: an answer lost halfway or an intervention the tutor keeps
    * to itself must not react. The past turns never do.
    */
+  /**
+   * The reaction of the answer still arriving, known from its `meta`: the overlay loads its emoji
+   * while the text arrives, so it is ready when the answer is complete.
+   */
+  readonly upcomingReaction = computed<Reaction | null>(
+    () => {
+      const arriving = this.turnsState().find(
+        (turn) => turn.status === 'answering' && turn.reaction && turn.intensity,
+      );
+      return arriving?.reaction && arriving.intensity
+        ? { id: arriving.id, kind: arriving.reaction, intensity: arriving.intensity }
+        : null;
+    },
+    { equal: (a, b) => a?.id === b?.id },
+  );
   readonly reaction = computed<Reaction | null>(
     () => {
       const last = this.freshAnswers().at(-1);

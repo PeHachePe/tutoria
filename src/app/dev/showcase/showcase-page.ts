@@ -237,16 +237,22 @@ export class ShowcasePage {
   protected readonly reactionKinds: { value: ReactionKind; label: string; icon: string }[] = [
     { value: 'hearts', label: 'Corazones', icon: 'favorite' },
     { value: 'cheer', label: 'Ánimo', icon: 'thumb_up' },
-    { value: 'trophy', label: 'Trofeo', icon: 'trophy' },
+    { value: 'party', label: 'Fiesta', icon: 'celebration' },
+    { value: 'thinking', label: 'Pensando', icon: 'psychology_alt' },
     { value: 'lightbulb', label: 'Bombilla', icon: 'lightbulb' },
     { value: 'rocket', label: 'Cohete', icon: 'rocket_launch' },
     { value: 'fire', label: 'Fuego', icon: 'local_fire_department' },
     { value: 'applause', label: 'Aplausos', icon: 'cheer' },
     { value: 'mind-blown', label: 'Mente explotando', icon: 'psychology' },
-    { value: 'paper-ball', label: 'Bola de papel', icon: 'sports_baseball' },
-    { value: 'eyes', label: 'Ojos vigilantes', icon: 'visibility' },
     { value: 'laugh', label: 'Risas', icon: 'sentiment_excited' },
+    { value: 'wink', label: 'Guiño', icon: 'sentiment_satisfied' },
+    { value: 'secret', label: 'Secreto', icon: 'visibility_off' },
+    { value: 'seriously', label: '¿En serio?', icon: 'sentiment_neutral' },
+    { value: 'throw', label: 'Lanzamiento', icon: 'sports_baseball' },
     { value: 'grumpy', label: 'Enfado de broma', icon: 'sentiment_frustrated' },
+    { value: 'eyes', label: 'Ojos vigilantes', icon: 'visibility' },
+    { value: 'empathy', label: 'Empatía', icon: 'volunteer_activism' },
+    { value: 'sleepy', label: 'Sueño', icon: 'bedtime' },
   ];
   protected readonly intensities: Intensity[] = [1, 2, 3];
   protected readonly reactionModes: { value: ReactionMode; label: string }[] = [
@@ -254,7 +260,7 @@ export class ShowcasePage {
     { value: 'reduced', label: 'Reducidas' },
     { value: 'off', label: 'Desactivadas' },
   ];
-  protected readonly reactionIntensity = signal<Intensity>(2);
+  protected readonly reactionIntensity = signal<Intensity>(3);
   /** Each button plays a new reaction, even the same emotion again. */
   protected readonly reaction = signal<Reaction | null>(null);
   protected readonly mascotReaction = computed(() =>

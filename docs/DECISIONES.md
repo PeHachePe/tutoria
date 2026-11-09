@@ -920,3 +920,52 @@ Preguntó también si la IA podría componer las animaciones (iconos, si late o 
 - Siguiente iteración: los emojis animados oficiales de Microsoft (Fluent Emoji Animated, MIT) como icono central.
 
 **Aprobación:** el autor pidió cada cambio, los revisó en su navegador y pidió hacer commit de lo actual antes de los emojis animados.
+
+## D-037 · Reacciones: emojis oficiales de Fluent, 3D o planos, y bromas a elección del autor (09/11/2026)
+
+**Contexto:** con el catálogo de recetas (D-036), el autor pidió que las reacciones lucieran más: emojis 3D en lugar de iconos planos, muchos y variados, animados si se podía, y bromas para cuando el alumno pide la solución. Pidió solo fuentes oficiales.
+
+**Decisión:**
+
+- **Fuente oficial:** los repositorios de Microsoft `fluentui-emoji-animated` (animados) y `fluentui-emoji` (estáticos 3D y planos), los dos MIT, con sus licencias junto a los ficheros. Microsoft no los publica en npm; los paquetes de npm son de terceros.
+  - `npm run emojis` trae solo los que usan las recetas y deja en `public/reactions/`:
+    - los animados, en WebP de 192 px (de unos 2 MB a entre 150 y 490 KB, unos 13 MB los 44);
+    - en `mini/`, 28 estáticos 3D de 64 px para las piezas de alrededor;
+    - en `flat/`, los planos en SVG (292 KB los 67).
+  - Solo genera lo que falta y borra lo que sobra. Difumina el borde de cada fotograma, porque algunas animaciones se salen del lienzo.
+  - Se apoya en `sharp` y `upng-js`, dependencias de desarrollo. La app nunca descarga nada de fuera.
+- **Varios emojis por reacción, elegido por el id de la reacción:** nunca sale igual y, en cuanto el tutor la elige (su `meta`), se sabe cuál será.
+- **Carga:**
+  - el overlay descarga ese emoji mientras el tutor escribe (`TutorStore.upcomingReaction`);
+  - los ligeros (miniaturas y bomba, o todos los planos) se precargan con prioridad baja dos segundos después de abrir la página;
+  - las imágenes no son diferidas, porque una reacción no puede esperar.
+- **3D o planos:** el ajuste «Emojis 3D», guardado por usuario en `SettingsStore`. Desactivado, los mismos emojis en plano 2D. Una pieza con emoji nunca muestra su icono de Material, que queda como respaldo.
+  - Las piezas con emoji van sin la sombra ni el brillo del CSS: dibujaban un recuadro difuminado alrededor de la imagen.
+- **Reacciones:** dieciocho.
+  - Las nuevas son pensando, guiño, secreto, «¿en serio?», empatía y sueño.
+  - Cambian de nombre: el trofeo pasa a ser fiesta (`party`) y la bola de papel, lanzamiento (`throw`).
+  - El lanzamiento tira una pelota, un huevo, una tarta, un tomate o una caca, con un 💥 al chocar y una mancha que gotea (la pelota rebota sin manchar).
+  - Se retiran los dibujos propios (bola de papel y ojos) y la grieta con sus esquirlas: al lado de los emojis quedaban pobres.
+- **Bromas, a elección del autor:** al pedir la solución, el tutor bromea por turnos (guiño, monos, «¿en serio?», lanzamiento y enfado). El autor eligió también la caca entre los proyectiles y 😡 y 🤬 entre las caras de enfado. Claude advirtió que pueden leerse como una falta de respeto al alumno y que las verán la tutora y el tribunal, y propuso la tarta como alternativa; el autor las quiso igualmente, siempre como bromas. La receta lo dice y el prompt del tutor real lo dirá: nunca ante un error.
+- **Quitados por no encajar:** 💘 y 😘 (lectura romántica en un tutor con alumnos menores) y la gráfica 📈. 🫠 pasa a «¿en serio?» y 😒 deja el enfado, porque no es enfado sino «¿me estás vacilando?».
+- **Intensidad:** el muestrario abre en la 3 y el tutor simulado responde con la 3, para que se vea todo; el tutor real elegirá la suya.
+
+**Alternativas:**
+
+- Paquetes de npm (`@fluentui-emoji/angular`, `@lobehub/fluent-emoji` y otros): no son de Microsoft, y algunos no traen ni el 3D ni los animados.
+- Emojis del sistema: cambian entre Mac y Windows y no toman la paleta.
+- Noto Animated Emoji (Google, CC BY 4.0): oficial también, pero el autor prefirió Fluent.
+- Precargar todos los animados: 13 MB por alumno nuevo.
+- Iconos de Material sin emojis: son iconos de interfaz y no expresan emociones (un «guiño» que no guiña).
+- Dejar que la IA componga las animaciones: ver D-036.
+
+**Consecuencias:**
+
+- `public/reactions/` pesa unos 13 MB en el repositorio.
+- Las recetas llevan `use`, la frase que verá el prompt (2.5).
+- La pantalla de ajustes (1.9) añade «Emojis 3D».
+- **Fallos del script, ya corregidos:**
+  - le pasaba al decodificador el bloque de memoria entero de un `Buffer`, y a veces leía restos del emoji anterior (un huevo salió bombilla);
+  - una segunda pasada en paralelo tumbó la primera.
+
+**Aprobación:** el autor pidió cada cambio y los revisó en su navegador; dio por bueno el conjunto («Sí, ciérralo»).

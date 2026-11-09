@@ -1,21 +1,23 @@
 import type { Intensity, ReactionKind } from '../../data/tutor';
 import type { ReactionMode } from './reaction';
 import {
-  applause,
   blast,
   crown,
   flames,
-  glow,
-  steam,
   flight,
+  glow,
+  emojiUrl,
   hero,
-  paperBall,
+  MINI_EMOJIS,
   peekingEyes,
   piece,
+  projectile,
+  PROJECTILES,
   rain,
   type ReactionContext,
   type ReactionParticle,
   type ReactionTone,
+  steam,
 } from './reaction-blocks';
 
 export type {
@@ -32,8 +34,6 @@ export type {
 export type ReactionPart = (
   | {
       readonly block: 'hero';
-      readonly icon?: string;
-      readonly tone?: ReactionTone;
       /**
        * How the big icon moves: it beats, flickers on like a bulb, shakes before it bursts, shakes
        * with laughter, fumes, or fumes until it blows up (with the blast).
@@ -53,13 +53,14 @@ export type ReactionPart = (
       readonly icons: readonly string[];
       readonly count?: number;
       readonly confetti?: number;
+      /** All over the screen instead of down the sides. */
+      readonly everywhere?: boolean;
     }
   | { readonly block: 'flames'; readonly count?: number }
   | { readonly block: 'flight' }
   | { readonly block: 'steam' }
-  | { readonly block: 'paper-ball' }
+  | { readonly block: 'throw' }
   | { readonly block: 'eyes' }
-  | { readonly block: 'applause' }
   | { readonly block: 'blast'; readonly delay: number }
 ) & {
   /** Only from this intensity on, to keep the biggest effects for the biggest moments. */
@@ -68,22 +69,43 @@ export type ReactionPart = (
   readonly maxIntensity?: Intensity;
 };
 
-/** A reaction: its main icon and colours, and the parts it is made of. */
+/** A reaction: when to use it, its icon, its emoji, its colours and the parts it is made of. */
 export interface ReactionRecipe {
-  /** The big one; also what a reduced reaction, or one with reduced motion, shows. */
+  /** When the tutor should choose it: the real tutor gets it in its prompt (2.5). */
+  readonly use: string;
+  /** The big one; also what shows without the 3D emoji or before one loads. */
   readonly icon: string;
+  /**
+   * Official Fluent emoji, by name (`npm run emojis`): one for each reaction, chosen by its id, 3D or
+   * flat as the student wants, that takes the place of the icon.
+   */
+  readonly emojis: readonly string[];
   readonly tones: readonly ReactionTone[];
   readonly parts: readonly ReactionPart[];
 }
 
+/** An emoji of a recipe, by its name: emojiUrl finds its file, 3D or flat. */
+const emoji = (name: string) => name;
+
 /**
- * The catalog of reactions (D-035). To add one: its name in REACTION_KINDS (data/tutor.ts), which is
- * also the list the tutor chooses from, and its recipe here. A new kind of motion also needs its
- * block and its animation in reactions.css.
+ * The catalog of reactions (D-036). To add one: its name in REACTION_KINDS (data/tutor.ts), which is
+ * also the list the tutor chooses from, and its recipe here; to add an emoji, its name in `npm run
+ * emojis` and here. A new kind of motion also needs its block and its file in styles/.
  */
 export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
   hearts: {
+    use: 'Warmth: the student understood something, or thanks the tutor.',
     icon: 'favorite',
+    emojis: [
+      'smiling-face-with-hearts',
+      'smiling-face-with-heart-eyes',
+      'sparkling-heart',
+      'revolving-hearts',
+      'growing-heart',
+      'two-hearts',
+      'beating-heart',
+      'heart-on-fire',
+    ].map(emoji),
     tones: ['pink', 'red', 'orange', 'violet'],
     parts: [
       { block: 'glow' },
@@ -101,20 +123,24 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   cheer: {
+    use: 'Encouragement to start or to keep going.',
     icon: 'thumb_up',
+    emojis: [emoji('thumbs-up')],
     tones: ['green', 'cyan', 'blue', 'yellow'],
     parts: [
       { block: 'hero' },
       { block: 'crown', icons: ['star', 'star_shine', 'bolt'] },
       {
         block: 'rain',
-        icons: ['thumb_up', 'star', 'bolt', 'fitness_center', 'trending_up'],
+        icons: ['thumb_up', 'star', 'bolt', 'fitness_center'],
         confetti: 4,
       },
     ],
   },
-  trophy: {
-    icon: 'trophy',
+  party: {
+    use: 'Celebration: every test passes or the exercise is done.',
+    icon: 'celebration',
+    emojis: [emoji('party-popper'), emoji('partying-face')],
     tones: ['yellow', 'pink', 'orange', 'green', 'cyan', 'blue', 'violet', 'red'],
     parts: [
       { block: 'glow' },
@@ -134,25 +160,48 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
       },
     ],
   },
+  thinking: {
+    use: 'A hint that makes the student think: a question back, a detail to look at.',
+    icon: 'psychology_alt',
+    emojis: ['thinking-face', 'face-with-monocle', 'nerd-face'].map(emoji),
+    tones: ['blue', 'cyan', 'violet'],
+    parts: [
+      { block: 'hero' },
+      { block: 'crown', icons: ['help', 'star_shine'], count: 8, delay: 400, reach: 0.9 },
+    ],
+  },
   lightbulb: {
+    use: 'An idea that switches on: the key of a hint.',
     icon: 'lightbulb',
+    // Still: it moves with the flicker of a bulb that switches on
+    emojis: [emoji('light-bulb')],
     tones: ['yellow', 'orange', 'cyan'],
     parts: [
-      { block: 'glow', delay: 680 },
       { block: 'hero', motion: 'flicker' },
+      { block: 'glow', delay: 680 },
       { block: 'crown', icons: ['star_shine', 'flare'], delay: 700, count: 12, reach: 1.2 },
     ],
   },
   rocket: {
+    use: 'A big step forward: much progress at once.',
     icon: 'rocket_launch',
+    emojis: [emoji('rocket')],
     tones: ['blue', 'orange', 'yellow', 'red'],
     parts: [
       { block: 'flight' },
-      { block: 'rain', icons: ['star', 'star_shine'], count: 6, confetti: 0 },
+      {
+        block: 'rain',
+        icons: ['star', 'star_shine', 'flare'],
+        count: 12,
+        confetti: 0,
+        everywhere: true,
+      },
     ],
   },
   fire: {
+    use: 'On a roll: several good steps in a row.',
     icon: 'local_fire_department',
+    emojis: [emoji('fire')],
     tones: ['orange', 'red', 'yellow'],
     parts: [
       { block: 'flames', count: 14 },
@@ -161,20 +210,26 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   applause: {
+    use: 'Good reasoning or a good question.',
     icon: 'cheer',
+    emojis: [emoji('clapping-hands')],
     tones: ['orange', 'yellow', 'pink', 'cyan'],
     parts: [
-      { block: 'applause' },
+      { block: 'glow' },
+      { block: 'hero' },
+      { block: 'crown', icons: ['cheer', 'star_shine', 'star'] },
       // Clapping hands rain down the sides
       { block: 'rain', icons: ['cheer'], count: 14, confetti: 6 },
     ],
   },
   'mind-blown': {
+    use: 'Admiration: a brilliant idea or solution of the student.',
     icon: 'psychology',
+    emojis: [emoji('exploding-head'), emoji('knocked-out-face')],
     tones: ['violet', 'pink', 'yellow', 'cyan'],
     parts: [
-      { block: 'glow', waves: 2, delay: 900 },
       { block: 'hero', motion: 'shake' },
+      { block: 'glow', waves: 2, delay: 900 },
       {
         block: 'crown',
         icons: ['explosion', 'bolt', 'star_shine'],
@@ -184,21 +239,10 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
       },
     ],
   },
-  'paper-ball': {
-    icon: 'priority_high',
-    tones: ['yellow', 'orange', 'red'],
-    parts: [{ block: 'paper-ball' }],
-  },
-  eyes: {
-    icon: 'visibility',
-    tones: ['blue', 'cyan', 'yellow'],
-    parts: [
-      { block: 'eyes' },
-      { block: 'crown', icons: ['help'], count: 6, delay: 1400, reach: 0.9 },
-    ],
-  },
   laugh: {
+    use: 'Humour: the student made a joke, or something funny happened.',
     icon: 'sentiment_excited',
+    emojis: [emoji('face-with-tears-of-joy'), emoji('rolling-on-the-floor-laughing')],
     tones: ['yellow', 'orange', 'pink', 'cyan'],
     parts: [
       { block: 'hero', motion: 'giggle' },
@@ -210,23 +254,135 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
       },
     ],
   },
-  // A joke, never for mistakes: a grumpy face that fumes when the student asks for the solution and,
-  // at the top intensity, blows up the screen
+  // The jokes for when the student asks for the solution: always jokes, never for mistakes (D-037)
+  wink: {
+    use: 'A friendly «nice try» when the student asks for the solution.',
+    icon: 'sentiment_satisfied',
+    emojis: [emoji('winking-face'), emoji('smirking-face')],
+    tones: ['yellow', 'orange'],
+    parts: [
+      { block: 'hero' },
+      { block: 'crown', icons: ['star_shine', 'favorite'], count: 6, delay: 300, reach: 0.8 },
+    ],
+  },
+  secret: {
+    use: 'A joke when the student asks for the solution: «my lips are sealed».',
+    icon: 'visibility_off',
+    emojis: ['see-no-evil-monkey', 'hear-no-evil-monkey', 'speak-no-evil-monkey'].map(emoji),
+    tones: ['orange', 'yellow', 'pink'],
+    parts: [
+      { block: 'hero', motion: 'giggle' },
+      { block: 'crown', icons: ['lock', 'visibility_off', 'star_shine'], count: 8, delay: 400 },
+    ],
+  },
+  seriously: {
+    use: 'A joke when the student asks for the solution again: «are you kidding me?».',
+    icon: 'sentiment_neutral',
+    // Resigned: unamused, rolling its eyes, sceptical, or melting with a «meh»
+    emojis: [
+      'unamused-face',
+      'face-with-rolling-eyes',
+      'face-with-raised-eyebrow',
+      'melting-face',
+    ].map(emoji),
+    tones: ['yellow', 'orange'],
+    parts: [
+      { block: 'hero' },
+      { block: 'crown', icons: ['help'], count: 6, delay: 500, reach: 0.8 },
+    ],
+  },
+  throw: {
+    use: 'A joke when the student asks for the solution again: something thrown at the screen.',
+    icon: 'sports_baseball',
+    // What it throws: a ball, an egg, a pie, a tomato or a poo, chosen by its id as any emoji
+    emojis: PROJECTILES.map((thrown) => thrown.emoji),
+    tones: ['yellow', 'orange', 'red'],
+    parts: [{ block: 'throw' }],
+  },
   grumpy: {
+    use: 'A joke when the student insists on the solution: a mock anger that, at the top, blows up.',
     icon: 'sentiment_frustrated',
+    emojis: ['face-with-steam-from-nose', 'pouting-face', 'face-with-symbols-on-mouth'].map(emoji),
     tones: ['red', 'orange'],
     parts: [
       { block: 'steam' },
       { block: 'hero', motion: 'fume', maxIntensity: 2 },
-      // At the top, the face itself blows up: it swells and vanishes in the flash
+      // At the top, the face itself blows up: a bomb falls, it swells and vanishes in the flash
       { block: 'hero', motion: 'fume-burst', minIntensity: 3 },
       { block: 'blast', delay: 1650, minIntensity: 3 },
     ],
   },
+  eyes: {
+    use: 'The tutor looks in on its own initiative, to see how it goes.',
+    icon: 'visibility',
+    emojis: [emoji('eyes')],
+    tones: ['blue', 'cyan', 'yellow'],
+    parts: [
+      { block: 'eyes' },
+      { block: 'crown', icons: ['help'], count: 6, delay: 1400, reach: 0.9 },
+    ],
+  },
+  empathy: {
+    use: 'The student is stuck or frustrated: understanding before the help.',
+    icon: 'volunteer_activism',
+    emojis: ['hugging-face', 'relieved-face', 'pleading-face'].map(emoji),
+    tones: ['pink', 'violet', 'orange'],
+    parts: [
+      { block: 'glow', waves: 2 },
+      { block: 'hero' },
+      { block: 'rain', icons: ['favorite', 'volunteer_activism'], count: 6, confetti: 0 },
+    ],
+  },
+  sleepy: {
+    use: 'A long time without activity: «are you still there?».',
+    icon: 'bedtime',
+    emojis: [emoji('yawning-face')],
+    tones: ['blue', 'violet'],
+    parts: [
+      { block: 'hero' },
+      { block: 'crown', icons: ['bedtime', 'snooze'], count: 6, delay: 500, reach: 0.8 },
+    ],
+  },
 };
+
+/**
+ * The emoji to fetch ahead, once the page has settled: in 3D, the small ones and the bomb (the big
+ * ones load one at a time, as soon as the tutor chooses a reaction, `reactionEmoji`); flat, all of
+ * them, which are light.
+ */
+export function prefetchedEmojis(threeD: boolean): readonly string[] {
+  const small = [...Object.values(MINI_EMOJIS), 'bomb'];
+  if (threeD) return [...new Set(small.map((name) => emojiUrl(name, true, name !== 'bomb')))];
+  const big = Object.values(REACTION_RECIPES).flatMap((recipe) => recipe.emojis);
+  return [...new Set([...big, ...small].map((name) => emojiUrl(name, false)))];
+}
+
+/** Which of its options a reaction takes, from its id: always the same for the same reaction. */
+export function variantOf(id: string): number {
+  let hash = 0;
+  for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return hash;
+}
+
+/** The emoji a reaction will show, 3D or flat, to load it ahead. */
+export function reactionEmoji(
+  { id, kind }: { readonly id: string; readonly kind: ReactionKind },
+  threeD: boolean,
+): string {
+  const emojis = REACTION_RECIPES[kind].emojis;
+  return emojiUrl(emojis[variantOf(id) % emojis.length], threeD);
+}
 
 /** The piece that ends last: its animationend ends the reaction. */
 export type TimedParticle = ReactionParticle & { readonly last: boolean };
+
+/** How the student wants to see the reactions. */
+export interface ReactionOptions {
+  readonly mode: ReactionMode;
+  readonly reducedMotion: boolean;
+  /** The animated 3D emoji, or the flat 2D ones (D-036). */
+  readonly emoji: boolean;
+}
 
 const MAX_INTENSITY: Intensity = 3;
 const REDUCED_SIZE_REM = 4;
@@ -234,39 +390,40 @@ const FADE_SIZE_REM = 6;
 const FADE_MS = 2000;
 
 /**
- * The pieces of one reaction, at random places so it never looks the same twice. Reduced, only its
- * icon beating in the middle, smaller; off, nothing. With reduced motion its icon fades in and out
- * in the middle, without moving.
+ * The pieces of one reaction, at random places so it never looks the same twice, with one of its
+ * emoji, chosen by its id. Reduced, only its icon beating in the middle, smaller; off, nothing. With
+ * reduced motion its icon fades in and out in the middle, without moving.
  *
  * @param random a number in [0, 1) on each call, such as `Math.random`
  */
 export function reactionParticles(
-  { kind, intensity }: { readonly kind: ReactionKind; readonly intensity: Intensity },
-  mode: ReactionMode,
-  reducedMotion: boolean,
+  {
+    id,
+    kind,
+    intensity,
+  }: { readonly id: string; readonly kind: ReactionKind; readonly intensity: Intensity },
+  { mode, reducedMotion, emoji: withEmoji }: ReactionOptions,
   random: () => number,
 ): TimedParticle[] {
   if (mode === 'off') return [];
   const recipe = REACTION_RECIPES[kind];
   const [tone] = recipe.tones;
-  const context: ReactionContext = { intensity, random };
-  if (reducedMotion) {
+  const image = reactionEmoji({ id, kind }, withEmoji);
+  const context: ReactionContext = { intensity, random, emoji: withEmoji, variant: variantOf(id) };
+  if (reducedMotion || mode === 'reduced') {
+    const fade = reducedMotion;
     return [
       {
         ...piece({
           icon: recipe.icon,
+          image,
           tone,
-          motion: 'fade',
-          size: FADE_SIZE_REM,
-          duration: FADE_MS,
+          motion: fade ? 'fade' : 'beat',
+          size: fade ? FADE_SIZE_REM : REDUCED_SIZE_REM,
+          ...(fade && { duration: FADE_MS }),
         }),
         last: true,
       },
-    ];
-  }
-  if (mode === 'reduced') {
-    return [
-      { ...piece({ icon: recipe.icon, tone, motion: 'beat', size: REDUCED_SIZE_REM }), last: true },
     ];
   }
   const particles = recipe.parts
@@ -274,26 +431,23 @@ export function reactionParticles(
       (part) =>
         intensity >= (part.minIntensity ?? 1) && intensity <= (part.maxIntensity ?? MAX_INTENSITY),
     )
-    .flatMap((part) => build(part, recipe, context));
+    .flatMap((part) => build(part, recipe, image, context));
   const ends = particles.map((particle) => particle.delay + particle.duration);
   const lastIndex = ends.indexOf(Math.max(...ends));
   return particles.map((particle, index) => ({ ...particle, last: index === lastIndex }));
 }
 
-/** The pieces of one part of a recipe. */
+/** The pieces of one part of a recipe, with the emoji chosen for this reaction. */
 function build(
   part: ReactionPart,
   recipe: ReactionRecipe,
+  image: string | null,
   context: ReactionContext,
 ): ReactionParticle[] {
   const [tone] = recipe.tones;
   switch (part.block) {
     case 'hero':
-      return [
-        hero(part.icon ?? recipe.icon, part.tone ?? tone, context, {
-          motion: part.motion ?? 'beat',
-        }),
-      ];
+      return [hero(recipe.icon, tone, context, { motion: part.motion ?? 'beat', image })];
     case 'glow':
       return glow(tone, context, part);
     case 'crown':
@@ -302,16 +456,14 @@ function build(
       return rain(part.icons, recipe.tones, context, part);
     case 'flames':
       return flames(context, part.count);
+    case 'flight':
+      return flight(recipe.icon, image, tone, recipe.tones, context);
     case 'steam':
       return steam(context);
-    case 'flight':
-      return flight(recipe.icon, tone, recipe.tones, context);
-    case 'paper-ball':
-      return paperBall(context);
+    case 'throw':
+      return projectile(context);
     case 'eyes':
-      return peekingEyes(context);
-    case 'applause':
-      return applause(recipe.tones, context);
+      return peekingEyes(recipe.icon, image, tone, context);
     case 'blast':
       return blast(context, part.delay);
   }

@@ -187,8 +187,8 @@ describe('Mascot', () => {
       expect(REACTION_MOVEMENTS).toMatchObject({
         hearts: 'tilt',
         cheer: 'hop',
-        trophy: 'cheer',
-        'paper-ball': 'ears',
+        party: 'cheer',
+        throw: 'ears',
       });
     });
 
@@ -199,7 +199,7 @@ describe('Mascot', () => {
       const host = fixture.nativeElement as HTMLElement;
       expect(host.classList).not.toContain('mascot-move-tilt');
 
-      fixture.componentRef.setInput('reaction', reactionOf('r2', 'trophy'));
+      fixture.componentRef.setInput('reaction', reactionOf('r2', 'party'));
       await fixture.whenStable();
       expect(host.classList).toContain('mascot-move-cheer');
 

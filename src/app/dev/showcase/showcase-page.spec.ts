@@ -143,13 +143,13 @@ describe('ShowcasePage', () => {
       await fixture.whenStable();
     };
 
-    for (const label of ['Corazones', 'Bola de papel', 'Ojos vigilantes', 'Enfado de broma']) {
+    for (const label of ['Corazones', 'Lanzamiento', '¿En serio?', 'Enfado de broma']) {
       expect(
         await loader.getHarness(MatButtonHarness.with({ text: new RegExp(label) })),
       ).toBeTruthy();
     }
     await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Intensidad 1' }))).check();
-    await play('Trofeo');
+    await play('Fiesta');
     const playing = pieces();
     expect(playing).toBeGreaterThan(0);
     expect(mascot.classList).toContain('mascot-move-cheer');

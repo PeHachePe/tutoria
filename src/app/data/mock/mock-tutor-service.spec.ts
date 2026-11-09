@@ -76,7 +76,7 @@ describe('MockTutorService', () => {
 
     const interaction = db.tables().interactions[0];
     expect(events).toEqual([
-      { type: 'meta', emotion: 'encouragement', intensity: 1, hintLevel: 1, reaction: 'lightbulb' },
+      { type: 'meta', emotion: 'encouragement', intensity: 3, hintLevel: 1, reaction: 'thinking' },
       ...typingChunks(TUTOR_ANSWERS[1][0]).map((text) => ({ type: 'delta', text })),
       { type: 'done', interactionId: interaction.id, silent: false },
     ]);
@@ -128,7 +128,7 @@ describe('MockTutorService', () => {
     const quiet = await collect(service.ask(request({ kind: 'proactive' })));
 
     expect(quiet).toEqual([
-      { type: 'meta', emotion: 'encouragement', intensity: 1, hintLevel: 1, reaction: 'eyes' },
+      { type: 'meta', emotion: 'encouragement', intensity: 3, hintLevel: 1, reaction: 'eyes' },
       { type: 'done', interactionId: null, silent: true },
     ]);
     expect(db.tables().interactions).toHaveLength(1);

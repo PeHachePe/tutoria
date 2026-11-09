@@ -19,8 +19,6 @@ export type ReactionMotion =
   | 'impact'
   | 'flame'
   | 'peek'
-  | 'clap-left'
-  | 'clap-right'
   | 'flicker'
   | 'shake'
   | 'giggle'
@@ -29,39 +27,42 @@ export type ReactionMotion =
   | 'steam'
   | 'flash'
   | 'smog'
-  | 'crack';
+  | 'splat'
+  | 'drip'
+  | 'drop';
 
 /** Colour of a piece, from the vivid palette of the reactions (theme tokens, 4.8). */
 export type ReactionTone =
-  'pink' | 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'violet' | 'smoke';
+  | 'pink'
+  | 'red'
+  | 'orange'
+  | 'yellow'
+  | 'green'
+  | 'cyan'
+  | 'blue'
+  | 'violet'
+  | 'smoke'
+  | 'cream'
+  | 'mud';
 
 /**
  * What a piece is: an icon; confetti (a square, a dot or a streamer); the glow behind the big icon
- * and the waves of light it sends out; a crumpled
- * paper ball and the star of its impact, the crack it leaves in the glass and its shards (both
- * drawings of their own); a pair of cartoon eyes; or, over the whole screen, the flash and the
- * dark cloud of an explosion.
+ * and the waves of light it sends out; the stain something leaves on the
+ * screen and its drips; or, over the whole screen, the flash and the dark cloud of an explosion.
  */
 export type ReactionShape =
-  | 'icon'
-  | 'square'
-  | 'dot'
-  | 'streamer'
-  | 'halo'
-  | 'wave'
-  | 'paper'
-  | 'impact'
-  | 'crack'
-  | 'shard'
-  | 'eyes'
-  | 'flash'
-  | 'smog';
+  'icon' | 'square' | 'dot' | 'streamer' | 'halo' | 'wave' | 'splat' | 'drip' | 'flash' | 'smog';
 
 /** One piece of a reaction. */
 export interface ReactionParticle {
   readonly shape: ReactionShape;
   /** Material Symbols name; null for the shapes that are not icons. */
   readonly icon: string | null;
+  /**
+   * An animated emoji that takes the place of the icon once it has loaded; until then, or if it
+   * never does, the icon shows (D-036).
+   */
+  readonly image: string | null;
   readonly tone: ReactionTone;
   readonly motion: ReactionMotion;
   /** Where its centre starts, in percent of the width and the height of the screen. */
@@ -84,6 +85,63 @@ export interface ReactionContext {
   readonly intensity: 1 | 2 | 3;
   /** A number in [0, 1) on each call, such as `Math.random`. */
   readonly random: () => number;
+  /** The animated 3D emoji the student wants, or the light flat 2D ones (D-036). */
+  readonly emoji: boolean;
+  /**
+   * Which of its options this reaction takes (its emoji, what it throws): fixed by its id, so the
+   * one it will show is known, and can load, as soon as the tutor chooses it.
+   */
+  readonly variant: number;
+}
+
+/**
+ * Where an emoji lives (`npm run emojis`): animated 3D in public/reactions/ (small and still in
+ * mini/, for the pieces around the big one), or flat 2D in flat/ when the 3D ones are off.
+ */
+export function emojiUrl(name: string, threeD: boolean, small = false): string {
+  if (!threeD) return `reactions/flat/${name}.svg`;
+  return small ? `reactions/mini/${name}.webp` : `reactions/${name}.webp`;
+}
+
+/**
+ * The emoji that take the place of the icons around the big one, by the icon they replace. An icon
+ * without one stays an icon.
+ */
+export const MINI_EMOJIS: Readonly<Record<string, string>> = {
+  favorite: 'red-heart',
+  sentiment_very_satisfied: 'smiling-face-with-smiling-eyes',
+  volunteer_activism: 'heart-hands',
+  local_florist: 'cherry-blossom',
+  sunny: 'sun',
+  star: 'star',
+  star_shine: 'sparkles',
+  bolt: 'high-voltage',
+  fitness_center: 'flexed-biceps',
+  military_tech: '1st-place-medal',
+  trophy: 'trophy',
+  workspace_premium: 'sports-medal',
+  cake: 'birthday-cake',
+  diamond_shine: 'gem-stone',
+  flare: 'glowing-star',
+  explosion: 'collision',
+  help: 'red-question-mark',
+  mood: 'slightly-smiling-face',
+  sentiment_excited: 'grinning-squinting-face',
+  lock: 'locked',
+  visibility_off: 'see-no-evil-monkey',
+  bedtime: 'crescent-moon',
+  snooze: 'zzz',
+  cloud: 'cloud',
+  thumb_up: 'thumbs-up',
+  cheer: 'clapping-hands',
+  local_fire_department: 'fire',
+  celebration: 'party-popper',
+};
+
+/** The small emoji of an icon, 3D or flat, when it has one. */
+function mini(icon: string | null, { emoji }: ReactionContext): string | null {
+  const name = icon ? MINI_EMOJIS[icon] : undefined;
+  return name ? emojiUrl(name, emoji, true) : null;
 }
 
 export const CENTRE = 50;
@@ -114,6 +172,7 @@ export function piece(
   return {
     shape: 'icon',
     icon: null,
+    image: null,
     x: CENTRE,
     y: CENTRE,
     drift: 0,
@@ -190,6 +249,7 @@ export function crown(
     return piece({
       shape: spark ? 'dot' : 'icon',
       icon: spark ? null : icons[index % icons.length],
+      image: spark ? null : mini(icons[index % icons.length], context),
       tone: tones[index % tones.length],
       motion: 'burst',
       drift: Math.round(Math.cos(angle) * distance),
@@ -216,12 +276,19 @@ const SIDE_MARGIN = 1;
 const SWAY_PX = 50;
 const CONFETTI_SPIN_DEG = 720;
 
-/** Icons and confetti that rain down a band on each side, leaving the middle of the screen free. */
+/**
+ * Icons and confetti that rain down a band on each side, leaving the middle of the screen free, or
+ * all over it.
+ */
 export function rain(
   icons: readonly string[],
   tones: readonly ReactionTone[],
   context: ReactionContext,
-  { count = 10, confetti = 8 }: { count?: number; confetti?: number } = {},
+  {
+    count = 10,
+    confetti = 8,
+    everywhere = false,
+  }: { count?: number; confetti?: number; everywhere?: boolean } = {},
 ): ReactionParticle[] {
   const { random, intensity } = context;
   const iconCount = amount(count, context);
@@ -233,9 +300,13 @@ export function rain(
     return piece({
       shape: isConfetti ? CONFETTI_SHAPES[index % CONFETTI_SHAPES.length] : 'icon',
       icon: isConfetti ? null : icons[index % icons.length],
+      image: isConfetti ? null : mini(icons[index % icons.length], context),
       tone: tones[(index + 1) % tones.length],
       motion: 'rain',
-      x: side + random() * SIDE_WIDTH,
+      // On both sides, leaving the middle free, or mixed all over the screen
+      x: everywhere
+        ? SIDE_MARGIN + random() * (100 - 2 * SIDE_MARGIN)
+        : side + random() * SIDE_WIDTH,
       y: 0,
       drift: swing(random) * SWAY_PX,
       spin: swing(random) * (isConfetti ? CONFETTI_SPIN_DEG : SPIN_DEG),
@@ -263,6 +334,7 @@ export function flames(context: ReactionContext, count = 12): ReactionParticle[]
   return Array.from({ length: total }, (_, index) =>
     piece({
       icon: 'local_fire_department',
+      image: mini('local_fire_department', context),
       tone: FIRE_TONES[index % FIRE_TONES.length],
       motion: 'flame',
       x: ((index + random()) / total) * 100,
@@ -278,23 +350,26 @@ export function flames(context: ReactionContext, count = 12): ReactionParticle[]
 const FLY_MS = 1600;
 const FLY_FROM = { x: 8, y: 88 };
 const FLY_TO = { x: 92, y: 10 };
-const TRAIL_MS = 900;
+const TRAIL_MS = 1100;
+const TRAIL_PIECES = 24;
 
 /**
- * An icon that crosses the screen diagonally from the bottom left, leaving a trail of sparks that
- * appear as it passes.
+ * An icon that crosses the screen diagonally from the bottom left, leaving a trail of little balls
+ * of light and sparkles that appear as it passes.
  */
 export function flight(
   icon: string,
+  image: string | null,
   tone: ReactionTone,
   trailTones: readonly ReactionTone[],
   context: ReactionContext,
 ): ReactionParticle[] {
   const { random } = context;
-  const trail = amount(14, context);
+  const trail = amount(TRAIL_PIECES, context);
   return [
     piece({
       icon,
+      image,
       tone,
       motion: 'fly',
       x: FLY_FROM.x,
@@ -307,14 +382,17 @@ export function flight(
     }),
     ...Array.from({ length: trail }, (_, index) => {
       const along = (index + 1) / (trail + 1);
+      // Mostly little balls of light, with a sparkle now and then
+      const sparkle = index % 3 === 0;
       return piece({
-        shape: index % 3 === 0 ? 'icon' : 'dot',
-        icon: index % 3 === 0 ? 'star_shine' : null,
+        shape: sparkle ? 'icon' : 'dot',
+        icon: sparkle ? 'star_shine' : null,
+        image: sparkle ? mini('star_shine', context) : null,
         tone: trailTones[index % trailTones.length],
         motion: 'trail',
         x: FLY_FROM.x + (FLY_TO.x - FLY_FROM.x) * along + swing(random) * 2,
         y: FLY_FROM.y + (FLY_TO.y - FLY_FROM.y) * along + swing(random) * 2,
-        size: index % 3 === 0 ? 1.5 + random() : SPARK_REM + random() * 0.6,
+        size: sparkle ? 1.5 + random() : SPARK_REM + random() * 0.6,
         delay: Math.round(along * FLY_MS * 0.8),
         duration: TRAIL_MS,
       });
@@ -324,118 +402,113 @@ export function flight(
 
 const THROW_MS = 2000;
 const IMPACT_MS = 600;
-/** The ball hits the screen at this share of its flight, where the glass cracks. */
+/** It hits the screen at this share of its flight, where it leaves its mark. */
 const HIT_AT = 0.35;
-const CRACK_MS = 1300;
+const STAIN_MS = 1900;
+const DRIP_MS = 1500;
+
+/** Something to throw at the screen in jest, and the mark it leaves where it hits. */
+interface Projectile {
+  /** Its icon, which shows until its emoji loads. */
+  readonly icon: string;
+  /** Its emoji, by name. */
+  readonly emoji: string;
+  /** The stain it leaves, of its colour, that drips; a ball leaves none. */
+  readonly stain: ReactionTone | null;
+}
+
+/** Always jokes, never for mistakes (D-037): a ball, an egg, a pie, a tomato or a poo. */
+export const PROJECTILES: readonly Projectile[] = [
+  { icon: 'sports_baseball', emoji: 'baseball', stain: null },
+  { icon: 'egg', emoji: 'egg', stain: 'yellow' },
+  { icon: 'cake', emoji: 'pie', stain: 'cream' },
+  { icon: 'nutrition', emoji: 'tomato', stain: 'red' },
+  { icon: 'sports_baseball', emoji: 'pile-of-poo', stain: 'mud' },
+];
 
 /**
- * A crumpled notebook page thrown at the screen: it flies in, cracks the glass with a star where
- * it hits, shards fall, and it drops.
+ * Something thrown at the screen in jest: it flies in and hits it with a 💥, squashes and falls. An
+ * egg, a pie, a tomato or a poo leave a stain that drips; a ball only bounces off.
  */
-export function paperBall(context: ReactionContext): ReactionParticle[] {
+export function projectile(context: ReactionContext): ReactionParticle[] {
   const { random } = context;
+  const thrown = PROJECTILES[context.variant % PROJECTILES.length];
   const hit = Math.round(THROW_MS * HIT_AT);
-  const shards = amount(10, context);
+  const size = heroSize(context);
+  const mark = thrown.stain ? stain(thrown.stain, hit, context) : [];
   return [
+    ...mark,
     piece({
-      shape: 'crack',
-      tone: 'cyan',
-      motion: 'crack',
-      size: heroSize(context) * 2.2,
-      delay: hit,
-      duration: CRACK_MS,
-    }),
-    piece({
-      shape: 'impact',
-      tone: 'yellow',
+      icon: 'explosion',
+      image: emojiUrl('collision', context.emoji, true),
+      tone: 'orange',
       motion: 'impact',
-      size: heroSize(context) * 0.8,
+      size: size * 0.8,
       delay: hit - 60,
       duration: IMPACT_MS,
     }),
     piece({
-      shape: 'paper',
-      tone: 'yellow',
+      icon: thrown.icon,
+      image: emojiUrl(thrown.emoji, context.emoji),
+      tone: thrown.stain ?? 'orange',
       motion: 'throw',
-      size: heroSize(context) * 0.55,
+      size: size * 0.55,
       drift: Math.round(swing(random) * 80),
       spin: 200 + Math.round(random() * 160),
       duration: THROW_MS,
     }),
-    ...Array.from({ length: shards }, (_, index) => {
-      const angle = (index / shards) * 2 * Math.PI + random() * 0.4;
-      const distance = 60 + random() * 120;
-      return piece({
-        shape: 'shard',
-        tone: 'cyan',
-        motion: 'burst',
-        drift: Math.round(Math.cos(angle) * distance),
-        // Shards fall: they fly out and down
-        lift: Math.round(Math.sin(angle) * distance * 0.5 + 220 + random() * 180),
-        spin: Math.round(swing(random) * 400),
-        size: 0.8 + random() * 1.4,
-        delay: hit + 40,
-        duration: BURST_MS,
-      });
-    }),
+  ];
+}
+
+/** A stain of its colour where it hits, splashes around it, and drips that slide down. */
+function stain(tone: ReactionTone, hit: number, context: ReactionContext): ReactionParticle[] {
+  const { random } = context;
+  const size = heroSize(context) * 1.5;
+  const drips = amount(4, context);
+  return [
+    piece({ shape: 'splat', tone, motion: 'splat', size, delay: hit, duration: STAIN_MS }),
+    ...crown([], [tone], context, { count: 8, delay: hit, reach: 0.6 }).map((splash) => ({
+      ...splash,
+      shape: 'dot' as const,
+      icon: null,
+    })),
+    ...Array.from({ length: drips }, (_, index) =>
+      piece({
+        shape: 'drip',
+        tone,
+        motion: 'drip',
+        // Along the lower half of the stain
+        drift: 0,
+        x: CENTRE + ((index + 0.5) / drips - 0.5) * size * 3 + swing(random) * 2,
+        y: CENTRE + 4,
+        lift: Math.round(80 + random() * 140),
+        size: 0.8 + random() * 0.8,
+        delay: hit + 150 + Math.round(random() * 250),
+        duration: DRIP_MS,
+      }),
+    ),
   ];
 }
 
 const PEEK_MS = 2800;
 
-/**
- * A pair of cartoon eyes (a drawing of their own) that peeks up from the bottom, looks to each
- * side, frowns in suspicion, blinks and hides again.
- */
-export function peekingEyes(context: ReactionContext): ReactionParticle[] {
-  return [
-    piece({
-      shape: 'eyes',
-      tone: 'blue',
-      motion: 'peek',
-      y: 100,
-      size: heroSize(context) * 1.4,
-      duration: PEEK_MS,
-    }),
-  ];
-}
-
-const CLAP_MS = 2400;
-/** The hands meet three times; the sparks fly at each clap. */
-const CLAPS_AT = [0.25, 0.5, 0.75];
-/** The sparks leave a moment before the hands meet. */
-const SPARKS_AHEAD_MS = 100;
-
-/** Two hands that clap three times in the middle, with sparks at each clap. */
-export function applause(
-  tones: readonly ReactionTone[],
+/** Eyes that peek up from the bottom edge, look around and hide again. */
+export function peekingEyes(
+  icon: string,
+  image: string | null,
+  tone: ReactionTone,
   context: ReactionContext,
 ): ReactionParticle[] {
-  const size = heroSize(context) * 0.7;
   return [
     piece({
-      icon: 'front_hand',
-      tone: tones[0],
-      motion: 'clap-left',
-      x: 43,
-      size,
-      duration: CLAP_MS,
+      icon,
+      image,
+      tone,
+      motion: 'peek',
+      y: 100,
+      size: heroSize(context) * 1.1,
+      duration: PEEK_MS,
     }),
-    piece({
-      icon: 'front_hand',
-      tone: tones[0],
-      motion: 'clap-right',
-      x: 57,
-      size,
-      duration: CLAP_MS,
-    }),
-    ...CLAPS_AT.flatMap((at) =>
-      crown(['star_shine', 'star'], tones, context, {
-        count: 6,
-        delay: Math.round(CLAP_MS * at) - SPARKS_AHEAD_MS,
-        reach: 0.7,
-      }),
-    ),
   ];
 }
 
@@ -457,6 +530,7 @@ export function steam(context: ReactionContext): ReactionParticle[] {
     const side = index % 2 === 0 ? -1 : 1;
     return piece({
       icon: 'cloud',
+      image: mini('cloud', context),
       tone: 'smoke',
       motion: 'steam',
       x: CENTRE,
@@ -471,6 +545,7 @@ export function steam(context: ReactionContext): ReactionParticle[] {
 }
 
 const FLASH_MS = 650;
+const BOMB_FALL_MS = 700;
 const SMOG_MS = 1250;
 
 /**
@@ -480,6 +555,16 @@ const SMOG_MS = 1250;
  */
 export function blast(context: ReactionContext, delay: number): ReactionParticle[] {
   return [
+    // A bomb falls onto the face just before it blows up
+    piece({
+      icon: 'bomb',
+      image: emojiUrl('bomb', context.emoji),
+      tone: 'smoke',
+      motion: 'drop',
+      size: heroSize(context) * 0.6,
+      delay: delay - BOMB_FALL_MS,
+      duration: BOMB_FALL_MS,
+    }),
     piece({ shape: 'smog', tone: 'smoke', motion: 'smog', delay, duration: SMOG_MS }),
     piece({ shape: 'flash', tone: 'yellow', motion: 'flash', delay, duration: FLASH_MS }),
     ...glow('orange', context, { waves: 2, delay }).filter((wave) => wave.shape === 'wave'),

@@ -18,6 +18,7 @@
     "e2e": "playwright test --project=e2e",
     "screenshots": "node scripts/screenshots.mjs",
     "favicon": "node scripts/generate-favicon.mjs",
+    "emojis": "node scripts/generate-reaction-emojis.mjs",
     "i18n": "node scripts/i18n.mjs"
   },
   "private": true,
@@ -60,9 +61,11 @@
     "jsdom": "^30.0.0",
     "postcss": "^8.5.3",
     "prettier": "^3.8.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.12",
     "typescript": "~6.0.2",
     "typescript-eslint": "8.71.0",
+    "upng-js": "^2.1.0",
     "vitest": "^5.0.0"
   }
 }

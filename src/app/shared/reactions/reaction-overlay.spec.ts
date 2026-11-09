@@ -4,7 +4,7 @@ import { type ComponentInput, render, screen } from '@testing-library/angular';
 import type { Reaction } from './reaction';
 import { MAX_PLAYING_REACTIONS, ReactionOverlay } from './reaction-overlay';
 
-const trophy: Reaction = { id: 'r1', kind: 'trophy', intensity: 3 };
+const party: Reaction = { id: 'r1', kind: 'party', intensity: 3 };
 
 describe('ReactionOverlay', () => {
   let reducedMotion: boolean;
@@ -49,12 +49,12 @@ describe('ReactionOverlay', () => {
   it('plays a reaction with its pieces, their colours and their paths', async () => {
     const { play } = await renderOverlay();
 
-    await play(trophy);
+    await play(party);
 
     const hero = pieces().find((piece) => piece.classList.contains('reaction-beat'))!;
     expect(hero.classList).toContain('material-symbols-outlined');
     expect(hero.classList).toContain('text-reaction-yellow');
-    expect(hero.textContent?.trim()).toBe('trophy');
+    expect(hero.textContent?.trim()).toBe('celebration');
     expect(hero.style.getPropertyValue('--x')).toBe('50%');
     expect(hero.style.getPropertyValue('--y')).toBe('50%');
     expect(hero.style.getPropertyValue('--duration')).toBe('2600ms');
@@ -67,18 +67,73 @@ describe('ReactionOverlay', () => {
     expect(confetti[0].className).toMatch(/bg-reaction-/);
   });
 
-  it('draws the paper ball and the eyes, which bring their own colours', async () => {
-    const { play } = await renderOverlay();
+  it('shows the emoji of each piece over its icon once it loads, 3D or flat', async () => {
+    const { fixture, play } = await renderOverlay();
 
-    await play({ id: 'p', kind: 'paper-ball', intensity: 1 });
-    await play({ id: 'e', kind: 'eyes', intensity: 1 });
+    await play(party);
+    const hero = pieces().find((piece) => piece.classList.contains('reaction-beat'))!;
+    const image = hero.querySelector('img')!;
+    expect(image.getAttribute('src')).toMatch(/^reactions\/[a-z-]+\.webp$/);
+    expect(image.getAttribute('loading')).toBe('eager');
+    expect(hero.classList).toContain('reaction-has-emoji');
+    expect(hero.classList).not.toContain('reaction-emoji-ready');
 
-    const paper = overlay().querySelector('.reaction-paper')!;
-    expect(paper.querySelector('app-paper-ball-art svg')).toBeTruthy();
-    expect(paper.className).not.toMatch(/bg-reaction-/);
-    const eyes = overlay().querySelector('.reaction-eyes')!;
-    expect(eyes.querySelector('app-cartoon-eyes-art svg')).toBeTruthy();
-    expect(eyes.className).not.toMatch(/bg-reaction-/);
+    image.dispatchEvent(new Event('load'));
+    await fixture.whenStable();
+    expect(hero.classList).toContain('reaction-emoji-ready');
+
+    fixture.componentRef.setInput('emojis', false);
+    await play({ ...party, id: 'r2' });
+    const flat = [...pieces()].filter((piece) => piece.classList.contains('reaction-beat')).pop()!;
+    expect(flat.querySelector('img')!.getAttribute('src')).toMatch(/^reactions\/flat\/.+\.svg$/);
+  });
+
+  it('loads the emoji of the reaction on its way, while its answer arrives', async () => {
+    const { fixture } = await renderOverlay();
+    const preload = () => overlay().querySelector<HTMLImageElement>('img.hidden');
+
+    fixture.componentRef.setInput('upcoming', { id: 'u1', kind: 'rocket', intensity: 1 });
+    await fixture.whenStable();
+    expect(preload()?.getAttribute('src')).toBe('reactions/rocket.webp');
+    expect(preload()?.getAttribute('loading')).toBe('eager');
+
+    // Loaded ahead, the reaction shows its emoji from the start
+    preload()!.dispatchEvent(new Event('load'));
+    fixture.componentRef.setInput('reaction', { id: 'u1', kind: 'rocket', intensity: 1 });
+    await fixture.whenStable();
+    expect(pieces().find((piece) => piece.classList.contains('reaction-fly'))?.classList).toContain(
+      'reaction-emoji-ready',
+    );
+
+    fixture.componentRef.setInput('mode', 'off');
+    await fixture.whenStable();
+    expect(preload()).toBeNull();
+  });
+
+  it('fetches the light emoji ahead once the page has settled', async () => {
+    vi.useFakeTimers();
+    const fetched: string[] = [];
+    vi.stubGlobal(
+      'Image',
+      class {
+        fetchPriority = '';
+        set src(url: string) {
+          fetched.push(url);
+        }
+      },
+    );
+    try {
+      const { fixture } = await renderOverlay({ emojis: false });
+      await fixture.whenStable();
+      expect(fetched).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(fetched).toContain('reactions/flat/red-heart.svg');
+      fixture.destroy();
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it('covers the screen with the flash and the dark cloud of an explosion', async () => {
@@ -125,7 +180,7 @@ describe('ReactionOverlay', () => {
   });
 
   it('does not play again the same reaction, nor the one there when it appears', async () => {
-    const { play } = await renderOverlay({ reaction: trophy });
+    const { play } = await renderOverlay({ reaction: party });
     expect(pieces()).toEqual([]);
 
     await play({ id: 'x', kind: 'cheer', intensity: 1 });
@@ -138,11 +193,11 @@ describe('ReactionOverlay', () => {
   it('shows a single piece when reduced and none when turned off', async () => {
     const { fixture, play } = await renderOverlay({ mode: 'reduced' });
 
-    await play(trophy);
+    await play(party);
     expect(pieces()).toHaveLength(1);
 
     fixture.componentRef.setInput('mode', 'off');
-    await play({ ...trophy, id: 'r2' });
+    await play({ ...party, id: 'r2' });
     expect(pieces()).toHaveLength(1);
   });
 
@@ -150,7 +205,7 @@ describe('ReactionOverlay', () => {
     reducedMotion = true;
     const { play } = await renderOverlay();
 
-    await play(trophy);
+    await play(party);
 
     expect(pieces()).toHaveLength(1);
     expect(pieces()[0].classList).toContain('reaction-fade');

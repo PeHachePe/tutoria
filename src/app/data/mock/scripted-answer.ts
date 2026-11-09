@@ -39,12 +39,25 @@ export interface ScriptedAnswer {
   readonly silent: boolean;
 }
 
-/** Each hint level lights up a bit more: an idea, then fire, then the rocket of the last one. */
-const HINT_REACTIONS: Record<HintLevel, ReactionKind> = { 1: 'lightbulb', 2: 'fire', 3: 'rocket' };
+/** Each hint level goes further: it makes the student think, switches on an idea, then takes off. */
+const MAX_INTENSITY: Intensity = 3;
+
+const HINT_REACTIONS: Record<HintLevel, ReactionKind> = {
+  1: 'thinking',
+  2: 'lightbulb',
+  3: 'rocket',
+};
 
 /** The reactions the scripted tutor takes turns with, so all of them show up in the app. */
-const ELUSION_REACTIONS: readonly ReactionKind[] = ['paper-ball', 'grumpy'];
-const QUESTION_REACTIONS: readonly ReactionKind[] = ['applause', 'mind-blown', 'laugh'];
+const ELUSION_REACTIONS: readonly ReactionKind[] = [
+  'wink',
+  'secret',
+  'seriously',
+  'throw',
+  'grumpy',
+];
+const QUESTION_REACTIONS: readonly ReactionKind[] = ['applause', 'mind-blown', 'laugh', 'fire'];
+const PROACTIVE_REACTIONS: readonly ReactionKind[] = ['eyes', 'empathy'];
 
 /**
  * Ways of asking for the solution instead of a hint, in the three languages of the interface (2.9),
@@ -84,7 +97,8 @@ export function scriptedAnswer({
     text: string,
     emotion: Emotion,
     reaction: ReactionKind,
-    intensity: Intensity = 1,
+    // The scripted tutor shows the reactions at their fullest; the real one chooses (2.6)
+    intensity: Intensity = MAX_INTENSITY,
     elusion = false,
   ) => ({ text, hintLevel, emotion, reaction, intensity, elusion, silent: false });
   const hint = TUTOR_ANSWERS[hintLevel][previous.length % TUTOR_ANSWERS[hintLevel].length];
@@ -96,16 +110,18 @@ export function scriptedAnswer({
       // Once is enough: right after stepping in, it lets the student work
       return previous.at(-1)?.trigger === 'proactive'
         ? { ...answer('', 'encouragement', 'eyes'), silent: true }
-        : answer(PROACTIVE_MESSAGE, 'encouragement', 'eyes', 2);
+        : answer(PROACTIVE_MESSAGE, 'encouragement', proactiveReaction(previous));
     case 'question': {
       const question = withoutAccents(message ?? '');
       // Asking for the solution gets a joke: «hey, not that»
       if (ELUSION_PATTERN.test(question)) {
-        // Each time a different joke: the paper ball, then the grumpy face
+        // Each time a different joke: a wink, the monkeys, «seriously?», something thrown, then a
+        // mock anger
         const elusions = previous.filter((interaction) => interaction.elusion).length;
-        return answer(ELUSION_ANSWER, 'surprise', ELUSION_REACTIONS[elusions % 2], 2, true);
+        const joke = ELUSION_REACTIONS[elusions % ELUSION_REACTIONS.length];
+        return answer(ELUSION_ANSWER, 'surprise', joke, MAX_INTENSITY, true);
       }
-      if (status === 'passed') return answer(PASSED_ANSWER, 'celebration', 'trophy', 2);
+      if (status === 'passed') return answer(PASSED_ANSWER, 'celebration', 'party');
       if (STATEMENT_PATTERN.test(question)) return answer(STATEMENT_ANSWER, 'joy', 'hearts');
       if (!code.trim()) return answer(START_ANSWER, 'encouragement', 'cheer');
       // A question with code to look at: it applauds the effort, its mind is blown, or it laughs
@@ -126,4 +142,10 @@ export function typingChunks(text: string): string[] {
 
 function withoutAccents(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** The proactive tutor takes turns: it looks in, then shows it understands. */
+function proactiveReaction(previous: readonly TutorInteraction[]): ReactionKind {
+  const before = previous.filter((interaction) => interaction.trigger === 'proactive').length;
+  return PROACTIVE_REACTIONS[before % PROACTIVE_REACTIONS.length];
 }

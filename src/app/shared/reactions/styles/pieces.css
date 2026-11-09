@@ -24,8 +24,6 @@
 .reaction-burst.material-symbols-outlined,
 .reaction-trail.material-symbols-outlined,
 .reaction-flame,
-.reaction-clap-left,
-.reaction-clap-right,
 .reaction-fly {
   filter: drop-shadow(0 0.05em 0.06em color-mix(in srgb, var(--mat-sys-shadow) 40%, transparent));
 }

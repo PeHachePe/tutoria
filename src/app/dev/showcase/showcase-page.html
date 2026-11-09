@@ -239,17 +239,28 @@
               }
             </mat-button-toggle-group>
           </div>
+          <mat-slide-toggle
+            [checked]="settings.reactionEmojis()"
+            (change)="settings.setReactionEmojis($event.checked)"
+          >
+            Emojis 3D
+          </mat-slide-toggle>
         </div>
         <p class="text-body-small text-on-surface-variant">
           Cada botón lanza el componente real con una reacción del catálogo, la que elige el tutor
-          para cada respuesta (o la de su emoción): dura de 2 a 3 segundos, nunca sale igual y la
-          mascota se mueve con ella. Reducidas, un solo icono pequeño; desactivadas, nada, tampoco
-          la mascota. Es el ajuste del alumno que usa la pantalla de trabajo. Con «reducir
-          movimiento» del sistema, un solo icono aparece y se desvanece sin moverse.
+          para cada respuesta (o la de su emoción): dura de 2 a 3 segundos, nunca sale igual, elige
+          uno de sus emojis al azar y la mascota se mueve con ella. Sin «Emojis 3D», los mismos
+          emojis en plano 2D, mucho más ligeros. Reducidas, un solo icono pequeño; desactivadas,
+          nada, tampoco la mascota. Es el ajuste del alumno que usa la pantalla de trabajo. Con
+          «reducir movimiento» del sistema, un solo icono aparece y se desvanece sin moverse.
         </p>
       </div>
     </div>
-    <app-reaction-overlay [reaction]="reaction()" [mode]="settings.reactions()" />
+    <app-reaction-overlay
+      [reaction]="reaction()"
+      [mode]="settings.reactions()"
+      [emojis]="settings.reactionEmojis()"
+    />
   </section>
 
   <section aria-labelledby="cards-title" class="flex flex-col gap-3">

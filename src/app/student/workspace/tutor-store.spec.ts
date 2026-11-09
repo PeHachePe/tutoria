@@ -214,6 +214,29 @@ describe('TutorStore', () => {
     expect(store.reaction()).toEqual({ id: turn.id, kind: 'fire', intensity: 3 });
   });
 
+  it('knows the reaction of the answer still arriving, so its emoji can load ahead', async () => {
+    await loaded();
+    const rest = deferred<void>();
+    ask.mockImplementationOnce(async function* () {
+      yield { type: 'meta', emotion: 'joy', intensity: 2, hintLevel: 1, reaction: 'rocket' };
+      await rest.promise;
+      yield { type: 'delta', text: '¡Despega!' };
+    });
+    expect(store.upcomingReaction()).toBeNull();
+
+    const asking = store.ask('¿Y ahora?');
+    await vi.waitFor(() => expect(store.turns()[0]?.reaction).toBe('rocket'));
+    expect(store.upcomingReaction()).toEqual({
+      id: store.turns()[0].id,
+      kind: 'rocket',
+      intensity: 2,
+    });
+
+    rest.resolve();
+    await asking;
+    expect(store.upcomingReaction()).toBeNull();
+  });
+
   it('reacts as its emotion when the tutor chose no reaction', async () => {
     await loaded();
 

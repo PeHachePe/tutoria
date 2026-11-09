@@ -187,4 +187,9 @@
 }
 
 <!-- The tutor's reactions (1.8), over the whole screen -->
-<app-reaction-overlay [reaction]="reaction()" [mode]="reactionMode()" />
+<app-reaction-overlay
+  [reaction]="reaction()"
+  [mode]="reactionMode()"
+  [emojis]="reactionEmojis()"
+  [upcoming]="upcomingReaction()"
+/>

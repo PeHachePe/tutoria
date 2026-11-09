@@ -30,14 +30,16 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Escritorio:** columna a la derecha del código, de ancho ajustable con un separador vertical (nunca baja de 16rem), o flotante si el alumno lo elige.
 - **Flotante** (con el código ampliado, en la tableta o por elección del alumno, D-033): la mascota abajo a la derecha. Al pulsarla, el tutor se abre en un panel sobre la esquina del código (24rem de ancho) y la mascota saca la lengua; en su cabecera están «Fijar el tutor a la derecha» (no en la tableta) y «Minimizar el tutor». Plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
-- **Reacciones flotantes (1.8, D-035):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos la reacción que eligió el tutor (o la de su emoción) en una capa sobre toda la pantalla:
-  - un icono grande en el centro que late, con un halo y ondas de luz a su compás, y alrededor coronas de chispas y lluvia de iconos y confeti por los lados; nunca sale igual;
-  - doce reacciones: corazones, ánimo, trofeo, bombilla que se enciende, cohete que cruza la pantalla, fuego, aplausos, mente explotando, bola de papel que agrieta la pantalla, ojos vigilantes, risas y enfado de broma (que en la intensidad 3 explota con un fogonazo);
+- **Reacciones flotantes (1.8, D-035 a D-037):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos la reacción que eligió el tutor (o la de su emoción) en una capa sobre toda la pantalla:
+  - un emoji grande en el centro (animado en 3D, o plano si el alumno desactiva «Emojis 3D»), con un halo y ondas de luz a su compás, y alrededor coronas, lluvia de emojis pequeños y confeti; nunca sale igual;
+  - dieciocho reacciones: corazones, ánimo, fiesta, pensando, bombilla, cohete, fuego, aplausos, mente explotando, risas, guiño, secreto, «¿en serio?», lanzamiento (pelota, huevo, tarta, tomate o caca, que se estampan con un 💥 y dejan su mancha), enfado de broma (que en la intensidad 3 explota con una bomba y un fogonazo), ojos vigilantes, empatía y sueño;
+  - las bromas son para cuando el alumno pide la solución, nunca para sus errores;
+  - el emoji de cada reacción se descarga en cuanto el tutor la elige, mientras escribe; si no llega a tiempo, sigue la coreografía hasta que aparece;
   - la intensidad (1 a 3) da más piezas y más grandes, y algunas partes solo salen en la más alta;
   - si llega otra respuesta mientras dura, se suma sin cortar la anterior (hasta tres);
   - la mascota del panel (o la flotante) se mueve con ellas;
   - las respuestas del historial, las que fallan a mitad y las intervenciones que el tutor decide callar no reaccionan.
-  - En el tutor simulado: la pista de nivel 1, 2 y 3 da bombilla, fuego y cohete; pedir la solución, la bola de papel y luego el enfado; las preguntas, aplausos, mente explotando o risas por turnos; el enunciado, corazones; el código vacío, ánimo; el ejercicio superado, trofeo.
+  - En el tutor simulado, siempre con intensidad 3: las pistas de nivel 1, 2 y 3 dan pensando, bombilla y cohete; pedir la solución, por turnos, guiño, secreto, «¿en serio?», lanzamiento y enfado; las preguntas, aplausos, mente explotando, risas o fuego; el enunciado, corazones; el código vacío, ánimo; el ejercicio superado, fiesta; sus intervenciones, ojos o empatía.
 
 ## Interacciones
 
@@ -85,12 +87,12 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] En el móvil, el punto de la pestaña «Tutor» aparece con una respuesta nueva y se va al abrirla.
 - [ ] El tutor pasa de fijo a flotante y de vuelta, y se recuerda al recargar; flotante, se abre con el foco en la pregunta y se minimiza con el botón, la mascota o Esc, con el foco de vuelta en la mascota.
 - [ ] Plegado, una respuesta nueva asoma en el bocadillo, se anuncia y abre el tutor.
-- [ ] Cada respuesta nueva lanza su reacción y mueve la mascota; dos seguidas se suman sin cortarse; reducidas, su icono pequeño; desactivadas, nada; con «reducir movimiento», su icono se desvanece sin moverse.
+- [ ] Cada respuesta nueva lanza su reacción con su emoji y mueve la mascota; dos seguidas se suman sin cortarse; sin «Emojis 3D», emojis planos; reducidas, su emoji pequeño; desactivadas, nada; con «reducir movimiento», su emoji se desvanece sin moverse.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 
 ## Fuera de alcance
 
-- El ajuste de las reacciones en la pantalla de ajustes (1.9): hasta entonces se cambia en el muestrario.
+- Los ajustes de las reacciones (modo y emojis 3D) en la pantalla de ajustes (1.9): hasta entonces se cambian en el muestrario.
 - La voz (6.1) y las intervenciones proactivas (6.2); la conversación ya muestra las de las fixtures.
 - El streaming real (2.4, D-017): el tutor simulado ya escribe poco a poco y el cliente no cambiará.
 

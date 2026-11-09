@@ -4,14 +4,20 @@ import { AuthStore } from '../../auth/auth-store';
 import { REACTION_MODES, type ReactionMode } from '../../shared/reactions/reaction';
 
 const REACTIONS_KEY = 'tutoria.reactions';
+const REACTION_EMOJIS_KEY = 'tutoria.reaction-emojis';
 
 export function reactionsKey(userId: string): string {
   return `${REACTIONS_KEY}.${userId}`;
 }
 
+export function reactionEmojisKey(userId: string): string {
+  return `${REACTION_EMOJIS_KEY}.${userId}`;
+}
+
 /**
- * The student's settings (4.5), remembered per user in this browser. For now only how the tutor's
- * reactions show (1.8); the settings screen (1.9) adds the animations, the proactivity and the voice.
+ * The student's settings (4.5), remembered per user in this browser. For now how the tutor's
+ * reactions show and whether with the animated 3D emoji or the flat ones (1.8, D-036); the settings screen (1.9)
+ * adds the proactivity and the voice.
  */
 @Service()
 export class SettingsStore {
@@ -22,12 +28,28 @@ export class SettingsStore {
 
   readonly reactions = this.reactionsState.asReadonly();
 
+  /** The animated 3D emoji of the reactions; without them, the light flat 2D ones. */
+  private readonly reactionEmojisState = linkedSignal<boolean>(
+    () => read(this.userId(), reactionEmojisKey) !== 'false',
+  );
+
+  readonly reactionEmojis = this.reactionEmojisState.asReadonly();
+
   setReactions(mode: ReactionMode): void {
     this.reactionsState.set(mode);
+    this.save(reactionsKey, mode);
+  }
+
+  setReactionEmojis(on: boolean): void {
+    this.reactionEmojisState.set(on);
+    this.save(reactionEmojisKey, String(on));
+  }
+
+  private save(key: (userId: string) => string, value: string): void {
     const userId = this.userId();
     if (!userId) return;
     try {
-      localStorage.setItem(reactionsKey(userId), mode);
+      localStorage.setItem(key(userId), value);
     } catch {
       // Storage unavailable: the choice lasts until the page is closed
     }
@@ -35,11 +57,16 @@ export class SettingsStore {
 }
 
 function readReactions(userId: string | undefined): ReactionMode {
-  if (!userId) return 'full';
+  const saved = read(userId, reactionsKey);
+  return REACTION_MODES.find((mode) => mode === saved) ?? 'full';
+}
+
+/** What the user saved, or null without a user, a value or storage. */
+function read(userId: string | undefined, key: (userId: string) => string): string | null {
+  if (!userId) return null;
   try {
-    const saved = localStorage.getItem(reactionsKey(userId));
-    return REACTION_MODES.find((mode) => mode === saved) ?? 'full';
+    return localStorage.getItem(key(userId));
   } catch {
-    return 'full';
+    return null;
   }
 }

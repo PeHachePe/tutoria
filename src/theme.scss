@@ -97,16 +97,12 @@ html {
     'violet': #a24bff,
     // Steam of the grumpy face
     'smoke': #c3ccd6,
-    // The crumpled paper ball, lit and in shade
-    'paper': #f6f1e6,
-    'paper-shade': #c9bfa9,
-    // Notebook lines and margin on the paper
-    'paper-rule': #9cc3e6,
-    'paper-margin': #e88a8a,
-    // The eyes that peek, and the glass the paper ball cracks
+    // Stains of what is thrown at the screen: cream of a pie and a brown one
+    'cream': #fff3d6,
+    'mud': #7a4a21,
+    // A shine and a dark ink for the effects
     'eye-white': #ffffff,
     'ink': #1d1b20,
-    'glass': #e3f6ff,
   );
   @each $name, $color in $reaction-colors {
     --app-reaction-#{$name}: #{$color};

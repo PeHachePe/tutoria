@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { AuthStore } from '../../auth/auth-store';
-import { reactionsKey, SettingsStore } from './settings-store';
+import { reactionEmojisKey, reactionsKey, SettingsStore } from './settings-store';
 
 describe('SettingsStore', () => {
   let userId: ReturnType<typeof signal<string | undefined>>;
@@ -63,5 +63,18 @@ describe('SettingsStore', () => {
     expect(store.reactions()).toBe('full');
     store.setReactions('reduced');
     expect(store.reactions()).toBe('reduced');
+  });
+
+  it('shows the 3D emoji by default, and remembers who prefers the flat ones', () => {
+    expect(store.reactionEmojis()).toBe(true);
+
+    store.setReactionEmojis(false);
+    expect(store.reactionEmojis()).toBe(false);
+    expect(localStorage.getItem(reactionEmojisKey('u1'))).toBe('false');
+
+    userId.set('u2');
+    expect(store.reactionEmojis()).toBe(true);
+    userId.set('u1');
+    expect(store.reactionEmojis()).toBe(false);
   });
 });

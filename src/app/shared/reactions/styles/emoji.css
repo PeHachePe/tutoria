@@ -1,0 +1,23 @@
+/* The emoji of a reaction (1.8, D-036), animated 3D or flat 2D: a piece that has one never shows its
+   icon, which looks poor beside them; the emoji appears as soon as it has loaded, and the rest of
+   the choreography goes on around it meanwhile. Pieces without one show their icons. */
+
+.reaction-emoji {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+.reaction-emoji-ready > .reaction-emoji {
+  opacity: 1;
+}
+
+/* Its icon steps aside, and so do the shadow and the glow: the emoji bring their own shading, and a
+   drop shadow over a piece with an image drew a blurred box around it */
+.reaction-has-emoji {
+  color: transparent !important;
+  filter: none !important;
+}

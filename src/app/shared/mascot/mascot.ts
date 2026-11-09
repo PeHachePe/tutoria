@@ -40,16 +40,22 @@ const MOVEMENTS: Record<MascotAction, { readonly className: string; readonly ani
 export const REACTION_MOVEMENTS: Record<ReactionKind, MascotAction> = {
   hearts: 'tilt',
   cheer: 'hop',
-  trophy: 'cheer',
+  party: 'cheer',
+  thinking: 'tilt',
   lightbulb: 'ears',
   rocket: 'hop',
   fire: 'cheer',
   applause: 'cheer',
   'mind-blown': 'ears',
-  'paper-ball': 'ears',
-  eyes: 'tilt',
   laugh: 'hop',
+  wink: 'tilt',
+  secret: 'ears',
+  seriously: 'tilt',
+  throw: 'ears',
   grumpy: 'ears',
+  eyes: 'tilt',
+  empathy: 'tilt',
+  sleepy: 'ears',
 };
 const MOVEMENT_ANIMATIONS = new Set(Object.values(MOVEMENTS).map((movement) => movement.animation));
 

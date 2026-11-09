@@ -74,25 +74,25 @@ describe('scripted answer', () => {
       text: TUTOR_ANSWERS[1][0],
       hintLevel: 1,
       emotion: 'encouragement',
-      reaction: 'lightbulb',
-      intensity: 1,
+      reaction: 'thinking',
+      intensity: 3,
       elusion: false,
       silent: false,
     });
     expect(second.text).toBe(TUTOR_ANSWERS[1][1]);
   });
 
-  it('lights up a bit more with each hint: an idea, fire, then the rocket', () => {
+  it('goes further with each hint: it makes the student think, an idea, then the rocket', () => {
     const hint = (previous: TutorInteraction[]) =>
       scriptedAnswer(input({ kind: 'hint', previous })).reaction;
 
-    expect(hint([])).toBe('lightbulb');
-    expect(hint([interaction('hint', 1)])).toBe('fire');
+    expect(hint([])).toBe('thinking');
+    expect(hint([interaction('hint', 1)])).toBe('lightbulb');
     expect(hint([interaction('hint', 1), interaction('hint', 2)])).toBe('rocket');
   });
 
   it('takes turns with its reactions to questions, so all of them show up', () => {
-    const reactions = [0, 1, 2, 3].map(
+    const reactions = [0, 1, 2, 3, 4].map(
       (count) =>
         scriptedAnswer(
           input({
@@ -102,7 +102,7 @@ describe('scripted answer', () => {
         ).reaction,
     );
 
-    expect(reactions).toEqual(['applause', 'mind-blown', 'laugh', 'applause']);
+    expect(reactions).toEqual(['applause', 'mind-blown', 'laugh', 'fire', 'applause']);
   });
 
   it('answers a question with a hint of its level', () => {
@@ -124,20 +124,26 @@ describe('scripted answer', () => {
         text: ELUSION_ANSWER,
         hintLevel: 1,
         emotion: 'surprise',
-        reaction: 'paper-ball',
-        intensity: 2,
+        reaction: 'wink',
+        intensity: 3,
         elusion: true,
         silent: false,
       });
     }
   });
 
-  it('jokes differently the next time the student asks for the solution', () => {
-    const asked = [interaction('question', 1, true)];
-
-    expect(scriptedAnswer(input({ message: 'Dame la solución', previous: asked })).reaction).toBe(
-      'grumpy',
+  it('jokes differently each time the student asks for the solution', () => {
+    const jokes = [1, 2, 3, 4, 5].map(
+      (count) =>
+        scriptedAnswer(
+          input({
+            message: 'Dame la solución',
+            previous: Array.from({ length: count }, () => interaction('question', 1, true)),
+          }),
+        ).reaction,
     );
+
+    expect(jokes).toEqual(['secret', 'seriously', 'throw', 'grumpy', 'wink']);
   });
 
   it('answers a question that arrives without its message with a hint', () => {
@@ -163,7 +169,7 @@ describe('scripted answer', () => {
 
     expect(answer.text).toBe(PASSED_ANSWER);
     expect(answer.emotion).toBe('celebration');
-    expect(answer.reaction).toBe('trophy');
+    expect(answer.reaction).toBe('party');
   });
 
   it('steps in on its own, but keeps quiet right after doing so', () => {
@@ -172,10 +178,15 @@ describe('scripted answer', () => {
       hintLevel: 1,
       emotion: 'encouragement',
       reaction: 'eyes',
-      intensity: 2,
+      intensity: 3,
       elusion: false,
       silent: false,
     });
+    expect(
+      scriptedAnswer(
+        input({ kind: 'proactive', previous: [interaction('proactive'), interaction('question')] }),
+      ).reaction,
+    ).toBe('empathy');
     const quiet = scriptedAnswer(
       input({ kind: 'proactive', previous: [interaction('proactive')] }),
     );

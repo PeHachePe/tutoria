@@ -19,16 +19,22 @@ export type Intensity = 1 | 2 | 3;
 export const REACTION_KINDS = [
   'hearts',
   'cheer',
-  'trophy',
+  'party',
+  'thinking',
   'lightbulb',
   'rocket',
   'fire',
   'applause',
   'mind-blown',
-  'paper-ball',
-  'eyes',
   'laugh',
+  'wink',
+  'secret',
+  'seriously',
+  'throw',
   'grumpy',
+  'eyes',
+  'empathy',
+  'sleepy',
 ] as const;
 
 export type ReactionKind = (typeof REACTION_KINDS)[number];
@@ -38,7 +44,7 @@ export const EMOTION_REACTIONS: Record<Emotion, ReactionKind> = {
   joy: 'hearts',
   surprise: 'mind-blown',
   encouragement: 'cheer',
-  celebration: 'trophy',
+  celebration: 'party',
 };
 
 /** What the client sends to the tutor (2.6). */

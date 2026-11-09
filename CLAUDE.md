@@ -25,6 +25,7 @@ Se desarrolla en macOS (zsh) y, alguna vez, en Windows. Todo tiene que funcionar
 - `npm start`: servidor de desarrollo con datos simulados.
 - `npm run format` y `npm run check` (formato, lint y tests unitarios). El lint hace cumplir buenas prácticas de Angular: no desactives reglas para salir del paso.
 - `npm run e2e`: Playwright (desde el paso 0.6).
+- `npm run emojis`: trae de los repositorios oficiales de Fluent Emoji los emojis de las reacciones que falten y borra los que sobren (`-- --force` los rehace todos; necesita red y tarda con los animados).
 
 ## Angular en este proyecto
 

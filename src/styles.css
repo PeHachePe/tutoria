@@ -72,6 +72,8 @@
   --color-reaction-blue: var(--app-reaction-blue);
   --color-reaction-violet: var(--app-reaction-violet);
   --color-reaction-smoke: var(--app-reaction-smoke);
+  --color-reaction-cream: var(--app-reaction-cream);
+  --color-reaction-mud: var(--app-reaction-mud);
 
   /* Material type scale: text-title-medium, text-body-small… */
   --text-display-small: var(--mat-sys-display-small-size);

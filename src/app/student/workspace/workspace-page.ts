@@ -120,9 +120,12 @@ export class WorkspacePage {
   private readonly userId = inject(AuthStore).userId;
   protected readonly store = inject(AttemptStore);
   private readonly tutor = inject(TutorStore);
-  protected readonly reactionMode = inject(SettingsStore).reactions;
+  private readonly settings = inject(SettingsStore);
+  protected readonly reactionMode = this.settings.reactions;
+  protected readonly reactionEmojis = this.settings.reactionEmojis;
   /** The emotion of each new answer floats over the screen (1.8). */
   protected readonly reaction = this.tutor.reaction;
+  protected readonly upcomingReaction = this.tutor.upcomingReaction;
   /** Turned off, the folded mascot does not move with the answers either. */
   protected readonly mascotReaction = computed(() =>
     this.reactionMode() === 'off' ? null : this.reaction(),
