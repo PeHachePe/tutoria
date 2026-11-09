@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import {
@@ -10,11 +10,6 @@ import {
   MatCardTitle,
 } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
-import {
-  MatExpansionPanel,
-  MatExpansionPanelHeader,
-  MatExpansionPanelTitle,
-} from '@angular/material/expansion';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
@@ -30,6 +25,7 @@ import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import { DataError } from '../../data/data-error';
 import type { Difficulty } from '../../data/exercise';
+import type { Emotion, Intensity } from '../../data/tutor';
 import type { RunResult } from '../../data/attempt';
 import { Splitter } from '../../shared/splitter/splitter';
 import type { SaveStatus } from '../../student/workspace/attempt-store';
@@ -42,9 +38,12 @@ import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, MascotMood } from '../../shared/mascot/mascot';
+import type { Reaction, ReactionMode } from '../../shared/reactions/reaction';
+import { ReactionOverlay } from '../../shared/reactions/reaction-overlay';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
+import { SettingsStore } from '../../student/settings/settings-store';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
 import { ShowcaseTable } from './showcase-table';
@@ -71,9 +70,6 @@ import { ShowcaseTable } from './showcase-table';
     MatCardActions,
     MatTabGroup,
     MatTab,
-    MatExpansionPanel,
-    MatExpansionPanelHeader,
-    MatExpansionPanelTitle,
     MatProgressBar,
     MatProgressSpinner,
     MatSlideToggle,
@@ -84,6 +80,7 @@ import { ShowcaseTable } from './showcase-table';
     Brand,
     LanguageMenu,
     Mascot,
+    ReactionOverlay,
     EmptyState,
     LoadError,
     LoadingSkeleton,
@@ -99,6 +96,7 @@ export class ShowcasePage {
   protected readonly theme = inject(ThemeService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  protected readonly settings = inject(SettingsStore);
 
   protected readonly modes: { value: ThemeMode; label: string; icon: string }[] = [
     { value: 'light', label: 'Claro', icon: 'light_mode' },
@@ -235,6 +233,29 @@ export class ShowcasePage {
   protected readonly mascotMood = signal<MascotMood>('idle');
   protected readonly mascotHeadset = signal(true);
   protected readonly mascotBowTie = signal(false);
+
+  protected readonly emotions: { value: Emotion; label: string; icon: string }[] = [
+    { value: 'joy', label: 'Alegría', icon: 'favorite' },
+    { value: 'surprise', label: 'Sorpresa', icon: 'priority_high' },
+    { value: 'encouragement', label: 'Ánimo', icon: 'thumb_up' },
+    { value: 'celebration', label: 'Celebración', icon: 'celebration' },
+  ];
+  protected readonly intensities: Intensity[] = [1, 2, 3];
+  protected readonly reactionModes: { value: ReactionMode; label: string }[] = [
+    { value: 'full', label: 'Completas' },
+    { value: 'reduced', label: 'Reducidas' },
+    { value: 'off', label: 'Desactivadas' },
+  ];
+  protected readonly reactionIntensity = signal<Intensity>(2);
+  /** Each button plays a new reaction, even the same emotion again. */
+  protected readonly reaction = signal<Reaction | null>(null);
+  protected readonly mascotReaction = computed(() =>
+    this.settings.reactions() === 'off' ? null : this.reaction(),
+  );
+
+  protected react(emotion: Emotion): void {
+    this.reaction.set({ id: crypto.randomUUID(), emotion, intensity: this.reactionIntensity() });
+  }
 
   protected readonly dialogResult = signal<string | undefined>(undefined);
 

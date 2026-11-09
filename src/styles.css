@@ -5,6 +5,7 @@
 
 /* Animations of our own pieces, each next to its component (4.8) */
 @import './app/shared/mascot/mascot.css';
+@import './app/shared/reactions/reactions.css';
 @import './app/student/workspace/tutor/tutor-chat.css';
 
 @theme inline {
@@ -60,6 +61,16 @@
   --color-on-info: var(--app-on-info);
   --color-info-container: var(--app-info-container);
   --color-on-info-container: var(--app-on-info-container);
+
+  /* Vivid palette of the tutor's reactions (1.8) */
+  --color-reaction-pink: var(--app-reaction-pink);
+  --color-reaction-red: var(--app-reaction-red);
+  --color-reaction-orange: var(--app-reaction-orange);
+  --color-reaction-yellow: var(--app-reaction-yellow);
+  --color-reaction-green: var(--app-reaction-green);
+  --color-reaction-cyan: var(--app-reaction-cyan);
+  --color-reaction-blue: var(--app-reaction-blue);
+  --color-reaction-violet: var(--app-reaction-violet);
 
   /* Material type scale: text-title-medium, text-body-small… */
   --text-display-small: var(--mat-sys-display-small-size);

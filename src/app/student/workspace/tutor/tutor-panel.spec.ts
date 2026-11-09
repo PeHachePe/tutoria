@@ -1,4 +1,5 @@
 import { computed, signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
@@ -8,6 +9,7 @@ import { AttemptService } from '../../../data/attempt-service';
 import { DataError } from '../../../data/data-error';
 import type { HintLevel, TutorEvent, TutorInteraction, TutorRequest } from '../../../data/tutor';
 import { TutorService } from '../../../data/tutor-service';
+import { SettingsStore } from '../../settings/settings-store';
 import { AttemptStore } from '../attempt-store';
 import { TutorStore } from '../tutor-store';
 import { MAX_QUESTION_LENGTH } from './tutor-composer';
@@ -180,6 +182,22 @@ describe('TutorPanel', () => {
       expect.objectContaining({ kind: 'question', message: '¿Por dónde empiezo?' }),
     );
     expect(within(conversation()).getByText('¿Por dónde empiezo?')).toBeTruthy();
+  });
+
+  it('moves the mascot with the emotion of each new answer, unless the reactions are off', async () => {
+    const { fixture } = await renderPanel();
+    const user = userEvent.setup();
+    const moving = () => mascots().some((mascot) => mascot.classList.contains('mascot-move-tilt'));
+
+    await user.click(screen.getByRole('button', { name: '¿Por dónde empiezo?' }));
+    await fixture.whenStable();
+    // Joy: a happy tilt
+    expect(moving()).toBe(true);
+
+    TestBed.inject(SettingsStore).setReactions('off');
+    await fixture.whenStable();
+    expect(moving()).toBe(false);
+    localStorage.clear();
   });
 
   it('climbs the hint levels, saying what each one gives', async () => {

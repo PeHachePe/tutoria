@@ -20,6 +20,7 @@ import { Mascot, type MascotMood } from '../../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { splitInlineCode } from '../../../shared/split-inline-code';
+import { SettingsStore } from '../../settings/settings-store';
 import { AttemptStore } from '../attempt-store';
 import { TutorStore, type TutorTurn } from '../tutor-store';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
@@ -94,6 +95,12 @@ export class TutorPanel {
 
   /** The student is writing to the tutor: the mascot listens, with its tongue out. */
   protected readonly composing = signal(false);
+
+  private readonly reactionMode = inject(SettingsStore).reactions;
+  /** The mascot moves with the emotion of each new answer (1.8), unless the reactions are off. */
+  protected readonly mascotReaction = computed(() =>
+    this.reactionMode() === 'off' ? null : this.store.reaction(),
+  );
 
   protected readonly mascotMood = computed<MascotMood>(() => {
     if (this.store.answering()) return 'thinking';

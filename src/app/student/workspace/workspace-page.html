@@ -174,7 +174,7 @@
         matTooltipPosition="before"
         (click)="toggleTutor()"
       >
-        <app-mascot class="size-14" [mood]="floatingMascotMood()" />
+        <app-mascot class="size-14" [mood]="floatingMascotMood()" [reaction]="mascotReaction()" />
         @if (tutorUnread()) {
           <span
             class="absolute end-1 top-1 size-3 rounded-full border-2 border-panel bg-primary"
@@ -185,3 +185,10 @@
     </div>
   }
 }
+
+<!-- The tutor's reactions (1.8): beside the tutor, or across the screen on phones -->
+<app-reaction-overlay
+  [reaction]="reaction()"
+  [mode]="reactionMode()"
+  [area]="compact() ? 'full' : 'end'"
+/>

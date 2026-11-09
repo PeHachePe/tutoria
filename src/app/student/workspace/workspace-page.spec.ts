@@ -23,6 +23,7 @@ import { SEED } from '../../data/mock/fixtures/seed';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
 import { CODE_SHARE, paneShareKey, STATEMENT_SHARE, tutorFloatingKey } from './pane-share';
+import { SettingsStore } from '../settings/settings-store';
 import { TutorStore } from './tutor-store';
 import { COMPACT_WORKSPACE_QUERY, WorkspacePage } from './workspace-page';
 
@@ -1003,6 +1004,29 @@ describe('WorkspacePage', () => {
       await answering;
       await fixture.whenStable();
       expect(mascot().querySelector('app-mascot')?.classList).not.toContain('mascot-thinking');
+    });
+
+    it('plays the reaction of a new answer and moves the folded mascot, unless they are off', async () => {
+      const { fixture } = await renderPage();
+      await expand();
+      // The overlay is decorative (aria-hidden): only its data-testid finds it (4.8)
+      const pieces = () =>
+        screen.getByTestId('reaction-overlay').querySelectorAll('.reaction-piece').length;
+      const moving = () =>
+        [...(mascot().querySelector('app-mascot')?.classList ?? [])].some((name) =>
+          name.startsWith('mascot-move-'),
+        );
+
+      await TestBed.inject(TutorStore).requestHint();
+      await fixture.whenStable();
+      expect(pieces()).toBeGreaterThan(0);
+      expect(moving()).toBe(true);
+
+      TestBed.inject(SettingsStore).setReactions('off');
+      await fixture.whenStable();
+      expect(pieces()).toBe(0);
+      expect(moving()).toBe(false);
+      localStorage.clear();
     });
 
     it('does not bring back an answer already read in the column', async () => {

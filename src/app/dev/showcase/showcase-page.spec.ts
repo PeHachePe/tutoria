@@ -52,7 +52,8 @@ describe('ShowcasePage', () => {
       'Botones',
       'Piezas propias con Tailwind',
       'Mascota',
-      'Tarjetas, pestañas y paneles',
+      'Reacciones',
+      'Tarjetas y pestañas',
       'Formulario con Signal Forms',
       'Tabla con ordenación y paginación',
       'Progreso, avisos y diálogos',
@@ -128,6 +129,30 @@ describe('ShowcasePage', () => {
     await (await loader.getHarness(MatSlideToggleHarness.with({ label: 'Pajarita' }))).toggle();
     expect(count('mascot-headset')).toBe(0);
     expect(count('mascot-bow-tie')).toBe(2);
+  });
+
+  it('plays each reaction with the real overlay, with its intensity, and turns them off', async () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const section = element.querySelector('[aria-labelledby="reactions-title"]') as HTMLElement;
+    const mascot = section.querySelector('app-mascot') as HTMLElement;
+    // The overlay is decorative (aria-hidden): only its data-testid finds it (4.8)
+    const pieces = () =>
+      section.querySelectorAll('[data-testid="reaction-overlay"] .reaction-piece').length;
+    const play = async (emotion: string) => {
+      await (await loader.getHarness(MatButtonHarness.with({ text: new RegExp(emotion) }))).click();
+      await fixture.whenStable();
+    };
+
+    await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Intensidad 1' }))).check();
+    await play('Celebración');
+    // The big trophy, five icons and sixteen bits of confetti
+    expect(pieces()).toBe(22);
+    expect(mascot.classList).toContain('mascot-move-cheer');
+
+    await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Desactivadas' }))).check();
+    await play('Ánimo');
+    expect(pieces()).toBe(0);
+    expect(mascot.classList).not.toContain('mascot-move-hop');
   });
 
   it('confirms the submission in the dialog', async () => {

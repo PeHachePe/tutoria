@@ -27,10 +27,12 @@ import { ExerciseService } from '../../data/exercise-service';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
+import { ReactionOverlay } from '../../shared/reactions/reaction-overlay';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { Splitter } from '../../shared/splitter/splitter';
 import { StatusChip } from '../../shared/status-chip/status-chip';
+import { SettingsStore } from '../settings/settings-store';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
 import { CODE_ZONE_ID, CodeZone } from './code-zone/code-zone';
@@ -73,6 +75,7 @@ const TUTOR_TAB = 2;
 @Component({
   selector: 'app-workspace-page',
   imports: [
+    ReactionOverlay,
     RouterLink,
     MatAnchor,
     MatIconAnchor,
@@ -117,6 +120,13 @@ export class WorkspacePage {
   private readonly userId = inject(AuthStore).userId;
   protected readonly store = inject(AttemptStore);
   private readonly tutor = inject(TutorStore);
+  protected readonly reactionMode = inject(SettingsStore).reactions;
+  /** The emotion of each new answer floats over the screen (1.8). */
+  protected readonly reaction = this.tutor.reaction;
+  /** Turned off, the folded mascot does not move with the answers either. */
+  protected readonly mascotReaction = computed(() =>
+    this.reactionMode() === 'off' ? null : this.reaction(),
+  );
   /** Pastes and absences, recorded for the attempt open for changes (2.8). */
   protected readonly signals = inject(BrowserSignals);
 

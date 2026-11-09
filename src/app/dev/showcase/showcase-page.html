@@ -203,8 +203,57 @@
     </div>
   </section>
 
+  <section aria-labelledby="reactions-title" class="flex flex-col gap-3">
+    <h2 id="reactions-title" class="text-title-large">Reacciones</h2>
+    <div class="flex flex-col gap-4 rounded-xl bg-panel p-4 shadow-sm md:flex-row md:items-center">
+      <app-mascot class="size-24 shrink-0 self-center" [reaction]="mascotReaction()" />
+      <div class="flex min-w-0 flex-col gap-3">
+        <div class="flex flex-wrap gap-2">
+          @for (emotion of emotions; track emotion.value) {
+            <button matButton="tonal" type="button" (click)="react(emotion.value)">
+              <mat-icon>{{ emotion.icon }}</mat-icon>
+              {{ emotion.label }}
+            </button>
+          }
+        </div>
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <mat-button-toggle-group
+            [value]="reactionIntensity()"
+            (change)="reactionIntensity.set($event.value)"
+            aria-label="Intensidad"
+            hideSingleSelectionIndicator
+          >
+            @for (intensity of intensities; track intensity) {
+              <mat-button-toggle [value]="intensity">Intensidad {{ intensity }}</mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+          <div class="max-w-full overflow-x-auto">
+            <mat-button-toggle-group
+              [value]="settings.reactions()"
+              (change)="settings.setReactions($event.value)"
+              aria-label="Reacciones"
+              hideSingleSelectionIndicator
+            >
+              @for (mode of reactionModes; track mode.value) {
+                <mat-button-toggle [value]="mode.value">{{ mode.label }}</mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </div>
+        </div>
+        <p class="text-body-small text-on-surface-variant">
+          Cada botón lanza el componente real con su emoción: flota de 2 a 3 segundos en un sitio
+          distinto cada vez y la mascota se mueve con él. Reducidas, un solo icono pequeño;
+          desactivadas, nada, tampoco la mascota. Es el ajuste del alumno que usa la pantalla de
+          trabajo. Con «reducir movimiento» del sistema, un solo icono aparece y se desvanece sin
+          moverse.
+        </p>
+      </div>
+    </div>
+    <app-reaction-overlay [reaction]="reaction()" [mode]="settings.reactions()" />
+  </section>
+
   <section aria-labelledby="cards-title" class="flex flex-col gap-3">
-    <h2 id="cards-title" class="text-title-large">Tarjetas, pestañas y paneles</h2>
+    <h2 id="cards-title" class="text-title-large">Tarjetas y pestañas</h2>
     <div class="grid gap-4 md:grid-cols-2">
       <mat-card appearance="outlined">
         <mat-card-header>
@@ -234,13 +283,6 @@
         </mat-tab-group>
       </mat-card>
     </div>
-
-    <mat-expansion-panel>
-      <mat-expansion-panel-header>
-        <mat-panel-title>Tutor</mat-panel-title>
-      </mat-expansion-panel-header>
-      <p>En el móvil, el tutor pasa a un panel plegable bajo el editor.</p>
-    </mat-expansion-panel>
   </section>
 
   <section aria-labelledby="form-title" class="flex flex-col gap-3">

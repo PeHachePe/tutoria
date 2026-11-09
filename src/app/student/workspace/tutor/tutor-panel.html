@@ -1,6 +1,6 @@
 <header class="flex items-center gap-3">
   @if (store.turns().length > 0) {
-    <app-mascot class="size-12 shrink-0" [mood]="mascotMood()" />
+    <app-mascot class="size-12 shrink-0" [mood]="mascotMood()" [reaction]="mascotReaction()" />
   }
   <div class="flex min-w-0 flex-1 flex-col gap-1">
     <h2

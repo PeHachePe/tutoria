@@ -5,11 +5,13 @@ import { AttemptService } from '../../data/attempt-service';
 import {
   type Emotion,
   type HintLevel,
+  type Intensity,
   MAX_HINT_LEVEL,
   type TutorInteraction,
   type TutorTrigger,
 } from '../../data/tutor';
 import { TutorService } from '../../data/tutor-service';
+import type { Reaction } from '../../shared/reactions/reaction';
 import { AttemptStore } from './attempt-store';
 
 /** Where an answer is: arriving, complete, or lost on the way. */
@@ -26,6 +28,7 @@ export interface TutorTurn {
   /** Decided by the server (2.6): null until its `meta` arrives. */
   readonly hintLevel: HintLevel | null;
   readonly emotion: Emotion | null;
+  readonly intensity: Intensity | null;
   readonly createdAt: string;
   readonly status: TurnStatus;
   /** Why it failed, to say so. */
@@ -94,6 +97,17 @@ export class TutorStore {
   readonly answerCount = computed(() => this.freshAnswers().length);
   /** The last answer that arrived whole, read aloud once: never the chunks while they arrive. */
   readonly announcement = computed(() => this.freshAnswers().at(-1)?.answer ?? '');
+  /**
+   * The emotion of the last answer that arrived whole, for the floating reactions (1.8). Its `meta`
+   * comes first, but it plays at the end: an answer lost halfway or an intervention the tutor keeps
+   * to itself must not react. The past turns never do.
+   */
+  readonly reaction = computed<Reaction | null>(() => {
+    const last = this.freshAnswers().at(-1);
+    return last?.emotion && last.intensity
+      ? { id: last.id, emotion: last.emotion, intensity: last.intensity }
+      : null;
+  });
 
   /** Asks a question in the student's words. */
   ask(message: string): Promise<void> {
@@ -136,6 +150,7 @@ export class TutorStore {
         answer: '',
         hintLevel: null,
         emotion: null,
+        intensity: null,
         createdAt: new Date().toISOString(),
         status: 'answering',
         fresh: true,
@@ -157,7 +172,11 @@ export class TutorStore {
       for await (const event of events) {
         switch (event.type) {
           case 'meta':
-            patch(() => ({ hintLevel: event.hintLevel, emotion: event.emotion }));
+            patch(() => ({
+              hintLevel: event.hintLevel,
+              emotion: event.emotion,
+              intensity: event.intensity,
+            }));
             break;
           case 'delta':
             patch((turn) => ({ answer: turn.answer + event.text }));
@@ -186,6 +205,7 @@ function pastTurn(interaction: TutorInteraction): TutorTurn {
     answer: interaction.transcript,
     hintLevel: interaction.hintLevel,
     emotion: interaction.emotion,
+    intensity: interaction.intensity,
     createdAt: interaction.createdAt,
     status: 'done',
     fresh: false,

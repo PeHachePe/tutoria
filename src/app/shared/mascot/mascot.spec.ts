@@ -3,7 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { ComponentInput, render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { Mascot, MascotMood } from './mascot';
+import type { Reaction } from '../reactions/reaction';
+import { Mascot, MascotMood, REACTION_MOVEMENTS } from './mascot';
 
 describe('Mascot', () => {
   async function renderMascot(inputs: ComponentInput<Mascot> = {}) {
@@ -65,7 +66,12 @@ describe('Mascot', () => {
   });
 
   describe('reactions to the pointer', () => {
-    const MOVE_CLASSES = ['mascot-move-tilt', 'mascot-move-hop', 'mascot-move-ears'];
+    const MOVE_CLASSES = [
+      'mascot-move-tilt',
+      'mascot-move-hop',
+      'mascot-move-ears',
+      'mascot-move-cheer',
+    ];
     const moveClassOf = (host: HTMLElement) =>
       [...host.classList].filter((name) => MOVE_CLASSES.includes(name));
 
@@ -165,6 +171,46 @@ describe('Mascot', () => {
       await userEvent.setup().click(host);
 
       expect(host.classList).not.toContain('mascot-lick');
+    });
+  });
+
+  describe('reactions of the tutor', () => {
+    const reactionOf = (id: string, emotion: Reaction['emotion']): Reaction => ({
+      id,
+      emotion,
+      intensity: 2,
+    });
+
+    it('moves with each emotion of the tutor', () => {
+      expect(REACTION_MOVEMENTS).toEqual({
+        joy: 'tilt',
+        surprise: 'ears',
+        encouragement: 'hop',
+        celebration: 'cheer',
+      });
+    });
+
+    it('moves once with each new reaction, and not with the one there when it appears', async () => {
+      const { fixture } = await render(Mascot, {
+        inputs: { reaction: reactionOf('r1', 'joy') },
+      });
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.classList).not.toContain('mascot-move-tilt');
+
+      fixture.componentRef.setInput('reaction', reactionOf('r2', 'celebration'));
+      await fixture.whenStable();
+      expect(host.classList).toContain('mascot-move-cheer');
+
+      const event = Object.assign(new Event('animationend', { bubbles: true }), {
+        animationName: 'mascot-cheer',
+      });
+      host.querySelector('.mascot-head')?.dispatchEvent(event);
+      await fixture.whenStable();
+      expect(host.classList).not.toContain('mascot-move-cheer');
+
+      fixture.componentRef.setInput('reaction', null);
+      await fixture.whenStable();
+      expect([...host.classList].some((name) => name.startsWith('mascot-move-'))).toBe(false);
     });
   });
 });

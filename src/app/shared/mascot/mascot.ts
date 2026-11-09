@@ -1,5 +1,15 @@
-import { Component, computed, ElementRef, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 
+import type { Emotion } from '../../data/tutor';
+import type { Reaction } from '../reactions/reaction';
 import { gazeOffset } from './gaze-offset';
 import { MascotMovement, pickMovement } from './pick-movement';
 
@@ -14,14 +24,24 @@ const MOOD_CLASSES: Record<MascotMood, string> = {
   joy: 'mascot-joy',
 };
 
-/** Class and CSS animation of each movement on hover; the names must match mascot.css. */
-const MOVEMENTS: Record<
-  MascotMovement,
-  { readonly className: string; readonly animation: string }
-> = {
-  tilt: { className: 'mascot-move-tilt', animation: 'mascot-curious' },
-  hop: { className: 'mascot-move-hop', animation: 'mascot-hop' },
-  ears: { className: 'mascot-move-ears', animation: 'mascot-ear-wiggle' },
+/** A movement on hover, or the two hops of a celebration, which only the tutor's reactions make. */
+type MascotAction = MascotMovement | 'cheer';
+
+/** Class and CSS animation of each movement; the names must match mascot.css. */
+const MOVEMENTS: Record<MascotAction, { readonly className: string; readonly animation: string }> =
+  {
+    tilt: { className: 'mascot-move-tilt', animation: 'mascot-curious' },
+    hop: { className: 'mascot-move-hop', animation: 'mascot-hop' },
+    ears: { className: 'mascot-move-ears', animation: 'mascot-ear-wiggle' },
+    cheer: { className: 'mascot-move-cheer', animation: 'mascot-cheer' },
+  };
+
+/** How the mascot joins each reaction of the tutor (1.8). */
+export const REACTION_MOVEMENTS: Record<Emotion, MascotAction> = {
+  joy: 'tilt',
+  surprise: 'ears',
+  encouragement: 'hop',
+  celebration: 'cheer',
 };
 const MOVEMENT_ANIMATIONS = new Set(Object.values(MOVEMENTS).map((movement) => movement.animation));
 
@@ -40,7 +60,8 @@ let nextPatternId = 0;
  * (`class="size-40"`). The accessories are inputs so the student settings can change them (1.9).
  * The coat keeps its own colours in both themes instead of using theme tokens (D-022).
  *
- * For fun, it reacts to the pointer: its eyes follow the mouse, passing the mouse over it while
+ * With the tutor's reactions (1.8) it moves too: a happy tilt for joy, its ears for surprise, a hop
+ * to encourage and two hops to celebrate. For fun, it also reacts to the pointer: its eyes follow the mouse, passing the mouse over it while
  * resting makes it move (a random movement), and clicking or tapping it (giving it the bone) makes
  * it stick its tongue out and hop. Each reaction ends with its CSS animation; with reduced motion only the eyes move, because
  * they follow what the user does.
@@ -62,9 +83,15 @@ export class Mascot {
   readonly mood = input<MascotMood>('idle');
   readonly headset = input(true);
   readonly bowTie = input(false);
+  /** Each new reaction of the tutor moves it once; the one already there when it appears does not. */
+  readonly reaction = input<Reaction | null>(null);
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  private readonly movement = signal<MascotMovement | null>(null);
+  private readonly movement = linkedSignal<Reaction | null, MascotAction | null>({
+    source: this.reaction,
+    computation: (reaction, previous) =>
+      previous && reaction ? REACTION_MOVEMENTS[reaction.emotion] : null,
+  });
   private readonly licking = signal(false);
   private lastMovement: MascotMovement | null = null;
 

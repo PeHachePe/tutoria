@@ -136,6 +136,7 @@ describe('TutorStore', () => {
     // The past is not read aloud again, nor counted as new
     expect(store.announcement()).toBe('');
     expect(store.answerCount()).toBe(0);
+    expect(store.reaction()).toBeNull();
   });
 
   it('starts without hints, and stays at the most concrete level', async () => {
@@ -177,6 +178,7 @@ describe('TutorStore', () => {
         answer: 'Hola, ¿qué tal?',
         hintLevel: 1,
         emotion: 'joy',
+        intensity: 1,
         createdAt: expect.any(String),
         status: 'done',
         fresh: true,
@@ -184,6 +186,37 @@ describe('TutorStore', () => {
     ]);
     expect(store.announcement()).toBe('Hola, ¿qué tal?');
     expect(store.answerCount()).toBe(1);
+  });
+
+  it('reacts with the emotion of each new answer once it is complete', async () => {
+    await loaded();
+    const rest = deferred<void>();
+    ask.mockImplementationOnce(async function* () {
+      yield { type: 'meta', emotion: 'celebration', intensity: 3, hintLevel: 1 };
+      await rest.promise;
+      yield { type: 'delta', text: '¡Bien!' };
+    });
+
+    const asking = store.ask('¿Está bien?');
+    await vi.waitFor(() => expect(store.turns()[0]?.emotion).toBe('celebration'));
+    expect(store.reaction()).toBeNull();
+
+    rest.resolve();
+    await asking;
+    const [turn] = store.turns();
+    expect(store.reaction()).toEqual({ id: turn.id, emotion: 'celebration', intensity: 3 });
+
+    await store.ask('¿Y ahora?');
+    expect(store.reaction()).toEqual({ id: store.turns()[1].id, emotion: 'joy', intensity: 1 });
+  });
+
+  it('does not react to an answer that failed', async () => {
+    await loaded();
+    ask.mockImplementationOnce(() => failing(new DataError('network')));
+
+    await store.ask('¿Qué falla?');
+
+    expect(store.reaction()).toBeNull();
   });
 
   it('ignores an empty question', async () => {
@@ -284,6 +317,7 @@ describe('TutorStore', () => {
     await store.ask('…');
 
     expect(store.turns()).toEqual([]);
+    expect(store.reaction()).toBeNull();
   });
 
   it('counts an answer that ends without done as finished', async () => {

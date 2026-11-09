@@ -83,6 +83,22 @@ html {
     --app-on-#{$name}-container: light-dark(#{map.get($palette, 10)}, #{map.get($palette, 90)});
   }
 
+  // The tutor's reactions (1.8): a vivid palette of their own, the same in both themes. They are
+  // decorative shapes, not text, so they do not need the contrast of the status colours.
+  $reaction-colors: (
+    pink: #ff2e88,
+    red: #ff3b30,
+    orange: #ff8a00,
+    yellow: #ffc400,
+    green: #1fd16b,
+    cyan: #00c8ff,
+    blue: #3d6bff,
+    violet: #a24bff,
+  );
+  @each $name, $color in $reaction-colors {
+    --app-reaction-#{$name}: #{$color};
+  }
+
   // Containers that sit on the page take the panel colour, like our own panels.
   @include mat.card-overrides(
     (
@@ -96,11 +112,6 @@ html {
     )
   );
   @include mat.paginator-overrides(
-    (
-      container-background-color: var(--app-panel),
-    )
-  );
-  @include mat.expansion-overrides(
     (
       container-background-color: var(--app-panel),
     )
