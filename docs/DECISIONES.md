@@ -864,3 +864,59 @@ Al ver la primera versión, con los colores del tema, el autor pidió reacciones
 - Una comprobación e2e de «ninguna pantalla se desplaza de lado a 375 px» queda en `E2E-PENDIENTES.md`.
 
 **Aprobación:** el autor aprobó el plan con las tres mejoras («dale pues con lo que consideras»), pidió las reacciones más vistosas, señaló el desplazamiento lateral y el panel «Tutor» del muestrario, y cerró el paso («Sí, ciérralo»).
+
+## D-036 · Reacciones: un catálogo de recetas declarativas, separado de la emoción (09/11/2026)
+
+**Contexto:** tras cerrar el 1.8 (D-035), el autor revisó las reacciones en su navegador y pidió más:
+
+- un efecto raro con una sola reacción y al pedir pistas seguidas: la nueva cortaba la anterior;
+- un icono grande que lata en el centro de la pantalla y más cosas alrededor;
+- muchas reacciones distintas, que la IA pudiera, por ejemplo, «lanzarte una piedra»;
+- que fuera fácil añadir expresiones en el futuro;
+- risas y enfado.
+
+Preguntó también si la IA podría componer las animaciones (iconos, si late o se lanza) o si convenía tenerlas configuradas en el back.
+
+**Decisión:**
+
+- **Emoción y reacción por separado:**
+  - la emoción (alegría, sorpresa, ánimo, celebración) sigue siendo el dato que se guarda y que analiza el docente;
+  - la reacción (`ReactionKind`, catálogo `REACTION_KINDS` en `data/tutor.ts`) es solo cómo se ve: el evento `meta` la lleva como campo opcional, y sin ella vale la de la emoción (`EMOTION_REACTIONS`);
+  - el modelo la elige del catálogo y el servidor descarta la que no exista (§2.6).
+- **Recetas declarativas, no código:** cada reacción es una receta (`REACTION_RECIPES`) con su icono, sus colores y una lista de bloques con parámetros:
+  - los bloques son `hero` (que late, parpadea, tiembla, se ríe, echa humo o revienta), `glow` (halo y ondas al compás del latido), `crown`, `rain`, `flames`, `flight`, `paper-ball`, `eyes`, `applause`, `steam` y `blast`;
+  - una parte puede limitarse a unas intensidades (`minIntensity`, `maxIntensity`);
+  - añadir una expresión es su nombre en el catálogo y su receta, y TypeScript avisa si falta alguna; un movimiento nuevo es además su bloque y su fichero de CSS;
+  - como son datos, se podrán llevar al back y editar desde la administración.
+- **Doce reacciones:** corazones, ánimo, trofeo, bombilla, cohete, fuego, aplausos, mente explotando, bola de papel, ojos vigilantes, risas y enfado de broma.
+  - En vez de la piedra, una bola de papel de cuaderno que agrieta la pantalla: la misma broma, sin agresividad.
+  - El enfado es de broma (una cara que echa humo) y en la intensidad 3 la cara revienta con un fogonazo y la pantalla se oscurece. Nunca ante un error: el prompt lo dice.
+- **En pantalla:**
+  - la capa cubre toda la pantalla;
+  - hasta tres reacciones a la vez, cada una hasta que acaba la suya;
+  - la misma reacción no se repite aunque llegue como objeto nuevo: el `computed` del store compara por id y la capa recuerda la última (era el aviso NG0955 de claves duplicadas);
+  - se animan solo transformaciones y opacidad, con filtros solo donde hacen falta.
+- **Dibujos propios:** la bola de papel arrugado y los ojos de dibujo animado son SVG en componentes pequeños (`art/`), como la mascota. Con degradados CSS quedaban pobres.
+- **CSS por bloque:** `reactions.css` es un índice que importa un fichero por bloque de `styles/`.
+- **Paleta:** los tokens `--app-reaction-*` suman humo, papel, pauta, margen, blanco de ojo, tinta y cristal. Las claves del mapa de Sass van entre comillas: sin ellas, Sass las leía como colores.
+- **Aplauso:** el icono `cheer` de Material Symbols, dos manos aplaudiendo.
+
+**Alternativas:**
+
+- Que la IA componga cada reacción (iconos, movimientos): más libre, pero inventaría iconos inexistentes o combinaciones fuera de tono, gastaría tokens y sería difícil de validar. Elegir un nombre de un catálogo cerrado sí se valida.
+- Recetas en el back desde ya: no hay back hasta la fase 2; las recetas ya son datos y se podrán mover.
+- Ampliar la lista de emociones: mezclaría el dato pedagógico con la estética.
+- Los aros de color con borde grueso: parecían una diana sobre el icono. Se rehicieron como halo y ondas difuminadas, por detrás.
+- Una pared de fuego con degradados CSS y aplausos con anillos: el autor prefirió las versiones con iconos.
+- Mover o romper la interfaz real en la explosión: desorienta y el alumno puede perder dónde escribía; todo pasa en la capa.
+- El emoji 👏 del sistema: cambia entre Mac y Windows y no toma la paleta.
+- Paquetes de npm con emojis de Fluent (`@fluentui-emoji/angular` y otros): no son de Microsoft, y los oficiales no están en npm.
+
+**Consecuencias:**
+
+- Cambian §2.6 (tipo `meta`, JSON del modelo, prompt y validación), §4.1 y el paso 1.8 del plan, y la ficha 04.
+- El tutor real (2.4, 2.5) recibe el catálogo en el prompt y valida la reacción.
+- `tutor_interaction` no guarda la reacción: el historial no reacciona.
+- Siguiente iteración: los emojis animados oficiales de Microsoft (Fluent Emoji Animated, MIT) como icono central.
+
+**Aprobación:** el autor pidió cada cambio, los revisó en su navegador y pidió hacer commit de lo actual antes de los emojis animados.

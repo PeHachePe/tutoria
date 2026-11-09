@@ -30,16 +30,14 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Escritorio:** columna a la derecha del código, de ancho ajustable con un separador vertical (nunca baja de 16rem), o flotante si el alumno lo elige.
 - **Flotante** (con el código ampliado, en la tableta o por elección del alumno, D-033): la mascota abajo a la derecha. Al pulsarla, el tutor se abre en un panel sobre la esquina del código (24rem de ancho) y la mascota saca la lengua; en su cabecera están «Fijar el tutor a la derecha» (no en la tableta) y «Minimizar el tutor». Plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
-- **Reacciones flotantes (1.8, D-035):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos su emoción en una capa sobre la pantalla:
-  - un icono protagonista en el centro y el resto alrededor, en un sitio distinto cada vez, con una paleta viva propia y confeti;
-  - alegría: corazones, caras sonrientes, flores y soles que suben balanceándose;
-  - sorpresa: «!», rayos y bombillas que estallan con una sacudida;
-  - ánimo: pulgares, cohetes, fuego y estrellas que suben a saltos;
-  - celebración: un trofeo, medallas y estrellas que explotan con confeti;
-  - la intensidad (1 a 3) da más piezas y más grandes;
-  - la mascota del panel (o la flotante) se mueve con ellas: ladea la cabeza, menea las orejas, salta o da dos saltos;
-  - salen por el lado del tutor; en el móvil, a todo el ancho;
+- **Reacciones flotantes (1.8, D-035):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos la reacción que eligió el tutor (o la de su emoción) en una capa sobre toda la pantalla:
+  - un icono grande en el centro que late, con un halo y ondas de luz a su compás, y alrededor coronas de chispas y lluvia de iconos y confeti por los lados; nunca sale igual;
+  - doce reacciones: corazones, ánimo, trofeo, bombilla que se enciende, cohete que cruza la pantalla, fuego, aplausos, mente explotando, bola de papel que agrieta la pantalla, ojos vigilantes, risas y enfado de broma (que en la intensidad 3 explota con un fogonazo);
+  - la intensidad (1 a 3) da más piezas y más grandes, y algunas partes solo salen en la más alta;
+  - si llega otra respuesta mientras dura, se suma sin cortar la anterior (hasta tres);
+  - la mascota del panel (o la flotante) se mueve con ellas;
   - las respuestas del historial, las que fallan a mitad y las intervenciones que el tutor decide callar no reaccionan.
+  - En el tutor simulado: la pista de nivel 1, 2 y 3 da bombilla, fuego y cohete; pedir la solución, la bola de papel y luego el enfado; las preguntas, aplausos, mente explotando o risas por turnos; el enunciado, corazones; el código vacío, ánimo; el ejercicio superado, trofeo.
 
 ## Interacciones
 
@@ -87,7 +85,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] En el móvil, el punto de la pestaña «Tutor» aparece con una respuesta nueva y se va al abrirla.
 - [ ] El tutor pasa de fijo a flotante y de vuelta, y se recuerda al recargar; flotante, se abre con el foco en la pregunta y se minimiza con el botón, la mascota o Esc, con el foco de vuelta en la mascota.
 - [ ] Plegado, una respuesta nueva asoma en el bocadillo, se anuncia y abre el tutor.
-- [ ] Cada respuesta nueva lanza la reacción de su emoción y mueve la mascota; reducidas, un solo icono; desactivadas, nada; con «reducir movimiento», un icono que se desvanece sin moverse.
+- [ ] Cada respuesta nueva lanza su reacción y mueve la mascota; dos seguidas se suman sin cortarse; reducidas, su icono pequeño; desactivadas, nada; con «reducir movimiento», su icono se desvanece sin moverse.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 
 ## Fuera de alcance
