@@ -1,6 +1,6 @@
 # Guía de desarrollo de TutorIA con asistencia de IA
 
-### Plan v4.3 · noviembre de 2026 · Angular 22.2 · desarrollo local primero, pantalla a pantalla
+### Plan v4.4 · noviembre de 2026 · Angular 22.2 · desarrollo local primero, pantalla a pantalla
 
 Este documento es el plan de construcción de TutorIA. Está pensado para ejecutarse con un agente de codificación (Claude Code) bajo supervisión humana y es autocontenido: incluye la especificación funcional, las decisiones técnicas con su justificación, la forma de trabajar con el agente y los pasos con sus criterios de verificación. En el repositorio vive como `docs/PLAN.md`, y es la única fuente de verdad: no hay una copia aparte de la especificación que pueda desincronizarse.
 
@@ -58,28 +58,34 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - Voz del tutor elegible (6.1) y protección del propio rol del administrador (5.1).
 - Datos simulados más realistas: un grupo de 24 alumnos, un segundo grupo con otro docente, un alumno desactivado y servicios simulados que imitan la RLS (4.3).
 
+**Cambios de la v4.4** (la aplicación completa en la PEC3; ver D-032):
+
+- La PEC3 entrega la aplicación completa con back-end real, no solo la capa 1: el bloque A llega hasta el 7.2 y la entrega de la PEC3 (3.2) se hace al final (1 y 6).
+- La beta pública (3.1) se publica en cuanto el núcleo funciona con back-end real, y cada fase posterior se despliega en ella.
+- La PEC4 queda para el feedback del consultor, lo opcional (6.3 y 7.3), la versión 1.0 (7.4), la memoria final, el vídeo de defensa, la presentación y el autoinforme.
+- Un solo guion de demo para el vídeo de la PEC3 y los 5 minutos de demostración en directo de la PEC4.
+
 ---
 
 ## 1. Calendario y alcance
 
-| Hito | Fecha límite          | Qué tiene que existir                                                                                                                                                            |
-| ---- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PEC3 | sáb 05/12/2026, 23:59 | Capa 1 funcionando con back-end real; versión beta en un servidor público; vídeo de demostración de 5 minutos como máximo; memoria con los cambios respecto a la PEC2; checklist |
-| PEC4 | mar 05/01/2027, 23:59 | Capas 2 a 4, administración, accesibilidad y responsive verificados; versión final pública con una cuenta de administración para el tribunal; vídeo de defensa y presentación    |
+| Hito | Fecha límite          | Qué tiene que existir                                                                                                                                                                                                                                                                                                         |
+| ---- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PEC3 | sáb 05/12/2026, 23:59 | La aplicación completa (capas 1 a 4 y administración) con back-end real, publicada en un servidor público, con accesibilidad y responsive verificados; lo que no llegue, justificado en la memoria y en el checklist; vídeo de demostración de 5 minutos como máximo; memoria con los cambios respecto a la PEC2; checklist   |
+| PEC4 | mar 05/01/2027, 23:59 | Cambios pedidos por el consultor y lo recortado en la PEC3; versión 1.0 pública con una cuenta de administración para el tribunal; memoria final; vídeo de defensa de unos 20 minutos (15 de presentación y 5 de demostración en directo, sin cortes); presentación escrita-visual; autoinforme de competencias transversales |
 
 Reparto orientativo por semanas:
 
-| Semana | Fechas       | Trabajo                                                           |
-| ------ | ------------ | ----------------------------------------------------------------- |
-| 1      | 6–15 nov     | Fase 0 y pasos 1.1–1.2                                            |
-| 2      | 16–22 nov    | Pasos 1.3–1.10 (pantalla de trabajo completa con datos simulados) |
-| 3      | 23–29 nov    | Fase 2 (Supabase local, ejecución y tutor reales)                 |
-| 4      | 30 nov–5 dic | Fase 3 (beta pública, vídeo y memoria de la PEC3)                 |
-| 5–6    | 6–20 dic     | Fases 4 y 5 (panel docente y administración)                      |
-| 7      | 21–27 dic    | Fase 6 (voz y tutor proactivo)                                    |
-| 8      | 28 dic–5 ene | Fase 7 (cierre) y memoria final                                   |
+| Semana | Fechas       | Trabajo                                                                                       |
+| ------ | ------------ | --------------------------------------------------------------------------------------------- |
+| 1      | 6–8 nov      | Fase 0 y pasos 1.1–1.6 (hecho)                                                                |
+| 2      | 9–15 nov     | Pasos 1.7–1.10 y fase 2 (Supabase local, ejecución y tutor reales)                            |
+| 3      | 16–22 nov    | Paso 3.1 (beta pública) y fase 4 (panel docente)                                              |
+| 4      | 23–29 nov    | Fase 5 (administración) y pasos 6.1–6.2 (voz y tutor proactivo)                               |
+| 5      | 30 nov–5 dic | Pasos 7.1–7.2 (accesibilidad, responsive y endurecimiento) y 3.2 (vídeo y memoria de la PEC3) |
+| 6–9    | 6 dic–5 ene  | Feedback de la PEC3, pasos 6.3 y 7.3 si hay tiempo, 7.4 (versión 1.0) y entrega final         |
 
-La PEC3 exige una beta en un servidor público, así que la última semana del bloque se reserva para eso. Hasta entonces todo se hace en local. El front con datos simulados puede publicarse antes (paso 1.10) sin coste y sin back-end.
+Quedan unas 90 h de pasos hasta la PEC3, unas 22 h por semana. El desarrollo debería acabar hacia el 2 de diciembre para dejar el 3.2 con margen. Si falta tiempo, se recorta en este orden: 6.3 y 7.3 (ya opcionales), 6.2 (capa 4), 6.1 (capa 3) y 5.3 (sistema), y lo que quede fuera se justifica en la memoria y en el checklist y pasa a la PEC4. La beta pública (3.1) se publica en cuanto el núcleo funciona con back-end real, como recomienda el aula, y cada fase posterior se despliega en ella. Hasta entonces todo se hace en local; el front con datos simulados puede publicarse antes (paso 1.10) sin coste y sin back-end.
 
 ---
 
@@ -222,6 +228,7 @@ interface TutorRequest {
   kind: 'question' | 'hint' | 'proactive';
   message?: string; // only for 'question'
   code: string; // current editor content, so the tutor always sees the latest code
+  language: 'es' | 'en' | 'ca'; // language of the interface, which the tutor answers in (D-033)
 }
 ```
 
@@ -389,6 +396,8 @@ src/app/
   app.ts  app.html  app.config.ts  app.routes.ts   # generated by ng new; app.routes.ts lazy-loads each role
   auth/               # login-page/, auth-store.ts, role-guard.ts, guest-guard.ts, home-path.ts
   student/            # student.routes.ts, student-layout/, catalog/, workspace/, settings/
+                      # workspace/: workspace.routes.ts (lazy, with its stores), the page and one folder
+                      # per zone: statement-zone/, code-zone/, tutor/ (chat and tutor-chat.css) (D-033)
   teacher/            # teacher.routes.ts, live/, history/, exercises/, groups/
   admin/              # admin.routes.ts, users/, system/
   not-found/          # not-found-page.ts: the 404, also for the pages of another role
@@ -708,7 +717,7 @@ Los bloques de plantilla de este documento van marcados como `angular`, no como 
   - el CLI ya genera los componentes sin hoja de estilos (`"style": "none"` en los `schematics` de `angular.json`);
   - el aspecto de los componentes de Material solo se ajusta en `src/theme.scss` (paleta, tipografía, densidad y overrides);
   - la disposición y las piezas propias se hacen con utilidades de Tailwind en la plantilla;
-  - las animaciones (por ejemplo, las reacciones) son CSS global: van en `src/styles.css` o, si son de una pieza concreta, en un parcial junto a su componente que `src/styles.css` importa (`shared/mascot/mascot.css`, D-022).
+  - las animaciones (por ejemplo, las reacciones) son CSS global: van en `src/styles.css` o, si son de una pieza concreta, en un parcial junto a su componente que `src/styles.css` importa (`shared/mascot/mascot.css`, D-022; `student/workspace/tutor/tutor-chat.css`, D-033).
 - **Tailwind no cambia el interior de un componente de Material:** pierde frente a sus estilos y obliga a pelearse con la especificidad. Para eso están los tokens del tema.
 - **Colores solo con tokens:** los de Tailwind están enlazados a las variables `--mat-sys-*`. Nunca colores directos ni utilidades `dark:`.
 - **Reparto de responsabilidades:**
@@ -916,7 +925,9 @@ Uno o dos datos o frases destacables del paso.
 
 Cada paso indica una estimación orientativa de horas, lo que se hace, cuándo está hecho (✅) y qué tests lleva (🧪). Las horas reales se anotan en `REGISTRO.md` para compararlas con la estimación.
 
-### Bloque A · Hasta la PEC3 (capa 1, núcleo en texto)
+### Bloque A · Hasta la PEC3 (la aplicación completa)
+
+Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (beta pública); fases 4 y 5; 6.1 y 6.2; 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
 
 #### Fase 0 · Cimientos (≈12 h)
 
@@ -1099,16 +1110,18 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 ✅ Dos minutos de trabajo dejan la traza esperada en el visor de eventos de la barra.
 🧪 Envío por lotes.
 
-**1.7 · Chat del tutor (≈3 h)** · ficha `04-tutor`
+**1.7 · Chat del tutor (≈3 h)** · ficha `04-tutor` · D-033
 
-- `TutorService` simulado (4.3).
-- El botón que abre el chat lleva la mascota (`<app-mascot>`, 1.1b): saca la lengua al abrirlo, la recoge al cerrarlo e inclina la cabeza mientras el tutor piensa.
-- `TutorStore`: mensajes, nivel actual y si está enviando; consume los eventos con `for await`.
-- Panel con burbujas propias (Tailwind), nivel de pista visible, «Pedir pista», campo de pregunta, indicador de escritura y error con reintento.
-- Los mensajes nuevos se anuncian con `aria-live="polite"`.
+- Antes del chat, `WorkspacePage` se parte en componentes de zona (enunciado, código y tutor) y la pantalla de trabajo se carga aparte (`loadChildren`), con sus stores.
+- `TutorService` simulado (4.3): una función pura elige la respuesta por tipo y nivel, con los textos de las fixtures, y detecta las peticiones de la solución.
+- La mascota (`<app-mascot>`, 1.1b) va en el panel, porque el tutor tiene columna propia (D-028): saca la lengua mientras el alumno escribe, la recoge al salir del campo e inclina la cabeza mientras el tutor piensa.
+- `TutorStore`: la conversación del intento (cargada con `AttemptService.history()`), el nivel actual y si está respondiendo; consume los eventos con `for await` y envía el idioma de la interfaz (§2.6).
+- Panel con burbujas propias (Tailwind) y nivel de pista en escalones con su nombre. «Pedir pista» dice lo que dará. Campo de pregunta con Signal Forms: Intro envía. Indicador de escritura, preguntas sugeridas y error con reintento. Solo lectura si el intento está entregado.
+- Cada respuesta se anuncia una vez, completa, con `aria-live="polite"`. En el móvil, la pestaña «Tutor» avisa de una respuesta nueva.
+- Separador vertical entre el código y el tutor, recordado por usuario.
 
 ✅ Conversación completa subiendo del nivel 1 al 3.
-🧪 `TutorStore` con un `TutorService` falso, incluido un error a mitad de respuesta.
+🧪 `TutorStore` con un `TutorService` falso, incluido un error a mitad de respuesta; el tutor simulado y su elección de respuestas con TDD.
 
 **1.8 · Reacciones flotantes (≈1,5 h)**
 
@@ -1223,10 +1236,12 @@ Commit: `feat: real backend core`.
 
 ✅ Smoke e2e contra la URL pública: acceso, resolver, pista y entrega.
 
-**3.2 · Entrega de la PEC3 (≈6 h, entre los dos)**
+**3.2 · Entrega de la PEC3 (≈6 h, entre los dos)** · se hace al final del bloque A, después del 7.2
 
 - Capturas para el apartado 2.4 de la memoria con `npm run screenshots -- pec3`.
-- Vídeo de 5 minutos como máximo: acceso, catálogo, resolver con pistas, reacciones y entrega.
+- Guion de demo de 5 minutos que sirva también para la demostración en directo de la PEC4: un caso de uso de principio a fin (el alumno resuelve un ejercicio con pistas, reacciones y voz, y lo entrega; el docente lo sigue en la sesión en vivo y abre el detalle del intento; un vistazo a la administración), mejor que un recorrido pantalla a pantalla.
+- Vídeo de 5 minutos como máximo con ese guion, grabado de la pantalla y montado.
+- Lo que no haya llegado, justificado en la memoria y en el checklist.
 - **Memoria:**
   - decisiones de la sección 3, con el cambio de Docker a Judge0 alojado;
   - modelo de datos;
@@ -1234,9 +1249,7 @@ Commit: `feat: real backend core`.
   - seguimiento con las horas reales de `REGISTRO.md`;
   - apartado 1.8.
 
-Etiqueta: `v0.3-beta`.
-
-### Bloque B · Hasta la PEC4 (capas 2 a 4 y administración)
+Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
 #### Fase 4 · Panel docente (capa 2, ≈20 h)
 
@@ -1362,7 +1375,7 @@ Commit: `feat: on-device tutor`.
 - e2e finales de los flujos de alumno, docente y administrador.
 - README con la instalación en local y el despliegue.
 - Despliegue final y cuenta de administración para el tribunal.
-- Vídeo de defensa. Si algo ha cambiado desde el 7.1, se relanza `npm run screenshots -- pec4`.
+- Vídeo de defensa: los 5 minutos de demostración repiten en directo el guion de la PEC3, con los cambios que haya pedido el consultor. Si algo ha cambiado desde el 7.1, se relanza `npm run screenshots -- pec4`.
 
 Commit: `release: v1.0`.
 
@@ -1370,14 +1383,14 @@ Commit: `release: v1.0`.
 
 ## 7. Riesgos y plan de contingencia
 
-| Riesgo                                                | Impacto | Medida                                                                                                                                                                                                                                              |
-| ----------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No llegar a la beta del 5/12                          | Alto    | El bloque A solo incluye la capa 1. El front simulado se puede publicar desde el paso 1.10. El panel docente queda fuera de la PEC3 salvo que sobre tiempo.                                                                                         |
-| Límites de la capa gratuita de Judge0                 | Medio   | Un envío por ejecución y límite por usuario. Si se agota antes de una demo, se graba antes o se contrata el plan mínimo.                                                                                                                            |
-| Judge0 alojado caído durante la evaluación            | Medio   | Vídeo grabado de antemano y mensaje de error claro en la aplicación.                                                                                                                                                                                |
-| Proyecto gratuito de Supabase pausado por inactividad | Medio   | Entrar al panel antes de cada fecha de evaluación y mantener actividad semanal.                                                                                                                                                                     |
-| Calidad, límites o condiciones del proveedor de IA    | Medio   | Adaptador compatible con la API de OpenAI: se cambia de proveedor desde la configuración (Gemini gratis, Ollama u otro), y para la demo se puede usar un modelo de pago por unos pocos euros. El plan gratuito de Gemini, solo con datos de prueba. |
-| Aspecto genérico de Material                          | Bajo    | Tema propio en `src/theme.scss`: paleta a partir del verde, formas, tipografía y densidad.                                                                                                                                                          |
-| Docker da problemas con Supabase local                | Bajo    | Proyecto de desarrollo en la nube.                                                                                                                                                                                                                  |
-| Pulir pantallas sin fin                               | Medio   | Tiempo máximo por pantalla y lista de pulido pendiente en su ficha.                                                                                                                                                                                 |
-| Código generado con IA sin revisar                    | Medio   | Un paso cada vez, tests, revisión humana antes de cada commit y registro en `REGISTRO.md`.                                                                                                                                                          |
+| Riesgo                                                | Impacto | Medida                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No llegar a la aplicación completa el 5/12            | Alto    | Orden de recorte fijado (6.3, 7.3, 6.2, 6.1 y 5.3), lo recortado se justifica en la memoria y en el checklist y pasa a la PEC4. Beta pública desde el 3.1, para ver los problemas de despliegue pronto. El front simulado se puede publicar desde el paso 1.10. |
+| Límites de la capa gratuita de Judge0                 | Medio   | Un envío por ejecución y límite por usuario. Si se agota antes de una demo, se graba antes o se contrata el plan mínimo.                                                                                                                                        |
+| Judge0 alojado caído durante la evaluación            | Medio   | Vídeo grabado de antemano y mensaje de error claro en la aplicación.                                                                                                                                                                                            |
+| Proyecto gratuito de Supabase pausado por inactividad | Medio   | Entrar al panel antes de cada fecha de evaluación y mantener actividad semanal.                                                                                                                                                                                 |
+| Calidad, límites o condiciones del proveedor de IA    | Medio   | Adaptador compatible con la API de OpenAI: se cambia de proveedor desde la configuración (Gemini gratis, Ollama u otro), y para la demo se puede usar un modelo de pago por unos pocos euros. El plan gratuito de Gemini, solo con datos de prueba.             |
+| Aspecto genérico de Material                          | Bajo    | Tema propio en `src/theme.scss`: paleta a partir del verde, formas, tipografía y densidad.                                                                                                                                                                      |
+| Docker da problemas con Supabase local                | Bajo    | Proyecto de desarrollo en la nube.                                                                                                                                                                                                                              |
+| Pulir pantallas sin fin                               | Medio   | Tiempo máximo por pantalla y lista de pulido pendiente en su ficha.                                                                                                                                                                                             |
+| Código generado con IA sin revisar                    | Medio   | Un paso cada vez, tests, revisión humana antes de cada commit y registro en `REGISTRO.md`.                                                                                                                                                                      |

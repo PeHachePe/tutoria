@@ -691,3 +691,88 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Consecuencias:** cambian §2.2, §2.8 y el paso 1.6 del plan, el tipo `ProcessEvent`, las fixtures y `seed.sql` (versión 3 del seed: los datos simulados guardados en el navegador se reinician). Una vuelta muy rápida tras ocultar la pestaña llega con un `awayMs` pequeño: el panel docente (4.1) puede ignorar las ausencias de menos de 2 s con ese dato. Con Supabase, el envío al ocultar la pestaña necesita `fetch` con `keepalive` (2.2).
 
 **Aprobación:** el autor, que aprobó el plan corregido del paso («Adelante»).
+
+## D-032 · La aplicación completa en la PEC3 (09/11/2026)
+
+**Contexto:** el plan llevaba a la PEC3 solo la capa 1 con back-end real (`v0.3-beta`) y dejaba el panel docente, la administración, la voz, el tutor proactivo y el cierre para la PEC4. El enunciado de la PEC3 pide una beta que «no tiene por qué tener todas las funcionalidades terminadas», pero es la entrega en la que se valora el grueso del producto. La PEC4, en cambio, carga mucho trabajo que no es programar: la memoria final, una presentación escrita-visual, un vídeo de defensa de unos 20 minutos (15 de presentación y 5 de demostración en directo, sin cortes y con el estudiante en cámara) y el autoinforme de competencias. Entre el 6 y el 8 de noviembre se cerraron la fase 0 y los pasos 1.1–1.6, con horas reales parecidas a las estimadas.
+
+**Decisión:**
+
+- **El bloque A llega hasta el 7.2:** fases 0, 1 y 2; 3.1 (beta pública); fases 4 y 5; 6.1 y 6.2; 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3), con la etiqueta `v0.9`.
+- **El bloque B (PEC4)** son el 6.3, el 7.3 y el 7.4, el feedback del consultor y lo que se recorte del bloque A.
+- **Orden de recorte** si falta tiempo: 6.3 y 7.3, 6.2 (capa 4), 6.1 (capa 3) y 5.3. Lo recortado se justifica en la memoria y en el checklist.
+- **Beta pública temprana:** el 3.1 se hace en cuanto el núcleo funciona con back-end real, y cada fase posterior se despliega en ella.
+- **Un solo guion de demo** para el vídeo de la PEC3 y los 5 minutos en directo de la PEC4: un caso de uso de principio a fin.
+- **La numeración de los pasos no cambia,** para no romper las referencias de la bitácora y del registro.
+
+**Alternativas:**
+
+- Mantener el plan: la PEC3 llegaría con media aplicación y diciembre tendría que repartirse entre programar la otra mitad y preparar la defensa.
+- Renumerar los pasos según el nuevo orden: más limpio de leer, pero rompe los enlaces de `REGISTRO.md`, de la bitácora y de las fichas.
+
+**Consecuencias:** cambian la sección 1 (hitos y reparto por semanas), el principio del bloque A, los pasos 3.2 y 7.4 y la tabla de riesgos del plan, que pasa a la v4.4. Quedan unas 90 h hasta la PEC3, unas 22 h por semana, con el desarrollo terminado hacia el 2 de diciembre. La memoria tiene que recoger el cambio de planificación en el seguimiento.
+
+**Aprobación:** el autor, que fijó el objetivo («mi idea es de cara a la pec 3 tener la app acabada»).
+
+## D-033 · Chat del tutor: zonas propias, conversación del intento y mascota que escucha (09/11/2026)
+
+**Contexto:** el paso 1.7 llena la zona del tutor de la pantalla de trabajo. Al revisarlo aparecieron desfases y huecos:
+
+- el plan hablaba de un botón con la mascota que abre y cierra el chat, pero desde D-028 y D-030 el tutor tiene una columna propia siempre a la vista;
+- `TutorService` solo sabe preguntar, así que al recargar la conversación se perdería y el nivel de pista volvería a cero;
+- si cada trozo de la respuesta se anunciara con `aria-live`, el lector de pantalla leería frases a medias;
+- el tutor contestaría siempre en español aunque la interfaz esté en inglés o catalán;
+- `WorkspacePage` tenía ya 298 líneas y 409 de plantilla, y el catálogo descargaba la pantalla de trabajo;
+- la columna del tutor estrechaba el código en la tableta sin que el alumno pudiera cambiarlo (D-030).
+
+**Decisión:**
+
+- **Pantalla partida en zonas:** `statement-zone/`, `code-zone/` (con sus resultados, indicador de guardado, diálogo y mensajes) y `tutor/`, como componentes con `input()` y `model()`. La página se queda con la cabecera, la disposición, los separadores y los eventos de la ventana.
+- **Ruta perezosa:** la pantalla de trabajo se carga con `loadChildren` (`workspace.routes.ts`), con sus stores (`AttemptStore`, `TutorStore` y `BrowserSignals`) dentro.
+- **`TutorStore`** (`@Service({ autoProvided: false })`):
+  - carga la conversación con `resource()` desde `AttemptService.history()`, que ya existía y deja al alumno leer sus intentos, en lugar de añadir una operación nueva;
+  - añade los turnos nuevos con `linkedSignal`, así que cada intento empieza desde su propio historial;
+  - envía cada pregunta o pista con el código del editor y lee la respuesta con `for await`;
+  - si la respuesta falla a mitad, descarta lo llegado y guarda la pregunta para reintentar;
+  - ignora las respuestas tardías de otro ejercicio;
+  - el nivel es el más alto de las pistas del intento: lo decide el servidor (2.6);
+  - anuncia cada respuesta una sola vez, cuando está completa.
+- **`language` en `TutorRequest`:** el idioma de la interfaz viaja en cada petición, para que el tutor real (2.4) conteste en ese idioma. El simulado lo ignora: sus textos son datos del servidor, en español.
+- **Tutor simulado:** una función pura (`scriptedAnswer`) elige la respuesta por tipo y nivel con los textos de las fixtures, ahora compartidos (`tutor-script.ts`). Detecta las peticiones de la solución en los tres idiomas (elusión, 2.9) y da respuestas propias para el código vacío, el enunciado y el intento superado. `MockTutorService` registra la interacción y los eventos `hint_requested` y `proactive_intervention`, aplica las reglas de acceso y escribe la respuesta en trozos de tres palabras cada 40 ms.
+- **La mascota escucha:**
+  - va en la cabecera del panel, o en grande en la bienvenida, en lugar de en un botón;
+  - saca la lengua mientras el alumno escribe y la recoge al salir del campo;
+  - inclina la cabeza mientras el tutor responde;
+  - no acompaña a cada burbuja: una columna de perros animados distrae.
+- **Panel del chat:**
+  - burbujas propias con su hora, y etiquetas «Pista · nivel N» y «El tutor se acerca»;
+  - días separados («Hoy» o la fecha);
+  - el nivel de pista con tres escalones y su nombre;
+  - «Pedir pista» dice lo que dará y pasa a «Otra pista» en el nivel 3;
+  - tres puntos mientras se espera y un cursor mientras llega el texto;
+  - preguntas sugeridas según el estado del intento;
+  - en un intento entregado, la conversación queda en solo lectura;
+  - se desplaza abajo solo con CSS (`flex-col-reverse`).
+- **Campo de pregunta:** Signal Forms con `submission`; Intro envía y Mayús + Intro hace salto de línea. El campo se vacía con `reset()` al enviar, como en la guía de Angular. El límite de 500 caracteres llega al campo como `maxlength` y un contador aparece desde los 400.
+- **Móvil:** la pestaña «Tutor» muestra un punto («Tutor, respuesta nueva») si llega una respuesta mientras el alumno mira otra pestaña.
+- **Separador vertical** entre el código y el tutor (`app-splitter` con `orientation="vertical"`):
+  - el código ocupa del 50 al 80 % (70 % al empezar) y se recuerda por usuario;
+  - la columna del tutor nunca baja de 16rem.
+- **Mascota flotante,** descartada por ahora: taparía el código justo cuando el alumno lee la pista, y D-030 quiere al tutor a la vista para las intervenciones proactivas.
+
+**Alternativas:**
+
+- Una operación `TutorService.conversation()`: más explícita, pero duplica lo que ya da `history()`, y la tabla de servicios (§4.2) ya preveía el historial del intento.
+- Un `effect()` que baje el desplazamiento al último mensaje: `flex-col-reverse` lo hace sin código y sin romper la regla de no usar `effect()` fuera de las APIs imperativas.
+- Un `aria-live` en la lista de mensajes (`role="log"`): anunciaría cada trozo mientras llega.
+- La mascota en cada burbuja del tutor: más cálida, pero recarga la columna.
+
+**Consecuencias:**
+
+- En el plan cambian §2.6 (`language` en la petición), §4.1 (carpetas de la pantalla de trabajo y `tutor-chat.css`) y el paso 1.7.
+- Cambian las fichas 03 y 04.
+- La Edge Function `tutor` (2.4) tiene que responder en el idioma de la petición.
+- Reintentar una pista que falló después de que el servidor la registrara subiría el nivel dos veces; se resolverá con la respuesta real (2.4).
+- Las reacciones (1.8) leerán la emoción de los turnos del store.
+
+**Aprobación:** el autor, que aprobó el plan con todas las mejoras propuestas («Sí, todo»).

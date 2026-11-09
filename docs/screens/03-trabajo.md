@@ -1,6 +1,6 @@
 # 03 · Pantalla de trabajo
 
-`/alumno/ejercicio/:id` · Alumno · Capas 1, 3 y 4 · 2 h la disposición (paso 1.3), 3 h el editor (1.4) y 3 h las pruebas y la entrega (1.5); se completa del 1.6 al 1.8
+`/alumno/ejercicio/:id` · Alumno · Capas 1, 3 y 4 · 2 h la disposición (paso 1.3), 3 h el editor (1.4), 3 h las pruebas y la entrega (1.5) y 3 h el chat del tutor (1.7, ficha 04); se completa con el 1.8
 
 ## Objetivo
 
@@ -13,7 +13,9 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - Si el alumno no tiene el ejercicio asignado, los dos servicios responden `not_found`.
 - El código se guarda con `AttemptService.saveCode` 800 ms después del último cambio (paso 1.4, D-029).
 - Las pruebas se ejecutan con `CodeRunnerService.run`, que guarda el código y fija `passed` o `tests_failed`, y se entrega con `AttemptService.submit` (paso 1.5, D-030). Los resultados viven en el store mientras se está en la pantalla: no se guardan.
-- El reparto entre enunciado y código se recuerda por usuario en `localStorage`.
+- El reparto entre enunciado y código, y entre código y tutor, se recuerda por usuario en `localStorage`.
+- La conversación con el tutor la lleva `TutorStore` (ficha 04, D-033).
+- La pantalla se descarga aparte (`loadChildren`), con sus stores, cuando el alumno abre un ejercicio (D-033).
 
 ## Contenido y disposición
 
@@ -23,8 +25,8 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
   - **Enunciado:** el texto, con el código en monoespaciada; «Ejemplos» como tabla de llamadas y resultados esperados (`suma([1, 2, 3])` → `6`) y «Y N comprobaciones ocultas» (2.5). Se puede plegar.
   - **Código:** el editor (1.4), con el indicador de guardado junto al encabezado; debajo, «Ejecutar pruebas» y «Entregar», y los resultados (1.5), que se desplazan por dentro y ocupan como mucho el 40 % de la zona. Es la zona principal y se lleva el espacio que sobre. Un intento nuevo empieza vacío, con «Escribe aquí la función `suma`» como texto de ayuda (D-018); uno entregado solo muestra su código y, en lugar de los botones, «Entregado el …» con «Volver a los ejercicios».
   - **Resultados** (figura 17): el resumen («3 de 5 superadas» o «Todas superadas»); cada ejemplo con su llamada, el esperado y el obtenido, el error o «Tiempo agotado»; las pruebas que no llegaron a empezar tras un tiempo agotado, como «Sin ejecutar»; las comprobaciones ocultas, solo con su icono; si el código no carga o no tiene la función, solo eso, una vez. Si el código cambia después de ejecutar, una nota avisa de que son de la versión anterior. Antes de la primera ejecución, una línea invita a ejecutar.
-  - **Tutor:** el chat (1.7).
-- Escritorio y tableta (desde 768 px), como en el prototipo: dos columnas. A la izquierda, el enunciado encima del código, con un separador entre los dos (el enunciado ocupa del 15 al 70 % de la columna; 45 % al empezar); a la derecha, el tutor con ancho fijo. La pantalla ocupa el alto de la ventana y cada zona se desplaza por dentro.
+  - **Tutor:** el chat (ficha 04).
+- Escritorio y tableta (desde 768 px), como en el prototipo: dos columnas. A la izquierda, el enunciado encima del código, con un separador entre los dos (el enunciado ocupa del 15 al 70 % de la columna; 45 % al empezar); a la derecha, el tutor, con un separador vertical entre el código y el tutor (el código ocupa del 50 al 80 % del ancho, 70 % al empezar, y el tutor nunca baja de 16rem). La pantalla ocupa el alto de la ventana y cada zona se desplaza por dentro.
 - Móvil (menos de 768 px): pestañas «Ejercicio», «Código» y «Tutor», cada una a pantalla completa. Cambia la figura 15, que apilaba los bloques con el tutor plegable debajo: a 375 × 667 no cabían y la página entera se desplazaba (5.4).
 
 ## Interacciones
@@ -38,7 +40,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - **Salir o recargar:** lo pendiente se guarda al ocultar la pestaña, al cambiar de ejercicio y al salir de la pantalla; con cambios sin guardar, el navegador pregunta antes de cerrar.
 - **Ejecutar pruebas** (o Ctrl + Intro desde el editor): envía el código actual, dice «Ejecutando…» y muestra los resultados; el estado pasa a «Superado» o «Con fallos». Un bucle infinito acaba a los 2 s en «Tiempo agotado» sin colgar la pestaña. Si falla, un aviso con «Reintentar».
 - **Entregar:** solo con el intento superado; pide confirmación («Seguir revisando» o «Entregar») y después el código queda en solo lectura. Antes de superar, el botón se puede enfocar y su tooltip explica por qué no se puede.
-- **Separador:** se arrastra o se mueve con las flechas, Inicio y Fin; doble clic vuelve al 45 %. Se recuerda para el alumno.
+- **Separadores:** se arrastran o se mueven con las flechas (arriba y abajo el del enunciado; izquierda y derecha el del tutor), Inicio y Fin; doble clic vuelve al reparto inicial. Se recuerdan para el alumno.
 - **Ampliar el código** (escritorio y tableta): el botón ⤢ del encabezado «Código» oculta el enunciado y le da su altura al código y a los resultados; el tutor sigue en su columna. El mismo botón vuelve a la vista normal. Es el mismo editor: no se pierde nada de lo escrito ni el historial de deshacer.
 - **Plegar los resultados:** su encabezado, con el resumen, los pliega o los despliega; cada ejecución nueva los vuelve a desplegar.
 - **Señales del navegador** (paso 1.6, D-031): en un intento sin entregar se registran, sin nada visible para el alumno, los pegados de texto de fuera del código y las salidas a otra ventana o pestaña de 2 s o más, con su duración. Cerrar sesión espera a guardar el código y a enviar los eventos. La pantalla de datos registrados (1.9) lo explica.
@@ -65,7 +67,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - El resumen de cada ejecución se anuncia (`aria-live="polite"`), porque los resultados aparecen lejos del botón; los fallos al ejecutar o entregar, con `role="alert"`. Cada resultado dice su estado con texto, además del icono y el color.
 - Los botones que se deshabilitan siguen enfocables (`disabledInteractive`); tras entregar, el foco va a la nota de entregado.
 - El diálogo de entrega atrapa el foco y empieza en «Seguir revisando».
-- El separador es un `separator` con su valor (`aria-valuenow`, en porcentaje) y `aria-controls` al enunciado.
+- Los separadores son `separator` con su valor (`aria-valuenow`, en porcentaje), su orientación y `aria-controls` a la zona que cambian: «Tamaño del enunciado» y «Ancho del código».
 - «Ampliar el código» es un botón de alternar: mismo nombre y `aria-pressed`. Los resultados plegables siguen el patrón de acordeón, como el enunciado.
 
 ## Criterios de aceptación
@@ -80,11 +82,12 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - [ ] Un intento entregado se ve en solo lectura y sin indicador de guardado.
 - [ ] El ejercicio 3 se resuelve y se entrega, y un bucle infinito acaba en tiempo agotado sin colgar la pestaña (paso 1.5).
 - [ ] El separador cambia el reparto con el ratón y con el teclado, y se recuerda al volver.
+- [ ] El separador vertical da más o menos ancho al tutor, sin bajar de 16rem, y se recuerda al volver (paso 1.7).
 - [ ] «Ampliar el código» da al código el sitio del enunciado, con el tutor a la vista y sin perder lo escrito, y los resultados se pliegan al resumen (iteraciones 1 y 2 del 1.5).
 
 ## Fuera de alcance
 
-- El chat (1.7) y las reacciones (1.8): su zona muestra qué llegará.
+- Las reacciones (1.8). El chat tiene su propia ficha (04).
 - El registro del pegado: el editor ya lo detecta, y lo envía el `EventLogger` del 1.6.
 - La lista de ejercicios dentro de la pantalla: el plan la dejaba opcional y basta con volver al catálogo.
 
