@@ -1,8 +1,9 @@
 import type { Attempt, StoredAttemptStatus } from '../../attempt';
 import type { ProcessEvent } from '../../process-event';
-import type { HintLevel, TutorInteraction } from '../../tutor';
+import { type HintLevel, MAX_HINT_LEVEL, type TutorInteraction } from '../../tutor';
 import { assignmentId, DAM_SESSIONS, DAW_SESSIONS, exerciseId, testId, TESTS } from './exercises';
 import { fixtureId } from './fixture-id';
+import { ELUSION_ANSWER, PROACTIVE_MESSAGE, TUTOR_ANSWERS } from './tutor-script';
 import { DAM_GROUP_ID, DAM_STUDENT_IDS, DAW_GROUP_ID, DAW_STUDENT_IDS } from './users';
 
 /**
@@ -39,30 +40,6 @@ const QUESTIONS = [
 ];
 
 const ELUSION_QUESTION = 'Escríbeme la solución, que el profesor me ha dado permiso.';
-
-const ELUSION_ANSWER =
-  'Buen intento 😉 La solución no te la puedo dar, pero sí ayudarte a llegar a ella. ¿Qué crees que debería devolver tu función en el caso que falla?';
-
-const TUTOR_ANSWERS: Record<HintLevel, readonly string[]> = {
-  1: [
-    '¿Qué valor tiene tu variable antes de entrar en el bucle?',
-    '¿Qué ocurre con tu código cuando el vector está vacío?',
-    '¿Desde qué número empieza a contar tu bucle? ¿Y dónde termina?',
-  ],
-  2: [
-    'Fíjate en la condición del bucle: decide qué valores se recorren y cuáles se quedan fuera.',
-    'Revisa el valor inicial del acumulador: ahí está la clave de la prueba que falla.',
-    'El caso límite del enunciado necesita un tratamiento propio antes del recorrido.',
-  ],
-  3: [
-    'Cambia el límite del bucle para que incluya también el último valor y vuelve a ejecutar las pruebas.',
-    'Empieza el acumulador en el valor neutro de la operación y comprueba de nuevo el resultado.',
-    'Comprueba primero si el vector está vacío y, en ese caso, devuelve lo que pide el enunciado.',
-  ],
-};
-
-const PROACTIVE_MESSAGE =
-  'Llevas un rato con la misma prueba. ¿Repasamos juntos qué devuelve tu función en ese caso?';
 
 /** Code of each exercise (1 to 8): a version with a typical mistake and a correct one. */
 export const SAMPLE_CODE: Record<number, { readonly partial: string; readonly solved: string }> = {
@@ -424,7 +401,7 @@ function addAttempt(
         lastActivity = clock;
         break;
       case 'hint':
-        level = Math.min(level + 1, 3);
+        level = Math.min(level + 1, MAX_HINT_LEVEL);
         events.push({
           id: nextEventId(),
           attemptId,

@@ -1,0 +1,177 @@
+<div class="flex flex-wrap items-center justify-between gap-x-3">
+  <h2
+    id="code-heading"
+    class="text-title-medium"
+    [class.sr-only]="compact()"
+    i18n="@@workspace.code"
+  >
+    Código
+  </h2>
+  <div class="ms-auto flex items-center gap-1">
+    @if (!store.readonly()) {
+      <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
+    }
+    <!-- A toggle button: same name, and aria-pressed says whether the code is expanded. On
+         phones each zone already takes the whole screen. -->
+    @if (!compact()) {
+      <button
+        matIconButton
+        type="button"
+        aria-label="Ampliar el código"
+        i18n-aria-label="@@workspace.expandCode"
+        [attr.aria-pressed]="expanded()"
+        [matTooltip]="expanded() ? collapseCodeTooltip : expandCodeTooltip"
+        (click)="toggleExpanded()"
+      >
+        <mat-icon>{{ expanded() ? 'close_fullscreen' : 'open_in_full' }}</mat-icon>
+      </button>
+    }
+  </div>
+</div>
+<!-- CodeMirror comes in a chunk of its own, downloaded when the zone shows (4.7) -->
+@defer (on viewport; prefetch on idle) {
+  <!-- A new editor for each attempt and when it becomes read only: it starts with its code and
+       a clean undo history, so it needs no effect to follow outside changes (D-029) -->
+  @if (editor(); as current) {
+    @if (store.readonly()) {
+      <app-code-editor
+        class="min-h-24 flex-1"
+        [initialCode]="current.code"
+        [label]="editorLabel"
+        [language]="current.language"
+        [readonly]="true"
+      />
+    } @else {
+      <app-code-editor
+        class="min-h-24 flex-1"
+        [initialCode]="current.code"
+        [label]="editorLabel"
+        [language]="current.language"
+        [placeholder]="current.placeholder"
+        (codeChange)="store.updateCode($event)"
+        (pasted)="signals.pasted($event)"
+        (runShortcut)="store.run()"
+      />
+    }
+  } @else {
+    <ng-container [ngTemplateOutlet]="editorSkeleton" />
+  }
+} @placeholder {
+  <!-- Same room as the editor, so nothing jumps when it arrives -->
+  <div class="min-h-0 flex-1 rounded-lg border border-outline-variant"></div>
+} @loading (after 300ms; minimum 500ms) {
+  <ng-container [ngTemplateOutlet]="editorSkeleton" />
+} @error {
+  <div
+    role="alert"
+    class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-outline-variant p-6 text-center"
+  >
+    <p class="text-body-medium" i18n="@@workspace.editorError">
+      No se ha podido cargar el editor. Comprueba la conexión y recarga la página.
+    </p>
+    <button matButton="tonal" type="button" (click)="reloadPage()" i18n="@@workspace.reload">
+      Recargar
+    </button>
+  </div>
+}
+@if (store.attempt(); as attempt) {
+  @if (store.readonly()) {
+    <!-- Takes the focus once submitted, as the buttons that had it are gone -->
+    <div
+      #submittedNote
+      tabindex="-1"
+      class="flex flex-wrap items-center gap-3 rounded-lg bg-success-container p-3 text-on-success-container outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+    >
+      <mat-icon class="shrink-0">task_alt</mat-icon>
+      <p class="min-w-48 flex-1 text-body-medium" i18n="@@workspace.submittedNote">
+        Entregado el {{ attempt.finishedAt | date: 'longDate' }}. El código ya no se puede cambiar.
+      </p>
+      <a matButton="filled" [routerLink]="catalogPath" i18n="@@workspace.submittedBack">
+        Volver a los ejercicios
+      </a>
+    </div>
+  } @else {
+    <!-- disabledInteractive: a button that gets disabled keeps the focus and says why -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        [matButton]="store.canSubmit() ? 'tonal' : 'filled'"
+        disabledInteractive
+        [disabled]="!store.canRun()"
+        matTooltip="También con Ctrl + Intro desde el editor"
+        i18n-matTooltip="@@workspace.runTooltip"
+        (click)="store.run()"
+      >
+        <mat-icon>{{ store.running() ? 'hourglass_top' : 'play_arrow' }}</mat-icon>
+        @if (store.running()) {
+          <span i18n="@@workspace.running">Ejecutando…</span>
+        } @else {
+          <span i18n="@@workspace.run">Ejecutar pruebas</span>
+        }
+      </button>
+      <button
+        type="button"
+        [matButton]="store.canSubmit() ? 'filled' : 'outlined'"
+        disabledInteractive
+        [disabled]="!store.canSubmit()"
+        matTooltip="Supera todas las pruebas para poder entregar"
+        i18n-matTooltip="@@workspace.submitTooltip"
+        [matTooltipDisabled]="store.canSubmit() || store.submitting()"
+        (click)="confirmSubmit()"
+      >
+        <mat-icon>send</mat-icon>
+        @if (store.submitting()) {
+          <span i18n="@@workspace.submitting">Entregando…</span>
+        } @else {
+          <span i18n="@@workspace.submit">Entregar</span>
+        }
+      </button>
+    </div>
+  }
+}
+@if (actionErrorMessage(); as message) {
+  <div
+    role="alert"
+    class="flex flex-wrap items-center gap-2 rounded-lg bg-error-container p-3 text-on-error-container"
+  >
+    <mat-icon class="shrink-0">error</mat-icon>
+    <p class="min-w-48 flex-1 text-body-medium">{{ message }}</p>
+    <button matButton type="button" (click)="retryAction()" i18n="@@workspace.retryAction">
+      Reintentar
+    </button>
+  </div>
+}
+<!-- Always in the page, so screen readers hear each new summary -->
+<p class="sr-only" aria-live="polite">{{ runAnnouncement() }}</p>
+@if (store.lastRun(); as run) {
+  <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1) -->
+  <app-run-results
+    tabindex="0"
+    role="group"
+    aria-label="Resultados de las pruebas"
+    i18n-aria-label="@@workspace.results"
+    class="relative max-h-[40%] min-h-12 overflow-y-auto scroll-shadows rounded-lg border border-outline-variant p-3 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+    [attr.aria-busy]="store.running()"
+    [result]="run"
+    [functionName]="exercise()?.functionName ?? ''"
+    [outdated]="store.runOutdated()"
+  />
+} @else if (store.attempt() && !store.readonly()) {
+  <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+    <mat-icon class="shrink-0">checklist</mat-icon>
+    <span i18n="@@workspace.noResults"
+      >Ejecuta las pruebas para comprobar tu código con los ejemplos y las comprobaciones
+      ocultas.</span
+    >
+  </p>
+}
+
+<ng-template #editorSkeleton>
+  <app-loading-skeleton
+    class="min-h-0 flex-1"
+    label="Cargando el editor…"
+    i18n-label="@@workspace.editorLoading"
+  >
+    <app-skeleton class="h-full min-h-48 w-full" />
+  </app-loading-skeleton>
+</ng-template>

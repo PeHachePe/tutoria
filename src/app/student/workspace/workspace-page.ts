@@ -1,49 +1,30 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import {
-  afterNextRender,
-  Component,
-  computed,
-  DOCUMENT,
-  ElementRef,
-  inject,
-  Injector,
-  input,
-  resource,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, DOCUMENT, inject, input, resource, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { MatAnchor, MatButton, MatIconAnchor } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
+import { MatAnchor, MatIconAnchor } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
-import { MatTab, MatTabGroup } from '@angular/material/tabs';
+import { MatTab, MatTabGroup, MatTabLabel } from '@angular/material/tabs';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom, map } from 'rxjs';
+import { map } from 'rxjs';
 
 import { APP_PATHS } from '../../core/app-paths';
 import { AuthStore } from '../../auth/auth-store';
 import { AppTitleStrategy } from '../../core/app-title-strategy';
-import { PageReloader } from '../../core/page-reloader';
 import { ExerciseService } from '../../data/exercise-service';
-import { CodeEditor } from '../../shared/code-editor/code-editor';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
-import { formatCall, formatValue, isMultilineText } from '../../shared/format-value';
 import { LoadError } from '../../shared/load-error/load-error';
-import { Mascot } from '../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { Splitter } from '../../shared/splitter/splitter';
-import { splitInlineCode } from '../../shared/split-inline-code';
 import { StatusChip } from '../../shared/status-chip/status-chip';
-import { actionErrorMessage } from './action-error-message';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
-import { RunResults } from './run-results';
-import { SaveIndicator } from './save-indicator';
-import { readStatementShare, saveStatementShare, STATEMENT_SHARE } from './statement-share';
-import { SubmitDialog } from './submit-dialog';
+import { CODE_ZONE_ID, CodeZone } from './code-zone/code-zone';
+import { CODE_SHARE, readPaneShare, savePaneShare, STATEMENT_SHARE } from './pane-share';
+import { STATEMENT_ZONE_ID, StatementZone } from './statement-zone/statement-zone';
+import { TutorPanel } from './tutor/tutor-panel';
+import { TutorStore } from './tutor-store';
 
 /**
  * Below this width (Tailwind's `md`) the zones become tabs, one at a time: stacked, they did not fit
@@ -51,38 +32,38 @@ import { SubmitDialog } from './submit-dialog';
  */
 export const COMPACT_WORKSPACE_QUERY = '(max-width: 767.98px)';
 
-/** Example rows drawn while the exercise loads. */
-const SKELETON_EXAMPLES = [1, 2, 3];
+/** Narrowest the tutor column gets, whatever the share: below it, the hints read badly (D-030). */
+const TUTOR_MIN_WIDTH = '16rem';
+
+/** Position of the tutor among the tabs of a phone. */
+const TUTOR_TAB = 2;
 
 /**
  * The workspace (/alumno/ejercicio/:id, ficha 03): the statement and its examples, the code and the
- * tutor of one exercise (RF-03 to RF-06). Step 1.3 builds the layout and opens the attempt, step 1.4
- * adds the editor with its autosave, step 1.5 runs the tests and submits (CU-01) and step 1.6 records
- * pastes and absences; the chat (1.7) fills its zone later.
+ * tutor of one exercise (RF-03 to RF-06), each in a zone of its own. The page loads the exercise,
+ * opens its attempt, lays the zones out (columns with splitters on wide screens, tabs on phones) and
+ * listens to the window to keep the code and record absences (2.8).
  */
 @Component({
   selector: 'app-workspace-page',
   imports: [
-    DatePipe,
-    NgTemplateOutlet,
     RouterLink,
     MatAnchor,
-    MatButton,
     MatIconAnchor,
     MatIcon,
     MatTab,
     MatTabGroup,
+    MatTabLabel,
     MatTooltip,
     DifficultyChip,
     StatusChip,
     LoadError,
     LoadingSkeleton,
     Skeleton,
-    Mascot,
-    CodeEditor,
-    SaveIndicator,
-    RunResults,
     Splitter,
+    StatementZone,
+    CodeZone,
+    TutorPanel,
   ],
   templateUrl: './workspace-page.html',
   host: {
@@ -106,17 +87,15 @@ export class WorkspacePage {
   private readonly exercises = inject(ExerciseService);
   private readonly titles = inject(AppTitleStrategy);
   private readonly document = inject(DOCUMENT);
-  private readonly pageReloader = inject(PageReloader);
-  private readonly dialog = inject(MatDialog);
-  private readonly injector = inject(Injector);
   private readonly userId = inject(AuthStore).userId;
   protected readonly store = inject(AttemptStore);
+  private readonly tutor = inject(TutorStore);
   /** Pastes and absences, recorded for the attempt open for changes (2.8). */
   protected readonly signals = inject(BrowserSignals);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
-  protected readonly skeletonExamples = SKELETON_EXAMPLES;
-  protected readonly splitInlineCode = splitInlineCode;
+  protected readonly statementZoneId = STATEMENT_ZONE_ID;
+  protected readonly codeZoneId = CODE_ZONE_ID;
 
   /** Phones: tabs instead of columns. BreakpointObserver is already an Observable (4.8). */
   protected readonly compact = toSignal(
@@ -145,134 +124,54 @@ export class WorkspacePage {
   });
 
   protected readonly error = computed(() => this.detail.error() ?? this.opening.error());
-
-  /**
-   * What the statement zone shows: the exercise, its visible tests as the calls the student would
-   * write with the value each must return, and how many hidden checks it has (2.5).
-   */
-  protected readonly content = computed(() => {
-    if (!this.detail.hasValue()) return undefined;
-    const { exercise, visibleTests, hiddenTestCount } = this.detail.value();
-    const examples = visibleTests.map((test) => {
-      const multiline = isMultilineText(test.expectedOutput);
-      return {
-        key: test.id,
-        call: formatCall(exercise.functionName, test.input),
-        expected: multiline ? test.expectedOutput : formatValue(test.expectedOutput),
-        multiline,
-      };
-    });
-    return { exercise, examples, hiddenTestCount };
-  });
-
-  protected readonly editorLabel = $localize`:@@workspace.editorLabel:Código`;
-
-  /**
-   * What the editor starts with, once both the attempt and the exercise are there: the help it shows
-   * while the code is empty («Escribe aquí la función `suma`», D-018) is read when it is created.
-   */
-  protected readonly editor = computed(() => {
-    const attempt = this.store.attempt();
-    const exercise = this.content()?.exercise;
-    if (!attempt || !exercise) return undefined;
-    return {
-      code: attempt.currentCode,
-      language: exercise.language,
-      placeholder: $localize`:@@workspace.editorPlaceholder:Escribe aquí la función ${exercise.functionName}:functionName:`,
-    };
-  });
+  protected readonly exercise = computed(() =>
+    this.detail.hasValue() ? this.detail.value().exercise : undefined,
+  );
 
   /** The statement folds away on wide screens, so the code gets its room. */
   protected readonly statementOpen = signal(true);
-
-  /** Share of the column the open statement takes, which the splitter changes (wide screens). */
-  protected readonly statementShare = signal(readStatementShare(this.userId()));
-  protected readonly statementShareLimits = STATEMENT_SHARE;
-
-  protected toggleStatement(): void {
-    this.statementOpen.update((open) => !open);
-  }
-
-  /**
-   * Wide screens: the code takes the room of the statement, which gives it its height, and goes
-   * back with the same button. The tutor stays in sight, to ask and to see it step in (6.2); its
-   * column only gave width, which the code does not lack. Not remembered: the screen opens again
-   * with its three zones.
-   */
+  /** Wide screens: the code takes the statement's room; not remembered, as the screen opens whole. */
   protected readonly codeExpanded = signal(false);
-  protected readonly expandCodeTooltip = $localize`:@@workspace.expandCodeTooltip:Ampliar el código`;
-  protected readonly collapseCodeTooltip = $localize`:@@workspace.collapseCodeTooltip:Volver a la vista normal`;
 
-  protected toggleCodeExpanded(): void {
-    this.codeExpanded.update((expanded) => !expanded);
-  }
+  /** Share of the left column the open statement takes, which its splitter changes. */
+  protected readonly statementShare = signal(readPaneShare(STATEMENT_SHARE, this.userId()));
+  /** Share of the width the code takes beside the tutor, which their splitter changes. */
+  protected readonly codeShare = signal(readPaneShare(CODE_SHARE, this.userId()));
+  protected readonly statementShareLimits = STATEMENT_SHARE;
+  protected readonly codeShareLimits = CODE_SHARE;
+  protected readonly tutorWidth = computed(
+    () => `max(${TUTOR_MIN_WIDTH}, ${100 - this.codeShare()}%)`,
+  );
 
   protected keepStatementShare(share: number): void {
-    saveStatementShare(this.userId(), share);
+    savePaneShare(STATEMENT_SHARE, this.userId(), share);
   }
 
-  /** The note that replaces the buttons once submitted, which takes the focus then. */
-  private readonly submittedNote = viewChild<ElementRef<HTMLElement>>('submittedNote');
-
-  protected readonly actionErrorMessage = computed(() => {
-    const failure = this.store.actionError();
-    return failure && actionErrorMessage(failure);
-  });
-
-  /**
-   * Read aloud once a run ends, as the results appear away from the button that started it. The
-   * summary of the results only says it again for those who look.
-   */
-  protected readonly runAnnouncement = computed(() => {
-    const run = this.store.lastRun();
-    if (!run) return '';
-    if (run.loadError) {
-      return $localize`:@@workspace.runAnnouncement.notRun:El código no se ha podido ejecutar.`;
-    }
-    const passed = run.results.filter((result) => result.passed).length;
-    const total = run.results.length;
-    return passed === total
-      ? $localize`:@@workspace.runAnnouncement.allPassed:Todas las pruebas superadas. Ya puedes entregar.`
-      : $localize`:@@workspace.runAnnouncement.somePassed:${passed}:passed: de ${total}:total: pruebas superadas.`;
-  });
-
-  /** «Entregar» asks first: once submitted, the code cannot change (2.4). */
-  protected async confirmSubmit(): Promise<void> {
-    if (!this.store.canSubmit()) return;
-    const confirmed = await firstValueFrom(this.dialog.open(SubmitDialog).afterClosed());
-    if (confirmed) await this.submit();
-  }
-
-  /** Tries again the run or the submission that failed. */
-  protected retryAction(): void {
-    if (this.store.actionError()?.action === 'submit') {
-      void this.submit();
-    } else {
-      void this.store.run();
-    }
+  protected keepCodeShare(share: number): void {
+    savePaneShare(CODE_SHARE, this.userId(), share);
   }
 
   /**
-   * The buttons give way to the note that says it is submitted: the focus goes there, instead of
-   * being lost with the button that had it (WCAG 2.4.3).
+   * Phones: the tab of the tutor shows a dot when an answer arrives while the student looks at
+   * another tab, as they may switch to the code while the tutor writes.
    */
-  private async submit(): Promise<void> {
-    if (await this.store.submit()) {
-      afterNextRender(() => this.submittedNote()?.nativeElement.focus(), {
-        injector: this.injector,
-      });
+  private readonly selectedTab = signal(0);
+  private readonly seenAnswers = signal(0);
+  protected readonly tutorUnread = computed(
+    () => this.selectedTab() !== TUTOR_TAB && this.tutor.answerCount() > this.seenAnswers(),
+  );
+
+  protected selectTab(index: number): void {
+    if (index === TUTOR_TAB || this.selectedTab() === TUTOR_TAB) {
+      this.seenAnswers.set(this.tutor.answerCount());
     }
+    this.selectedTab.set(index);
   }
 
   /** Reloads only what failed. */
   protected retry(): void {
     if (this.detail.error()) this.detail.reload();
     if (this.opening.error()) this.opening.reload();
-  }
-
-  /** Reloads the page when the chunk of the editor could not be downloaded. */
-  protected reloadPage(): void {
-    this.pageReloader.reload();
   }
 
   /**

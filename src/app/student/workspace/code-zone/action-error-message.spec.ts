@@ -1,4 +1,4 @@
-import { DataError } from '../../data/data-error';
+import { DataError } from '../../../data/data-error';
 import { actionErrorMessage } from './action-error-message';
 
 describe('actionErrorMessage', () => {

@@ -14,8 +14,8 @@
   <h1
     class="line-clamp-2 min-h-7 min-w-0 flex-1 text-title-medium sm:line-clamp-none sm:min-h-8 sm:text-headline-small"
   >
-    @if (content(); as current) {
-      {{ current.exercise.title }}
+    @if (exercise(); as current) {
+      {{ current.title }}
     } @else {
       <!-- While it loads, a skeleton of the title shows and screen readers hear «Ejercicio» -->
       <span [class.sr-only]="!error()" i18n="@@workspace.heading">Ejercicio</span>
@@ -26,10 +26,10 @@
       }
     }
   </h1>
-  @if (content(); as current) {
+  @if (exercise(); as current) {
     <!-- On phones the chips take their own line, so the title keeps the width of the screen -->
     <div class="flex w-full flex-wrap items-center gap-2 ps-12 sm:w-auto sm:ps-0">
-      <app-difficulty-chip [difficulty]="current.exercise.difficulty" />
+      <app-difficulty-chip [difficulty]="current.difficulty" />
       @if (store.attempt()) {
         <app-status-chip [status]="store.status()" [testCount]="store.testCount()" />
       }
@@ -44,36 +44,62 @@
     </a>
   </app-load-error>
 } @else if (compact()) {
-  <mat-tab-group class="app-fill-tabs min-h-0 flex-1" mat-stretch-tabs preserveContent>
+  <mat-tab-group
+    class="app-fill-tabs min-h-0 flex-1"
+    mat-stretch-tabs
+    preserveContent
+    (selectedIndexChange)="selectTab($event)"
+  >
     <mat-tab label="Ejercicio" i18n-label="@@workspace.tab.exercise">
-      <ng-container [ngTemplateOutlet]="statementZone" />
+      <app-statement-zone
+        [detail]="detail.value()"
+        [loading]="detail.isLoading()"
+        [compact]="true"
+      />
     </mat-tab>
     <mat-tab label="Código" i18n-label="@@workspace.tab.code">
-      <ng-container [ngTemplateOutlet]="codeZone" />
+      <app-code-zone [exercise]="exercise()" [compact]="true" />
     </mat-tab>
-    <mat-tab label="Tutor" i18n-label="@@workspace.tab.tutor">
-      <ng-container [ngTemplateOutlet]="tutorZone" />
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <!-- With an answer not seen yet, a dot, and its name says so -->
+        @if (tutorUnread()) {
+          <span class="flex items-center gap-1.5">
+            <span aria-hidden="true" i18n="@@workspace.tab.tutor">Tutor</span>
+            <span class="size-2 rounded-full bg-primary" aria-hidden="true"></span>
+            <span class="sr-only" i18n="@@workspace.tab.tutorUnread">Tutor, respuesta nueva</span>
+          </span>
+        } @else {
+          <span i18n="@@workspace.tab.tutor">Tutor</span>
+        }
+      </ng-template>
+      <app-tutor-panel [compact]="true" />
     </mat-tab>
   </mat-tab-group>
 } @else {
-  <!-- As in the prototype (figure 17): the statement over the code, the tutor in its own column.
-       Expanded, the code takes the statement's height and the tutor stays in sight; it is the same
-       editor, never created again. -->
+  <!-- As in the prototype (figure 17): the statement over the code, the tutor in its own column,
+       with a splitter between each pair. Expanded, the code takes the statement's height and the
+       tutor stays in sight; it is the same editor, never created again. -->
   <div
-    class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_17rem] gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
+    class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_auto_var(--tutor-width)] gap-1"
+    [style.--tutor-width]="tutorWidth()"
   >
-    <!-- The splitter moves the boundary between the open statement and the code (ficha 03) -->
     <div
       class="flex min-h-0 flex-col"
       [class]="statementOpen() && !codeExpanded() ? 'gap-1' : 'gap-4'"
     >
       @if (!codeExpanded()) {
-        <ng-container [ngTemplateOutlet]="statementZone" />
+        <app-statement-zone
+          [detail]="detail.value()"
+          [loading]="detail.isLoading()"
+          [share]="statementShare()"
+          [(open)]="statementOpen"
+        />
         @if (statementOpen()) {
           <app-splitter
             label="Tamaño del enunciado"
             i18n-label="@@workspace.statementSize"
-            controls="statement-zone"
+            [controls]="statementZoneId"
             [min]="statementShareLimits.min"
             [max]="statementShareLimits.max"
             [defaultValue]="statementShareLimits.default"
@@ -82,328 +108,19 @@
           />
         }
       }
-      <ng-container [ngTemplateOutlet]="codeZone" />
+      <app-code-zone [exercise]="exercise()" [(expanded)]="codeExpanded" />
     </div>
-    <ng-container [ngTemplateOutlet]="tutorZone" />
+    <app-splitter
+      orientation="vertical"
+      label="Ancho del código"
+      i18n-label="@@workspace.codeWidth"
+      [controls]="codeZoneId"
+      [min]="codeShareLimits.min"
+      [max]="codeShareLimits.max"
+      [defaultValue]="codeShareLimits.default"
+      [(value)]="codeShare"
+      (changeEnd)="keepCodeShare($event)"
+    />
+    <app-tutor-panel />
   </div>
 }
-
-<ng-template #statementZone>
-  <!-- Open on a wide screen, it takes the share the splitter sets and shrinks before the code -->
-  <section
-    id="statement-zone"
-    aria-labelledby="statement-heading"
-    class="flex min-h-0 flex-col gap-3 rounded-xl bg-panel p-4"
-    [class]="compact() ? 'h-full' : statementOpen() ? 'min-h-24 grow-0' : 'shrink-0'"
-    [style.flex-basis.%]="!compact() && statementOpen() ? statementShare() : null"
-    [attr.aria-busy]="detail.isLoading()"
-  >
-    @if (compact()) {
-      <h2 id="statement-heading" class="sr-only" i18n="@@workspace.statement">Enunciado</h2>
-    } @else {
-      <!-- Accordion pattern of the ARIA practices: a heading that holds the toggle button -->
-      <h2>
-        <button
-          id="statement-heading"
-          type="button"
-          class="flex w-full items-center gap-2 rounded-lg text-start text-title-medium outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
-          aria-controls="statement-body"
-          [attr.aria-expanded]="statementOpen()"
-          (click)="toggleStatement()"
-        >
-          <mat-icon
-            class="transition-transform duration-200 motion-reduce:transition-none"
-            [class.-rotate-90]="!statementOpen()"
-            >expand_more</mat-icon
-          >
-          <span i18n="@@workspace.statement">Enunciado</span>
-        </button>
-      </h2>
-    }
-    <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1) -->
-    <div
-      id="statement-body"
-      tabindex="0"
-      role="group"
-      aria-labelledby="statement-heading"
-      class="flex min-h-0 flex-col gap-4 overflow-y-auto scroll-shadows rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-      [hidden]="!compact() && !statementOpen()"
-    >
-      @if (detail.isLoading()) {
-        <app-loading-skeleton label="Cargando el ejercicio…" i18n-label="@@workspace.loading">
-          <div class="flex flex-col gap-3">
-            <app-skeleton class="h-5 w-full" />
-            <app-skeleton class="h-5 w-4/5" />
-            <app-skeleton class="mt-2 h-5 w-24" />
-            @for (row of skeletonExamples; track row) {
-              <app-skeleton class="h-8 w-full max-w-md" />
-            }
-          </div>
-        </app-loading-skeleton>
-      } @else if (content(); as current) {
-        <p class="max-w-prose text-body-large">
-          @for (part of splitInlineCode(current.exercise.statement); track $index) {
-            @if (part.code) {
-              <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{
-                part.text
-              }}</code>
-            } @else {
-              {{ part.text }}
-            }
-          }
-        </p>
-        <div class="flex flex-col gap-2">
-          <h3 class="text-title-small" i18n="@@workspace.examples">Ejemplos</h3>
-          <table class="w-full max-w-xl border-collapse text-start">
-            <thead>
-              <tr class="text-label-medium text-on-surface-variant">
-                <th scope="col" class="py-1 pe-4 text-start font-medium" i18n="@@workspace.call">
-                  Llamada
-                </th>
-                <th scope="col" class="py-1 text-start font-medium" i18n="@@workspace.returns">
-                  Devuelve
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (example of current.examples; track example.key) {
-                <tr class="border-t border-outline-variant align-top">
-                  <td class="py-2 pe-4 font-mono text-body-medium break-all">{{ example.call }}</td>
-                  <td class="py-2 font-mono text-body-medium font-semibold break-all">
-                    @if (example.multiline) {
-                      <pre class="font-mono whitespace-pre-wrap">{{ example.expected }}</pre>
-                    } @else {
-                      {{ example.expected }}
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-          @if (current.hiddenTestCount > 0) {
-            <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
-              <mat-icon class="shrink-0">visibility_off</mat-icon>
-              <span i18n="@@workspace.hiddenTests">{current.hiddenTestCount, plural,
-                =1 {Y 1 comprobación oculta: verás si la superas, pero no sus datos.}
-                other {
-                  Y {{ current.hiddenTestCount }} comprobaciones ocultas: verás si las superas, pero
-                  no sus datos.
-                }
-              }</span>
-            </p>
-          }
-        </div>
-      }
-    </div>
-  </section>
-</ng-template>
-
-<ng-template #codeZone>
-  <section
-    aria-labelledby="code-heading"
-    class="flex min-h-48 flex-1 flex-col gap-3 rounded-xl bg-panel p-4"
-    [class.h-full]="compact()"
-  >
-    <div class="flex flex-wrap items-center justify-between gap-x-3">
-      <h2
-        id="code-heading"
-        class="text-title-medium"
-        [class.sr-only]="compact()"
-        i18n="@@workspace.code"
-      >
-        Código
-      </h2>
-      <div class="ms-auto flex items-center gap-1">
-        @if (!store.readonly()) {
-          <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
-        }
-        <!-- A toggle button: same name, and aria-pressed says whether the code is expanded. On
-             phones each zone already takes the whole screen. -->
-        @if (!compact()) {
-          <button
-            matIconButton
-            type="button"
-            aria-label="Ampliar el código"
-            i18n-aria-label="@@workspace.expandCode"
-            [attr.aria-pressed]="codeExpanded()"
-            [matTooltip]="codeExpanded() ? collapseCodeTooltip : expandCodeTooltip"
-            (click)="toggleCodeExpanded()"
-          >
-            <mat-icon>{{ codeExpanded() ? 'close_fullscreen' : 'open_in_full' }}</mat-icon>
-          </button>
-        }
-      </div>
-    </div>
-    <!-- CodeMirror comes in a chunk of its own, downloaded when the zone shows (4.7) -->
-    @defer (on viewport; prefetch on idle) {
-      <!-- A new editor for each attempt and when it becomes read only: it starts with its code and
-           a clean undo history, so it needs no effect to follow outside changes (D-029) -->
-      @if (editor(); as current) {
-        @if (store.readonly()) {
-          <app-code-editor
-            class="min-h-24 flex-1"
-            [initialCode]="current.code"
-            [label]="editorLabel"
-            [language]="current.language"
-            [readonly]="true"
-          />
-        } @else {
-          <app-code-editor
-            class="min-h-24 flex-1"
-            [initialCode]="current.code"
-            [label]="editorLabel"
-            [language]="current.language"
-            [placeholder]="current.placeholder"
-            (codeChange)="store.updateCode($event)"
-            (pasted)="signals.pasted($event)"
-            (runShortcut)="store.run()"
-          />
-        }
-      } @else {
-        <ng-container [ngTemplateOutlet]="editorSkeleton" />
-      }
-    } @placeholder {
-      <!-- Same room as the editor, so nothing jumps when it arrives -->
-      <div class="min-h-0 flex-1 rounded-lg border border-outline-variant"></div>
-    } @loading (after 300ms; minimum 500ms) {
-      <ng-container [ngTemplateOutlet]="editorSkeleton" />
-    } @error {
-      <div
-        role="alert"
-        class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-outline-variant p-6 text-center"
-      >
-        <p class="text-body-medium" i18n="@@workspace.editorError">
-          No se ha podido cargar el editor. Comprueba la conexión y recarga la página.
-        </p>
-        <button matButton="tonal" type="button" (click)="reloadPage()" i18n="@@workspace.reload">
-          Recargar
-        </button>
-      </div>
-    }
-    @if (store.attempt(); as attempt) {
-      @if (store.readonly()) {
-        <!-- Takes the focus once submitted, as the buttons that had it are gone -->
-        <div
-          #submittedNote
-          tabindex="-1"
-          class="flex flex-wrap items-center gap-3 rounded-lg bg-success-container p-3 text-on-success-container outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          <mat-icon class="shrink-0">task_alt</mat-icon>
-          <p class="min-w-48 flex-1 text-body-medium" i18n="@@workspace.submittedNote">
-            Entregado el {{ attempt.finishedAt | date: 'longDate' }}. El código ya no se puede
-            cambiar.
-          </p>
-          <a matButton="filled" [routerLink]="catalogPath" i18n="@@workspace.submittedBack">
-            Volver a los ejercicios
-          </a>
-        </div>
-      } @else {
-        <!-- disabledInteractive: a button that gets disabled keeps the focus and says why -->
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            [matButton]="store.canSubmit() ? 'tonal' : 'filled'"
-            disabledInteractive
-            [disabled]="!store.canRun()"
-            matTooltip="También con Ctrl + Intro desde el editor"
-            i18n-matTooltip="@@workspace.runTooltip"
-            (click)="store.run()"
-          >
-            <mat-icon>{{ store.running() ? 'hourglass_top' : 'play_arrow' }}</mat-icon>
-            @if (store.running()) {
-              <span i18n="@@workspace.running">Ejecutando…</span>
-            } @else {
-              <span i18n="@@workspace.run">Ejecutar pruebas</span>
-            }
-          </button>
-          <button
-            type="button"
-            [matButton]="store.canSubmit() ? 'filled' : 'outlined'"
-            disabledInteractive
-            [disabled]="!store.canSubmit()"
-            matTooltip="Supera todas las pruebas para poder entregar"
-            i18n-matTooltip="@@workspace.submitTooltip"
-            [matTooltipDisabled]="store.canSubmit() || store.submitting()"
-            (click)="confirmSubmit()"
-          >
-            <mat-icon>send</mat-icon>
-            @if (store.submitting()) {
-              <span i18n="@@workspace.submitting">Entregando…</span>
-            } @else {
-              <span i18n="@@workspace.submit">Entregar</span>
-            }
-          </button>
-        </div>
-      }
-    }
-    @if (actionErrorMessage(); as message) {
-      <div
-        role="alert"
-        class="flex flex-wrap items-center gap-2 rounded-lg bg-error-container p-3 text-on-error-container"
-      >
-        <mat-icon class="shrink-0">error</mat-icon>
-        <p class="min-w-48 flex-1 text-body-medium">{{ message }}</p>
-        <button matButton type="button" (click)="retryAction()" i18n="@@workspace.retryAction">
-          Reintentar
-        </button>
-      </div>
-    }
-    <!-- Always in the page, so screen readers hear each new summary -->
-    <p class="sr-only" aria-live="polite">{{ runAnnouncement() }}</p>
-    @if (store.lastRun(); as run) {
-      <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1) -->
-      <app-run-results
-        tabindex="0"
-        role="group"
-        aria-label="Resultados de las pruebas"
-        i18n-aria-label="@@workspace.results"
-        class="relative max-h-[40%] min-h-12 overflow-y-auto scroll-shadows rounded-lg border border-outline-variant p-3 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-        [attr.aria-busy]="store.running()"
-        [result]="run"
-        [functionName]="content()?.exercise?.functionName ?? ''"
-        [outdated]="store.runOutdated()"
-      />
-    } @else if (store.attempt() && !store.readonly()) {
-      <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
-        <mat-icon class="shrink-0">checklist</mat-icon>
-        <span i18n="@@workspace.noResults"
-          >Ejecuta las pruebas para comprobar tu código con los ejemplos y las comprobaciones
-          ocultas.</span
-        >
-      </p>
-    }
-  </section>
-</ng-template>
-
-<ng-template #editorSkeleton>
-  <app-loading-skeleton
-    class="min-h-0 flex-1"
-    label="Cargando el editor…"
-    i18n-label="@@workspace.editorLoading"
-  >
-    <app-skeleton class="h-full min-h-48 w-full" />
-  </app-loading-skeleton>
-</ng-template>
-
-<ng-template #tutorZone>
-  <section
-    aria-labelledby="tutor-heading"
-    class="flex min-h-0 flex-col items-center gap-3 rounded-xl bg-panel p-4"
-    [class.h-full]="compact()"
-  >
-    <h2
-      id="tutor-heading"
-      class="self-start text-title-medium"
-      [class.sr-only]="compact()"
-      i18n="@@workspace.tutor"
-    >
-      Tutor
-    </h2>
-    <div class="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-      <app-mascot class="size-28" />
-      <p class="max-w-60 text-body-medium text-on-surface-variant" i18n="@@workspace.tutorSoon">
-        Aquí podrás pedir pistas al tutor: el chat llega en el paso 1.7.
-      </p>
-    </div>
-  </section>
-</ng-template>

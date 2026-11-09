@@ -85,6 +85,7 @@ module.exports = defineConfig([
             'matTooltipPosition',
             'mode',
             'mood',
+            'orientation',
             'patternUnits',
             'scope',
             'stroke-linecap',

@@ -37,6 +37,34 @@ function pointer(type: string, target: Element | Document, clientY = 0, button =
   fireEvent(target, new MouseEvent(type, { bubbles: true, clientY, button }));
 }
 
+/** The same, along the width. */
+function pointerX(type: string, target: Element | Document, clientX: number): void {
+  fireEvent(target, new MouseEvent(type, { bubbles: true, clientX, button: 0 }));
+}
+
+@Component({
+  imports: [Splitter],
+  template: `
+    <div data-testid="row">
+      <div id="left"></div>
+      <app-splitter
+        orientation="vertical"
+        label="Ancho del código"
+        controls="left"
+        [min]="50"
+        [max]="80"
+        [defaultValue]="70"
+        [(value)]="share"
+        (changeEnd)="ended.push($event)"
+      />
+    </div>
+  `,
+})
+class RowHost {
+  readonly share = signal(70);
+  readonly ended: number[] = [];
+}
+
 describe('Splitter', () => {
   it('is a focusable separator that tells the share of the pane it controls', async () => {
     const { splitter } = await renderSplitter();
@@ -110,5 +138,48 @@ describe('Splitter', () => {
 
     expect(host.share()).toBe(45);
     expect(host.ended).toEqual([50, 45, 40, 70, 15, 45]);
+  });
+
+  describe('vertical, between two columns', () => {
+    async function renderVertical() {
+      const { fixture } = await render(RowHost);
+      const splitter = screen.getByRole('separator', { name: 'Ancho del código' });
+      vi.spyOn(screen.getByTestId('row'), 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(100, 0, 1000, 400), // left 100, width 1000
+      );
+      return { host: fixture.componentInstance, splitter };
+    }
+
+    it('says it is vertical', async () => {
+      const { splitter } = await renderVertical();
+
+      expect(splitter.getAttribute('aria-orientation')).toBe('vertical');
+      expect(splitter.getAttribute('aria-valuenow')).toBe('70');
+    });
+
+    it('follows the pointer across the width', async () => {
+      const { host, splitter } = await renderVertical();
+
+      pointerX('pointerdown', splitter, 800);
+      pointerX('pointermove', document, 700); // 600 of 1000 px
+      pointerX('pointerup', document, 700);
+
+      expect(host.share()).toBe(60);
+      expect(host.ended).toEqual([60]);
+    });
+
+    it('moves with the left and right arrows, not with the up and down ones', async () => {
+      const { host, splitter } = await renderVertical();
+
+      fireEvent.keyDown(splitter, { key: 'ArrowLeft' });
+      expect(host.share()).toBe(65);
+      fireEvent.keyDown(splitter, { key: 'ArrowRight' });
+      fireEvent.keyDown(splitter, { key: 'ArrowRight' });
+      expect(host.share()).toBe(75);
+      fireEvent.keyDown(splitter, { key: 'ArrowDown' });
+
+      expect(host.share()).toBe(75);
+      expect(host.ended).toEqual([65, 70, 75]);
+    });
   });
 });

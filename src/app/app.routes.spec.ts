@@ -14,6 +14,7 @@ import { CodeRunnerService } from './data/code-runner-service';
 import { EventService } from './data/event-service';
 import { DataError } from './data/data-error';
 import { ExerciseService } from './data/exercise-service';
+import { TutorService } from './data/tutor-service';
 import type { Role } from './data/user';
 import { studentRoutes } from './student/student.routes';
 import { teacherRoutes } from './teacher/teacher.routes';
@@ -40,6 +41,7 @@ describe('app routes', () => {
         },
         { provide: CodeRunnerService, useValue: {} },
         { provide: EventService, useValue: {} },
+        { provide: TutorService, useValue: {} },
       ],
     });
     await restoreSession();

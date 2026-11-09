@@ -2,8 +2,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input, linkedSignal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 
-import type { RunResult, TestResult } from '../../data/attempt';
-import { formatCall, formatValue, isMultilineText } from '../../shared/format-value';
+import type { RunResult, TestResult } from '../../../data/attempt';
+import { formatCall, formatValue, isMultilineText } from '../../../shared/format-value';
 
 /**
  * How a test ended: passed, a wrong value, an error thrown, out of time, or never started because

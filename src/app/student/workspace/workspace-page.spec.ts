@@ -15,12 +15,15 @@ import { CodeRunnerService } from '../../data/code-runner-service';
 import { DataError } from '../../data/data-error';
 import { EventService } from '../../data/event-service';
 import type { ExerciseDetail } from '../../data/exercise';
+import type { TutorEvent } from '../../data/tutor';
+import { TutorService } from '../../data/tutor-service';
 import { ExerciseService } from '../../data/exercise-service';
 import { buildRunResult } from '../../data/mock/code-runner/build-run-result';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
-import { statementShareKey } from './statement-share';
+import { CODE_SHARE, paneShareKey, STATEMENT_SHARE } from './pane-share';
+import { TutorStore } from './tutor-store';
 import { WorkspacePage } from './workspace-page';
 
 /** The detail of a seed exercise (0-based index), as the exercise service returns it. */
@@ -64,6 +67,13 @@ function attemptOf(exerciseId: string, status: StoredAttemptStatus = 'in_progres
     finishedAt: null,
     updatedAt: '2026-11-08T10:00:00.000Z',
   };
+}
+
+/** What the tutor answers in these tests: a short hint of level 1. */
+async function* tutorAnswer(): AsyncGenerator<TutorEvent> {
+  yield { type: 'meta', emotion: 'joy', intensity: 1, hintLevel: 1 };
+  yield { type: 'delta', text: 'Mira el bucle.' };
+  yield { type: 'done', interactionId: 'interaction-1', silent: false };
 }
 
 function text(element: Element | null | undefined): string {
@@ -113,12 +123,24 @@ describe('WorkspacePage', () => {
         { provide: PageReloader, useValue: { reload } },
         provideRouter([]),
         AttemptStore,
+        TutorStore,
         BrowserSignals,
+        { provide: TutorService, useValue: { ask: () => tutorAnswer() } },
         { provide: EventService, useValue: { send: sendEvents } },
         { provide: ExerciseService, useValue: { getDetail: vi.fn(getDetail) } },
         {
           provide: AttemptService,
-          useValue: { openOrCreate: vi.fn(openOrCreate), saveCode: save, submit: submitAttempt },
+          useValue: {
+            openOrCreate: vi.fn(openOrCreate),
+            saveCode: save,
+            submit: submitAttempt,
+            history: () =>
+              Promise.resolve({
+                attempt: attemptOf(SUM.exercise.id),
+                events: [],
+                interactions: [],
+              }),
+          },
         },
         { provide: CodeRunnerService, useValue: { run: runTests } },
         ...provideSessionOf('student'),
@@ -736,7 +758,7 @@ describe('WorkspacePage', () => {
 
       expect(toggle.getAttribute('aria-pressed')).toBe('true');
       expect(screen.queryByRole('region', { name: 'Enunciado' })).toBeNull();
-      expect(screen.queryByRole('separator')).toBeNull();
+      expect(screen.queryByRole('separator', { name: 'Tamaño del enunciado' })).toBeNull();
       // The tutor stays in sight: the student can still ask, and see it step in (6.2)
       expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
       // The same CodeMirror: nothing typed nor its undo history is lost
@@ -773,29 +795,75 @@ describe('WorkspacePage', () => {
       await userEvent.setup().keyboard('{ArrowDown}');
 
       expect(statementZone().style.flexBasis).toBe('50%');
-      expect(localStorage.getItem(statementShareKey('student-1'))).toBe('50');
+      expect(localStorage.getItem(paneShareKey(STATEMENT_SHARE, 'student-1'))).toBe('50');
     });
 
     it('starts with the share the student left', async () => {
-      localStorage.setItem(statementShareKey('student-1'), '60');
+      localStorage.setItem(paneShareKey(STATEMENT_SHARE, 'student-1'), '60');
 
       await renderPage();
 
       expect(statementZone().style.flexBasis).toBe('60%');
     });
 
-    it('goes away while the statement is folded, and on a phone', async () => {
+    it('goes away while the statement is folded', async () => {
       await renderPage();
       await userEvent.setup().click(screen.getByRole('button', { name: 'Enunciado' }));
 
-      expect(screen.queryByRole('separator')).toBeNull();
+      expect(screen.queryByRole('separator', { name: 'Tamaño del enunciado' })).toBeNull();
       expect(statementZone().style.flexBasis).toBe('');
+    });
+
+    it('sizes the code beside the tutor and remembers the share for the student', async () => {
+      await renderPage();
+      const splitter = screen.getByRole('separator', { name: 'Ancho del código' });
+      const grid = splitter.parentElement as HTMLElement;
+      expect(splitter.getAttribute('aria-controls')).toBe('code-zone');
+      expect(grid.style.getPropertyValue('--tutor-width')).toBe('max(16rem, 30%)');
+
+      splitter.focus();
+      await userEvent.setup().keyboard('{ArrowLeft}');
+
+      expect(grid.style.getPropertyValue('--tutor-width')).toBe('max(16rem, 35%)');
+      expect(localStorage.getItem(paneShareKey(CODE_SHARE, 'student-1'))).toBe('65');
     });
 
     it('does not show on a phone, where each zone is a tab', async () => {
       await renderPage({ compact: true });
 
       expect(screen.queryByRole('separator')).toBeNull();
+    });
+  });
+
+  describe('tutor tab', () => {
+    function tutorTab(): HTMLElement {
+      return screen.getAllByRole('tab')[2];
+    }
+
+    it('marks an answer that arrives while the student looks at another tab, until they open it', async () => {
+      const { fixture } = await renderPage({ compact: true });
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('tab', { name: 'Código' }));
+
+      await TestBed.inject(TutorStore).requestHint();
+      await fixture.whenStable();
+      expect(tutorTab().textContent).toContain('Tutor, respuesta nueva');
+      expect(screen.getByRole('tab', { name: 'Tutor, respuesta nueva' })).toBe(tutorTab());
+
+      await user.click(tutorTab());
+      expect(text(tutorTab())).toBe('Tutor');
+      await user.click(screen.getByRole('tab', { name: 'Ejercicio' }));
+      expect(text(tutorTab())).toBe('Tutor');
+    });
+
+    it('does not mark the answers read in the tab itself', async () => {
+      const { fixture } = await renderPage({ compact: true });
+      await userEvent.setup().click(tutorTab());
+
+      await TestBed.inject(TutorStore).requestHint();
+      await fixture.whenStable();
+
+      expect(text(tutorTab())).toBe('Tutor');
     });
   });
 });

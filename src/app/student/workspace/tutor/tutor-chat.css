@@ -1,0 +1,78 @@
+/* Animations of the tutor chat (step 1.7): global CSS, imported from src/styles.css and kept next to
+   its component (4.8). Each new turn slides in, the tutor «types» with three dots until the first
+   words arrive, and a caret blinks at the end of an answer that is still arriving. Whoever asks for
+   less motion gets the turns and the dots still, and a caret that does not blink. */
+
+.tutor-turn {
+  animation: tutor-turn-in 220ms ease-out both;
+}
+
+@keyframes tutor-turn-in {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+}
+
+.tutor-typing {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding-block: 0.375rem;
+}
+
+.tutor-typing > span {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: var(--mat-sys-on-surface-variant);
+  animation: tutor-typing 1.2s ease-in-out infinite;
+}
+
+.tutor-typing > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.tutor-typing > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes tutor-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    translate: 0 0;
+  }
+  30% {
+    opacity: 1;
+    translate: 0 -0.25rem;
+  }
+}
+
+.tutor-caret {
+  display: inline-block;
+  width: 0.125rem;
+  height: 1em;
+  margin-inline-start: 0.125rem;
+  vertical-align: text-bottom;
+  background: currentColor;
+  animation: tutor-caret 1s steps(1) infinite;
+}
+
+@keyframes tutor-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutor-turn,
+  .tutor-typing > span,
+  .tutor-caret {
+    animation: none;
+  }
+
+  .tutor-typing > span {
+    opacity: 0.6;
+  }
+}

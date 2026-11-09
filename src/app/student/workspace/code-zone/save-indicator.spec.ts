@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import type { SaveStatus } from './attempt-store';
+import type { SaveStatus } from '../attempt-store';
 import { SaveIndicator } from './save-indicator';
 
 async function renderIndicator(status: SaveStatus) {

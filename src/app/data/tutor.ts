@@ -1,4 +1,9 @@
+import type { AppLocale } from '../core/locale';
+
 export type HintLevel = 1 | 2 | 3;
+
+/** The most concrete hint: asking for another one stays there (2.6). */
+export const MAX_HINT_LEVEL: HintLevel = 3;
 
 export type TutorTrigger = 'question' | 'hint' | 'proactive';
 
@@ -14,6 +19,8 @@ export interface TutorRequest {
   readonly message?: string;
   /** Current editor content, so the tutor always sees the latest code. */
   readonly code: string;
+  /** Language of the interface, which the tutor answers in (D-033). */
+  readonly language: AppLocale;
 }
 
 /** Each answer arrives as `meta` → `delta`(s) → `done`. */

@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 
-import type { SaveStatus } from './attempt-store';
+import type { SaveStatus } from '../attempt-store';
 
 /**
  * Whether the code is saved, next to the editor. «Guardando…» and «Guardado» are only visible text:

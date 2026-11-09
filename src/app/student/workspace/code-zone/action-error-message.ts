@@ -1,5 +1,5 @@
-import { DataError } from '../../data/data-error';
-import type { ActionError } from './attempt-store';
+import { DataError } from '../../../data/data-error';
+import type { ActionError } from '../attempt-store';
 
 const FAILED: Record<ActionError['action'], string> = {
   run: $localize`:@@workspace.runFailed:No se han podido ejecutar las pruebas.`,

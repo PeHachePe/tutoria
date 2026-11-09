@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/angular';
 
-import type { RunResult } from '../../data/attempt';
+import type { RunResult } from '../../../data/attempt';
 import { RunResults, testStates } from './run-results';
 
 function text(element: Element | null): string {

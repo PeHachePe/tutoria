@@ -1,0 +1,225 @@
+<header class="flex items-center gap-3">
+  @if (store.turns().length > 0) {
+    <app-mascot class="size-12 shrink-0" [mood]="mascotMood()" />
+  }
+  <div class="flex min-w-0 flex-1 flex-col gap-1">
+    <h2
+      id="tutor-heading"
+      class="text-title-medium"
+      [class.sr-only]="compact()"
+      i18n="@@workspace.tutor"
+    >
+      Tutor
+    </h2>
+    <app-hint-level-meter [level]="store.hintLevel()" />
+  </div>
+</header>
+
+<!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1). Reversed,
+     it stays at the bottom while the answers grow, with no script. -->
+<div
+  tabindex="0"
+  role="group"
+  aria-label="Conversación con el tutor"
+  i18n-aria-label="@@tutor.conversation"
+  class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto scroll-shadows rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+  [attr.aria-busy]="store.loading()"
+>
+  <!-- Centred while there is no conversation yet; at the bottom, like any chat, once there is -->
+  <div class="flex flex-col gap-3 py-1" [class.my-auto]="items().length === 0">
+    @if (store.loading()) {
+      <app-loading-skeleton
+        label="Cargando la conversación…"
+        i18n-label="@@tutor.loading"
+        class="flex flex-col gap-3"
+      >
+        @for (bubble of skeletonBubbles; track $index) {
+          <app-skeleton class="h-10 rounded-2xl" [class]="bubble" />
+        }
+      </app-loading-skeleton>
+    } @else if (store.loadError()) {
+      <div
+        role="alert"
+        class="flex flex-wrap items-center gap-2 rounded-lg bg-error-container p-3 text-on-error-container"
+      >
+        <mat-icon class="shrink-0">error</mat-icon>
+        <p class="min-w-40 flex-1 text-body-medium" i18n="@@tutor.loadError">
+          No se ha podido cargar la conversación.
+        </p>
+        <button matButton type="button" (click)="store.reload()" i18n="@@tutor.retryLoad">
+          Reintentar
+        </button>
+      </div>
+    } @else if (items().length === 0) {
+      <!-- An empty chat greets, says what to expect and offers a way to start -->
+      <div class="flex flex-col items-center gap-3 py-2 text-center">
+        <app-mascot class="size-24" [mood]="mascotMood()" />
+        <p class="text-title-medium">{{ greeting() }}</p>
+        <p class="max-w-64 text-body-medium text-on-surface-variant">
+          @if (store.readonly()) {
+            <span i18n="@@tutor.emptySubmitted">En este ejercicio no pediste ayuda al tutor.</span>
+          } @else {
+            <span i18n="@@tutor.intro"
+              >Pregúntame lo que necesites o pide una pista. No te daré la solución, pero te ayudaré
+              a encontrarla.</span
+            >
+          }
+        </p>
+        @if (!store.readonly()) {
+          <ul
+            class="flex flex-wrap justify-center gap-2"
+            aria-label="Preguntas sugeridas"
+            i18n-aria-label="@@tutor.suggestions"
+          >
+            @for (suggestion of suggestions(); track suggestion) {
+              <li>
+                <button
+                  type="button"
+                  class="rounded-full border border-outline-variant px-3 py-1.5 text-label-large text-primary transition-colors outline-offset-2 hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-primary disabled:text-on-surface-variant motion-reduce:transition-none"
+                  [disabled]="!store.canAsk()"
+                  (click)="ask(suggestion)"
+                >
+                  {{ suggestion }}
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    } @else {
+      @for (item of items(); track item.turn.id) {
+        @let turn = item.turn;
+        @if (item.dayLabel; as dayLabel) {
+          <p
+            class="flex items-center gap-3 text-label-small text-on-surface-variant before:h-px before:flex-1 before:bg-outline-variant after:h-px after:flex-1 after:bg-outline-variant"
+          >
+            {{ dayLabel }}
+          </p>
+        }
+        <div class="tutor-turn flex flex-col gap-1">
+          @if (turn.studentMessage !== null) {
+            <div class="flex max-w-[85%] flex-col items-end gap-0.5 self-end">
+              <p
+                class="rounded-2xl rounded-ee-sm bg-primary-container px-3 py-2 text-body-medium text-on-primary-container"
+              >
+                <span class="sr-only" i18n="@@tutor.you">Tú:</span>
+                <span class="whitespace-pre-line">{{ turn.studentMessage }}</span>
+              </p>
+              <time
+                class="text-label-small text-on-surface-variant"
+                [attr.datetime]="turn.createdAt"
+                >{{ turn.createdAt | date: 'shortTime' }}</time
+              >
+            </div>
+          }
+          @switch (turn.trigger) {
+            @case ('hint') {
+              <p
+                class="mt-1 inline-flex items-center gap-1 self-center rounded-full bg-tertiary-container px-2.5 py-0.5 text-label-medium text-on-tertiary-container"
+              >
+                <mat-icon class="size-4! text-[1rem]!">lightbulb</mat-icon>
+                @if (turn.hintLevel; as level) {
+                  <span i18n="@@tutor.hintOfLevel">Pista · nivel {{ level }}</span>
+                } @else {
+                  <span i18n="@@tutor.hintAsked">Pista</span>
+                }
+              </p>
+            }
+            @case ('proactive') {
+              <p
+                class="mt-1 inline-flex items-center gap-1 self-center rounded-full bg-secondary-container px-2.5 py-0.5 text-label-medium text-on-secondary-container"
+              >
+                <mat-icon class="size-4! text-[1rem]!">waving_hand</mat-icon>
+                <span i18n="@@tutor.proactive">El tutor se acerca</span>
+              </p>
+            }
+          }
+          @if (turn.status === 'failed') {
+            <div
+              role="alert"
+              class="flex flex-wrap items-center gap-2 rounded-lg bg-error-container p-3 text-on-error-container"
+            >
+              <mat-icon class="shrink-0">error</mat-icon>
+              <p class="min-w-40 flex-1 text-body-medium">{{ errorMessage(turn) }}</p>
+              <button matButton type="button" (click)="retry(turn)" i18n="@@tutor.retry">
+                Reintentar
+              </button>
+            </div>
+          } @else {
+            <div class="flex max-w-[92%] flex-col items-start gap-0.5 self-start">
+              <p
+                class="rounded-2xl rounded-ss-sm bg-surface-container-high px-3 py-2 text-body-medium text-on-surface"
+              >
+                <span class="sr-only" i18n="@@tutor.tutorSays">Tutor:</span>
+                @if (turn.status === 'answering' && !turn.answer) {
+                  <span class="tutor-typing" aria-hidden="true"
+                    ><span></span><span></span><span></span
+                  ></span>
+                  <span class="sr-only" i18n="@@tutor.typing">El tutor está escribiendo…</span>
+                } @else {
+                  <!-- pre-line: keeps the line breaks of the answer, not the spaces of this template -->
+                  <span class="whitespace-pre-line">
+                    @for (part of item.parts; track $index) {
+                      @if (part.code) {
+                        <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{
+                          part.text
+                        }}</code>
+                      } @else {
+                        {{ part.text }}
+                      }
+                    }
+                  </span>
+                  @if (turn.status === 'answering') {
+                    <span class="tutor-caret" aria-hidden="true"></span>
+                  }
+                }
+              </p>
+              @if (turn.status === 'done') {
+                <time
+                  class="text-label-small text-on-surface-variant"
+                  [attr.datetime]="turn.createdAt"
+                  >{{ turn.createdAt | date: 'shortTime' }}</time
+                >
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Always in the page, so screen readers hear each answer once it is complete -->
+<p class="sr-only" aria-live="polite">{{ store.announcement() }}</p>
+
+@if (store.readonly()) {
+  <p
+    class="flex items-center gap-2 rounded-lg bg-surface-container p-3 text-body-small text-on-surface-variant"
+  >
+    <mat-icon class="shrink-0">task_alt</mat-icon>
+    <span i18n="@@tutor.submitted"
+      >Ejercicio entregado: puedes repasar la conversación, pero el tutor ya no da más pistas.</span
+    >
+  </p>
+} @else {
+  <div class="flex flex-col gap-2">
+    <!-- disabledInteractive: while the tutor answers, the button keeps the focus and says why -->
+    <button
+      matButton="tonal"
+      type="button"
+      class="self-start"
+      disabledInteractive
+      [disabled]="!store.canAsk()"
+      [matTooltip]="hintTooltip()"
+      (click)="requestHint()"
+    >
+      <mat-icon>lightbulb</mat-icon>
+      @if (store.hintLevel() === maxHintLevel) {
+        <span i18n="@@tutor.anotherHint">Otra pista</span>
+      } @else {
+        <span i18n="@@tutor.requestHint">Pedir pista</span>
+      }
+    </button>
+    <app-tutor-composer (focusin)="composing.set(true)" (focusout)="composing.set(false)" />
+  </div>
+}
