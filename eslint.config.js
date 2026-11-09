@@ -74,6 +74,7 @@ module.exports = defineConfig([
             'align',
             'appearance',
             'aria-controls',
+            'aria-describedby',
             'aria-labelledby',
             'aria-live',
             'ariaCurrentWhenActive',

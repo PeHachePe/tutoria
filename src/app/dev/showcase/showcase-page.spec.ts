@@ -120,7 +120,7 @@ describe('ShowcasePage', () => {
 
     expect(mascots()).toHaveLength(2);
     expect(count('mascot-headset')).toBe(2);
-    expect(count('mascot-bow-tie')).toBe(0);
+    expect(count('mascot-bow-tie')).toBe(2);
 
     await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Pensando' }))).check();
     expect(mascots().every((mascot) => mascot.classList.contains('mascot-thinking'))).toBe(true);
@@ -128,7 +128,7 @@ describe('ShowcasePage', () => {
     await (await loader.getHarness(MatSlideToggleHarness.with({ label: 'Auriculares' }))).toggle();
     await (await loader.getHarness(MatSlideToggleHarness.with({ label: 'Pajarita' }))).toggle();
     expect(count('mascot-headset')).toBe(0);
-    expect(count('mascot-bow-tie')).toBe(2);
+    expect(count('mascot-bow-tie')).toBe(0);
   });
 
   it('plays each reaction of the catalog with the real overlay, and turns them off', async () => {

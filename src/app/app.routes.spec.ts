@@ -87,9 +87,9 @@ describe('app routes', () => {
   });
 
   it('tells which step builds each placeholder screen', async () => {
-    await visit('student', '/alumno/ajustes');
+    await visit('teacher', '/docente/historico');
 
-    expect(screen.getByText('Esta pantalla se construye en el paso 1.9.')).toBeTruthy();
+    expect(screen.getByText('Esta pantalla se construye en el paso 4.4.')).toBeTruthy();
   });
 
   it.each<[Role, string]>([

@@ -22,4 +22,6 @@ export const SCREENS: readonly Screen[] = [
     path: '/alumno/ejercicio/40000000-0000-4000-8000-000000000003',
     user: 'studentHalfway',
   },
+  { code: '05-ajustes', path: '/alumno/ajustes', user: 'studentHalfway' },
+  { code: '05b-datos', path: '/alumno/datos', user: 'studentHalfway' },
 ];

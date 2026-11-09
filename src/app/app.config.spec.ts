@@ -9,7 +9,7 @@ import { environment } from '../environments/environment';
 import { appConfig } from './app.config';
 import { routes } from './app.routes';
 import { AuthStore } from './auth/auth-store';
-import { DAW_STUDENT_IDS } from './data/mock/fixtures/users';
+import { DAW_STUDENT_IDS, TEACHER_ID } from './data/mock/fixtures/users';
 import { MOCK_SESSION_STORAGE_KEY } from './data/mock/mock-db';
 import { MOCK_NETWORK_STORAGE_KEY } from './data/mock/mock-network';
 
@@ -40,11 +40,13 @@ describe('appConfig', () => {
   });
 
   it('passes the route data to the screens as inputs', async () => {
+    // A teacher this time: the student's screens are built, and the teacher's are placeholders
+    localStorage.setItem(MOCK_SESSION_STORAGE_KEY, TEACHER_ID);
     await TestBed.inject(ApplicationInitStatus).donePromise;
 
-    await RouterTestingHarness.create('/alumno/ajustes');
+    await RouterTestingHarness.create('/docente/historico');
 
-    expect(screen.getByText('Esta pantalla se construye en el paso 1.9.')).toBeTruthy();
+    expect(screen.getByText('Esta pantalla se construye en el paso 4.4.')).toBeTruthy();
   });
 
   it('applies the colour mode on start-up', async () => {

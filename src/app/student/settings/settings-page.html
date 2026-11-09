@@ -1,0 +1,226 @@
+<div class="flex flex-col gap-6">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-headline-medium" i18n="@@settings.heading">Ajustes</h1>
+    <p class="text-body-large text-on-surface-variant" i18n="@@settings.intro">
+      Los cambios se aplican y se guardan al momento en este navegador.
+    </p>
+  </header>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <!-- Appearance: also in the bar, as a shortcut (step 1.1d) -->
+    <section
+      aria-labelledby="settings-appearance"
+      class="flex flex-col gap-5 rounded-2xl bg-panel p-4 sm:p-6"
+    >
+      <h2 id="settings-appearance" class="text-title-large" i18n="@@settings.appearance">
+        Apariencia
+      </h2>
+      <div class="flex flex-col gap-2">
+        <h3 id="settings-theme" class="text-title-small" i18n="@@settings.theme">Tema</h3>
+        <div class="max-w-full overflow-x-auto">
+          <mat-button-toggle-group
+            aria-labelledby="settings-theme"
+            hideSingleSelectionIndicator
+            [value]="themeMode()"
+            (change)="setTheme($event.value)"
+          >
+            @for (choice of themeChoices; track choice.mode) {
+              <mat-button-toggle [value]="choice.mode">
+                <mat-icon class="me-1 align-middle">{{ choice.icon }}</mat-icon>
+                {{ choice.label }}
+              </mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <h3 id="settings-language" class="text-title-small" i18n="@@settings.language">Idioma</h3>
+        <div class="max-w-full overflow-x-auto">
+          <mat-button-toggle-group
+            aria-labelledby="settings-language"
+            aria-describedby="settings-language-hint"
+            hideSingleSelectionIndicator
+            [value]="locale"
+            (change)="setLocale($event.value)"
+          >
+            @for (option of languageOptions; track option.locale) {
+              <mat-button-toggle [value]="option.locale" [attr.lang]="option.locale">
+                {{ option.label }}
+              </mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+        </div>
+        <p
+          id="settings-language-hint"
+          class="text-body-small text-on-surface-variant"
+          i18n="@@settings.language.hint"
+        >
+          Al cambiarlo, la página se vuelve a cargar.
+        </p>
+      </div>
+    </section>
+
+    <!-- The mascot, with a live preview of its accessories -->
+    <section
+      aria-labelledby="settings-mascot"
+      class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+    >
+      <h2 id="settings-mascot" class="text-title-large" i18n="@@settings.mascot">Mascota</h2>
+      <div class="flex items-center gap-6">
+        <app-mascot class="size-24 shrink-0 sm:size-32" [reaction]="sample()" />
+        <div class="flex flex-col gap-3">
+          <mat-slide-toggle
+            [checked]="settings.mascotHeadset()"
+            (change)="settings.setMascotHeadset($event.checked)"
+            i18n="@@settings.mascot.headset"
+          >
+            Auriculares con micro
+          </mat-slide-toggle>
+          <mat-slide-toggle
+            [checked]="settings.mascotBowTie()"
+            (change)="settings.setMascotBowTie($event.checked)"
+            i18n="@@settings.mascot.bowTie"
+          >
+            Pajarita de cuadros
+          </mat-slide-toggle>
+          <mat-slide-toggle
+            [checked]="settings.mascotBoneCursor()"
+            (change)="settings.setMascotBoneCursor($event.checked)"
+            i18n="@@settings.mascot.boneCursor"
+          >
+            Puntero de hueso al pasar por encima
+          </mat-slide-toggle>
+        </div>
+      </div>
+    </section>
+
+    <!-- The tutor's reactions (RF-10, CU-03 4a) -->
+    <section
+      aria-labelledby="settings-reactions"
+      class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+    >
+      <div class="flex flex-col gap-1">
+        <h2 id="settings-reactions" class="text-title-large" i18n="@@settings.reactions">
+          Reacciones del tutor
+        </h2>
+        <p class="text-body-medium text-on-surface-variant" i18n="@@settings.reactions.intro">
+          Las animaciones con las que el tutor acompaña sus respuestas.
+        </p>
+      </div>
+      <div class="flex flex-col gap-2">
+        <div class="max-w-full overflow-x-auto">
+          <mat-button-toggle-group
+            aria-labelledby="settings-reactions"
+            aria-describedby="settings-reactions-hint"
+            hideSingleSelectionIndicator
+            [value]="settings.reactions()"
+            (change)="settings.setReactions($event.value)"
+          >
+            @for (choice of reactionChoices; track choice.mode) {
+              <mat-button-toggle [value]="choice.mode">{{ choice.label }}</mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+        </div>
+        <p
+          id="settings-reactions-hint"
+          class="text-body-small text-on-surface-variant"
+          aria-live="polite"
+        >
+          {{ reactionHint() }}
+        </p>
+      </div>
+      <mat-slide-toggle
+        aria-describedby="settings-emojis-hint"
+        [checked]="settings.reactionEmojis()"
+        [disabled]="settings.reactions() === 'off'"
+        (change)="settings.setReactionEmojis($event.checked)"
+        i18n="@@settings.reactions.emojis"
+      >
+        Emojis 3D
+      </mat-slide-toggle>
+      <p
+        id="settings-emojis-hint"
+        class="-mt-2 text-body-small text-on-surface-variant"
+        i18n="@@settings.reactions.emojis.hint"
+      >
+        Animados y con volumen. Sin ellos, emojis planos, más ligeros para conexiones lentas.
+      </p>
+      <div>
+        <button
+          matButton="tonal"
+          type="button"
+          [disabled]="settings.reactions() === 'off'"
+          (click)="trySample()"
+        >
+          <mat-icon>play_arrow</mat-icon>
+          <ng-container i18n="@@settings.reactions.try">Probar una reacción</ng-container>
+        </button>
+      </div>
+    </section>
+
+    <!-- The tutor: proactivity (step 6.2) and voice (step 6.1) -->
+    <section
+      aria-labelledby="settings-tutor"
+      class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+    >
+      <h2 id="settings-tutor" class="text-title-large" i18n="@@settings.tutor">Tutor</h2>
+      <div class="flex flex-col gap-1">
+        <mat-slide-toggle
+          aria-describedby="settings-proactive-hint"
+          [checked]="settings.proactive()"
+          (change)="settings.setProactive($event.checked)"
+          i18n="@@settings.tutor.proactive"
+        >
+          El tutor puede escribirme por iniciativa propia
+        </mat-slide-toggle>
+        <p
+          id="settings-proactive-hint"
+          class="text-body-small text-on-surface-variant"
+          i18n="@@settings.tutor.proactive.hint"
+        >
+          Si llevas un rato atascado o superas algo que se te resistía, te escribe sin que se lo
+          pidas.
+        </p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <mat-slide-toggle
+          aria-describedby="settings-voice-hint"
+          disabled
+          i18n="@@settings.tutor.voice"
+        >
+          Hablar con el tutor por voz
+        </mat-slide-toggle>
+        <p
+          id="settings-voice-hint"
+          class="text-body-small text-on-surface-variant"
+          i18n="@@settings.tutor.voice.hint"
+        >
+          Pronto podrás hablarle y escuchar sus respuestas. Nunca se graba el audio.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Privacy (RF-07) -->
+  <section
+    aria-labelledby="settings-privacy"
+    class="flex flex-col items-start gap-3 rounded-2xl bg-panel p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+  >
+    <div class="flex flex-col gap-1">
+      <h2 id="settings-privacy" class="text-title-large" i18n="@@settings.privacy">Privacidad</h2>
+      <p class="text-body-medium text-on-surface-variant" i18n="@@settings.privacy.text">
+        Qué registra TutorIA mientras trabajas, para qué y quién puede verlo.
+      </p>
+    </div>
+    <a matButton="outlined" [routerLink]="dataPath">
+      <mat-icon>shield_person</mat-icon>
+      <ng-container i18n="@@settings.privacy.link">Ver los datos registrados</ng-container>
+    </a>
+  </section>
+</div>
+
+<app-reaction-overlay
+  [reaction]="sample()"
+  [mode]="settings.reactions()"
+  [emojis]="settings.reactionEmojis()"
+/>

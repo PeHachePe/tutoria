@@ -969,3 +969,29 @@ Preguntó también si la IA podría componer las animaciones (iconos, si late o 
   - una segunda pasada en paralelo tumbó la primera.
 
 **Aprobación:** el autor pidió cada cambio y los revisó en su navegador; dio por bueno el conjunto («Sí, ciérralo»).
+
+## D-038 · Ajustes que se aplican al momento, accesorios por inyección y aviso de datos en el shell (09/11/2026)
+
+**Contexto:** el paso 1.9 construye los ajustes del alumno y la pantalla de datos registrados (RF-07), con su aviso la primera vez. Durante el paso, el autor pidió además un puntero de hueso mejor y que se pudiera quitar, y la pajarita puesta por defecto y algo más grande.
+
+**Decisión:**
+
+- **Sin formulario:** cada control de los ajustes aplica y guarda su cambio al momento, como los ajustes de un sistema operativo. No hay nada que enviar ni validar, así que no se usan Signal Forms (§4.6): los botones conmutadores y los interruptores de Material llaman directamente a `SettingsStore` o `ThemeService`.
+- **`SettingsStore`** guarda por usuario las reacciones, los emojis 3D, la proactividad, los tres ajustes de la mascota (auriculares, pajarita y puntero de hueso) y si se vio el aviso, con una sola forma de leer y escribir cada clave (`settingKey`). El tema sigue en `ThemeService`, para todo el navegador, porque el acceso también lo usa.
+- **Accesorios por inyección:** `MASCOT_ACCESSORIES` (en `shared/mascot/`) da los accesorios de las mascotas que no los reciben por `input()`. Lo provee la ruta del área del alumno con sus ajustes, así que todas sus mascotas (tutor, botón flotante, catálogo y vista previa) los siguen sin tocar cada página, y `shared/` no depende de `student/`.
+- **Aviso de datos en el shell:** lo abre `StudentLayout` en cualquier página del área, no solo en el catálogo, para que un enlace directo a un ejercicio también lo muestre antes de trabajar (RGPD). No se cierra con Esc ni fuera: hay que elegir «Entendido» o «Ver los detalles». Abrir la pantalla de datos cuenta como visto.
+- **Mascota (a petición del autor):** pajarita activada por defecto, un 25 % más grande y algo más baja para que la barbilla no tape el nudo; puntero de hueso de 24 px (antes 32), con el contorno dibujado bajo toda la silueta, sin líneas por dentro, y que se puede quitar en los ajustes (vuelve la mano).
+- **La intensidad de las reacciones no es un ajuste:** la decide el tutor en cada respuesta; el alumno elige cuánto quiere ver (completas, reducidas o desactivadas).
+
+**Alternativas:**
+
+- Signal Forms con un modelo y un `effect()` que guarde: un efecto fuera de la frontera con APIs imperativas, que §4.8 no permite, para un formulario que no se envía.
+- Pasar los accesorios como `input()` en cada uso de la mascota: seis sitios que recordar en cada pantalla nueva.
+- Aviso solo en el catálogo, como decía el plan: un enlace directo a un ejercicio se lo saltaría.
+
+**Consecuencias:**
+
+- El tutor proactivo (6.2) tiene que leer `SettingsStore.proactive` y la voz (6.1), activar su interruptor.
+- Que el alumno vio el aviso solo queda en su navegador; como prueba del consentimiento (RGPD art. 7.1) habría que guardarlo en el servidor (`PENDIENTES.md`).
+
+**Aprobación:** el autor aprobó el plan del paso con sus propuestas y pidió los cambios de la mascota durante el paso; la forma técnica, por delegación del autor en el agente.

@@ -1,4 +1,4 @@
-import { ApplicationRef } from '@angular/core';
+import { ApplicationRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ComponentInput, render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { REACTION_KINDS } from '../../data/tutor';
 import type { Reaction } from '../reactions/reaction';
 import { Mascot, MascotMood, REACTION_MOVEMENTS } from './mascot';
+import { MASCOT_ACCESSORIES } from './mascot-accessories';
 
 describe('Mascot', () => {
   async function renderMascot(inputs: ComponentInput<Mascot> = {}) {
@@ -25,12 +26,20 @@ describe('Mascot', () => {
     expect(host.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 200 200');
   });
 
-  it('rests by default, with the headset on and without the bow tie', async () => {
+  it('rests by default, with the headset, the bow tie and the bone pointer', async () => {
     const host = await renderMascot();
 
-    expect([...host.classList].filter((name) => name.startsWith('mascot-'))).toEqual([]);
+    expect([...host.classList].filter((name) => name.startsWith('mascot-'))).toEqual([
+      'mascot-bone',
+    ]);
     expect(headset()).toBeTruthy();
-    expect(bowTie()).toBeNull();
+    expect(bowTie()).toBeTruthy();
+  });
+
+  it('keeps the hand pointer without the bone', async () => {
+    const host = await renderMascot({ boneCursor: false });
+
+    expect(host.classList).not.toContain('mascot-bone');
   });
 
   it.each<[MascotMood, string]>([
@@ -45,10 +54,25 @@ describe('Mascot', () => {
   });
 
   it('wears the accessories it is given', async () => {
-    await renderMascot({ headset: false, bowTie: true });
+    await renderMascot({ headset: false, bowTie: false });
 
     expect(headset()).toBeNull();
+    expect(bowTie()).toBeNull();
+  });
+
+  it('wears the accessories of its injector when it is not given them', async () => {
+    const accessories = { headset: signal(false), bowTie: signal(true), boneCursor: signal(false) };
+    const { fixture } = await render(Mascot, {
+      providers: [{ provide: MASCOT_ACCESSORIES, useValue: accessories }],
+    });
+    expect(headset()).toBeNull();
     expect(bowTie()).toBeTruthy();
+
+    accessories.headset.set(true);
+    fixture.componentRef.setInput('bowTie', false);
+    await fixture.whenStable();
+    expect(headset()).toBeTruthy();
+    expect(bowTie()).toBeNull();
   });
 
   it('gives each mascot its own plaid pattern, so two on one page do not clash', async () => {

@@ -5,14 +5,22 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
+import { provideSessionOf, restoreSession, userWith } from '../../auth/auth-testing';
+import { RegisteredDataPage } from '../registered-data/registered-data-page';
+import { settingKey } from '../settings/settings-store';
 import { READING_PAGE_CLASS, StudentLayout, WIDE_PAGE_CLASS } from './student-layout';
 
 @Component({ template: '<h1>Página</h1>' })
 class Page {}
 
 describe('StudentLayout', () => {
-  async function renderAt(url: string) {
+  const noticeKey = settingKey('dataNoticeSeen', userWith('student').id);
+
+  afterEach(() => localStorage.clear());
+
+  /** The student of provideSessionOf('student') has seen the notice, unless a test says otherwise. */
+  async function renderAt(url: string, { noticeSeen = true } = {}) {
+    if (noticeSeen) localStorage.setItem(noticeKey, 'true');
     TestBed.configureTestingModule({
       providers: [
         provideSessionOf('student'),
@@ -23,6 +31,7 @@ describe('StudentLayout', () => {
             children: [
               { path: '', component: Page },
               { path: 'ajustes', component: Page },
+              { path: 'datos', component: RegisteredDataPage },
               { path: 'ejercicio/:id', component: Page },
             ],
           },
@@ -85,5 +94,33 @@ describe('StudentLayout', () => {
     expect(screen.getByRole('menuitem', { name: /Mis datos/ }).getAttribute('href')).toBe(
       '/alumno/datos',
     );
+  });
+
+  it('shows the notice on the registered data the first time, until the student accepts it', async () => {
+    await renderAt('/alumno/ejercicio/exercise-3', { noticeSeen: false });
+
+    const notice = await screen.findByRole('dialog', { name: 'Antes de empezar: tus datos' });
+    expect(within(notice).getByRole('link', { name: 'Ver los detalles' })).toBeTruthy();
+    expect(localStorage.getItem(noticeKey)).toBeNull();
+
+    await userEvent.setup().click(within(notice).getByRole('button', { name: 'Entendido' }));
+
+    expect(localStorage.getItem(noticeKey)).toBe('true');
+  });
+
+  it('does not show the notice again once seen', async () => {
+    await renderAt('/alumno');
+    TestBed.tick();
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('does not cover the registered data with the notice: reading them counts as seen', async () => {
+    await renderAt('/alumno/datos', { noticeSeen: false });
+    TestBed.tick();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Datos registrados' })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(localStorage.getItem(noticeKey)).toBe('true');
   });
 });

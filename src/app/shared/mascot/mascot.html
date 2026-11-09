@@ -1,6 +1,6 @@
 <!-- Approved sketch v14 (D-022): drawn as is, only the class names and the accessories change -->
 <svg viewBox="0 0 200 200" class="size-full overflow-visible">
-  @if (bowTie()) {
+  @if (wearsBowTie()) {
     <defs>
       <pattern [attr.id]="plaidId" width="5" height="5" patternUnits="userSpaceOnUse">
         <rect width="5" height="5" fill="#86573F" />
@@ -9,14 +9,18 @@
     </defs>
   }
   <g class="mascot-head">
-    @if (bowTie()) {
-      <g data-testid="mascot-bow-tie">
+    @if (wearsBowTie()) {
+      <!-- A little bigger and lower than in the sketch, so the chin does not hide the knot (1.9) -->
+      <g
+        data-testid="mascot-bow-tie"
+        transform="translate(100 181) scale(1.25) translate(-100 -177)"
+      >
         <path d="M100 176 L80 166 Q74 177 80 188 Z" [attr.fill]="plaidFill" />
         <path d="M100 176 L120 166 Q126 177 120 188 Z" [attr.fill]="plaidFill" />
         <rect x="94" y="169" width="12" height="14" rx="4" fill="#6F4533" />
       </g>
     }
-    @if (headset()) {
+    @if (wearsHeadset()) {
       <path
         d="M38 104 A62 62 0 0 1 162 104"
         fill="none"
@@ -98,7 +102,7 @@
       stroke-linecap="round"
     />
 
-    @if (headset()) {
+    @if (wearsHeadset()) {
       <g data-testid="mascot-headset">
         <rect x="26" y="94" width="14" height="26" rx="6" fill="#3B4A63" />
         <rect x="160" y="94" width="14" height="26" rx="6" fill="#3B4A63" />

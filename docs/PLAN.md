@@ -1058,7 +1058,7 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 - `<app-mascot>` en `shared/mascot/`: SVG en línea, decorativo (`aria-hidden`), con el tamaño que le dé quien lo usa.
 - Estado con `input()`: reposo (parpadea, mueve una oreja y asoma la punta de la lengua), chat abierto (gira la cabeza y saca la lengua de lado; al cerrarlo la recoge), pensando (inclina la cabeza) y alegría (dos saltitos).
-- Accesorios como inputs, para personalizarlos en los ajustes (1.9): auriculares con micro (activados por defecto) y pajarita de cuadros (desactivada).
+- Accesorios como inputs, para personalizarlos en los ajustes (1.9): auriculares con micro y pajarita de cuadros, los dos activados por defecto (la pajarita, desde el 1.9).
 - Reacciones al puntero, a petición del autor: los ojos siguen al ratón, al pasarlo por encima hace un movimiento al azar (ladea la cabeza, salta o menea la oreja) y al hacer clic saca la lengua. Sobre ella, el puntero es un huesecito.
 - Animaciones en `shared/mascot/mascot.css`, importado desde `src/styles.css` (4.8), desactivadas con `prefers-reduced-motion`. Los colores de la perra son fijos, no tokens del tema (D-022).
 - Favicon: `public/favicon.svg` con la cabeza simplificada y `favicon.ico` de respaldo generado con `npm run favicon`, en lugar del de Angular.
@@ -1184,9 +1184,10 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 **1.9 · Ajustes del alumno y datos registrados (≈2,5 h)** · fichas `05-ajustes` y `05b-datos` · Figuras 14 y 23
 
 - Tema (claro, oscuro o sistema), reacciones (completas, reducidas o desactivadas, y emojis 3D o planos, que `SettingsStore` ya guarda desde el 1.8), proactividad (sin efecto hasta el paso 6.2) y voz (deshabilitada hasta el 6.1).
-- Accesorios de la mascota (auriculares y pajarita, 1.1b).
+- Accesorios de la mascota (auriculares y pajarita, 1.1b) y el puntero de hueso, que se puede quitar; todas las mascotas del alumno los llevan (`MASCOT_ACCESSORIES`, D-038).
+- Idioma también en los ajustes, además de la barra.
 - Persistidos por usuario en localStorage.
-- Pantalla `/alumno/datos` (RF-07, 2.2), enlazada desde los ajustes, y aviso la primera vez que el alumno entra al catálogo, que se recuerda por usuario.
+- Pantalla `/alumno/datos` (RF-07, 2.2), enlazada desde los ajustes, y aviso la primera vez que el alumno entra en cualquier página de su área (también un enlace directo a un ejercicio), que se recuerda por usuario (D-038).
 
 🧪 Store de ajustes; el aviso sale solo la primera vez.
 Commit: `feat: student flow (mock)`.

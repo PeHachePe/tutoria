@@ -1,0 +1,105 @@
+<div class="flex flex-col gap-6">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-headline-medium" i18n="@@myData.heading">Datos registrados</h1>
+    <p class="text-body-large text-on-surface-variant" i18n="@@myData.intro">
+      Qué registra TutorIA mientras trabajas, para qué y quién puede verlo.
+    </p>
+  </header>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <section
+      aria-labelledby="my-data-recorded"
+      class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6 lg:row-span-3"
+    >
+      <h2 id="my-data-recorded" class="text-title-large" i18n="@@myData.recorded">Se registra</h2>
+      <ul class="flex flex-col gap-4">
+        @for (item of recorded; track item.icon) {
+          <li class="flex gap-3">
+            <span
+              class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container"
+              aria-hidden="true"
+            >
+              <mat-icon>{{ item.icon }}</mat-icon>
+            </span>
+            <div class="flex flex-col">
+              <span class="text-title-small">{{ item.title }}</span>
+              <span class="text-body-medium text-on-surface-variant">{{ item.detail }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- What is never recorded stands apart, as in the prototype (figure 23) -->
+    <section
+      aria-labelledby="my-data-never"
+      class="flex flex-col gap-2 rounded-2xl border-2 border-success bg-success-container p-4 text-on-success-container sm:p-6"
+    >
+      <h2 id="my-data-never" class="flex items-center gap-2 text-title-large">
+        <mat-icon aria-hidden="true">mic_off</mat-icon>
+        <ng-container i18n="@@myData.never">Nunca se registra</ng-container>
+      </h2>
+      <p class="text-title-medium" i18n="@@myData.never.audio">
+        El audio de tu voz: TutorIA no lo graba ni lo guarda.
+      </p>
+      <p class="text-body-medium" i18n="@@myData.never.detail">
+        Cuando hables con el tutor, solo se guarda el texto, que puedes revisar antes de enviarlo.
+        Tampoco se registra lo que haces fuera de TutorIA.
+      </p>
+    </section>
+
+    <section
+      aria-labelledby="my-data-purpose"
+      class="flex flex-col gap-2 rounded-2xl bg-panel p-4 sm:p-6"
+    >
+      <h2 id="my-data-purpose" class="text-title-large" i18n="@@myData.purpose">Para qué</h2>
+      <p class="text-body-large" i18n="@@myData.purpose.text">
+        Para aprender, no para sancionar: ayuda a tu docente a saber cuándo acercarse a echarte una
+        mano y a mejorar las actividades.
+      </p>
+    </section>
+
+    <section
+      aria-labelledby="my-data-viewers"
+      class="flex flex-col gap-2 rounded-2xl bg-panel p-4 sm:p-6"
+    >
+      <h2 id="my-data-viewers" class="text-title-large" i18n="@@myData.viewers">Quién lo ve</h2>
+      <p class="text-body-large" i18n="@@myData.viewers.text">
+        Tu docente, solo en los grupos de los que es responsable, y la administración de TutorIA.
+      </p>
+      <p class="text-body-medium text-on-surface-variant" i18n="@@myData.viewers.others">
+        El resto del alumnado no ve tus datos.
+      </p>
+    </section>
+  </div>
+
+  <section
+    aria-labelledby="my-data-services"
+    class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
+  >
+    <h2 id="my-data-services" class="text-title-large" i18n="@@myData.services">
+      Servicios externos
+    </h2>
+    <ul class="flex list-disc flex-col gap-2 ps-5 text-body-large">
+      <li i18n="@@myData.services.ai">
+        Las respuestas del tutor las redacta un modelo de inteligencia artificial de un proveedor
+        externo. Recibe el enunciado, tu código, la conversación y el nivel de pista, pero no tu
+        nombre ni tu correo.
+      </li>
+      <li i18n="@@myData.services.voice">
+        Cuando uses la voz, el reconocimiento lo hace tu navegador, que puede enviar el audio a un
+        servicio externo para transcribirlo (Chrome, a Google). Si prefieres evitarlo, puedes
+        escribir siempre.
+      </li>
+    </ul>
+  </section>
+
+  <div class="flex flex-wrap justify-end gap-3">
+    <a matButton="outlined" [routerLink]="settingsPath" i18n="@@myData.toSettings">
+      Ir a los ajustes
+    </a>
+    <a matButton="filled" [routerLink]="catalogPath" i18n="@@myData.toCatalog">
+      Ir a los ejercicios
+    </a>
+  </div>
+</div>

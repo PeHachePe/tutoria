@@ -11,6 +11,7 @@ import {
 import type { ReactionKind } from '../../data/tutor';
 import type { Reaction } from '../reactions/reaction';
 import { gazeOffset } from './gaze-offset';
+import { MASCOT_ACCESSORIES } from './mascot-accessories';
 import { MascotMovement, pickMovement } from './pick-movement';
 
 /** What the mascot is doing: resting, with the chat open, waiting for the tutor or celebrating. */
@@ -64,6 +65,7 @@ const EYES_CENTRE = { x: 0.5, y: 0.52 };
 
 const LICK_CLASS = 'mascot-lick';
 const LICK_ANIMATION = 'mascot-lick';
+const BONE_CURSOR_CLASS = 'mascot-bone';
 
 /** Ids inside an inline SVG are global to the page, so each mascot numbers its own (D-022). */
 let nextPatternId = 0;
@@ -71,7 +73,7 @@ let nextPatternId = 0;
 /**
  * The TutorIA mascot (step 1.1b): a pug based on the author's dog, as an inline SVG. It is
  * decorative, so it is hidden from assistive technology, and the parent sets its size with a class
- * (`class="size-40"`). The accessories are inputs so the student settings can change them (1.9).
+ * (`class="size-40"`). The accessories are inputs, or else MASCOT_ACCESSORIES (the student settings, 1.9).
  * The coat keeps its own colours in both themes instead of using theme tokens (D-022).
  *
  * With the tutor's reactions (1.8) it moves too: a happy tilt for joy, its ears for surprise, a hop
@@ -95,10 +97,19 @@ let nextPatternId = 0;
 })
 export class Mascot {
   readonly mood = input<MascotMood>('idle');
-  readonly headset = input(true);
-  readonly bowTie = input(false);
+  /** Without a value, what MASCOT_ACCESSORIES says: in the student area, the student's choice. */
+  readonly headset = input<boolean>();
+  readonly bowTie = input<boolean>();
+  readonly boneCursor = input<boolean>();
   /** Each new reaction of the tutor moves it once; the one already there when it appears does not. */
   readonly reaction = input<Reaction | null>(null);
+
+  private readonly accessories = inject(MASCOT_ACCESSORIES);
+  protected readonly wearsHeadset = computed(() => this.headset() ?? this.accessories.headset());
+  protected readonly wearsBowTie = computed(() => this.bowTie() ?? this.accessories.bowTie());
+  private readonly hasBoneCursor = computed(
+    () => this.boneCursor() ?? this.accessories.boneCursor(),
+  );
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly movement = linkedSignal<Reaction | null, MascotAction | null>({
@@ -115,6 +126,7 @@ export class Mascot {
       MOOD_CLASSES[this.mood()],
       movement ? MOVEMENTS[movement].className : '',
       this.licking() ? LICK_CLASS : '',
+      this.hasBoneCursor() ? BONE_CURSOR_CLASS : '',
     ]
       .filter(Boolean)
       .join(' ');

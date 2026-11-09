@@ -232,7 +232,7 @@ export class ShowcasePage {
   ];
   protected readonly mascotMood = signal<MascotMood>('idle');
   protected readonly mascotHeadset = signal(true);
-  protected readonly mascotBowTie = signal(false);
+  protected readonly mascotBowTie = signal(true);
 
   protected readonly reactionKinds: { value: ReactionKind; label: string; icon: string }[] = [
     { value: 'hearts', label: 'Corazones', icon: 'favorite' },

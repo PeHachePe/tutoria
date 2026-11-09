@@ -3,12 +3,17 @@
    tip of its tongue peek out; each mood and each reaction adds its class on <app-mascot>. The
    coordinates are those of the drawing (viewBox 0 0 200 200). */
 
-/* Over the mascot the pointer becomes a little bone, which also hints that it can be clicked
-   (it licks). The hotspot is the upper knob; browsers that cannot show it use the hand. */
+/* The mascot can be clicked (it licks). Over it the pointer becomes a little bone unless the
+   student turned it off (mascot-bone, 1.9): the outline is drawn under the whole shape, so there
+   are no lines inside it. The hotspot is the upper knob; browsers that cannot show it use the hand. */
 .mascot {
+  cursor: pointer;
+}
+
+.mascot-bone {
   cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath transform='rotate(45 16 16)' d='M11.43 13.7H20.57A3.6 3.6 0 1 1 25.18 16A3.6 3.6 0 1 1 20.57 18.3H11.43A3.6 3.6 0 1 1 6.82 16A3.6 3.6 0 1 1 11.43 13.7Z' fill='%23FFF8EC' stroke='%235B4B45' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
-      7 7,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cdefs%3E%3Cg id='b'%3E%3Crect x='6' y='10.4' width='12' height='3.2'/%3E%3Ccircle cx='6' cy='10.3' r='2.3'/%3E%3Ccircle cx='6' cy='13.7' r='2.3'/%3E%3Ccircle cx='18' cy='10.3' r='2.3'/%3E%3Ccircle cx='18' cy='13.7' r='2.3'/%3E%3C/g%3E%3C/defs%3E%3Cg transform='rotate(45 12 12)'%3E%3Cuse href='%23b' fill='%235B4B45' stroke='%235B4B45' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cuse href='%23b' fill='%23FFF8EC'/%3E%3C/g%3E%3C/svg%3E")
+      5 5,
     pointer;
 }
 
