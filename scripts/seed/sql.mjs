@@ -5,6 +5,7 @@ export const SEED_TABLES = [
   { table: 'app_user', source: 'users', jsonb: [] },
   { table: 'class_group', source: 'groups', jsonb: [] },
   { table: 'enrollment', source: 'enrollments', jsonb: [] },
+  { table: 'class_session', source: 'classSessions', jsonb: [] },
   { table: 'exercise', source: 'exercises', jsonb: [] },
   { table: 'test', source: 'tests', jsonb: ['input', 'expected_output'] },
   { table: 'exercise_assignment', source: 'assignments', jsonb: [] },

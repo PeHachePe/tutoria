@@ -73,6 +73,14 @@ insert into enrollment (id, group_id, user_id) values
   ('30000000-0000-4000-8000-000000000029', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000045'),
   ('30000000-0000-4000-8000-000000000030', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000046');
 
+insert into class_session (id, group_id, number, title) values
+  ('a0000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 1, 'Bucles y condicionales'),
+  ('a0000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 2, 'Vectores'),
+  ('a0000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 3, 'Recorridos de vectores'),
+  ('a0000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', 4, 'Cadenas y formato'),
+  ('a0000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002', 1, 'Primeros bucles'),
+  ('a0000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000002', 2, null);
+
 insert into exercise (id, title, statement, difficulty, topics, language, function_name, max_repeated_failures, max_idle_minutes, created_by, created_at, updated_at) values
   ('40000000-0000-4000-8000-000000000001', 'Contar números pares', 'Escribe una función `contarPares` que reciba un número entero `n` y devuelva cuántos números pares hay entre 1 y `n`, ambos incluidos. Si `n` es menor que 2, la función debe devolver 0.', 'initial', array['Bucles', 'rangos', 'condicionales']::text[], 'javascript', 'contarPares', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
   ('40000000-0000-4000-8000-000000000002', 'Tabla de multiplicar', 'Escribe una función `tablaMultiplicar` que reciba un número entero `n` y devuelva su tabla de multiplicar del 1 al 10 como un único texto. Cada línea sigue el formato `n x i = resultado` y las líneas se separan con un salto de línea (`\n`), sin salto al final. Si `n` es 0, todas las líneas dan 0.', 'initial', array['Bucles anidados', 'salida formateada']::text[], 'javascript', 'tablaMultiplicar', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),

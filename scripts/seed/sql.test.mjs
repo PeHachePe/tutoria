@@ -83,6 +83,7 @@ describe('buildSeedSql', () => {
       'app_user',
       'class_group',
       'enrollment',
+      'class_session',
       'exercise',
       'test',
       'exercise_assignment',

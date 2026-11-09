@@ -42,6 +42,11 @@ export class MockExerciseService extends ExerciseService {
             exercise: findRow(tables.exercises, assignment.exerciseId),
             assignmentId: assignment.id,
             session: assignment.session,
+            sessionTitle:
+              tables.classSessions.find(
+                (s) => s.groupId === assignment.groupId && s.number === assignment.session,
+              )?.title ?? null,
+            updatedAt: attempt?.updatedAt ?? null,
             status: attempt?.status ?? 'not_started',
             hintCount: interactions.filter((i) => i.trigger === 'hint').length,
             hintLevel: highestLevel(interactions),

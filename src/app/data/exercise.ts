@@ -49,11 +49,24 @@ export interface ExerciseAssignment {
   readonly session: number;
 }
 
+/** Table `class_session`: a class session of a group, with an optional title («Bucles»). */
+export interface ClassSession {
+  readonly id: string;
+  readonly groupId: string;
+  /** Order of the session in the group; assignments refer to it with `(groupId, session)`. */
+  readonly number: number;
+  readonly title: string | null;
+}
+
 /** A card of the student's catalog. */
 export interface AssignedExercise {
   readonly exercise: Exercise;
   readonly assignmentId: string;
   readonly session: number;
+  /** Title the teacher gave the session, or null to show just its number. */
+  readonly sessionTitle: string | null;
+  /** Last change of the student's latest attempt, or null without one. */
+  readonly updatedAt: string | null;
   /** Status of the student's latest attempt, or `not_started`. */
   readonly status: AttemptStatus;
   /** Hints the student asked for («Pedir pista») in the latest attempt. */

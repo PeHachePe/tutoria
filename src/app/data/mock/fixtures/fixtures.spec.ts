@@ -29,6 +29,7 @@ describe('seed fixtures', () => {
       SEED.users,
       SEED.groups,
       SEED.enrollments,
+      SEED.classSessions,
       SEED.exercises,
       SEED.tests,
       SEED.assignments,
@@ -101,6 +102,15 @@ describe('seed fixtures', () => {
       );
       expect(failures.length, exercise.title).toBeGreaterThan(0);
     });
+  });
+
+  it('gives every session of each group a row, numbered from 1, some of them untitled', () => {
+    const keys = SEED.classSessions.map((session) => `${session.groupId}/${session.number}`);
+    const used = new Set(SEED.assignments.map((a) => `${a.groupId}/${a.session}`));
+
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(new Set(keys)).toEqual(used);
+    expect(SEED.classSessions.some((session) => session.title === null)).toBe(true);
   });
 
   it('gives each student at most one attempt per exercise, through an assignment of their group', () => {

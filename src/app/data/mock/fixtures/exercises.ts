@@ -1,4 +1,4 @@
-import type { Difficulty, Exercise, ExerciseAssignment, Test } from '../../exercise';
+import type { ClassSession, Difficulty, Exercise, ExerciseAssignment, Test } from '../../exercise';
 import { fixtureId } from './fixture-id';
 import { DAM_GROUP_ID, DAW_GROUP_ID, TEACHER_ID } from './users';
 
@@ -183,6 +183,20 @@ export const TESTS: readonly Test[] = EXERCISE_FIXTURES.flatMap((fixture, index)
 export const DAW_SESSIONS: readonly number[] = [1, 1, 2, 2, 3, 4, 4, 4];
 /** 1.º DAM B has only reached session 2, with the first four exercises. */
 export const DAM_SESSIONS: readonly number[] = [1, 1, 2, 2];
+
+/** Titles of the sessions of each group: one is left without a title to show the fallback. */
+const SESSION_TITLES: readonly (readonly [groupId: string, titles: readonly (string | null)[]])[] =
+  [
+    [
+      DAW_GROUP_ID,
+      ['Bucles y condicionales', 'Vectores', 'Recorridos de vectores', 'Cadenas y formato'],
+    ],
+    [DAM_GROUP_ID, ['Primeros bucles', null]],
+  ];
+
+export const CLASS_SESSIONS: readonly ClassSession[] = SESSION_TITLES.flatMap(([groupId, titles]) =>
+  titles.map((title, index) => ({ groupId, number: index + 1, title })),
+).map((session, index) => ({ id: fixtureId('session', index + 1), ...session }));
 
 export function assignmentId(groupId: string, exerciseNumber: number): string {
   return fixtureId('assignment', (groupId === DAW_GROUP_ID ? 0 : 100) + exerciseNumber);

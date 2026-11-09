@@ -76,6 +76,42 @@ describe('MockExerciseService', () => {
       });
     });
 
+    it('adds the title of each session and when the latest attempt changed', async () => {
+      db.setSession(DAW_STUDENT_IDS[1]); // Hugo
+      const attemptOf = (n: number) =>
+        SEED.attempts.find(
+          (a) => a.userId === DAW_STUDENT_IDS[1] && a.exerciseId === exerciseId(n),
+        );
+
+      const entries = await service.listAssigned(DAW_STUDENT_IDS[1]);
+
+      expect(entries.map((entry) => entry.sessionTitle)).toEqual([
+        'Bucles y condicionales',
+        'Bucles y condicionales',
+        'Vectores',
+        'Vectores',
+        'Recorridos de vectores',
+        'Cadenas y formato',
+        'Cadenas y formato',
+        'Cadenas y formato',
+      ]);
+      expect(entries[0].updatedAt).toBe(attemptOf(1)?.updatedAt);
+      expect(entries[7].updatedAt).toBeNull();
+    });
+
+    it('leaves the title out of a session that has none', async () => {
+      db.setSession(DAM_STUDENT_IDS[0]);
+
+      const entries = await service.listAssigned(DAM_STUDENT_IDS[0]);
+
+      expect(entries.map((entry) => entry.sessionTitle)).toEqual([
+        'Primeros bucles',
+        'Primeros bucles',
+        null,
+        null,
+      ]);
+    });
+
     it('counts the hints asked in the latest attempt and the highest level reached', async () => {
       db.setSession(DAW_STUDENT_IDS[1]); // Hugo
       const attempt = SEED.attempts.find(
