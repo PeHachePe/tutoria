@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ComponentInput, render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
+import { REACTION_KINDS } from '../../data/tutor';
 import type { Reaction } from '../reactions/reaction';
 import { Mascot, MascotMood, REACTION_MOVEMENTS } from './mascot';
 
@@ -175,29 +176,30 @@ describe('Mascot', () => {
   });
 
   describe('reactions of the tutor', () => {
-    const reactionOf = (id: string, emotion: Reaction['emotion']): Reaction => ({
+    const reactionOf = (id: string, kind: Reaction['kind']): Reaction => ({
       id,
-      emotion,
+      kind,
       intensity: 2,
     });
 
-    it('moves with each emotion of the tutor', () => {
-      expect(REACTION_MOVEMENTS).toEqual({
-        joy: 'tilt',
-        surprise: 'ears',
-        encouragement: 'hop',
-        celebration: 'cheer',
+    it('moves with each reaction of the tutor', () => {
+      expect(Object.keys(REACTION_MOVEMENTS).sort()).toEqual([...REACTION_KINDS].sort());
+      expect(REACTION_MOVEMENTS).toMatchObject({
+        hearts: 'tilt',
+        cheer: 'hop',
+        trophy: 'cheer',
+        'paper-ball': 'ears',
       });
     });
 
     it('moves once with each new reaction, and not with the one there when it appears', async () => {
       const { fixture } = await render(Mascot, {
-        inputs: { reaction: reactionOf('r1', 'joy') },
+        inputs: { reaction: reactionOf('r1', 'hearts') },
       });
       const host = fixture.nativeElement as HTMLElement;
       expect(host.classList).not.toContain('mascot-move-tilt');
 
-      fixture.componentRef.setInput('reaction', reactionOf('r2', 'celebration'));
+      fixture.componentRef.setInput('reaction', reactionOf('r2', 'trophy'));
       await fixture.whenStable();
       expect(host.classList).toContain('mascot-move-cheer');
 

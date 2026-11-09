@@ -209,10 +209,10 @@
       <app-mascot class="size-24 shrink-0 self-center" [reaction]="mascotReaction()" />
       <div class="flex min-w-0 flex-col gap-3">
         <div class="flex flex-wrap gap-2">
-          @for (emotion of emotions; track emotion.value) {
-            <button matButton="tonal" type="button" (click)="react(emotion.value)">
-              <mat-icon>{{ emotion.icon }}</mat-icon>
-              {{ emotion.label }}
+          @for (kind of reactionKinds; track kind.value) {
+            <button matButton="tonal" type="button" (click)="react(kind.value)">
+              <mat-icon>{{ kind.icon }}</mat-icon>
+              {{ kind.label }}
             </button>
           }
         </div>
@@ -241,11 +241,11 @@
           </div>
         </div>
         <p class="text-body-small text-on-surface-variant">
-          Cada botón lanza el componente real con su emoción: flota de 2 a 3 segundos en un sitio
-          distinto cada vez y la mascota se mueve con él. Reducidas, un solo icono pequeño;
-          desactivadas, nada, tampoco la mascota. Es el ajuste del alumno que usa la pantalla de
-          trabajo. Con «reducir movimiento» del sistema, un solo icono aparece y se desvanece sin
-          moverse.
+          Cada botón lanza el componente real con una reacción del catálogo, la que elige el tutor
+          para cada respuesta (o la de su emoción): dura de 2 a 3 segundos, nunca sale igual y la
+          mascota se mueve con ella. Reducidas, un solo icono pequeño; desactivadas, nada, tampoco
+          la mascota. Es el ajuste del alumno que usa la pantalla de trabajo. Con «reducir
+          movimiento» del sistema, un solo icono aparece y se desvanece sin moverse.
         </p>
       </div>
     </div>

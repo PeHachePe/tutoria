@@ -1,0 +1,78 @@
+/* Two hands that meet three times in the middle (1.8); the right one is the left one mirrored */
+
+.reaction-clap-left,
+.reaction-clap-right {
+  --meet: calc(7vw - var(--size) * 0.3);
+  animation-timing-function: ease-in-out;
+}
+
+.reaction-clap-left {
+  animation-name: reaction-clap-left;
+}
+
+.reaction-clap-right {
+  animation-name: reaction-clap-right;
+  transform: scaleX(-1);
+}
+
+@keyframes reaction-clap-left {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+  }
+  10% {
+    opacity: 1;
+    scale: 1;
+  }
+  18%,
+  32%,
+  57%,
+  82% {
+    translate: 0 0;
+    rotate: -12deg;
+  }
+  25%,
+  50%,
+  75% {
+    translate: var(--meet) 0;
+    rotate: 0deg;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+
+@keyframes reaction-clap-right {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+  }
+  10% {
+    opacity: 1;
+    scale: 1;
+  }
+  18%,
+  32%,
+  57%,
+  82% {
+    translate: 0 0;
+    rotate: 12deg;
+  }
+  25%,
+  50%,
+  75% {
+    translate: calc(var(--meet) * -1) 0;
+    rotate: 0deg;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 0.8;
+  }
+}

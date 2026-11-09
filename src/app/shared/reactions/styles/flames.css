@@ -1,0 +1,36 @@
+/* Flames that rise from the bottom of the screen, flicker and go out (1.8) */
+
+.reaction-flame {
+  animation-name: reaction-flame;
+  animation-timing-function: ease-out;
+}
+
+@keyframes reaction-flame {
+  0% {
+    opacity: 0;
+    translate: 0 0;
+    scale: 0.3;
+  }
+  20% {
+    opacity: 1;
+    scale: 1.1 1;
+  }
+  35% {
+    scale: 0.9 1.15;
+  }
+  50% {
+    scale: 1.1 0.95;
+    translate: 0 calc(var(--lift) * 0.5);
+  }
+  65% {
+    scale: 0.95 1.1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 0.4;
+    translate: var(--drift) var(--lift);
+  }
+}

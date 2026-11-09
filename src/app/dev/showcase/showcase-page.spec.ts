@@ -131,27 +131,33 @@ describe('ShowcasePage', () => {
     expect(count('mascot-bow-tie')).toBe(2);
   });
 
-  it('plays each reaction with the real overlay, with its intensity, and turns them off', async () => {
+  it('plays each reaction of the catalog with the real overlay, and turns them off', async () => {
     const element = fixture.nativeElement as HTMLElement;
     const section = element.querySelector('[aria-labelledby="reactions-title"]') as HTMLElement;
     const mascot = section.querySelector('app-mascot') as HTMLElement;
     // The overlay is decorative (aria-hidden): only its data-testid finds it (4.8)
     const pieces = () =>
       section.querySelectorAll('[data-testid="reaction-overlay"] .reaction-piece').length;
-    const play = async (emotion: string) => {
-      await (await loader.getHarness(MatButtonHarness.with({ text: new RegExp(emotion) }))).click();
+    const play = async (label: string) => {
+      await (await loader.getHarness(MatButtonHarness.with({ text: new RegExp(label) }))).click();
       await fixture.whenStable();
     };
 
+    for (const label of ['Corazones', 'Bola de papel', 'Ojos vigilantes', 'Enfado de broma']) {
+      expect(
+        await loader.getHarness(MatButtonHarness.with({ text: new RegExp(label) })),
+      ).toBeTruthy();
+    }
     await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Intensidad 1' }))).check();
-    await play('Celebración');
-    // The big trophy, five icons and sixteen bits of confetti
-    expect(pieces()).toBe(22);
+    await play('Trofeo');
+    const playing = pieces();
+    expect(playing).toBeGreaterThan(0);
     expect(mascot.classList).toContain('mascot-move-cheer');
 
+    // Turned off: the reaction on screen finishes, but no new one comes, nor does the mascot move
     await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Desactivadas' }))).check();
     await play('Ánimo');
-    expect(pieces()).toBe(0);
+    expect(pieces()).toBe(playing);
     expect(mascot.classList).not.toContain('mascot-move-hop');
   });
 

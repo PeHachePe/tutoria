@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 
-import type { Emotion } from '../../data/tutor';
+import type { ReactionKind } from '../../data/tutor';
 import type { Reaction } from '../reactions/reaction';
 import { gazeOffset } from './gaze-offset';
 import { MascotMovement, pickMovement } from './pick-movement';
@@ -37,11 +37,19 @@ const MOVEMENTS: Record<MascotAction, { readonly className: string; readonly ani
   };
 
 /** How the mascot joins each reaction of the tutor (1.8). */
-export const REACTION_MOVEMENTS: Record<Emotion, MascotAction> = {
-  joy: 'tilt',
-  surprise: 'ears',
-  encouragement: 'hop',
-  celebration: 'cheer',
+export const REACTION_MOVEMENTS: Record<ReactionKind, MascotAction> = {
+  hearts: 'tilt',
+  cheer: 'hop',
+  trophy: 'cheer',
+  lightbulb: 'ears',
+  rocket: 'hop',
+  fire: 'cheer',
+  applause: 'cheer',
+  'mind-blown': 'ears',
+  'paper-ball': 'ears',
+  eyes: 'tilt',
+  laugh: 'hop',
+  grumpy: 'ears',
 };
 const MOVEMENT_ANIMATIONS = new Set(Object.values(MOVEMENTS).map((movement) => movement.animation));
 
@@ -90,7 +98,7 @@ export class Mascot {
   private readonly movement = linkedSignal<Reaction | null, MascotAction | null>({
     source: this.reaction,
     computation: (reaction, previous) =>
-      previous && reaction ? REACTION_MOVEMENTS[reaction.emotion] : null,
+      previous && reaction ? REACTION_MOVEMENTS[reaction.kind] : null,
   });
   private readonly licking = signal(false);
   private lastMovement: MascotMovement | null = null;

@@ -1,0 +1,161 @@
+/* The cartoon eyes that peek up from the bottom (1.8). The pair is a drawing of its own
+   (art/cartoon-eyes-art.ts): the piece rises and hides, while inside the pupils look to each
+   side, the lids blink and narrow in suspicion and the brows frown, all timed with the piece
+   through --delay and --duration, which they inherit. Fixed colours, like the mascot's. */
+
+.reaction-eyes {
+  width: var(--size);
+  height: calc(var(--size) * 0.6);
+  filter: drop-shadow(0 0.03em 0.06em color-mix(in srgb, var(--mat-sys-shadow) 45%, transparent));
+}
+
+/* Peek: rises from the bottom edge, stays while the eyes look around, and hides again */
+.reaction-peek {
+  animation-name: reaction-peek;
+  animation-timing-function: ease-in-out;
+}
+
+@keyframes reaction-peek {
+  0% {
+    opacity: 1;
+    translate: 0 60%;
+  }
+  14%,
+  86% {
+    opacity: 1;
+    translate: 0 -70%;
+  }
+  100% {
+    opacity: 1;
+    translate: 0 60%;
+  }
+}
+
+.eyes-white {
+  fill: var(--app-reaction-eye-white);
+}
+
+.eyes-rim {
+  fill: none;
+  stroke: var(--app-reaction-ink);
+  stroke-width: 4;
+}
+
+.eyes-iris {
+  fill: var(--app-reaction-ink);
+}
+
+.eyes-shine {
+  fill: var(--app-reaction-eye-white);
+}
+
+.eyes-lid {
+  fill: color-mix(in srgb, var(--app-reaction-eye-white) 75%, var(--app-reaction-ink));
+  stroke: var(--app-reaction-ink);
+  stroke-width: 4;
+}
+
+.eyes-brow {
+  fill: none;
+  stroke: var(--app-reaction-ink);
+  stroke-width: 7;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.eyes-pupil,
+.eyes-lid,
+.eyes-brow {
+  animation-duration: var(--duration);
+  animation-delay: var(--delay);
+  animation-fill-mode: both;
+  animation-timing-function: ease-in-out;
+}
+
+/* The pupils look to one side, to the other, and at the student */
+.eyes-pupil {
+  animation-name: eyes-look;
+}
+
+@keyframes eyes-look {
+  0%,
+  18% {
+    translate: 0 0;
+  }
+  26%,
+  34% {
+    translate: -14px 0;
+  }
+  42%,
+  50% {
+    translate: 14px 0;
+  }
+  58%,
+  100% {
+    translate: 0 6px;
+  }
+}
+
+/* The lids, out of sight above, come down to blink and then narrow in suspicion */
+.eyes-lid {
+  animation-name: eyes-lid;
+}
+
+@keyframes eyes-lid {
+  0%,
+  52%,
+  58% {
+    translate: 0 -94px;
+  }
+  55% {
+    translate: 0 0;
+  }
+  64%,
+  80% {
+    translate: 0 -56px;
+  }
+  86%,
+  100% {
+    translate: 0 -94px;
+  }
+}
+
+/* While they narrow, the brows frown: they drop and tilt towards the middle */
+.eyes-brow-left {
+  animation-name: eyes-brow-left;
+}
+
+.eyes-brow-right {
+  animation-name: eyes-brow-right;
+}
+
+@keyframes eyes-brow-left {
+  0%,
+  58%,
+  86%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  64%,
+  80% {
+    translate: 0 8px;
+    rotate: 14deg;
+  }
+}
+
+@keyframes eyes-brow-right {
+  0%,
+  58%,
+  86%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  64%,
+  80% {
+    translate: 0 8px;
+    rotate: -14deg;
+  }
+}

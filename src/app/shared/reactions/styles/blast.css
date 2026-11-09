@@ -1,0 +1,63 @@
+/* The explosion over the whole screen (1.8): a single flash out of the middle and a dark cloud
+   that covers the screen and clears. Both take the whole overlay instead of a point. One flash only
+   (WCAG 2.3.1), and never with reduced motion. */
+
+.reaction-flash,
+.reaction-smog {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.reaction-flash {
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--app-reaction-eye-white) 0 8%,
+    var(--app-reaction-yellow) 18%,
+    var(--app-reaction-orange) 32%,
+    color-mix(in srgb, var(--app-reaction-red) 60%, transparent) 46%,
+    transparent 62%
+  );
+  animation-name: reaction-flash;
+  animation-timing-function: ease-out;
+}
+
+@keyframes reaction-flash {
+  0% {
+    opacity: 0;
+    scale: 0.05;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 2.6;
+  }
+}
+
+/* The screen goes almost black, darker at the edges, and clears */
+.reaction-smog {
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--app-reaction-ink) 55%, transparent) 0,
+    var(--app-reaction-ink) 75%
+  );
+  animation-name: reaction-smog;
+  animation-timing-function: ease-in-out;
+}
+
+@keyframes reaction-smog {
+  0% {
+    opacity: 0;
+  }
+  15%,
+  45% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}

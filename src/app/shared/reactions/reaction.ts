@@ -1,9 +1,9 @@
-import type { Emotion, Intensity } from '../../data/tutor';
+import type { Intensity, ReactionKind } from '../../data/tutor';
 
-/** One reaction of the tutor to show: a new id plays it again, even with the same emotion. */
+/** One reaction of the tutor to show: a new id plays it again, even the same kind. */
 export interface Reaction {
   readonly id: string;
-  readonly emotion: Emotion;
+  readonly kind: ReactionKind;
   readonly intensity: Intensity;
 }
 

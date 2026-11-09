@@ -95,6 +95,18 @@ html {
     'cyan': #00c8ff,
     'blue': #3d6bff,
     'violet': #a24bff,
+    // Steam of the grumpy face
+    'smoke': #c3ccd6,
+    // The crumpled paper ball, lit and in shade
+    'paper': #f6f1e6,
+    'paper-shade': #c9bfa9,
+    // Notebook lines and margin on the paper
+    'paper-rule': #9cc3e6,
+    'paper-margin': #e88a8a,
+    // The eyes that peek, and the glass the paper ball cracks
+    'eye-white': #ffffff,
+    'ink': #1d1b20,
+    'glass': #e3f6ff,
   );
   @each $name, $color in $reaction-colors {
     --app-reaction-#{$name}: #{$color};

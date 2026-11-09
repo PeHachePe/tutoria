@@ -4,6 +4,7 @@ import {
   type HintLevel,
   type Intensity,
   MAX_HINT_LEVEL,
+  type ReactionKind,
   type TutorInteraction,
   type TutorTrigger,
 } from '../tutor';
@@ -32,9 +33,18 @@ export interface ScriptedAnswer {
   readonly hintLevel: HintLevel;
   readonly emotion: Emotion;
   readonly intensity: Intensity;
+  /** The reaction the model chose (D-035). */
+  readonly reaction: ReactionKind;
   readonly elusion: boolean;
   readonly silent: boolean;
 }
+
+/** Each hint level lights up a bit more: an idea, then fire, then the rocket of the last one. */
+const HINT_REACTIONS: Record<HintLevel, ReactionKind> = { 1: 'lightbulb', 2: 'fire', 3: 'rocket' };
+
+/** The reactions the scripted tutor takes turns with, so all of them show up in the app. */
+const ELUSION_REACTIONS: readonly ReactionKind[] = ['paper-ball', 'grumpy'];
+const QUESTION_REACTIONS: readonly ReactionKind[] = ['applause', 'mind-blown', 'laugh'];
 
 /**
  * Ways of asking for the solution instead of a hint, in the three languages of the interface (2.9),
@@ -70,31 +80,36 @@ export function scriptedAnswer({
   const hintLevel = (
     kind === 'hint' ? Math.min(current + 1, MAX_HINT_LEVEL) : Math.max(current, 1)
   ) as HintLevel;
-  const answer = (text: string, emotion: Emotion, intensity: Intensity = 1, elusion = false) => ({
-    text,
-    hintLevel,
-    emotion,
-    intensity,
-    elusion,
-    silent: false,
-  });
+  const answer = (
+    text: string,
+    emotion: Emotion,
+    reaction: ReactionKind,
+    intensity: Intensity = 1,
+    elusion = false,
+  ) => ({ text, hintLevel, emotion, reaction, intensity, elusion, silent: false });
   const hint = TUTOR_ANSWERS[hintLevel][previous.length % TUTOR_ANSWERS[hintLevel].length];
 
   switch (kind) {
     case 'hint':
-      return answer(hint, 'encouragement');
+      return answer(hint, 'encouragement', HINT_REACTIONS[hintLevel]);
     case 'proactive':
       // Once is enough: right after stepping in, it lets the student work
       return previous.at(-1)?.trigger === 'proactive'
-        ? { ...answer('', 'encouragement'), silent: true }
-        : answer(PROACTIVE_MESSAGE, 'encouragement', 2);
+        ? { ...answer('', 'encouragement', 'eyes'), silent: true }
+        : answer(PROACTIVE_MESSAGE, 'encouragement', 'eyes', 2);
     case 'question': {
       const question = withoutAccents(message ?? '');
-      if (ELUSION_PATTERN.test(question)) return answer(ELUSION_ANSWER, 'surprise', 2, true);
-      if (status === 'passed') return answer(PASSED_ANSWER, 'celebration', 2);
-      if (STATEMENT_PATTERN.test(question)) return answer(STATEMENT_ANSWER, 'joy');
-      if (!code.trim()) return answer(START_ANSWER, 'encouragement');
-      return answer(hint, 'joy');
+      // Asking for the solution gets a joke: «hey, not that»
+      if (ELUSION_PATTERN.test(question)) {
+        // Each time a different joke: the paper ball, then the grumpy face
+        const elusions = previous.filter((interaction) => interaction.elusion).length;
+        return answer(ELUSION_ANSWER, 'surprise', ELUSION_REACTIONS[elusions % 2], 2, true);
+      }
+      if (status === 'passed') return answer(PASSED_ANSWER, 'celebration', 'trophy', 2);
+      if (STATEMENT_PATTERN.test(question)) return answer(STATEMENT_ANSWER, 'joy', 'hearts');
+      if (!code.trim()) return answer(START_ANSWER, 'encouragement', 'cheer');
+      // A question with code to look at: it applauds the effort, its mind is blown, or it laughs
+      return answer(hint, 'joy', QUESTION_REACTIONS[previous.length % QUESTION_REACTIONS.length]);
     }
   }
 }

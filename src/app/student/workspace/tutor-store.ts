@@ -4,9 +4,11 @@ import { LanguageService } from '../../core/language-service';
 import { AttemptService } from '../../data/attempt-service';
 import {
   type Emotion,
+  EMOTION_REACTIONS,
   type HintLevel,
   type Intensity,
   MAX_HINT_LEVEL,
+  type ReactionKind,
   type TutorInteraction,
   type TutorTrigger,
 } from '../../data/tutor';
@@ -29,6 +31,8 @@ export interface TutorTurn {
   readonly hintLevel: HintLevel | null;
   readonly emotion: Emotion | null;
   readonly intensity: Intensity | null;
+  /** The reaction the tutor chose, or the one of its emotion. */
+  readonly reaction: ReactionKind | null;
   readonly createdAt: string;
   readonly status: TurnStatus;
   /** Why it failed, to say so. */
@@ -102,12 +106,16 @@ export class TutorStore {
    * comes first, but it plays at the end: an answer lost halfway or an intervention the tutor keeps
    * to itself must not react. The past turns never do.
    */
-  readonly reaction = computed<Reaction | null>(() => {
-    const last = this.freshAnswers().at(-1);
-    return last?.emotion && last.intensity
-      ? { id: last.id, emotion: last.emotion, intensity: last.intensity }
-      : null;
-  });
+  readonly reaction = computed<Reaction | null>(
+    () => {
+      const last = this.freshAnswers().at(-1);
+      return last?.reaction && last.intensity
+        ? { id: last.id, kind: last.reaction, intensity: last.intensity }
+        : null;
+    },
+    // The same answer is the same reaction: a new object for it would play it again
+    { equal: (a, b) => a?.id === b?.id },
+  );
 
   /** Asks a question in the student's words. */
   ask(message: string): Promise<void> {
@@ -151,6 +159,7 @@ export class TutorStore {
         hintLevel: null,
         emotion: null,
         intensity: null,
+        reaction: null,
         createdAt: new Date().toISOString(),
         status: 'answering',
         fresh: true,
@@ -176,6 +185,7 @@ export class TutorStore {
               hintLevel: event.hintLevel,
               emotion: event.emotion,
               intensity: event.intensity,
+              reaction: event.reaction ?? EMOTION_REACTIONS[event.emotion],
             }));
             break;
           case 'delta':
@@ -206,6 +216,8 @@ function pastTurn(interaction: TutorInteraction): TutorTurn {
     hintLevel: interaction.hintLevel,
     emotion: interaction.emotion,
     intensity: interaction.intensity,
+    // The past never reacts, so it does not need to know how
+    reaction: null,
     createdAt: interaction.createdAt,
     status: 'done',
     fresh: false,

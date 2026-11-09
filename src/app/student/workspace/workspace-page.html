@@ -186,9 +186,5 @@
   }
 }
 
-<!-- The tutor's reactions (1.8): beside the tutor, or across the screen on phones -->
-<app-reaction-overlay
-  [reaction]="reaction()"
-  [mode]="reactionMode()"
-  [area]="compact() ? 'full' : 'end'"
-/>
+<!-- The tutor's reactions (1.8), over the whole screen -->
+<app-reaction-overlay [reaction]="reaction()" [mode]="reactionMode()" />

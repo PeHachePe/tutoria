@@ -25,7 +25,7 @@ import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import { DataError } from '../../data/data-error';
 import type { Difficulty } from '../../data/exercise';
-import type { Emotion, Intensity } from '../../data/tutor';
+import type { Intensity, ReactionKind } from '../../data/tutor';
 import type { RunResult } from '../../data/attempt';
 import { Splitter } from '../../shared/splitter/splitter';
 import type { SaveStatus } from '../../student/workspace/attempt-store';
@@ -234,11 +234,19 @@ export class ShowcasePage {
   protected readonly mascotHeadset = signal(true);
   protected readonly mascotBowTie = signal(false);
 
-  protected readonly emotions: { value: Emotion; label: string; icon: string }[] = [
-    { value: 'joy', label: 'Alegría', icon: 'favorite' },
-    { value: 'surprise', label: 'Sorpresa', icon: 'priority_high' },
-    { value: 'encouragement', label: 'Ánimo', icon: 'thumb_up' },
-    { value: 'celebration', label: 'Celebración', icon: 'celebration' },
+  protected readonly reactionKinds: { value: ReactionKind; label: string; icon: string }[] = [
+    { value: 'hearts', label: 'Corazones', icon: 'favorite' },
+    { value: 'cheer', label: 'Ánimo', icon: 'thumb_up' },
+    { value: 'trophy', label: 'Trofeo', icon: 'trophy' },
+    { value: 'lightbulb', label: 'Bombilla', icon: 'lightbulb' },
+    { value: 'rocket', label: 'Cohete', icon: 'rocket_launch' },
+    { value: 'fire', label: 'Fuego', icon: 'local_fire_department' },
+    { value: 'applause', label: 'Aplausos', icon: 'cheer' },
+    { value: 'mind-blown', label: 'Mente explotando', icon: 'psychology' },
+    { value: 'paper-ball', label: 'Bola de papel', icon: 'sports_baseball' },
+    { value: 'eyes', label: 'Ojos vigilantes', icon: 'visibility' },
+    { value: 'laugh', label: 'Risas', icon: 'sentiment_excited' },
+    { value: 'grumpy', label: 'Enfado de broma', icon: 'sentiment_frustrated' },
   ];
   protected readonly intensities: Intensity[] = [1, 2, 3];
   protected readonly reactionModes: { value: ReactionMode; label: string }[] = [
@@ -253,8 +261,8 @@ export class ShowcasePage {
     this.settings.reactions() === 'off' ? null : this.reaction(),
   );
 
-  protected react(emotion: Emotion): void {
-    this.reaction.set({ id: crypto.randomUUID(), emotion, intensity: this.reactionIntensity() });
+  protected react(kind: ReactionKind): void {
+    this.reaction.set({ id: crypto.randomUUID(), kind, intensity: this.reactionIntensity() });
   }
 
   protected readonly dialogResult = signal<string | undefined>(undefined);

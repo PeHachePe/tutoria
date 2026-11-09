@@ -11,6 +11,36 @@ export type Emotion = 'joy' | 'surprise' | 'encouragement' | 'celebration';
 
 export type Intensity = 1 | 2 | 3;
 
+/**
+ * The visual reactions the tutor can choose for an answer (1.8, D-035): each one has its own
+ * choreography on screen. The emotion is the data the teacher analyses; the reaction is only how
+ * it looks, so it is optional and falls back to the one of the emotion.
+ */
+export const REACTION_KINDS = [
+  'hearts',
+  'cheer',
+  'trophy',
+  'lightbulb',
+  'rocket',
+  'fire',
+  'applause',
+  'mind-blown',
+  'paper-ball',
+  'eyes',
+  'laugh',
+  'grumpy',
+] as const;
+
+export type ReactionKind = (typeof REACTION_KINDS)[number];
+
+/** The reaction of each emotion, when the tutor does not choose one. */
+export const EMOTION_REACTIONS: Record<Emotion, ReactionKind> = {
+  joy: 'hearts',
+  surprise: 'mind-blown',
+  encouragement: 'cheer',
+  celebration: 'trophy',
+};
+
 /** What the client sends to the tutor (2.6). */
 export interface TutorRequest {
   readonly attemptId: string;
@@ -30,6 +60,8 @@ export type TutorEvent =
       readonly emotion: Emotion;
       readonly intensity: Intensity;
       readonly hintLevel: HintLevel;
+      /** How the reaction looks; without it, the one of the emotion. */
+      readonly reaction?: ReactionKind;
     }
   | { readonly type: 'delta'; readonly text: string }
   | {

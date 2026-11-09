@@ -1,0 +1,50 @@
+/* Every piece of a reaction (1.8): placed by its centre at --x and --y, sized with --size, and
+   animated with its --delay and --duration. Only transforms and opacity move, so the browser moves
+   the pieces without painting the page again. */
+
+.reaction-piece {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  margin-inline-start: calc(var(--size) / -2);
+  margin-top: calc(var(--size) / -2);
+  font-size: var(--size);
+  line-height: 1;
+  /* Filled icons read better as shapes */
+  font-variation-settings: 'FILL' 1;
+  opacity: 0;
+  animation-duration: var(--duration);
+  animation-delay: var(--delay);
+  animation-fill-mode: both;
+  will-change: translate, scale, rotate, opacity;
+}
+
+/* A thin shadow outlines the small icons on light backgrounds, where a yellow one would get lost */
+.reaction-rain.material-symbols-outlined,
+.reaction-burst.material-symbols-outlined,
+.reaction-trail.material-symbols-outlined,
+.reaction-flame,
+.reaction-clap-left,
+.reaction-clap-right,
+.reaction-fly {
+  filter: drop-shadow(0 0.05em 0.06em color-mix(in srgb, var(--mat-sys-shadow) 40%, transparent));
+}
+
+/* Confetti */
+.reaction-square {
+  width: var(--size);
+  height: var(--size);
+  border-radius: 2px;
+}
+
+.reaction-dot {
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+}
+
+.reaction-streamer {
+  width: calc(var(--size) * 0.4);
+  height: calc(var(--size) * 1.8);
+  border-radius: 999px;
+}

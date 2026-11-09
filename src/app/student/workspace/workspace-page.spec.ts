@@ -1017,14 +1017,18 @@ describe('WorkspacePage', () => {
           name.startsWith('mascot-move-'),
         );
 
-      await TestBed.inject(TutorStore).requestHint();
+      const tutor = TestBed.inject(TutorStore);
+      await tutor.requestHint();
       await fixture.whenStable();
-      expect(pieces()).toBeGreaterThan(0);
+      const playing = pieces();
+      expect(playing).toBeGreaterThan(0);
       expect(moving()).toBe(true);
 
+      // Turned off, the next answer brings no reaction and the mascot stays still
       TestBed.inject(SettingsStore).setReactions('off');
+      await tutor.requestHint();
       await fixture.whenStable();
-      expect(pieces()).toBe(0);
+      expect(pieces()).toBe(playing);
       expect(moving()).toBe(false);
       localStorage.clear();
     });

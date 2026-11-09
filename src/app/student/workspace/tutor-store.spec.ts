@@ -179,6 +179,7 @@ describe('TutorStore', () => {
         hintLevel: 1,
         emotion: 'joy',
         intensity: 1,
+        reaction: 'hearts',
         createdAt: expect.any(String),
         status: 'done',
         fresh: true,
@@ -188,26 +189,52 @@ describe('TutorStore', () => {
     expect(store.answerCount()).toBe(1);
   });
 
-  it('reacts with the emotion of each new answer once it is complete', async () => {
+  it('reacts with each new answer once it is complete, as the tutor chose', async () => {
     await loaded();
     const rest = deferred<void>();
     ask.mockImplementationOnce(async function* () {
-      yield { type: 'meta', emotion: 'celebration', intensity: 3, hintLevel: 1 };
+      yield {
+        type: 'meta',
+        emotion: 'celebration',
+        intensity: 3,
+        hintLevel: 1,
+        reaction: 'fire',
+      };
       await rest.promise;
       yield { type: 'delta', text: '¡Bien!' };
     });
 
     const asking = store.ask('¿Está bien?');
-    await vi.waitFor(() => expect(store.turns()[0]?.emotion).toBe('celebration'));
+    await vi.waitFor(() => expect(store.turns()[0]?.reaction).toBe('fire'));
     expect(store.reaction()).toBeNull();
 
     rest.resolve();
     await asking;
     const [turn] = store.turns();
-    expect(store.reaction()).toEqual({ id: turn.id, emotion: 'celebration', intensity: 3 });
+    expect(store.reaction()).toEqual({ id: turn.id, kind: 'fire', intensity: 3 });
+  });
+
+  it('reacts as its emotion when the tutor chose no reaction', async () => {
+    await loaded();
 
     await store.ask('¿Y ahora?');
-    expect(store.reaction()).toEqual({ id: store.turns()[1].id, emotion: 'joy', intensity: 1 });
+
+    expect(store.reaction()).toEqual({ id: store.turns()[0].id, kind: 'hearts', intensity: 1 });
+  });
+
+  it('keeps the same reaction while the conversation goes on, so it plays once', async () => {
+    await loaded();
+    await store.ask('Primera');
+    const first = store.reaction();
+    const rest = deferred<void>();
+    ask.mockImplementationOnce(() => answer(['Segunda'], 1, { waitFor: rest.promise }));
+
+    const asking = store.ask('Segunda');
+    await vi.waitFor(() => expect(store.answering()).toBe(true));
+
+    expect(store.reaction()).toBe(first);
+    rest.resolve();
+    await asking;
   });
 
   it('does not react to an answer that failed', async () => {
