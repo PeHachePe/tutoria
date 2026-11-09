@@ -26,7 +26,7 @@
   tabindex="0"
   role="group"
   aria-labelledby="statement-heading"
-  class="flex min-h-0 flex-col gap-4 overflow-y-auto scroll-shadows rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+  class="@container flex min-h-0 flex-col gap-4 overflow-y-auto scroll-shadows rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
   [hidden]="!compact() && !open()"
 >
   @if (loading()) {
@@ -41,57 +41,62 @@
       </div>
     </app-loading-skeleton>
   } @else if (content(); as current) {
-    <p class="max-w-prose text-body-large">
-      @for (part of splitInlineCode(current.exercise.statement); track $index) {
-        @if (part.code) {
-          <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{
-            part.text
-          }}</code>
-        } @else {
-          {{ part.text }}
-        }
-      }
-    </p>
-    <div class="flex flex-col gap-2">
-      <h3 class="text-title-small" i18n="@@workspace.examples">Ejemplos</h3>
-      <table class="w-full max-w-xl border-collapse text-start">
-        <thead>
-          <tr class="text-label-medium text-on-surface-variant">
-            <th scope="col" class="py-1 pe-4 text-start font-medium" i18n="@@workspace.call">
-              Llamada
-            </th>
-            <th scope="col" class="py-1 text-start font-medium" i18n="@@workspace.returns">
-              Devuelve
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (example of current.examples; track example.key) {
-            <tr class="border-t border-outline-variant align-top">
-              <td class="py-2 pe-4 font-mono text-body-medium break-all">{{ example.call }}</td>
-              <td class="py-2 font-mono text-body-medium font-semibold break-all">
-                @if (example.multiline) {
-                  <pre class="font-mono whitespace-pre-wrap">{{ example.expected }}</pre>
-                } @else {
-                  {{ example.expected }}
-                }
-              </td>
-            </tr>
+    <!-- A wide panel (floating tutor) puts the examples beside the text, which keeps its reading width -->
+    <div
+      class="flex flex-col gap-4 @4xl:grid @4xl:grid-cols-[minmax(0,65ch)_minmax(0,36rem)] @4xl:items-start @4xl:gap-10"
+    >
+      <p class="max-w-prose text-body-large">
+        @for (part of splitInlineCode(current.exercise.statement); track $index) {
+          @if (part.code) {
+            <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{
+              part.text
+            }}</code>
+          } @else {
+            {{ part.text }}
           }
-        </tbody>
-      </table>
-      @if (current.hiddenTestCount > 0) {
-        <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
-          <mat-icon class="shrink-0">visibility_off</mat-icon>
-          <span i18n="@@workspace.hiddenTests">{current.hiddenTestCount, plural,
-            =1 {Y 1 comprobación oculta: verás si la superas, pero no sus datos.}
-            other {
-              Y {{ current.hiddenTestCount }} comprobaciones ocultas: verás si las superas, pero no
-              sus datos.
+        }
+      </p>
+      <div class="flex flex-col gap-2">
+        <h3 class="text-title-small" i18n="@@workspace.examples">Ejemplos</h3>
+        <table class="w-full max-w-xl border-collapse text-start">
+          <thead>
+            <tr class="text-label-medium text-on-surface-variant">
+              <th scope="col" class="py-1 pe-4 text-start font-medium" i18n="@@workspace.call">
+                Llamada
+              </th>
+              <th scope="col" class="py-1 text-start font-medium" i18n="@@workspace.returns">
+                Devuelve
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (example of current.examples; track example.key) {
+              <tr class="border-t border-outline-variant align-top">
+                <td class="py-2 pe-4 font-mono text-body-medium break-all">{{ example.call }}</td>
+                <td class="py-2 font-mono text-body-medium font-semibold break-all">
+                  @if (example.multiline) {
+                    <pre class="font-mono whitespace-pre-wrap">{{ example.expected }}</pre>
+                  } @else {
+                    {{ example.expected }}
+                  }
+                </td>
+              </tr>
             }
-          }</span>
-        </p>
-      }
+          </tbody>
+        </table>
+        @if (current.hiddenTestCount > 0) {
+          <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+            <mat-icon class="shrink-0">visibility_off</mat-icon>
+            <span i18n="@@workspace.hiddenTests">{current.hiddenTestCount, plural,
+              =1 {Y 1 comprobación oculta: verás si la superas, pero no sus datos.}
+              other {
+                Y {{ current.hiddenTestCount }} comprobaciones ocultas: verás si las superas, pero
+                no sus datos.
+              }
+            }</span>
+          </p>
+        }
+      </div>
     </div>
   }
 </div>
