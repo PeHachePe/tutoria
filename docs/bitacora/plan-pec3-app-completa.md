@@ -1,6 +1,6 @@
 # Plan · La aplicación completa en la PEC3
 
-09/11/2026 · Sesión de Claude Code · Commit (abajo)
+09/11/2026 · Sesión de Claude Code · Commits `0018c12` y `54e81cc`
 
 ## Objetivo
 
@@ -34,6 +34,7 @@ Reordenar el plan para entregar la aplicación completa en la PEC3 y dejar la PE
 
 ## Problemas y cómo se resolvieron
 
+- La sesión del 1.7, en paralelo, confirmó `PLAN.md`, `DECISIONES.md` y `metricas.csv` con estos cambios dentro (`54e81cc`), así que el commit propio (`0018c12`) solo llevó esta bitácora.
 - El autor creía que la PEC3 pedía la versión final. El enunciado pide una beta; el objetivo de llegar con la aplicación completa se fijó igualmente, por la carga de la PEC4.
 - Había trabajo del 1.7 sin confirmar en el árbol: las métricas del repositorio de esta sesión lo incluyen. Lo de esta sesión son solo los tres documentos (+63 / −33 líneas en el plan y las decisiones).
 
@@ -47,7 +48,7 @@ Sin cambios de código: unitarios 661 · e2e 38.
 
 ## Validación humana
 
-El autor fijó el objetivo en el chat. Pendiente: que revise el plan v4.4 y el orden de recorte.
+El autor fijó el objetivo en el chat y dio por bueno el plan v4.4, con el orden de recorte («Sí, vale»), a la primera.
 
 ## Capturas
 
