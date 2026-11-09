@@ -224,6 +224,12 @@
     "tutor.hintTooltip": "Nivell {$level}: {$promise}",
     "tutor.today": "Avui",
     "workspace.tab.tutorUnread": "Tutor, resposta nova",
-    "workspace.codeWidth": "Amplada del codi"
+    "workspace.codeWidth": "Amplada del codi",
+    "tutor.minimize": "Minimitza el tutor",
+    "tutor.minimizeTooltip": "Minimitza",
+    "tutor.float": "Fes flotant el tutor",
+    "tutor.fix": "Fixa el tutor a la dreta",
+    "workspace.openTutor": "Obre el tutor",
+    "workspace.closeTutor": "Tanca el tutor"
   }
 }

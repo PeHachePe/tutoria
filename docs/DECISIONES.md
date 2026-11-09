@@ -758,7 +758,11 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 - **Separador vertical** entre el código y el tutor (`app-splitter` con `orientation="vertical"`):
   - el código ocupa del 50 al 80 % (70 % al empezar) y se recuerda por usuario;
   - la columna del tutor nunca baja de 16rem.
-- **Mascota flotante,** descartada por ahora: taparía el código justo cuando el alumno lee la pista, y D-030 quiere al tutor a la vista para las intervenciones proactivas.
+- **Mascota flotante** (iteración 1, a petición del autor): Claude la había descartado en la propuesta, porque taparía el código mientras se lee la pista y D-030 quería al tutor a la vista. El autor quiso verla y pidió poder cambiar de un modo a otro y un botón para minimizarla. Se queda así:
+  - un botón en la cabecera del tutor lo pasa de la columna a la mascota flotante («Hacer flotante el tutor») y de vuelta («Fijar el tutor a la derecha»); la elección se recuerda por usuario (`tutoria.tutor-floating`) y fijarlo devuelve también la vista normal si el código estaba ampliado;
+  - es siempre flotante con el código ampliado y en la tableta (de 768 a 1023 px), donde la columna estrechaba demasiado el código; en el móvil sigue la pestaña;
+  - la mascota abre el panel sobre la esquina del código con el foco en la pregunta, y saca la lengua mientras está abierto (el «abrir y cerrar» del plan original); «Minimizar el tutor», la propia mascota o Esc lo pliegan y devuelven el foco a la mascota;
+  - plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto, y se lee en voz alta con una región `aria-live` propia, porque la del panel no está en la página; el bocadillo abre el tutor. Así se cumple lo que pedía D-030: el alumno ve al tutor cuando interviene.
 
 **Alternativas:**
 
@@ -766,6 +770,8 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 - Un `effect()` que baje el desplazamiento al último mensaje: `flex-col-reverse` lo hace sin código y sin romper la regla de no usar `effect()` fuera de las APIs imperativas.
 - Un `aria-live` en la lista de mensajes (`role="log"`): anunciaría cada trozo mientras llega.
 - La mascota en cada burbuja del tutor: más cálida, pero recarga la columna.
+- Solo la columna fija (la propuesta inicial): más simple, pero en la tableta el código quedaba en unos 450 px, y hay alumnos que prefieren el ancho completo y llamar al tutor cuando lo necesitan.
+- Un panel flotante arrastrable o redimensionable: mucha complejidad y difícil de manejar con el teclado, para poca ganancia.
 
 **Consecuencias:**
 
@@ -774,5 +780,6 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 - La Edge Function `tutor` (2.4) tiene que responder en el idioma de la petición.
 - Reintentar una pista que falló después de que el servidor la registrara subiría el nivel dos veces; se resolverá con la respuesta real (2.4).
 - Las reacciones (1.8) leerán la emoción de los turnos del store.
+- El tutor proactivo (6.2) usará el bocadillo de la mascota cuando el tutor esté plegado.
 
-**Aprobación:** el autor, que aprobó el plan con todas las mejoras propuestas («Sí, todo»).
+**Aprobación:** el autor, que aprobó el plan con todas las mejoras propuestas («Sí, todo») y la iteración 1 («Sí, termínalo»).

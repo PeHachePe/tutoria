@@ -1,5 +1,17 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, computed, DOCUMENT, inject, input, resource, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DOCUMENT,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  resource,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatAnchor, MatIconAnchor } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -14,6 +26,7 @@ import { AppTitleStrategy } from '../../core/app-title-strategy';
 import { ExerciseService } from '../../data/exercise-service';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { LoadError } from '../../shared/load-error/load-error';
+import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { Splitter } from '../../shared/splitter/splitter';
@@ -21,7 +34,14 @@ import { StatusChip } from '../../shared/status-chip/status-chip';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
 import { CODE_ZONE_ID, CodeZone } from './code-zone/code-zone';
-import { CODE_SHARE, readPaneShare, savePaneShare, STATEMENT_SHARE } from './pane-share';
+import {
+  CODE_SHARE,
+  readPaneShare,
+  readTutorFloating,
+  savePaneShare,
+  saveTutorFloating,
+  STATEMENT_SHARE,
+} from './pane-share';
 import { STATEMENT_ZONE_ID, StatementZone } from './statement-zone/statement-zone';
 import { TutorPanel } from './tutor/tutor-panel';
 import { TutorStore } from './tutor-store';
@@ -31,6 +51,12 @@ import { TutorStore } from './tutor-store';
  * in a phone screen without scrolling the whole page (ficha 03, 5.4).
  */
 export const COMPACT_WORKSPACE_QUERY = '(max-width: 767.98px)';
+
+/**
+ * Tablets (below Tailwind's `lg`): the tutor column would narrow the code too much, so the tutor
+ * folds into the floating mascot, as it does with the code expanded (D-033).
+ */
+export const NARROW_WORKSPACE_QUERY = '(max-width: 1023.98px)';
 
 /** Narrowest the tutor column gets, whatever the share: below it, the hints read badly (D-030). */
 const TUTOR_MIN_WIDTH = '16rem';
@@ -61,6 +87,7 @@ const TUTOR_TAB = 2;
     LoadingSkeleton,
     Skeleton,
     Splitter,
+    Mascot,
     StatementZone,
     CodeZone,
     TutorPanel,
@@ -101,6 +128,14 @@ export class WorkspacePage {
   protected readonly compact = toSignal(
     inject(BreakpointObserver)
       .observe(COMPACT_WORKSPACE_QUERY)
+      .pipe(map((state) => state.matches)),
+    { requireSync: true },
+  );
+
+  /** Tablets: the tutor floats instead of taking a column. */
+  protected readonly narrow = toSignal(
+    inject(BreakpointObserver)
+      .observe(NARROW_WORKSPACE_QUERY)
       .pipe(map((state) => state.matches)),
     { requireSync: true },
   );
@@ -152,20 +187,94 @@ export class WorkspacePage {
   }
 
   /**
-   * Phones: the tab of the tutor shows a dot when an answer arrives while the student looks at
-   * another tab, as they may switch to the code while the tutor writes.
+   * The tutor folds into the floating mascot, which opens it over the corner of the code, when the
+   * student chooses it, with the code expanded and on tablets, where its column would narrow the
+   * code too much (D-033). Phones keep their tab.
+   */
+  protected readonly floatingTutor = computed(
+    () => !this.compact() && (this.codeExpanded() || this.narrow() || this.preferFloating()),
+  );
+  /** The student chose the floating tutor on a wide screen; remembered in this browser. */
+  private readonly preferFloating = signal(readTutorFloating(this.userId()));
+  protected readonly tutorOpen = signal(false);
+  protected readonly openTutorLabel = $localize`:@@workspace.openTutor:Abrir el tutor`;
+  protected readonly closeTutorLabel = $localize`:@@workspace.closeTutor:Cerrar el tutor`;
+  private readonly tutorToggle = viewChild<ElementRef<HTMLElement>>('tutorToggle');
+  /** The open floating tutor; the column one is not there while the tutor floats. */
+  private readonly floatingPanel = viewChild<TutorPanel>('floatingPanel');
+  private readonly injector = inject(Injector);
+
+  /**
+   * Open, it sticks its tongue out, and pulls it back on closing (1.1b); it tilts its head while the
+   * tutor thinks.
+   */
+  protected readonly floatingMascotMood = computed<MascotMood>(() => {
+    if (this.tutorOpen()) return 'chat';
+    return this.tutor.answering() ? 'thinking' : 'idle';
+  });
+
+  /** The first words of the last answer, shown beside the folded mascot. */
+  protected readonly latestAnswer = this.tutor.announcement;
+
+  /**
+   * A dot (and, folded, a bubble) when an answer arrives while the tutor is out of sight: another
+   * tab on a phone, or the folded mascot. The student may look at the code while the tutor writes.
    */
   private readonly selectedTab = signal(0);
   private readonly seenAnswers = signal(0);
+  private readonly tutorVisible = computed(() => {
+    if (this.compact()) return this.selectedTab() === TUTOR_TAB;
+    return !this.floatingTutor() || this.tutorOpen();
+  });
   protected readonly tutorUnread = computed(
-    () => this.selectedTab() !== TUTOR_TAB && this.tutor.answerCount() > this.seenAnswers(),
+    () => !this.tutorVisible() && this.tutor.answerCount() > this.seenAnswers(),
   );
+
+  protected markAnswersSeen(): void {
+    this.seenAnswers.set(this.tutor.answerCount());
+  }
 
   protected selectTab(index: number): void {
     if (index === TUTOR_TAB || this.selectedTab() === TUTOR_TAB) {
-      this.seenAnswers.set(this.tutor.answerCount());
+      this.markAnswersSeen();
     }
     this.selectedTab.set(index);
+  }
+
+  /** Opens the folded tutor with the focus on the question, ready to write, or folds it again. */
+  protected toggleTutor(): void {
+    this.markAnswersSeen();
+    this.tutorOpen.update((open) => !open);
+    if (this.tutorOpen()) this.focusQuestion();
+  }
+
+  /**
+   * Floats the tutor, open so the conversation does not vanish, or fixes it in its column again,
+   * which also brings the statement back. Floating, the focus goes to the question, as the button
+   * that had it is gone; fixed, the column is where it was.
+   */
+  protected toggleDock(): void {
+    const floating = !this.floatingTutor();
+    this.markAnswersSeen();
+    this.preferFloating.set(floating);
+    saveTutorFloating(this.userId(), floating);
+    if (floating) {
+      this.tutorOpen.set(true);
+      this.focusQuestion();
+    } else {
+      this.codeExpanded.set(false);
+      this.tutorOpen.set(false);
+    }
+  }
+
+  private focusQuestion(): void {
+    afterNextRender(() => this.floatingPanel()?.focusQuestion(), { injector: this.injector });
+  }
+
+  /** Esc or «Minimizar» fold the tutor and give the focus back to the mascot that opened it. */
+  protected closeTutor(): void {
+    this.toggleTutor();
+    afterNextRender(() => this.tutorToggle()?.nativeElement.focus(), { injector: this.injector });
   }
 
   /** Reloads only what failed. */

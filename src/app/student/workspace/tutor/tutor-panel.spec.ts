@@ -365,6 +365,22 @@ describe('TutorPanel', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
+  it('takes the focus to the question, ready to write', async () => {
+    const { fixture } = await renderPanel();
+
+    fixture.componentInstance.focusQuestion();
+
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Pregunta al tutor' }));
+  });
+
+  it('takes the focus to the conversation of a submitted attempt, to read it', async () => {
+    const { fixture } = await renderPanel({ status: 'submitted' });
+
+    fixture.componentInstance.focusQuestion();
+
+    expect(document.activeElement).toBe(conversation());
+  });
+
   it('says a submitted attempt had no help, without suggestions', async () => {
     await renderPanel({ status: 'submitted' });
 

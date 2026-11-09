@@ -1,7 +1,8 @@
 /**
- * How the splitters of the workspace share their room (ficha 03), in percent: the statement takes a
- * share of the left column, over the code, and the code a share of the width, beside the tutor. The
- * student moves them, and each is remembered per user in this browser, as a convenience.
+ * How the workspace shares its room (ficha 03), remembered per user in this browser, as a
+ * convenience: the splitters, in percent (the statement takes a share of the left column, over the
+ * code, and the code a share of the width, beside the tutor), and whether the student prefers the
+ * tutor floating over the code instead of in its column (D-033).
  */
 export interface PaneShare {
   /** Prefix of the localStorage key, followed by the user id. */
@@ -47,5 +48,30 @@ export function savePaneShare(pane: PaneShare, userId: string | undefined, share
     localStorage.setItem(paneShareKey(pane, userId), String(share));
   } catch {
     // Storage unavailable: the share lasts until the page is closed
+  }
+}
+
+const TUTOR_FLOATING_KEY = 'tutoria.tutor-floating';
+
+export function tutorFloatingKey(userId: string): string {
+  return `${TUTOR_FLOATING_KEY}.${userId}`;
+}
+
+/** Fixed in its column unless the student chose it floating. */
+export function readTutorFloating(userId: string | undefined): boolean {
+  if (!userId) return false;
+  try {
+    return localStorage.getItem(tutorFloatingKey(userId)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function saveTutorFloating(userId: string | undefined, floating: boolean): void {
+  if (!userId) return;
+  try {
+    localStorage.setItem(tutorFloatingKey(userId), String(floating));
+  } catch {
+    // Storage unavailable: the choice lasts until the page is closed
   }
 }

@@ -101,6 +101,10 @@ export class TutorComposer {
     () => this.store.canAsk() && this.model().message.trim() !== '' && this.questionForm().valid(),
   );
 
+  focus(): void {
+    this.questionForm.message().focusBoundControl();
+  }
+
   /** Intro sends; with Mayús, or while an input method composes a character, it is a new line. */
   protected sendOnEnter(event: Event): void {
     const key = event as KeyboardEvent;

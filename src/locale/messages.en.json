@@ -224,6 +224,12 @@
     "tutor.hintTooltip": "Level {$level}: {$promise}",
     "tutor.today": "Today",
     "workspace.tab.tutorUnread": "Tutor, new answer",
-    "workspace.codeWidth": "Width of the code"
+    "workspace.codeWidth": "Width of the code",
+    "tutor.minimize": "Minimise the tutor",
+    "tutor.minimizeTooltip": "Minimise",
+    "tutor.float": "Float the tutor",
+    "tutor.fix": "Dock the tutor on the right",
+    "workspace.openTutor": "Open the tutor",
+    "workspace.closeTutor": "Close the tutor"
   }
 }

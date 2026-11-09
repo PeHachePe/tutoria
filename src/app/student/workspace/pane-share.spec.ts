@@ -2,8 +2,11 @@ import {
   CODE_SHARE,
   paneShareKey,
   readPaneShare,
+  readTutorFloating,
   savePaneShare,
+  saveTutorFloating,
   STATEMENT_SHARE,
+  tutorFloatingKey,
 } from './pane-share';
 
 describe('pane share', () => {
@@ -55,5 +58,35 @@ describe('pane share', () => {
     savePaneShare(STATEMENT_SHARE, undefined, 60);
 
     expect(localStorage.length).toBe(0);
+  });
+
+  describe('floating tutor', () => {
+    it('starts fixed in its column, and remembers the choice of each user', () => {
+      expect(readTutorFloating('u1')).toBe(false);
+      expect(readTutorFloating(undefined)).toBe(false);
+
+      saveTutorFloating('u1', true);
+
+      expect(localStorage.getItem(tutorFloatingKey('u1'))).toBe('true');
+      expect(readTutorFloating('u1')).toBe(true);
+      expect(readTutorFloating('u2')).toBe(false);
+      saveTutorFloating('u1', false);
+      expect(readTutorFloating('u1')).toBe(false);
+    });
+
+    it('keeps working without storage, and saves nothing without a user', () => {
+      saveTutorFloating(undefined, true);
+      expect(localStorage.length).toBe(0);
+
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+
+      expect(() => saveTutorFloating('u1', true)).not.toThrow();
+      expect(readTutorFloating('u1')).toBe(false);
+    });
   });
 });

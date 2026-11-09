@@ -27,7 +27,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
   - se desplaza por dentro y se queda abajo mientras crece.
 - **Sin conversación:** la mascota grande, «¡Hola, Lucía!», «Pregúntame lo que necesites o pide una pista. No te daré la solución, pero te ayudaré a encontrarla» y dos preguntas sugeridas. La primera depende del intento: «¿Por dónde empiezo?», «¿Por qué falla una de las pruebas?» o «¿Se puede mejorar mi código?». La segunda es siempre «No entiendo el enunciado».
 - **Pie:** «Pedir pista» («Otra pista» en el nivel 3), con un tooltip que dice qué dará el siguiente nivel; debajo, el campo «Pregunta al tutor» con el botón de enviar y la ayuda «Intro para enviar; Mayús + Intro, nueva línea».
-- **Escritorio y tableta:** columna a la derecha del código. Su ancho se cambia con un separador vertical y nunca baja de 16rem.
+- **Escritorio:** columna a la derecha del código, de ancho ajustable con un separador vertical (nunca baja de 16rem), o flotante si el alumno lo elige.
+- **Flotante** (con el código ampliado, en la tableta o por elección del alumno, D-033): la mascota abajo a la derecha. Al pulsarla, el tutor se abre en un panel sobre la esquina del código (24rem de ancho) y la mascota saca la lengua; en su cabecera están «Fijar el tutor a la derecha» (no en la tableta) y «Minimizar el tutor». Plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
 
 ## Interacciones
@@ -39,6 +40,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Reintentar** (conversación que no cargó): la vuelve a cargar.
 - **Mascota:** saca la lengua mientras el foco está en el campo, la recoge al salir e inclina la cabeza mientras el tutor responde.
 - **Separador vertical:** se arrastra o se mueve con las flechas izquierda y derecha, Inicio y Fin; doble clic vuelve al 70 % para el código. Se recuerda para el alumno.
+- **Hacer flotante / Fijar:** pasa el tutor de la columna a la mascota flotante (abierto, con el foco en la pregunta) y de vuelta; fijarlo devuelve también la vista normal si el código estaba ampliado. Se recuerda para el alumno.
+- **Abrir y minimizar** (flotante): la mascota lo abre con el foco en la pregunta; «Minimizar el tutor», la mascota o Esc lo pliegan y el foco vuelve a la mascota. El bocadillo de una respuesta nueva también lo abre.
 - **Móvil:** si llega una respuesta mientras el alumno está en otra pestaña, la pestaña «Tutor» muestra un punto hasta que la abre.
 
 ## Estados
@@ -60,6 +63,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - El nivel se dice con texto, no solo con los escalones.
 - Los botones deshabilitados siguen enfocables (`disabledInteractive`).
 - La pestaña con aviso se llama «Tutor, respuesta nueva».
+- La mascota flotante es un botón «Abrir el tutor» / «Cerrar el tutor» con `aria-expanded` y `aria-controls` al panel. Plegado, la respuesta nueva se anuncia con su propia región `aria-live`, porque la del panel no está en la página.
 - Las animaciones (entrada de cada turno, puntos y cursor) respetan `prefers-reduced-motion`.
 
 ## Criterios de aceptación
@@ -70,6 +74,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] Un fallo de red a mitad de respuesta muestra el aviso y «Reintentar» la recupera sin perder la pregunta.
 - [ ] Un intento entregado muestra su conversación sin poder preguntar.
 - [ ] En el móvil, el punto de la pestaña «Tutor» aparece con una respuesta nueva y se va al abrirla.
+- [ ] El tutor pasa de fijo a flotante y de vuelta, y se recuerda al recargar; flotante, se abre con el foco en la pregunta y se minimiza con el botón, la mascota o Esc, con el foco de vuelta en la mascota.
+- [ ] Plegado, una respuesta nueva asoma en el bocadillo, se anuncia y abre el tutor.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 
 ## Fuera de alcance

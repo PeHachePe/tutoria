@@ -22,9 +22,9 @@ import { buildRunResult } from '../../data/mock/code-runner/build-run-result';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
-import { CODE_SHARE, paneShareKey, STATEMENT_SHARE } from './pane-share';
+import { CODE_SHARE, paneShareKey, STATEMENT_SHARE, tutorFloatingKey } from './pane-share';
 import { TutorStore } from './tutor-store';
-import { WorkspacePage } from './workspace-page';
+import { COMPACT_WORKSPACE_QUERY, WorkspacePage } from './workspace-page';
 
 /** The detail of a seed exercise (0-based index), as the exercise service returns it. */
 function detailOf(index: number): ExerciseDetail {
@@ -87,6 +87,8 @@ interface Setup {
   submit?: AttemptService['submit'];
   run?: CodeRunnerService['run'];
   compact?: boolean;
+  /** Below 1024 px; phones are narrow too. */
+  narrow?: boolean;
   /** False when a request never answers: then the page cannot become stable. */
   settle?: boolean;
 }
@@ -109,6 +111,7 @@ describe('WorkspacePage', () => {
       }),
     run = () => Promise.resolve(SOME_FAILED),
     compact = false,
+    narrow = compact,
     settle = true,
   }: Setup = {}) {
     const reload = vi.fn();
@@ -146,7 +149,13 @@ describe('WorkspacePage', () => {
         ...provideSessionOf('student'),
         {
           provide: BreakpointObserver,
-          useValue: { observe: () => of({ matches: compact, breakpoints: {} }) },
+          useValue: {
+            observe: (query: string) =>
+              of({
+                matches: query === COMPACT_WORKSPACE_QUERY ? compact : narrow,
+                breakpoints: {},
+              }),
+          },
         },
       ],
     });
@@ -759,8 +768,9 @@ describe('WorkspacePage', () => {
       expect(toggle.getAttribute('aria-pressed')).toBe('true');
       expect(screen.queryByRole('region', { name: 'Enunciado' })).toBeNull();
       expect(screen.queryByRole('separator', { name: 'Tamaño del enunciado' })).toBeNull();
-      // The tutor stays in sight: the student can still ask, and see it step in (6.2)
-      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
+      // The tutor folds into the floating mascot, still at hand (D-033)
+      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Abrir el tutor' })).toBeTruthy();
       // The same CodeMirror: nothing typed nor its undo history is lost
       expect(editorView()).toBe(view);
 
@@ -864,6 +874,145 @@ describe('WorkspacePage', () => {
       await fixture.whenStable();
 
       expect(text(tutorTab())).toBe('Tutor');
+    });
+  });
+
+  describe('floating tutor', () => {
+    afterEach(() => localStorage.clear());
+
+    const mascot = () => screen.getByRole('button', { name: /^(Abrir|Cerrar) el tutor$/ });
+    const question = () => screen.getByRole('textbox', { name: 'Pregunta al tutor' });
+
+    async function expand(): Promise<void> {
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Ampliar el código' }));
+    }
+
+    it('opens from the mascot ready to ask, and folds back with «Minimizar», the mascot or Esc', async () => {
+      const { fixture } = await renderPage();
+      const user = userEvent.setup();
+      await expand();
+      expect(mascot().getAttribute('aria-expanded')).toBe('false');
+      expect(mascot().getAttribute('aria-label')).toBe('Abrir el tutor');
+
+      await user.click(mascot());
+      await fixture.whenStable();
+      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
+      expect(mascot().getAttribute('aria-expanded')).toBe('true');
+      expect(mascot().getAttribute('aria-label')).toBe('Cerrar el tutor');
+      expect(mascot().querySelector('app-mascot')?.classList).toContain('mascot-chat');
+      expect(document.activeElement).toBe(question());
+
+      await user.click(screen.getByRole('button', { name: 'Minimizar el tutor' }));
+      await fixture.whenStable();
+      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+      expect(document.activeElement).toBe(mascot());
+
+      await user.click(mascot());
+      await fixture.whenStable();
+      await user.keyboard('{Escape}');
+      await fixture.whenStable();
+      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+      expect(document.activeElement).toBe(mascot());
+
+      await user.click(mascot());
+      await user.click(mascot());
+      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+    });
+
+    it('lets the student float the tutor and fix it again, and remembers the choice', async () => {
+      const { fixture } = await renderPage();
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: 'Hacer flotante el tutor' }));
+      await fixture.whenStable();
+      expect(screen.queryByRole('separator', { name: 'Ancho del código' })).toBeNull();
+      expect(screen.getByRole('region', { name: 'Enunciado' })).toBeTruthy();
+      expect(document.activeElement).toBe(question());
+      expect(localStorage.getItem(tutorFloatingKey('student-1'))).toBe('true');
+
+      await user.click(screen.getByRole('button', { name: 'Fijar el tutor a la derecha' }));
+      await fixture.whenStable();
+      expect(screen.getByRole('separator', { name: 'Ancho del código' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Hacer flotante el tutor' })).toBeTruthy();
+      expect(localStorage.getItem(tutorFloatingKey('student-1'))).toBe('false');
+    });
+
+    it('fixes the tutor from the expanded code, which goes back to the normal view', async () => {
+      const { fixture } = await renderPage();
+      const user = userEvent.setup();
+      await expand();
+      await user.click(mascot());
+      await fixture.whenStable();
+
+      await user.click(screen.getByRole('button', { name: 'Fijar el tutor a la derecha' }));
+
+      expect(screen.getByRole('region', { name: 'Enunciado' })).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Ampliar el código' }).getAttribute('aria-pressed'),
+      ).toBe('false');
+      expect(screen.getByRole('separator', { name: 'Ancho del código' })).toBeTruthy();
+    });
+
+    it('starts floating when the student chose it', async () => {
+      localStorage.setItem(tutorFloatingKey('student-1'), 'true');
+
+      await renderPage();
+
+      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+      expect(mascot()).toBeTruthy();
+    });
+
+    it('floats on a tablet, where its column does not fit, with no way to fix it', async () => {
+      const { fixture } = await renderPage({ narrow: true });
+
+      expect(screen.getByRole('region', { name: 'Enunciado' })).toBeTruthy();
+      expect(screen.queryByRole('separator', { name: 'Ancho del código' })).toBeNull();
+      await userEvent.setup().click(mascot());
+      await fixture.whenStable();
+
+      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Fijar/ })).toBeNull();
+    });
+
+    it('shows and reads aloud a new answer beside the folded mascot, which opens the tutor', async () => {
+      const { fixture } = await renderPage();
+      await expand();
+
+      await TestBed.inject(TutorStore).requestHint();
+      await fixture.whenStable();
+      const bubble = screen.getByRole('button', { name: 'Mira el bucle.' });
+      const announced = [...document.querySelectorAll('[aria-live="polite"]')].map((live) =>
+        live.textContent?.trim(),
+      );
+      expect(announced).toContain('Mira el bucle.');
+
+      await userEvent.setup().click(bubble);
+      await fixture.whenStable();
+      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Mira el bucle.' })).toBeNull();
+    });
+
+    it('tilts the head of the folded mascot while the tutor answers', async () => {
+      const { fixture } = await renderPage();
+      await expand();
+
+      const answering = TestBed.inject(TutorStore).requestHint();
+      fixture.detectChanges();
+      expect(mascot().querySelector('app-mascot')?.classList).toContain('mascot-thinking');
+
+      await answering;
+      await fixture.whenStable();
+      expect(mascot().querySelector('app-mascot')?.classList).not.toContain('mascot-thinking');
+    });
+
+    it('does not bring back an answer already read in the column', async () => {
+      const { fixture } = await renderPage();
+      await TestBed.inject(TutorStore).requestHint();
+      await fixture.whenStable();
+
+      await expand();
+
+      expect(screen.queryByRole('button', { name: 'Mira el bucle.' })).toBeNull();
     });
   });
 });

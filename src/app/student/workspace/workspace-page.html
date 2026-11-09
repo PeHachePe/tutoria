@@ -81,7 +81,12 @@
        with a splitter between each pair. Expanded, the code takes the statement's height and the
        tutor stays in sight; it is the same editor, never created again. -->
   <div
-    class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_auto_var(--tutor-width)] gap-1"
+    class="grid min-h-0 flex-1 gap-1"
+    [class]="
+      floatingTutor()
+        ? 'grid-cols-[minmax(0,1fr)]'
+        : 'grid-cols-[minmax(0,1fr)_auto_var(--tutor-width)]'
+    "
     [style.--tutor-width]="tutorWidth()"
   >
     <div
@@ -108,19 +113,75 @@
           />
         }
       }
-      <app-code-zone [exercise]="exercise()" [(expanded)]="codeExpanded" />
+      <app-code-zone
+        [exercise]="exercise()"
+        [(expanded)]="codeExpanded"
+        (expandedChange)="markAnswersSeen()"
+      />
     </div>
-    <app-splitter
-      orientation="vertical"
-      label="Ancho del código"
-      i18n-label="@@workspace.codeWidth"
-      [controls]="codeZoneId"
-      [min]="codeShareLimits.min"
-      [max]="codeShareLimits.max"
-      [defaultValue]="codeShareLimits.default"
-      [(value)]="codeShare"
-      (changeEnd)="keepCodeShare($event)"
-    />
-    <app-tutor-panel />
+    @if (!floatingTutor()) {
+      <app-splitter
+        orientation="vertical"
+        label="Ancho del código"
+        i18n-label="@@workspace.codeWidth"
+        [controls]="codeZoneId"
+        [min]="codeShareLimits.min"
+        [max]="codeShareLimits.max"
+        [defaultValue]="codeShareLimits.default"
+        [(value)]="codeShare"
+        (changeEnd)="keepCodeShare($event)"
+      />
+      <app-tutor-panel [dock]="'float'" (dockChange)="toggleDock()" />
+    }
   </div>
+
+  <!-- Chosen by the student, with the code expanded or on a tablet: the tutor folds into the mascot,
+       which opens it over the corner of the code (D-033). «Minimizar» and Esc fold it again and give
+       the focus back to the mascot. -->
+  @if (floatingTutor()) {
+    <div class="fixed end-6 bottom-6 z-20 flex flex-col items-end gap-3">
+      <!-- Folded, the tutor's own announcer is not in the page: this one reads the new answer -->
+      <p class="sr-only" aria-live="polite">{{ tutorUnread() ? latestAnswer() : '' }}</p>
+      @if (tutorOpen()) {
+        <app-tutor-panel
+          #floatingPanel
+          id="floating-tutor"
+          [dock]="narrow() ? 'none' : 'fix'"
+          (dockChange)="toggleDock()"
+          [minimizable]="true"
+          (minimize)="closeTutor()"
+          (keydown.escape)="closeTutor()"
+          class="h-[min(34rem,calc(100dvh-12rem))] w-[min(24rem,calc(100vw-3rem))] border border-outline-variant shadow-xl"
+        />
+      } @else if (tutorUnread()) {
+        <!-- A new answer while folded: its first words, in a bubble that opens the tutor -->
+        <button
+          type="button"
+          class="tutor-turn max-w-72 rounded-2xl rounded-ee-sm border border-outline-variant bg-surface-container-high px-3 py-2 text-start text-body-medium text-on-surface shadow-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+          (click)="toggleTutor()"
+        >
+          <span class="line-clamp-3">{{ latestAnswer() }}</span>
+        </button>
+      }
+      <button
+        #tutorToggle
+        type="button"
+        class="relative grid size-16 place-items-center rounded-full bg-primary-container shadow-lg outline-offset-2 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none"
+        aria-controls="floating-tutor"
+        [attr.aria-expanded]="tutorOpen()"
+        [attr.aria-label]="tutorOpen() ? closeTutorLabel : openTutorLabel"
+        [matTooltip]="tutorOpen() ? closeTutorLabel : openTutorLabel"
+        matTooltipPosition="before"
+        (click)="toggleTutor()"
+      >
+        <app-mascot class="size-14" [mood]="floatingMascotMood()" />
+        @if (tutorUnread()) {
+          <span
+            class="absolute end-1 top-1 size-3 rounded-full border-2 border-panel bg-primary"
+            aria-hidden="true"
+          ></span>
+        }
+      </button>
+    </div>
+  }
 }

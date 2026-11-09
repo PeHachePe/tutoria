@@ -1,6 +1,16 @@
 import { DatePipe, formatDate } from '@angular/common';
-import { Component, computed, inject, input, LOCALE_ID, signal } from '@angular/core';
-import { MatButton } from '@angular/material/button';
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  LOCALE_ID,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 
@@ -38,6 +48,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
   imports: [
     DatePipe,
     MatButton,
+    MatIconButton,
     MatIcon,
     MatTooltip,
     Mascot,
@@ -57,6 +68,15 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
 export class TutorPanel {
   /** Phones: a tab of its own, which names it. */
   readonly compact = input(false);
+  /**
+   * What the dock button offers: to float the tutor over the code, to fix it in its column again,
+   * or nothing (phones, and tablets, where the column does not fit).
+   */
+  readonly dock = input<'none' | 'float' | 'fix'>('none');
+  readonly dockChange = output<void>();
+  /** Floating, it offers to fold back into the mascot. */
+  readonly minimizable = input(false);
+  readonly minimize = output<void>();
 
   protected readonly store = inject(TutorStore);
   private readonly attempt = inject(AttemptStore);
@@ -65,6 +85,12 @@ export class TutorPanel {
 
   protected readonly skeletonBubbles = SKELETON_BUBBLES;
   protected readonly maxHintLevel = MAX_HINT_LEVEL;
+
+  protected readonly dockLabel = computed(() =>
+    this.dock() === 'float'
+      ? $localize`:@@tutor.float:Hacer flotante el tutor`
+      : $localize`:@@tutor.fix:Fijar el tutor a la derecha`,
+  );
 
   /** The student is writing to the tutor: the mascot listens, with its tongue out. */
   protected readonly composing = signal(false);
@@ -111,6 +137,19 @@ export class TutorPanel {
       return { turn, dayLabel, parts: splitInlineCode(turn.answer) };
     });
   });
+
+  private readonly composer = viewChild<TutorComposer>('composer');
+  private readonly conversation = viewChild.required<ElementRef<HTMLElement>>('conversation');
+
+  /** Ready to write: the question field, or the conversation of a submitted attempt, to read it. */
+  focusQuestion(): void {
+    const composer = this.composer();
+    if (composer) {
+      composer.focus();
+    } else {
+      this.conversation().nativeElement.focus();
+    }
+  }
 
   protected errorMessage(turn: TutorTurn): string {
     return tutorErrorMessage(turn.error);

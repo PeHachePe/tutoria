@@ -1119,6 +1119,7 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 - Panel con burbujas propias (Tailwind) y nivel de pista en escalones con su nombre. «Pedir pista» dice lo que dará. Campo de pregunta con Signal Forms: Intro envía. Indicador de escritura, preguntas sugeridas y error con reintento. Solo lectura si el intento está entregado.
 - Cada respuesta se anuncia una vez, completa, con `aria-live="polite"`. En el móvil, la pestaña «Tutor» avisa de una respuesta nueva.
 - Separador vertical entre el código y el tutor, recordado por usuario.
+- Iteración 1: el tutor puede ir fijo en su columna o flotante, plegado en la mascota que lo abre sobre el código; el alumno elige y se recuerda. Con el código ampliado y en la tableta es siempre flotante. Se minimiza con un botón, con la mascota o con Esc, y una respuesta nueva asoma en un bocadillo.
 
 ✅ Conversación completa subiendo del nivel 1 al 3.
 🧪 `TutorStore` con un `TutorService` falso, incluido un error a mitad de respuesta; el tutor simulado y su elección de respuestas con TDD.

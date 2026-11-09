@@ -13,11 +13,40 @@
     </h2>
     <app-hint-level-meter [level]="store.hintLevel()" />
   </div>
+  <!-- Fixed in its column or floating over the code: the student chooses (proposal of step 1.7) -->
+  @if (dock() !== 'none') {
+    <button
+      matIconButton
+      type="button"
+      class="self-start"
+      [attr.aria-label]="dockLabel()"
+      [matTooltip]="dockLabel()"
+      (click)="dockChange.emit()"
+    >
+      <mat-icon>{{ dock() === 'float' ? 'picture_in_picture_alt' : 'dock_to_right' }}</mat-icon>
+    </button>
+  }
+  <!-- Floating: back to the mascot, as the chat windows of other apps do -->
+  @if (minimizable()) {
+    <button
+      matIconButton
+      type="button"
+      class="-ms-2 self-start"
+      aria-label="Minimizar el tutor"
+      i18n-aria-label="@@tutor.minimize"
+      matTooltip="Minimizar"
+      i18n-matTooltip="@@tutor.minimizeTooltip"
+      (click)="minimize.emit()"
+    >
+      <mat-icon>remove</mat-icon>
+    </button>
+  }
 </header>
 
 <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1). Reversed,
      it stays at the bottom while the answers grow, with no script. -->
 <div
+  #conversation
   tabindex="0"
   role="group"
   aria-label="Conversación con el tutor"
@@ -220,6 +249,10 @@
         <span i18n="@@tutor.requestHint">Pedir pista</span>
       }
     </button>
-    <app-tutor-composer (focusin)="composing.set(true)" (focusout)="composing.set(false)" />
+    <app-tutor-composer
+      #composer
+      (focusin)="composing.set(true)"
+      (focusout)="composing.set(false)"
+    />
   </div>
 }
