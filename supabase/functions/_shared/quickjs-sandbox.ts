@@ -85,12 +85,18 @@ const HELPERS = `(() => {
     return encoded;
   };
   const describe = (error) => (error instanceof Error ? error.name + ': ' + error.message : String(error));
+  // The line of the student's code (solution.js) where it was thrown; JSON leaves it out if unknown
+  const lineOf = (error) => {
+    // Backslashes doubled: this is the text of a template literal
+    const match = /solution\\.js:(\\d+)/.exec(error instanceof Error ? String(error.stack) : '');
+    return match ? Number(match[1]) : undefined;
+  };
   return (fn, argsJson) => {
     let outcome;
     try {
       outcome = { ok: true, value: encode(fn(...JSON.parse(argsJson)), []) };
     } catch (error) {
-      outcome = { ok: false, error: describe(error) };
+      outcome = { ok: false, error: describe(error), line: lineOf(error) };
     }
     return JSON.stringify(outcome);
   };
@@ -172,8 +178,8 @@ export class QuickJsSandbox implements CodeSandbox {
     const result = context.callFunction(call, context.undefined, fn, args);
     args.dispose();
     if (result.error) {
-      const error = takeError(context, result.error);
-      return error === INTERRUPTED ? undefined : { ok: false, error };
+      const { message } = takeError(context, result.error);
+      return message === INTERRUPTED ? undefined : { ok: false, error: message };
     }
     const text: unknown = context.dump(result.value);
     result.value.dispose();
@@ -185,10 +191,14 @@ export class QuickJsSandbox implements CodeSandbox {
 function load(context: QuickJSContext, request: RunRequest): Loaded {
   const evaluated = context.evalCode(request.code, 'solution.js');
   if (evaluated.error) {
-    const error = takeError(context, evaluated.error);
-    return error === INTERRUPTED
-      ? { timedOut: true }
-      : { loadError: { kind: 'invalid_code', message: error } };
+    const { message, line } = takeError(context, evaluated.error);
+    if (message === INTERRUPTED) return { timedOut: true };
+    return {
+      loadError:
+        line === undefined
+          ? { kind: 'invalid_code', message }
+          : { kind: 'invalid_code', message, line },
+    };
   }
   evaluated.value.dispose();
   const name = request.functionName;
@@ -204,15 +214,27 @@ function load(context: QuickJSContext, request: RunRequest): Loaded {
   return { fn: found.value };
 }
 
-/** `TypeError: …`, as the browser console writes it; anything else thrown, as text. */
-function takeError(context: QuickJSContext, handle: QuickJSHandle): string {
+/**
+ * `TypeError: …`, as the browser console writes it, anything else thrown as text, and the line of
+ * the student's code where it happened: QuickJS gives it as `lineNumber` for a syntax error and in
+ * the stack (`solution.js:3`) for the rest.
+ */
+function takeError(
+  context: QuickJSContext,
+  handle: QuickJSHandle,
+): { readonly message: string; readonly line?: number } {
   const error: unknown = context.dump(handle);
   handle.dispose();
-  const text =
-    typeof error === 'object' && error !== null && 'name' in error && 'message' in error
-      ? `${String(error.name)}: ${String(error.message)}`
-      : String(error);
-  return BROWSER_MESSAGES[text] ?? text;
+  if (typeof error !== 'object' || error === null || !('name' in error) || !('message' in error)) {
+    return { message: String(error) };
+  }
+  const text = `${String(error.name)}: ${String(error.message)}`;
+  const message = BROWSER_MESSAGES[text] ?? text;
+  const line =
+    'lineNumber' in error && typeof error.lineNumber === 'number'
+      ? error.lineNumber
+      : Number(/solution\.js:(\d+)/.exec('stack' in error ? String(error.stack) : '')?.[1]);
+  return Number.isInteger(line) && line > 0 ? { message, line } : { message };
 }
 
 /**
@@ -224,12 +246,20 @@ function readOutcome(text: unknown, maxChars: number): TestOutcome {
   if (typeof text !== 'string') return { ok: false, error: UNREADABLE };
   if (text.length > maxChars) return { ok: false, error: TOO_LARGE };
   try {
-    const outcome = JSON.parse(text) as { ok?: unknown; value?: EncodedValue; error?: unknown };
+    const outcome = JSON.parse(text) as {
+      ok?: unknown;
+      value?: EncodedValue;
+      error?: unknown;
+      line?: unknown;
+    };
     if (outcome.ok === true && 'value' in outcome) {
       return { ok: true, value: decodeRunValue(outcome.value as EncodedValue) };
     }
     if (outcome.ok === false && typeof outcome.error === 'string') {
-      return { ok: false, error: BROWSER_MESSAGES[outcome.error] ?? outcome.error };
+      const error = BROWSER_MESSAGES[outcome.error] ?? outcome.error;
+      return typeof outcome.line === 'number'
+        ? { ok: false, error, line: outcome.line }
+        : { ok: false, error };
     }
   } catch {
     // Not JSON: below

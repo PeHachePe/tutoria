@@ -16,6 +16,8 @@ export interface TestResult {
   readonly timeout: boolean;
   /** Runtime error message, if any. */
   readonly error?: string;
+  /** Line of the student's code where that error was thrown, when the engine says it. */
+  readonly line?: number;
   /** Input, expected and actual values: visible tests only. */
   readonly input?: readonly unknown[];
   readonly expected?: unknown;
@@ -32,6 +34,8 @@ export interface RunLoadError {
   readonly kind: 'invalid_code' | 'missing_function';
   /** Message of the JavaScript error, for `invalid_code`. */
   readonly message?: string;
+  /** Line of the student's code where it failed, when the engine says it. */
+  readonly line?: number;
 }
 
 /** Result of running every test of an attempt. */
@@ -64,7 +68,8 @@ export interface RunRequest {
 
 /** What one test obtained: the returned value, or the message of the error it threw. */
 export type TestOutcome =
-  { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly error: string };
+  | { readonly ok: true; readonly value: unknown }
+  | { readonly ok: false; readonly error: string; readonly line?: number };
 
 /** What comes out of the sandbox: an outcome per test that ended in time, or why none ran. */
 export interface RunOutcome {
@@ -101,7 +106,9 @@ function testResult(test: RunTest, outcome: TestOutcome | undefined): TestResult
   if (test.isHidden) return result;
   const details = { ...result, input: test.input, expected: test.expectedOutput };
   if (!outcome) return details;
-  return outcome.ok ? { ...details, actual: outcome.value } : { ...details, error: outcome.error };
+  if (outcome.ok) return { ...details, actual: outcome.value };
+  const { error, line } = outcome;
+  return line === undefined ? { ...details, error } : { ...details, error, line };
 }
 
 /** The `detail` of the `run` event (2.8): how many tests passed and failed, and which failed. */

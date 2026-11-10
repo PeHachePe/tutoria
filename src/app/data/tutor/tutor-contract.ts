@@ -50,7 +50,8 @@ export type ReactionKind = (typeof REACTION_KINDS)[number];
 
 /**
  * When the tutor should choose each reaction: the real tutor gets this list in its prompt (2.6). The
- * jokes are only for asking for the solution, never for a mistake or a doubt (D-036, D-037).
+ * jokes (wink to grumpy) are play acting with affection, open to any relaxed moment, never when the
+ * student is frustrated (D-043, which widens D-036 and D-037).
  */
 export const REACTION_USES: Record<ReactionKind, string> = {
   hearts: 'Warmth: the student understood something, or thanks the tutor.',
@@ -63,12 +64,14 @@ export const REACTION_USES: Record<ReactionKind, string> = {
   applause: 'Good reasoning or a good question.',
   'mind-blown': 'Admiration: a brilliant idea or solution of the student.',
   laugh: 'Humour: the student made a joke, or something funny happened.',
-  wink: 'A friendly «nice try» when the student asks for the solution.',
-  secret: 'A joke when the student asks for the solution: «my lips are sealed».',
-  seriously: 'A joke when the student asks for the solution again: «are you kidding me?».',
-  throw: 'A joke when the student asks for the solution again: something thrown at the screen.',
+  wink: 'A playful «nice try» or «I see what you did there»: a cheeky shortcut, a guess, a trick.',
+  secret: '«My lips are sealed»: the student asks for the solution, or for something to keep.',
+  seriously:
+    'A mock «seriously?»: the same slip again, an odd idea, a joke of the student, or asking for the solution again.',
+  throw:
+    'Something thrown at the screen, playfully: a slip repeated once too often, a cheeky remark, insisting on the solution.',
   grumpy:
-    'A joke when the student insists on the solution: a mock anger that, at the top, blows up.',
+    'A mock anger, as play acting: a rebel semicolon, a slip the tutor «fights» with, insisting on the solution. It blows up only at intensity 3.',
   eyes: 'The tutor looks in on its own initiative, to see how it goes.',
   empathy: 'The student is stuck or frustrated: understanding before the help.',
   sleepy: 'A long time without activity: «are you still there?».',

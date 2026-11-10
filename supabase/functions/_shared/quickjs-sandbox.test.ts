@@ -40,10 +40,24 @@ Deno.test('a syntax error is invalid code, with the message of the error', async
   assert(outcome.loadError?.message?.startsWith('SyntaxError: '));
 });
 
+Deno.test('a syntax error says the line where it is', async () => {
+  const outcome = await run(
+    ['function suma(v) {', '  let total = 0', '  for (let i = 0; i < v.length i++) {}', '}'].join(
+      '\n',
+    ),
+  );
+
+  assertEquals(outcome.loadError, {
+    kind: 'invalid_code',
+    message: "SyntaxError: expecting ';'",
+    line: 3,
+  });
+});
+
 Deno.test('an error outside the function is invalid code too', async () => {
   const outcome = await run('throw new TypeError("Mal"); function suma() {}');
 
-  assertEquals(outcome.loadError, { kind: 'invalid_code', message: 'TypeError: Mal' });
+  assertEquals(outcome.loadError, { kind: 'invalid_code', message: 'TypeError: Mal', line: 1 });
 });
 
 Deno.test(
@@ -61,6 +75,23 @@ Deno.test('an exception in a test is its error, and the other tests still run', 
 
   assertEquals(outcome.outcomes[2], { ok: false, error: 'RangeError: Vacío' });
   assertEquals(outcome.outcomes[3], { ok: true, value: -2 });
+});
+
+Deno.test('an error in a test says the line of the code where it was thrown', async () => {
+  const outcome = await run(
+    [
+      'function suma(v) {',
+      '  for (let i = 0; i < v.length; i++) {',
+      '    total += v[i];',
+      '  }',
+      '}',
+    ].join('\n'),
+    [[[1]]],
+  );
+
+  assertEquals(outcome.outcomes, [
+    { ok: false, error: "ReferenceError: 'total' is not defined", line: 3 },
+  ]);
 });
 
 Deno.test('anything thrown that is not an error is its text', async () => {

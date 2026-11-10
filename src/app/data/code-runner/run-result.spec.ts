@@ -72,6 +72,19 @@ describe('buildRunResult', () => {
     ]);
   });
 
+  it('keeps the line of the error of a visible test, and never that of a hidden one', () => {
+    const result = buildRunResult(TESTS, {
+      outcomes: [
+        { ok: false, error: "ReferenceError: 'total' is not defined", line: 3 },
+        { ok: true, value: 0 },
+        { ok: false, error: "ReferenceError: 'total' is not defined", line: 3 },
+      ],
+    });
+
+    expect(result.results[0]).toMatchObject({ error: expect.any(String), line: 3 });
+    expect(result.results[2]).toEqual({ testId: 't3', passed: false, timeout: false });
+  });
+
   it('marks the tests without an outcome as timed out', () => {
     const result = buildRunResult(TESTS, { outcomes: [{ ok: true, value: 6 }] });
 
