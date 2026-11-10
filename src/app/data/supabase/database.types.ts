@@ -10,12 +10,7 @@ export type Database = {
     };
     Functions: {
       graphql: {
-        Args: {
-          extensions?: Json;
-          operationName?: string;
-          query?: string;
-          variables?: Json;
-        };
+        Args: { extensions?: Json; operationName?: string; query?: string; variables?: Json };
         Returns: Json;
       };
     };
@@ -32,17 +27,18 @@ export type Database = {
         Row: {
           key: string;
           updated_at: string;
-          value: Json;
+          value: NonNullable<Json>;
         };
+        ComputedFields: never;
         Insert: {
           key: string;
           updated_at?: string;
-          value: Json;
+          value: NonNullable<Json>;
         };
         Update: {
           key?: string;
           updated_at?: string;
-          value?: Json;
+          value?: NonNullable<Json>;
         };
         Relationships: [];
       };
@@ -57,6 +53,7 @@ export type Database = {
           status: Database['public']['Enums']['user_status'];
           updated_at: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           email: string;
@@ -92,6 +89,7 @@ export type Database = {
           updated_at: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           assignment_id?: string | null;
           current_code?: string;
@@ -147,6 +145,7 @@ export type Database = {
           school_year: string;
           teacher_id: string;
         };
+        ComputedFields: never;
         Insert: {
           id?: string;
           name: string;
@@ -176,6 +175,7 @@ export type Database = {
           number: number;
           title: string | null;
         };
+        ComputedFields: never;
         Insert: {
           group_id: string;
           id?: string;
@@ -204,6 +204,7 @@ export type Database = {
           id: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           group_id: string;
           id?: string;
@@ -247,6 +248,7 @@ export type Database = {
           topics: string[];
           updated_at: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           created_by: string;
@@ -294,6 +296,7 @@ export type Database = {
           id: string;
           session: number;
         };
+        ComputedFields: never;
         Insert: {
           exercise_id: string;
           group_id: string;
@@ -339,6 +342,7 @@ export type Database = {
           timestamp: string;
           type: Database['public']['Enums']['process_event_type'];
         };
+        ComputedFields: never;
         Insert: {
           attempt_id: string;
           detail?: Json | null;
@@ -368,25 +372,26 @@ export type Database = {
       test: {
         Row: {
           exercise_id: string;
-          expected_output: Json;
+          expected_output: NonNullable<Json>;
           id: string;
-          input: Json;
+          input: NonNullable<Json>;
           is_hidden: boolean;
           position: number;
         };
+        ComputedFields: never;
         Insert: {
           exercise_id: string;
-          expected_output: Json;
+          expected_output: NonNullable<Json>;
           id?: string;
-          input: Json;
+          input: NonNullable<Json>;
           is_hidden?: boolean;
           position: number;
         };
         Update: {
           exercise_id?: string;
-          expected_output?: Json;
+          expected_output?: NonNullable<Json>;
           id?: string;
-          input?: Json;
+          input?: NonNullable<Json>;
           is_hidden?: boolean;
           position?: number;
         };
@@ -414,6 +419,7 @@ export type Database = {
           transcript: string;
           trigger: Database['public']['Enums']['tutor_trigger'];
         };
+        ComputedFields: never;
         Insert: {
           attempt_id: string;
           created_at?: string;
@@ -455,29 +461,17 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      can_read_attempt: {
-        Args: { target_attempt_id: string };
-        Returns: boolean;
-      };
-      can_record_event: {
-        Args: { target_attempt_id: string };
-        Returns: boolean;
-      };
+      can_read_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
+      can_record_event: { Args: { target_attempt_id: string }; Returns: boolean };
       current_app_role: {
-        Args: never;
+        Args: Record<PropertyKey, never>;
         Returns: Database['public']['Enums']['user_role'];
       };
-      hidden_test_count: {
-        Args: { target_exercise_id: string };
-        Returns: number;
-      };
-      is_admin: { Args: never; Returns: boolean };
-      is_assigned_to_me: {
-        Args: { target_exercise_id: string };
-        Returns: boolean;
-      };
+      hidden_test_count: { Args: { target_exercise_id: string }; Returns: number };
+      is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      is_assigned_to_me: { Args: { target_exercise_id: string }; Returns: boolean };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
-      is_staff: { Args: never; Returns: boolean };
+      is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
       open_attempt: {
         Args: { target_exercise_id: string };
         Returns: {
@@ -570,9 +564,7 @@ export type Tables<
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never) = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R;
@@ -595,9 +587,7 @@ export type TablesInsert<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never) = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I;
     }
@@ -619,9 +609,7 @@ export type TablesUpdate<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never) = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U;
     }
@@ -643,9 +631,7 @@ export type Enums<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never) = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
     ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
@@ -659,9 +645,7 @@ export type CompositeTypes<
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never) = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
     ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
