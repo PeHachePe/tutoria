@@ -414,7 +414,9 @@ export type Database = {
           hint_level: number;
           id: string;
           intensity: number;
+          model: string | null;
           prompt_version: string;
+          request_id: string | null;
           student_message: string | null;
           transcript: string;
           trigger: Database['public']['Enums']['tutor_trigger'];
@@ -428,7 +430,9 @@ export type Database = {
           hint_level: number;
           id?: string;
           intensity: number;
+          model?: string | null;
           prompt_version: string;
+          request_id?: string | null;
           student_message?: string | null;
           transcript: string;
           trigger: Database['public']['Enums']['tutor_trigger'];
@@ -441,7 +445,9 @@ export type Database = {
           hint_level?: number;
           id?: string;
           intensity?: number;
+          model?: string | null;
           prompt_version?: string;
+          request_id?: string | null;
           student_message?: string | null;
           transcript?: string;
           trigger?: Database['public']['Enums']['tutor_trigger'];
@@ -472,6 +478,10 @@ export type Database = {
       is_assigned_to_me: { Args: { target_exercise_id: string }; Returns: boolean };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
+      latest_tutor_calls: {
+        Args: { max_count: number; since: string; target_user_id: string };
+        Returns: string[];
+      };
       open_attempt: {
         Args: { target_exercise_id: string };
         Returns: {
@@ -501,6 +511,23 @@ export type Database = {
           target_attempt_id: string;
         };
         Returns: undefined;
+      };
+      record_tutor_interaction: {
+        Args: {
+          answer_elusion: boolean;
+          answer_emotion: Database['public']['Enums']['emotion'];
+          answer_hint_level: number;
+          answer_intensity: number;
+          answer_model: string;
+          answer_prompt_version: string;
+          answer_silent: boolean;
+          answer_transcript: string;
+          asked_message: string;
+          asked_trigger: Database['public']['Enums']['tutor_trigger'];
+          target_attempt_id: string;
+          target_request_id: string;
+        };
+        Returns: string;
       };
       submit_attempt: {
         Args: { target_attempt_id: string };
