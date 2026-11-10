@@ -8,8 +8,8 @@ import { ELUSION_ANSWER, TUTOR_ANSWERS } from './fixtures/tutor-script';
 import { DAW_STUDENT_IDS } from './fixtures/users';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
-import { MOCK_TUTOR_TYPING_MS, MockTutorService } from './mock-tutor-service';
-import { typingChunks } from './scripted-answer';
+import { TUTOR_TYPING_MS, typingChunks } from '../tutor/typing';
+import { MockTutorService } from './mock-tutor-service';
 
 const NOW = '2026-11-10T09:30:00.000Z';
 const STUDENT = DAW_STUDENT_IDS[0];
@@ -35,7 +35,14 @@ const SUBMITTED: Attempt = { ...attemptOf(STUDENT, 'submitted'), id: 'attempt-su
 const CODE = 'function suma(v) {\n  return 0;\n}';
 
 function request(overrides: Partial<TutorRequest> = {}): TutorRequest {
-  return { attemptId: ATTEMPT.id, kind: 'hint', code: CODE, language: 'es', ...overrides };
+  return {
+    requestId: crypto.randomUUID(),
+    attemptId: ATTEMPT.id,
+    kind: 'hint',
+    code: CODE,
+    language: 'es',
+    ...overrides,
+  };
 }
 
 async function collect(events: AsyncIterable<TutorEvent>): Promise<TutorEvent[]> {
@@ -53,7 +60,7 @@ describe('MockTutorService', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
     TestBed.configureTestingModule({
-      providers: [MockTutorService, { provide: MOCK_TUTOR_TYPING_MS, useValue: typingMs }],
+      providers: [MockTutorService, { provide: TUTOR_TYPING_MS, useValue: typingMs }],
     });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     db = TestBed.inject(MockDb);
@@ -159,12 +166,6 @@ describe('MockTutorService', () => {
     await expect(collect(service.ask(request({ attemptId: SUBMITTED.id })))).rejects.toMatchObject({
       kind: 'invalid',
     });
-  });
-
-  it('writes at the pace of someone typing by default', () => {
-    TestBed.configureTestingModule({});
-
-    expect(TestBed.inject(MOCK_TUTOR_TYPING_MS)).toBe(40);
   });
 
   it('needs the message of a question', async () => {

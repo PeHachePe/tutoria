@@ -58,22 +58,27 @@ const KIND_OF_STATUS: Readonly<Record<number, DataErrorKind>> = {
 };
 
 /** Translates a failure of Supabase into the only error the data services throw (4.2). */
-export function toDataError(failure: SupabaseFailure): DataError {
+export function toDataError(failure: SupabaseFailure, retryAfterSeconds?: number): DataError {
   const kind =
     (failure.code && KIND_OF_CODE[failure.code]) ||
     (failure.status !== undefined && KIND_OF_STATUS[failure.status]) ||
     'unknown';
-  return new DataError(kind, failure.message, { cause: failure });
+  return new DataError(kind, failure.message, { cause: failure, retryAfterSeconds });
 }
 
 /**
  * Translates a failure of `functions.invoke()`: by the status the Edge Function answered with
- * (`_shared/http.ts`), or `network` without an answer. The relay fails when the function does not
- * exist or cannot start.
+ * (`_shared/http.ts`), with how long to wait if it set a limit, or `network` without an answer. The
+ * relay fails when the function does not exist or cannot start.
  */
 export function toFunctionDataError(error: Error): DataError {
   if (error instanceof FunctionsHttpError) {
-    return toDataError({ message: error.message, status: (error.context as Response).status });
+    const response = error.context as Response;
+    const retryAfter = Number(response.headers.get('Retry-After'));
+    return toDataError(
+      { message: error.message, status: response.status },
+      retryAfter > 0 ? retryAfter : undefined,
+    );
   }
   if (error instanceof FunctionsFetchError)
     return toDataError({ message: error.message, status: 0 });

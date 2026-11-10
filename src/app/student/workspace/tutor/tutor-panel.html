@@ -177,9 +177,7 @@
               @if (isSessionExpired(turn.error)) {
                 <app-sign-in-again />
               } @else {
-                <button matButton type="button" (click)="retry(turn)" i18n="@@tutor.retry">
-                  Reintentar
-                </button>
+                <app-retry-button [error]="turn.error" (retry)="retry(turn)" />
               }
             </div>
           } @else {

@@ -10,15 +10,25 @@ export type DataErrorKind =
   | 'invalid'
   | 'unknown';
 
+export interface DataErrorOptions extends ErrorOptions {
+  /** How long the server asked to wait before trying again (`Retry-After`), for `rate_limited`. */
+  readonly retryAfterSeconds?: number;
+}
+
 /** The only error the data services throw: both versions (mock and Supabase) translate their errors into it. */
 export class DataError extends Error {
   override readonly name = 'DataError';
+  /** When it makes sense to try again (epoch milliseconds), if the server said so. */
+  readonly retryAt?: number;
 
   constructor(
     readonly kind: DataErrorKind,
     message = `Data error: ${kind}`,
-    options?: ErrorOptions,
+    options?: DataErrorOptions,
   ) {
     super(message, options);
+    if (options?.retryAfterSeconds) {
+      this.retryAt = Date.now() + options.retryAfterSeconds * 1000;
+    }
   }
 }

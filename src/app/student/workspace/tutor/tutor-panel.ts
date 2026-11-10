@@ -25,6 +25,7 @@ import { AttemptStore } from '../attempt-store';
 import { TutorStore, type TutorTurn } from '../tutor-store';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
 import { TutorComposer } from './tutor-composer';
+import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { tutorErrorMessage } from './tutor-error-message';
 
@@ -50,6 +51,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
   imports: [
     DatePipe,
     MatButton,
+    RetryButton,
     MatIconButton,
     MatIcon,
     MatTooltip,

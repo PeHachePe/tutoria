@@ -23,6 +23,6 @@ export const SEED: MockTables = {
   events: EVENTS,
   aiProvider: {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash-lite',
   },
 };

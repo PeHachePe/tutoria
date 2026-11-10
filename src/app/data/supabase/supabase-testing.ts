@@ -217,6 +217,8 @@ export function interactionRow(
     intensity: 1,
     elusion: false,
     prompt_version: 'v1',
+    request_id: null,
+    model: null,
     created_at: '2026-09-01T08:05:00+00:00',
     ...overrides,
   };

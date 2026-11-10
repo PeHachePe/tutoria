@@ -69,10 +69,8 @@ export type ReactionPart = (
   readonly maxIntensity?: Intensity;
 };
 
-/** A reaction: when to use it, its icon, its emoji, its colours and the parts it is made of. */
+/** A reaction: its icon, its emoji, its colours and the parts it is made of. */
 export interface ReactionRecipe {
-  /** When the tutor should choose it: the real tutor gets it in its prompt (2.5). */
-  readonly use: string;
   /** The big one; also what shows without the 3D emoji or before one loads. */
   readonly icon: string;
   /**
@@ -89,12 +87,11 @@ const emoji = (name: string) => name;
 
 /**
  * The catalog of reactions (D-036). To add one: its name in REACTION_KINDS (data/tutor.ts), which is
- * also the list the tutor chooses from, and its recipe here; to add an emoji, its name in `npm run
+ * also the list the tutor chooses from, with when to use it in REACTION_USES, and its recipe here; to add an emoji, its name in `npm run
  * emojis` and here. A new kind of motion also needs its block and its file in styles/.
  */
 export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
   hearts: {
-    use: 'Warmth: the student understood something, or thanks the tutor.',
     icon: 'favorite',
     emojis: [
       'smiling-face-with-hearts',
@@ -123,7 +120,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   cheer: {
-    use: 'Encouragement to start or to keep going.',
     icon: 'thumb_up',
     emojis: [emoji('thumbs-up')],
     tones: ['green', 'cyan', 'blue', 'yellow'],
@@ -138,7 +134,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   party: {
-    use: 'Celebration: every test passes or the exercise is done.',
     icon: 'celebration',
     emojis: [emoji('party-popper'), emoji('partying-face')],
     tones: ['yellow', 'pink', 'orange', 'green', 'cyan', 'blue', 'violet', 'red'],
@@ -161,7 +156,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   thinking: {
-    use: 'A hint that makes the student think: a question back, a detail to look at.',
     icon: 'psychology_alt',
     emojis: ['thinking-face', 'face-with-monocle', 'nerd-face'].map(emoji),
     tones: ['blue', 'cyan', 'violet'],
@@ -171,7 +165,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   lightbulb: {
-    use: 'An idea that switches on: the key of a hint.',
     icon: 'lightbulb',
     // Still: it moves with the flicker of a bulb that switches on
     emojis: [emoji('light-bulb')],
@@ -183,7 +176,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   rocket: {
-    use: 'A big step forward: much progress at once.',
     icon: 'rocket_launch',
     emojis: [emoji('rocket')],
     tones: ['blue', 'orange', 'yellow', 'red'],
@@ -199,7 +191,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   fire: {
-    use: 'On a roll: several good steps in a row.',
     icon: 'local_fire_department',
     emojis: [emoji('fire')],
     tones: ['orange', 'red', 'yellow'],
@@ -210,7 +201,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   applause: {
-    use: 'Good reasoning or a good question.',
     icon: 'cheer',
     emojis: [emoji('clapping-hands')],
     tones: ['orange', 'yellow', 'pink', 'cyan'],
@@ -223,7 +213,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   'mind-blown': {
-    use: 'Admiration: a brilliant idea or solution of the student.',
     icon: 'psychology',
     emojis: [emoji('exploding-head'), emoji('knocked-out-face')],
     tones: ['violet', 'pink', 'yellow', 'cyan'],
@@ -240,7 +229,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   laugh: {
-    use: 'Humour: the student made a joke, or something funny happened.',
     icon: 'sentiment_excited',
     emojis: [emoji('face-with-tears-of-joy'), emoji('rolling-on-the-floor-laughing')],
     tones: ['yellow', 'orange', 'pink', 'cyan'],
@@ -256,7 +244,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
   },
   // The jokes for when the student asks for the solution: always jokes, never for mistakes (D-037)
   wink: {
-    use: 'A friendly «nice try» when the student asks for the solution.',
     icon: 'sentiment_satisfied',
     emojis: [emoji('winking-face'), emoji('smirking-face')],
     tones: ['yellow', 'orange'],
@@ -266,7 +253,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   secret: {
-    use: 'A joke when the student asks for the solution: «my lips are sealed».',
     icon: 'visibility_off',
     emojis: ['see-no-evil-monkey', 'hear-no-evil-monkey', 'speak-no-evil-monkey'].map(emoji),
     tones: ['orange', 'yellow', 'pink'],
@@ -276,7 +262,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   seriously: {
-    use: 'A joke when the student asks for the solution again: «are you kidding me?».',
     icon: 'sentiment_neutral',
     // Resigned: unamused, rolling its eyes, sceptical, or melting with a «meh»
     emojis: [
@@ -292,7 +277,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   throw: {
-    use: 'A joke when the student asks for the solution again: something thrown at the screen.',
     icon: 'sports_baseball',
     // What it throws: a ball, an egg, a pie, a tomato or a poo, chosen by its id as any emoji
     emojis: PROJECTILES.map((thrown) => thrown.emoji),
@@ -300,7 +284,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     parts: [{ block: 'throw' }],
   },
   grumpy: {
-    use: 'A joke when the student insists on the solution: a mock anger that, at the top, blows up.',
     icon: 'sentiment_frustrated',
     emojis: ['face-with-steam-from-nose', 'pouting-face', 'face-with-symbols-on-mouth'].map(emoji),
     tones: ['red', 'orange'],
@@ -313,7 +296,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   eyes: {
-    use: 'The tutor looks in on its own initiative, to see how it goes.',
     icon: 'visibility',
     emojis: [emoji('eyes')],
     tones: ['blue', 'cyan', 'yellow'],
@@ -323,7 +305,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   empathy: {
-    use: 'The student is stuck or frustrated: understanding before the help.',
     icon: 'volunteer_activism',
     emojis: ['hugging-face', 'relieved-face', 'pleading-face'].map(emoji),
     tones: ['pink', 'violet', 'orange'],
@@ -334,7 +315,6 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
     ],
   },
   sleepy: {
-    use: 'A long time without activity: «are you still there?».',
     icon: 'bedtime',
     emojis: [emoji('yawning-face')],
     tones: ['blue', 'violet'],

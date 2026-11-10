@@ -163,6 +163,7 @@ describe('TutorStore', () => {
     await store.ask('  ¿Por dónde empiezo?  ');
 
     const request: TutorRequest = {
+      requestId: store.turns()[0].id,
       attemptId: 'a1',
       kind: 'question',
       message: '¿Por dónde empiezo?',
@@ -330,10 +331,12 @@ describe('TutorStore', () => {
 
     await store.retry(failed.id);
 
+    // The same request again, so the server can give back an answer it had already recorded
     expect(ask).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: 'question', message: '¿Qué falla?' }),
+      expect.objectContaining({ requestId: failed.id, kind: 'question', message: '¿Qué falla?' }),
     );
     expect(store.turns()).toHaveLength(1);
+    expect(store.turns()[0].id).toBe(failed.id);
     expect(store.turns()[0]).toMatchObject({ status: 'done', answer: 'Hola, ¿qué tal?' });
   });
 

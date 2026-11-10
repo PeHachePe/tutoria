@@ -3,11 +3,12 @@ import { computed, inject, linkedSignal, resource, Service } from '@angular/core
 import { LanguageService } from '../../core/i18n/language-service';
 import { AttemptService } from '../../data/attempt-service';
 import {
+  answerHintLevel,
   type Emotion,
   EMOTION_REACTIONS,
   type HintLevel,
   type Intensity,
-  MAX_HINT_LEVEL,
+  reachedHintLevel,
   type ReactionKind,
   type TutorInteraction,
   type TutorTrigger,
@@ -80,19 +81,9 @@ export class TutorStore {
   );
 
   /** The level «Pedir pista» has reached in this attempt: 0 before the first hint. */
-  readonly hintLevel = computed(() =>
-    this.turnsState().reduce<HintLevel | 0>(
-      (level, turn) =>
-        turn.trigger === 'hint' && turn.hintLevel !== null && turn.hintLevel > level
-          ? turn.hintLevel
-          : level,
-      0,
-    ),
-  );
-  /** What the next hint will be: one level more, up to the most concrete. */
-  readonly nextHintLevel = computed(
-    () => Math.min(this.hintLevel() + 1, MAX_HINT_LEVEL) as HintLevel,
-  );
+  readonly hintLevel = computed(() => reachedHintLevel(this.turnsState()));
+  /** What the next hint will be: one level more, up to the most concrete, as the server decides. */
+  readonly nextHintLevel = computed(() => answerHintLevel('hint', this.turnsState()));
 
   private readonly freshAnswers = computed(() =>
     this.turnsState().filter((turn) => turn.fresh && turn.status === 'done'),
@@ -143,12 +134,15 @@ export class TutorStore {
     return this.send('hint');
   }
 
-  /** Sends again what a failed turn asked, in its place. */
+  /**
+   * Sends again what a failed turn asked, in its place and with its id: if the server had recorded
+   * it before the answer was lost, it gives that answer back instead of a new one (2.6).
+   */
   async retry(turnId: string): Promise<void> {
     const failed = this.turnsState().find((turn) => turn.id === turnId);
     if (failed?.status !== 'failed') return;
     this.turnsState.update((turns) => turns.filter((turn) => turn.id !== turnId));
-    await this.send(failed.trigger, failed.studentMessage ?? undefined);
+    await this.send(failed.trigger, failed.studentMessage ?? undefined, turnId);
   }
 
   reload(): void {
@@ -158,12 +152,15 @@ export class TutorStore {
   /**
    * Sends the request with the code as it is now, unsaved changes included, and writes the answer as
    * it arrives. Another exercise opened meanwhile has a conversation of its own, where this turn no
-   * longer exists, so its late events change nothing.
+   * longer exists, so its late events change nothing. The id of the turn is the id of the request.
    */
-  private async send(kind: TutorTrigger, message?: string): Promise<void> {
+  private async send(
+    kind: TutorTrigger,
+    message?: string,
+    id: string = crypto.randomUUID(),
+  ): Promise<void> {
     const attempt = this.attemptStore.attempt();
     if (!attempt || !this.canAsk()) return;
-    const id = crypto.randomUUID();
     this.turnsState.update((turns) => [
       ...turns,
       {
@@ -187,6 +184,7 @@ export class TutorStore {
 
     try {
       const events = this.tutor.ask({
+        requestId: id,
         attemptId: attempt.id,
         kind,
         message,

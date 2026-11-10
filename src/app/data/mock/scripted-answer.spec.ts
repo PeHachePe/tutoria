@@ -7,12 +7,7 @@ import {
   STATEMENT_ANSWER,
   TUTOR_ANSWERS,
 } from './fixtures/tutor-script';
-import {
-  currentHintLevel,
-  type ScriptInput,
-  scriptedAnswer,
-  typingChunks,
-} from './scripted-answer';
+import { type ScriptInput, scriptedAnswer } from './scripted-answer';
 
 const CODE = 'function suma(v) {\n  return 0;\n}';
 
@@ -42,14 +37,6 @@ function input(overrides: Partial<ScriptInput>): ScriptInput {
 
 describe('scripted answer', () => {
   describe('hint level', () => {
-    it('is none before the first hint, and each hint raises it up to 3', () => {
-      expect(currentHintLevel([])).toBe(0);
-      expect(currentHintLevel([interaction('question')])).toBe(0);
-      expect(currentHintLevel([interaction('hint', 1), interaction('hint', 2)])).toBe(2);
-      const four = [1, 2, 3, 3].map((level) => interaction('hint', level as HintLevel));
-      expect(currentHintLevel(four)).toBe(3);
-    });
-
     it('raises a level with each hint, starting at 1 and staying at 3', () => {
       expect(scriptedAnswer(input({ kind: 'hint' })).hintLevel).toBe(1);
       expect(
@@ -192,10 +179,5 @@ describe('scripted answer', () => {
     );
     expect(quiet.silent).toBe(true);
     expect(quiet.text).toBe('');
-  });
-
-  it('splits the text in chunks of a few words, as if it were being written', () => {
-    expect(typingChunks('Uno dos tres cuatro cinco')).toEqual(['Uno dos tres ', 'cuatro cinco']);
-    expect(typingChunks('')).toEqual([]);
   });
 });

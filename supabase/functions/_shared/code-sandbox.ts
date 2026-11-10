@@ -4,7 +4,8 @@ import type { RunOutcome, RunRequest } from '../../../src/app/data/code-runner/r
  * Where the student's code runs, isolated from the function and its secrets (D-042). It only gets
  * the code and the inputs, never the expected values: the function compares outside. Today it is
  * QuickJS inside the function (`QuickJsSandbox`); another language, or another engine such as
- * Judge0, is another class with this same method, wired in `index.ts`.
+ * Judge0, is another class with this same method, wired in the `index.ts` of each function: `execute`
+ * runs every test with it, and `tutor` the examples, to tell the model what the code does now.
  */
 export interface CodeSandbox {
   /**

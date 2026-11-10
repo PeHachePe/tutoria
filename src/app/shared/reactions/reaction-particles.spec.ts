@@ -30,11 +30,10 @@ const idWithVariant = (variant: number, count: number) =>
   )!;
 
 describe('reactionParticles', () => {
-  it('has a recipe for every reaction, with when to use it and its emoji', () => {
+  it('has a recipe for every reaction, with its emoji', () => {
     expect(Object.keys(REACTION_RECIPES).sort()).toEqual([...REACTION_KINDS].sort());
     for (const kind of REACTION_KINDS) {
       const recipe = REACTION_RECIPES[kind];
-      expect(recipe.use.length, kind).toBeGreaterThan(10);
       expect(recipe.emojis?.length, kind).toBeGreaterThan(0);
       expect(full(kind).length, kind).toBeGreaterThan(0);
     }

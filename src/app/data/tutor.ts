@@ -1,54 +1,32 @@
 import type { AppLocale } from '../core/i18n/locale';
+import type { HintLevel, Emotion, Intensity, TutorTrigger } from './tutor/tutor-contract';
 
-export type HintLevel = 1 | 2 | 3;
-
-/** The most concrete hint: asking for another one stays there (2.6). */
-export const MAX_HINT_LEVEL: HintLevel = 3;
-
-export type TutorTrigger = 'question' | 'hint' | 'proactive';
-
-export type Emotion = 'joy' | 'surprise' | 'encouragement' | 'celebration';
-
-export type Intensity = 1 | 2 | 3;
-
-/**
- * The visual reactions the tutor can choose for an answer (1.8, D-035): each one has its own
- * choreography on screen. The emotion is the data the teacher analyses; the reaction is only how
- * it looks, so it is optional and falls back to the one of the emotion.
- */
-export const REACTION_KINDS = [
-  'hearts',
-  'cheer',
-  'party',
-  'thinking',
-  'lightbulb',
-  'rocket',
-  'fire',
-  'applause',
-  'mind-blown',
-  'laugh',
-  'wink',
-  'secret',
-  'seriously',
-  'throw',
-  'grumpy',
-  'eyes',
-  'empathy',
-  'sleepy',
-] as const;
-
-export type ReactionKind = (typeof REACTION_KINDS)[number];
-
-/** The reaction of each emotion, when the tutor does not choose one. */
-export const EMOTION_REACTIONS: Record<Emotion, ReactionKind> = {
-  joy: 'hearts',
-  surprise: 'mind-blown',
-  encouragement: 'cheer',
-  celebration: 'party',
-};
+// The contract the Edge Function `tutor` shares with the app lives in a file without imports
+export {
+  answerHintLevel,
+  type Emotion,
+  EMOTION_REACTIONS,
+  EMOTIONS,
+  type HintLevel,
+  type Intensity,
+  type LeveledTurn,
+  MAX_HINT_LEVEL,
+  REACTION_KINDS,
+  REACTION_USES,
+  type ReactionKind,
+  reachedHintLevel,
+  TUTOR_TRIGGERS,
+  type TutorEvent,
+  type TutorTrigger,
+} from './tutor/tutor-contract';
 
 /** What the client sends to the tutor (2.6). */
 export interface TutorRequest {
+  /**
+   * Chosen by the client for each turn and sent again when it retries it: the server answers a
+   * request it already recorded with that answer, so a retry never raises the level twice (2.6).
+   */
+  readonly requestId: string;
   readonly attemptId: string;
   readonly kind: TutorTrigger;
   /** Only for `question`. */
@@ -58,24 +36,6 @@ export interface TutorRequest {
   /** Language of the interface, which the tutor answers in (D-033). */
   readonly language: AppLocale;
 }
-
-/** Each answer arrives as `meta` → `delta`(s) → `done`. */
-export type TutorEvent =
-  | {
-      readonly type: 'meta';
-      readonly emotion: Emotion;
-      readonly intensity: Intensity;
-      readonly hintLevel: HintLevel;
-      /** How the reaction looks; without it, the one of the emotion. */
-      readonly reaction?: ReactionKind;
-    }
-  | { readonly type: 'delta'; readonly text: string }
-  | {
-      readonly type: 'done';
-      readonly interactionId: string | null;
-      /** The model chose not to intervene. */
-      readonly silent: boolean;
-    };
 
 /** Table `tutor_interaction`, written only by the server. */
 export interface TutorInteraction {

@@ -6,3 +6,6 @@
 .env.keys
 .env.local
 .env.*.local
+
+# Secrets of the Edge Functions in local (the AI key, step 2.4): never in the repository
+functions/.env

@@ -1,9 +1,9 @@
 import type { StoredAttemptStatus } from '../attempt';
 import {
+  answerHintLevel,
   type Emotion,
   type HintLevel,
   type Intensity,
-  MAX_HINT_LEVEL,
   type ReactionKind,
   type TutorInteraction,
   type TutorTrigger,
@@ -68,18 +68,9 @@ const ELUSION_PATTERN =
 
 const STATEMENT_PATTERN = /enunciado|enunciat|statement/;
 
-/** Words per chunk of the answer, as the mock writes it a little at a time. */
-const WORDS_PER_CHUNK = 3;
-
-/** The level the conversation has reached: each «Pedir pista» raised it (0 before the first). */
-export function currentHintLevel(previous: readonly TutorInteraction[]): HintLevel | 0 {
-  const hints = previous.filter((interaction) => interaction.trigger === 'hint').length;
-  return Math.min(hints, MAX_HINT_LEVEL) as HintLevel | 0;
-}
-
 /**
- * The answer of the scripted tutor (4.3). The level follows the rules of the server (2.6): a hint
- * raises it, up to 3, and the rest is answered at the current one, at least 1. It never gives the
+ * The answer of the scripted tutor (4.3). The level follows the rules of the server (2.6), with the
+ * same function. It never gives the
  * solution: asking for it gets a question back and is recorded as an elusion.
  */
 export function scriptedAnswer({
@@ -89,10 +80,7 @@ export function scriptedAnswer({
   status,
   previous,
 }: ScriptInput): ScriptedAnswer {
-  const current = currentHintLevel(previous);
-  const hintLevel = (
-    kind === 'hint' ? Math.min(current + 1, MAX_HINT_LEVEL) : Math.max(current, 1)
-  ) as HintLevel;
+  const hintLevel = answerHintLevel(kind, previous);
   const answer = (
     text: string,
     emotion: Emotion,
@@ -128,16 +116,6 @@ export function scriptedAnswer({
       return answer(hint, 'joy', QUESTION_REACTIONS[previous.length % QUESTION_REACTIONS.length]);
     }
   }
-}
-
-/** The answer in chunks of a few words, which the mock sends one by one as `delta` events. */
-export function typingChunks(text: string): string[] {
-  const words = text.match(/\S+\s*/g) ?? [];
-  const chunks: string[] = [];
-  for (let start = 0; start < words.length; start += WORDS_PER_CHUNK) {
-    chunks.push(words.slice(start, start + WORDS_PER_CHUNK).join(''));
-  }
-  return chunks;
 }
 
 function withoutAccents(text: string): string {

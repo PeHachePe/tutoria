@@ -3895,4 +3895,4 @@ insert into process_event (id, attempt_id, type, timestamp, detail) values
   ('90000000-0000-4000-8000-000000000693', '70000000-0000-4000-8000-000000000202', 'submit', '2026-10-15T10:52:00.000Z', 'null'::jsonb);
 
 insert into app_setting (key, value) values
-  ('ai_provider', '{"baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash"}'::jsonb);
+  ('ai_provider', '{"baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-3.5-flash-lite"}'::jsonb);

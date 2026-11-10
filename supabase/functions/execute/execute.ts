@@ -1,14 +1,11 @@
 import { buildRunResult, encodeRunResult } from '../../../src/app/data/code-runner/run-result.ts';
 import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
-import type { CodeSandbox } from './code-sandbox.ts';
+import { MAX_CODE_LENGTH, minuteBefore, secondsToWait } from '../_shared/limits.ts';
+import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import type { RunStore } from './run-store.ts';
 
 /** Runs a user may start in a minute (2.3). */
 export const RUNS_PER_MINUTE = 10;
-const MINUTE_MS = 60_000;
-
-/** Far above any solution of a beginner: a larger body is not a solution. */
-export const MAX_CODE_LENGTH = 50_000;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -47,7 +44,8 @@ export function createExecuteHandler({
       if (attempt.status === 'submitted') return failure(409, 'The attempt is submitted');
 
       const wait = secondsToWait(
-        await store.latestRuns(userId, new Date(now() - MINUTE_MS), RUNS_PER_MINUTE),
+        await store.latestRuns(userId, minuteBefore(now()), RUNS_PER_MINUTE),
+        RUNS_PER_MINUTE,
         now(),
       );
       if (wait > 0) return failure(429, 'Too many runs', { 'Retry-After': String(wait) });
@@ -91,14 +89,4 @@ async function readBody(request: Request): Promise<{ attemptId: string; code: st
     // Not JSON: below
   }
   return null;
-}
-
-/**
- * Seconds until the user may run again, or 0 if they may now: with the limit reached, when the
- * oldest of the latest runs leaves the minute.
- */
-export function secondsToWait(latestRuns: readonly Date[], now: number): number {
-  if (latestRuns.length < RUNS_PER_MINUTE) return 0;
-  const oldest = latestRuns[RUNS_PER_MINUTE - 1].getTime();
-  return Math.max(1, Math.ceil((oldest + MINUTE_MS - now) / 1000));
 }

@@ -14,7 +14,7 @@ import { SupabaseAuthService } from './supabase-auth-service';
 import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
-import { UnavailableTutorService } from './unavailable-tutor-service';
+import { SupabaseTutorService } from './supabase-tutor-service';
 
 describe('provideSupabaseData', () => {
   const fetchSpy = vi.fn<typeof fetch>(() => Promise.resolve(Response.json([])));
@@ -39,10 +39,7 @@ describe('provideSupabaseData', () => {
     expect(TestBed.inject(AttemptService)).toBeInstanceOf(SupabaseAttemptService);
     expect(TestBed.inject(EventService)).toBeInstanceOf(SupabaseEventService);
     expect(TestBed.inject(CodeRunnerService)).toBeInstanceOf(SupabaseCodeRunnerService);
-  });
-
-  it('leaves the tutor unavailable until its Edge Function exists', () => {
-    expect(TestBed.inject(TutorService)).toBeInstanceOf(UnavailableTutorService);
+    expect(TestBed.inject(TutorService)).toBeInstanceOf(SupabaseTutorService);
   });
 
   it('creates one client for the project, with the publishable key', async () => {

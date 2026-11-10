@@ -344,7 +344,14 @@ deno_version = 2
 [functions.execute]
 enabled = true
 verify_jwt = true
-import_map = "./functions/execute/deno.json"
+import_map = "./functions/deno.json"
+
+# Step 2.4 · The AI tutor (docs/PLAN.md §2.6): the provider comes from `app_setting.ai_provider` and
+# its key from the secret AI_API_KEY (in local, supabase/functions/.env, ignored by git).
+[functions.tutor]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deno.json"
 
 [analytics]
 enabled = true

@@ -1,4 +1,4 @@
-import { inject, InjectionToken, Service } from '@angular/core';
+import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
 import type { ProcessEvent } from '../process-event';
@@ -7,12 +7,8 @@ import { TutorService } from '../tutor-service';
 import { findOwnAttempt, now } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
-import { type ScriptedAnswer, scriptedAnswer, typingChunks } from './scripted-answer';
-
-/** Pause before each chunk of the answer, in milliseconds, as if it were being written. */
-export const MOCK_TUTOR_TYPING_MS = new InjectionToken<number>('MOCK_TUTOR_TYPING_MS', {
-  factory: () => 40,
-});
+import { TUTOR_TYPING_MS, typeOut } from '../tutor/typing';
+import { type ScriptedAnswer, scriptedAnswer } from './scripted-answer';
 
 /** Version of the prompt the interactions record (2.6); the scripted tutor follows v0. */
 const PROMPT_VERSION = 'v0';
@@ -27,7 +23,7 @@ const PROMPT_VERSION = 'v0';
 export class MockTutorService extends TutorService {
   private readonly db = inject(MockDb);
   private readonly network = inject(MockNetwork);
-  private readonly typingMs = inject(MOCK_TUTOR_TYPING_MS);
+  private readonly typingMs = inject(TUTOR_TYPING_MS);
 
   ask(request: TutorRequest): AsyncIterable<TutorEvent> {
     return this.answer(request);
@@ -37,8 +33,7 @@ export class MockTutorService extends TutorService {
     const { answer, interactionId } = await this.network.request(() => this.record(request));
     const { emotion, intensity, reaction, hintLevel, text, silent } = answer;
     yield { type: 'meta', emotion, intensity, hintLevel, reaction };
-    for (const chunk of typingChunks(text)) {
-      await wait(this.typingMs);
+    for await (const chunk of typeOut(text, this.typingMs)) {
       yield { type: 'delta', text: chunk };
     }
     yield { type: 'done', interactionId, silent };
@@ -106,8 +101,4 @@ export class MockTutorService extends TutorService {
         return undefined;
     }
   }
-}
-
-function wait(ms: number): Promise<void> {
-  return ms === 0 ? Promise.resolve() : new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -1,13 +1,9 @@
 import { assertEquals } from '@std/assert';
 
 import type { RunOutcome, RunResult } from '../../../src/app/data/code-runner/run-result.ts';
-import type { CodeSandbox } from './code-sandbox.ts';
-import {
-  createExecuteHandler,
-  MAX_CODE_LENGTH,
-  RUNS_PER_MINUTE,
-  secondsToWait,
-} from './execute.ts';
+import type { CodeSandbox } from '../_shared/code-sandbox.ts';
+import { MAX_CODE_LENGTH, secondsToWait } from '../_shared/limits.ts';
+import { createExecuteHandler, RUNS_PER_MINUTE } from './execute.ts';
 import type { RecordOutcome, RunAttempt, RunStore } from './run-store.ts';
 
 const NOW = Date.parse('2026-11-10T10:00:00Z');
@@ -215,7 +211,7 @@ Deno.test('a failure of the server is an unknown error, never a crash', async ()
 Deno.test('secondsToWait lets run below the limit and waits at least a second at it', () => {
   const runs = (ago: number) => Array.from({ length: RUNS_PER_MINUTE }, () => new Date(NOW - ago));
 
-  assertEquals(secondsToWait(runs(1_000).slice(1), NOW), 0);
-  assertEquals(secondsToWait(runs(30_000), NOW), 30);
-  assertEquals(secondsToWait(runs(59_999), NOW), 1);
+  assertEquals(secondsToWait(runs(1_000).slice(1), RUNS_PER_MINUTE, NOW), 0);
+  assertEquals(secondsToWait(runs(30_000), RUNS_PER_MINUTE, NOW), 30);
+  assertEquals(secondsToWait(runs(59_999), RUNS_PER_MINUTE, NOW), 1);
 });

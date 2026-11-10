@@ -126,12 +126,28 @@ describe('MockNetwork', () => {
     network.failNextRequest('rate_limited');
     expect(network.failNext()).toBe('rate_limited');
 
-    await expect(network.request(operation)).rejects.toEqual(
-      new DataError('rate_limited', 'Simulated failure: rate_limited'),
-    );
+    await expect(network.request(operation)).rejects.toMatchObject({
+      kind: 'rate_limited',
+      message: 'Simulated failure: rate_limited',
+    });
     expect(operation).not.toHaveBeenCalled();
     expect(network.failNext()).toBeNull();
     await expect(network.request(operation)).resolves.toBe('ok');
+  });
+
+  it('asks to wait a few seconds after a simulated limit, as the server does', async () => {
+    vi.useFakeTimers({ now: Date.parse('2026-11-10T10:00:00Z') });
+    const network = create();
+    network.setLatency({ min: 0, max: 0 });
+
+    network.failNextRequest('rate_limited');
+    const limited = await network.request(() => 'ok').catch((error: unknown) => error);
+    network.failNextRequest('network');
+    const offline = await network.request(() => 'ok').catch((error: unknown) => error);
+
+    expect(limited).toMatchObject({ retryAt: Date.parse('2026-11-10T10:00:10Z') });
+    expect(offline).toMatchObject({ kind: 'network', retryAt: undefined });
+    vi.useRealTimers();
   });
 
   it('cancels a pending failure', async () => {

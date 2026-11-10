@@ -164,9 +164,7 @@
     @if (actionSessionExpired()) {
       <app-sign-in-again />
     } @else {
-      <button matButton type="button" (click)="retryAction()" i18n="@@workspace.retryAction">
-        Reintentar
-      </button>
+      <app-retry-button [error]="store.actionError()?.error" (retry)="retryAction()" />
     }
   </div>
 }

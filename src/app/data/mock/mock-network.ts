@@ -48,11 +48,17 @@ export class MockNetwork {
     this.failNextState.set(null);
     await wait(this.latencyState());
     if (failure) {
-      throw new DataError(failure, `Simulated failure: ${failure}`);
+      throw new DataError(failure, `Simulated failure: ${failure}`, {
+        // As the runner and the tutor say how long to wait (Retry-After)
+        retryAfterSeconds: failure === 'rate_limited' ? SIMULATED_RETRY_AFTER_SECONDS : undefined,
+      });
     }
     return operation();
   }
 }
+
+/** The wait a simulated limit asks for, short enough to see the countdown end. */
+const SIMULATED_RETRY_AFTER_SECONDS = 10;
 
 function wait({ min, max }: LatencyRange): Promise<void> {
   const ms = Math.round(min + Math.random() * (max - min));

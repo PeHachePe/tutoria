@@ -26,6 +26,7 @@ import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { AttemptStore } from '../attempt-store';
 import { BrowserSignals } from '../browser-signals';
+import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { actionErrorMessage } from './action-error-message';
 import { RunResults } from './run-results';
@@ -49,6 +50,7 @@ export const CODE_ZONE_ID = 'code-zone';
     RouterLink,
     MatAnchor,
     MatButton,
+    RetryButton,
     MatIconButton,
     MatIcon,
     MatTooltip,

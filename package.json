@@ -14,7 +14,7 @@
     "check": "prettier --check . && ng lint && ng test --watch=false && npm run test:scripts && npm run test:functions && npm run seed -- --check && npm run i18n -- --check",
     "format": "prettier --write .",
     "test:scripts": "node --test \".claude/hooks/*.test.mjs\" \"scripts/**/*.test.mjs\"",
-    "test:functions": "deno test --config supabase/functions/execute/deno.json supabase/functions",
+    "test:functions": "deno test --config supabase/functions/deno.json supabase/functions",
     "metrics": "node scripts/metrics.mjs",
     "seed": "node scripts/generate-seed.mjs",
     "db:start": "supabase start",

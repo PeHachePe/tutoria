@@ -15,12 +15,11 @@ import { SupabaseAuthService } from './supabase-auth-service';
 import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
-import { UnavailableTutorService } from './unavailable-tutor-service';
+import { SupabaseTutorService } from './supabase-tutor-service';
 
 /**
- * The Supabase version of every data service, with the only client of the app (4.4). The tutor
- * stays unavailable until its Edge Function exists (step 2.4); the rest of the services join in
- * their own steps.
+ * The Supabase version of every data service, with the only client of the app (4.4); the rest of
+ * the services join in their own steps.
  */
 export function provideSupabaseData(config: SupabaseConfig): EnvironmentProviders {
   return makeEnvironmentProviders([
@@ -36,6 +35,6 @@ export function provideSupabaseData(config: SupabaseConfig): EnvironmentProvider
     { provide: AttemptService, useClass: SupabaseAttemptService },
     { provide: EventService, useClass: SupabaseEventService },
     { provide: CodeRunnerService, useClass: SupabaseCodeRunnerService },
-    { provide: TutorService, useClass: UnavailableTutorService },
+    { provide: TutorService, useClass: SupabaseTutorService },
   ]);
 }
