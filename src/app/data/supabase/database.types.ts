@@ -499,6 +499,15 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      record_run: {
+        Args: {
+          new_status: Database['public']['Enums']['attempt_status'];
+          ran_code: string;
+          run_detail: Json;
+          target_attempt_id: string;
+        };
+        Returns: undefined;
+      };
       submit_attempt: {
         Args: { target_attempt_id: string };
         Returns: {
