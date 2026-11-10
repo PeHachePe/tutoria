@@ -24,9 +24,10 @@ const KIND_OF_CODE: Readonly<Record<string, DataErrorKind>> = {
   '23514': 'invalid',
   // The RLS or the column privileges reject the write
   '42501': 'forbidden',
-  // Auth: wrong credentials, a disabled account or a session that cannot be renewed
+  // Auth: a disabled account, which Auth tells before checking the password (D-041)
+  user_banned: 'forbidden',
+  // Auth: wrong credentials or a session that cannot be renewed
   invalid_credentials: 'unauthorized',
-  user_banned: 'unauthorized',
   session_not_found: 'unauthorized',
   refresh_token_not_found: 'unauthorized',
   bad_jwt: 'unauthorized',

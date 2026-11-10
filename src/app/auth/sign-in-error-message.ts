@@ -1,13 +1,17 @@
 import type { DataErrorKind } from '../data/data-error';
 
 /**
- * Message of the login form for a failed sign-in. A wrong password, a disabled account and an
- * unknown email share one message, so the form never reveals which accounts exist.
+ * Message of the login form for a failed sign-in. A wrong password and an unknown email share one
+ * message, so the form never reveals which accounts exist. A disabled account (`forbidden`) says so:
+ * Supabase Auth already tells it to anyone who asks, whatever the password, so hiding it would only
+ * confuse its owner.
  */
 export function signInErrorMessage(kind: DataErrorKind): string {
   switch (kind) {
     case 'unauthorized':
       return $localize`:@@login.errors.unauthorized:Correo o contraseña incorrectos`;
+    case 'forbidden':
+      return $localize`:@@login.errors.disabled:Tu cuenta está desactivada. Si crees que es un error, habla con tu docente`;
     case 'network':
       return $localize`:@@login.errors.network:No hay conexión. Comprueba la red e inténtalo de nuevo`;
     case 'rate_limited':

@@ -10,7 +10,10 @@ export interface Credentials {
  * and each environment provides its mock or Supabase version (4.2, D-005).
  */
 export abstract class AuthService {
-  /** Throws `DataError('unauthorized')` if the credentials are wrong or the user is disabled. */
+  /**
+   * Throws `DataError('unauthorized')` if the credentials are wrong and `DataError('forbidden')` if
+   * the account is disabled, whatever the password, as Supabase Auth does.
+   */
   abstract signIn(credentials: Credentials): Promise<AppUser>;
 
   abstract signOut(): Promise<void>;

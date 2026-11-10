@@ -316,6 +316,7 @@
     "workspace.editingElsewhere": " Aquest exercici està obert en una altra pestanya. Aquí només el pots llegir, perquè una pestanya no esborri els canvis de l’altra. ",
     "workspace.continueHere": " Continua aquí ",
     "workspace.draftRestored": "Hem recuperat el codi que no s’havia arribat a desar. Ja s’està desant.",
-    "tutor.error.unavailable": "Ara mateix no està disponible: torna-ho a provar més tard."
+    "tutor.error.unavailable": "Ara mateix no està disponible: torna-ho a provar més tard.",
+    "login.errors.disabled": "El teu compte està desactivat. Si creus que és un error, parla amb el teu docent"
   }
 }

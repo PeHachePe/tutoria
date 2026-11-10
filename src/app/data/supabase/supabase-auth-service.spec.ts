@@ -54,10 +54,19 @@ describe('SupabaseAuthService', () => {
     await expect(signIn()).rejects.toMatchObject({ kind: 'unauthorized' });
   });
 
+  it('rejects a disabled account, which Auth blocks whatever the password', async () => {
+    server.on('POST', '/auth/v1/token', {
+      status: 400,
+      body: { code: 400, error_code: 'user_banned', msg: 'User is banned' },
+    });
+
+    await expect(signIn()).rejects.toMatchObject({ kind: 'forbidden' });
+  });
+
   it('signs out again and rejects an account disabled after Auth let it in', async () => {
     server.on('GET', '/rest/v1/app_user', { body: { ...LUCIA, status: 'disabled' } });
 
-    await expect(signIn()).rejects.toMatchObject({ kind: 'unauthorized' });
+    await expect(signIn()).rejects.toMatchObject({ kind: 'forbidden' });
     expect(server.sentTo('POST', '/auth/v1/logout')).toHaveLength(1);
     await expect(service.currentUser()).resolves.toBeNull();
   });

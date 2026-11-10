@@ -32,7 +32,8 @@ Que cualquier usuario entre con su correo y su contraseña y llegue al inicio de
   - Correo: «Introduce tu correo» / «El correo no es válido».
   - Contraseña: «Introduce tu contraseña».
 - **Error del servidor**, según el tipo de `DataError`:
-  - `unauthorized`: «Correo o contraseña incorrectos». También para una cuenta desactivada, para no revelar qué cuentas existen.
+  - `unauthorized`: «Correo o contraseña incorrectos», igual para un correo desconocido, para no revelar qué cuentas existen.
+  - `forbidden`: «Tu cuenta está desactivada. Si crees que es un error, habla con tu docente». Supabase Auth lo dice antes de comprobar la contraseña, así que ocultarlo solo confundiría al alumno (D-041).
   - `network`: «No hay conexión. Comprueba la red e inténtalo de nuevo».
   - `rate_limited`: «Demasiados intentos. Espera un momento e inténtalo de nuevo».
   - cualquier otro: «No se ha podido entrar. Inténtalo de nuevo».

@@ -26,7 +26,7 @@ export class SupabaseAuthService extends AuthService {
     // Auth already blocks the disabled accounts (seed.sql); this covers one disabled meanwhile
     if (user.status !== 'active') {
       await this.signOut();
-      throw new DataError('unauthorized', 'The account is disabled');
+      throw new DataError('forbidden', 'The account is disabled');
     }
     return user;
   }

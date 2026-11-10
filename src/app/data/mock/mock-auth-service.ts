@@ -18,9 +18,9 @@ export class MockAuthService extends AuthService {
     return this.network.request(() => {
       const normalized = email.trim().toLowerCase();
       const user = this.db.tables().users.find((candidate) => candidate.email === normalized);
-      if (!user || user.status !== 'active' || password !== MOCK_PASSWORD) {
-        throw new DataError('unauthorized');
-      }
+      // As Supabase Auth: a disabled account is told before checking the password
+      if (user?.status === 'disabled') throw new DataError('forbidden');
+      if (!user || password !== MOCK_PASSWORD) throw new DataError('unauthorized');
       this.db.setSession(user.id);
       return user;
     });

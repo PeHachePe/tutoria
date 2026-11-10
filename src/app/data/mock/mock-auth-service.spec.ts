@@ -33,13 +33,22 @@ describe('MockAuthService', () => {
   it.each([
     ['a wrong password', 'lucia.martin@tutoria.test', 'otra'],
     ['an unknown email', 'nadie@tutoria.test', MOCK_PASSWORD],
-    ['a disabled account', 'raul.medina@tutoria.test', MOCK_PASSWORD],
   ])('rejects %s as unauthorized', async (_case, email, password) => {
     await expect(service.signIn({ email, password })).rejects.toMatchObject({
       kind: 'unauthorized',
     });
     expect(db.sessionUserId()).toBeNull();
   });
+
+  it.each([MOCK_PASSWORD, 'otra'])(
+    'rejects a disabled account as forbidden, whatever the password (%s), as Supabase does',
+    async (password) => {
+      await expect(
+        service.signIn({ email: 'raul.medina@tutoria.test', password }),
+      ).rejects.toMatchObject({ kind: 'forbidden' });
+      expect(db.sessionUserId()).toBeNull();
+    },
+  );
 
   it('signs out', async () => {
     db.setSession(DAW_STUDENT_IDS[0]);

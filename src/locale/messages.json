@@ -19,6 +19,7 @@
     "login.errors.emailInvalid": "El correo no es válido",
     "login.errors.passwordRequired": "Introduce tu contraseña",
     "login.errors.unauthorized": "Correo o contraseña incorrectos",
+    "login.errors.disabled": "Tu cuenta está desactivada. Si crees que es un error, habla con tu docente",
     "login.errors.network": "No hay conexión. Comprueba la red e inténtalo de nuevo",
     "login.errors.rateLimited": "Demasiados intentos. Espera un momento e inténtalo de nuevo",
     "login.errors.unknown": "No se ha podido entrar. Inténtalo de nuevo",

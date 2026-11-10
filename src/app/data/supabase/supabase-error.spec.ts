@@ -10,7 +10,7 @@ describe('toDataError', () => {
     ['23505', 'invalid'],
     ['42501', 'forbidden'],
     ['invalid_credentials', 'unauthorized'],
-    ['user_banned', 'unauthorized'],
+    ['user_banned', 'forbidden'],
     ['refresh_token_not_found', 'unauthorized'],
     ['over_request_rate_limit', 'rate_limited'],
   ])('reads the code %s as %s, whatever the status', (code, kind) => {
