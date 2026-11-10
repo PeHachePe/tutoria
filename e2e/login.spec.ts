@@ -65,7 +65,7 @@ test.describe('acceso', () => {
     await expect(page.getByLabel('Correo')).toBeFocused();
   });
 
-  test('una contraseña incorrecta y una cuenta desactivada dan el mismo error', async ({
+  test('una contraseña incorrecta no dice si la cuenta existe; una desactivada, sí (D-041)', async ({
     page,
   }) => {
     await signIn(page, 'lucia.martin@tutoria.test', 'otra');
@@ -74,7 +74,9 @@ test.describe('acceso', () => {
     await page.getByLabel('Correo').fill('raul.medina@tutoria.test');
     await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD);
     await page.getByRole('button', { name: 'Entrar' }).click();
-    await expect(page.getByRole('alert')).toHaveText(/Correo o contraseña incorrectos/);
+    await expect(page.getByRole('alert')).toHaveText(
+      /Tu cuenta está desactivada. Si crees que es un error, habla con tu docente/,
+    );
     await expect(page).toHaveURL('/login');
   });
 
