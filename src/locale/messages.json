@@ -152,6 +152,7 @@
     "settings.reactions.emojis": " Emojis 3D ",
     "settings.reactions.emojis.hint": " Animados y con volumen. Sin ellos, emojis planos, más ligeros para conexiones lentas. ",
     "settings.reactions.try": "Probar una reacción",
+    "settings.reactions.try.hint": " Cada prueba cambia de reacción y de intensidad. En el chat, la intensidad la elige el tutor según el momento. ",
     "settings.tutor": "Tutor",
     "settings.tutor.proactive": " El tutor puede escribirme por iniciativa propia ",
     "settings.tutor.proactive.hint": " Si llevas un rato sin avanzar o superas algo que se te resistía, te escribe sin que se lo pidas. ",

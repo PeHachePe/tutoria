@@ -292,6 +292,7 @@
     "settings.reactions.emojis": "3D emoji",
     "settings.reactions.emojis.hint": "Animated and with depth. Without them, flat emoji, lighter for slow connections.",
     "settings.reactions.try": "Try a reaction",
+    "settings.reactions.try.hint": "Each try changes the reaction and its intensity. In the chat, the tutor picks the intensity to suit the moment.",
     "settings.tutor": "Tutor",
     "settings.tutor.proactive": "The tutor may write to me on its own",
     "settings.tutor.proactive.hint": "If you have been stuck for a while or you get past something that was resisting you, it writes without you asking.",

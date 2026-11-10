@@ -8,7 +8,7 @@ import { AuthStore } from '../../auth/auth-store';
 import { LanguageService } from '../../core/language-service';
 import { ThemeService } from '../../core/theme-service';
 import { MASCOT_ACCESSORIES } from '../../shared/mascot/mascot-accessories';
-import { SettingsPage } from './settings-page';
+import { sampleReaction, SettingsPage } from './settings-page';
 import { SettingsStore } from './settings-store';
 
 describe('SettingsPage', () => {
@@ -75,7 +75,7 @@ describe('SettingsPage', () => {
     ).toBe(true);
   });
 
-  it('plays sample reactions, one after another', async () => {
+  it('plays sample reactions, one after another, and says the tutor picks the intensity', async () => {
     const { user } = await renderPage();
     const overlay = document.querySelector('app-reaction-overlay') as HTMLElement;
     const tryIt = screen.getByRole('button', { name: 'Probar una reacción' });
@@ -84,6 +84,15 @@ describe('SettingsPage', () => {
     await user.click(tryIt);
 
     expect(overlay.childElementCount).toBeGreaterThan(0);
+    expect(tryIt.getAttribute('aria-describedby')).toBe('settings-try-hint');
+    expect(document.getElementById('settings-try-hint')?.textContent).toContain('intensidad');
+  });
+
+  it('goes through every intensity, each with another cheerful reaction', () => {
+    const tries = [0, 1, 2, 3].map(sampleReaction);
+
+    expect(tries.map((sample) => sample.intensity)).toEqual([1, 2, 3, 1]);
+    expect(new Set(tries.map((sample) => sample.kind)).size).toBe(4);
   });
 
   it('dresses the mascot, and the preview shows it at once', async () => {

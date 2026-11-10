@@ -9,7 +9,7 @@ import { APP_PATHS } from '../../core/app-paths';
 import { LanguageService } from '../../core/language-service';
 import { AppLocale, LANGUAGE_OPTIONS } from '../../core/locale';
 import { ThemeMode, ThemeService } from '../../core/theme-service';
-import type { ReactionKind } from '../../data/tutor';
+import type { Intensity, ReactionKind } from '../../data/tutor';
 import { Mascot } from '../../shared/mascot/mascot';
 import type { Reaction, ReactionMode } from '../../shared/reactions/reaction';
 import { ReactionOverlay } from '../../shared/reactions/reaction-overlay';
@@ -57,8 +57,16 @@ const SAMPLE_REACTIONS: readonly ReactionKind[] = [
   'lightbulb',
 ];
 
-/** The middle intensity: a try shows what a usual reaction looks like, not the biggest one. */
-const SAMPLE_INTENSITY = 2;
+/** From the smallest to the biggest: the tutor picks one for each answer, so the tries show them all. */
+const SAMPLE_INTENSITIES: readonly Intensity[] = [1, 2, 3];
+
+/** What the n-th try (from 0) plays: each one another reaction and the next intensity. */
+export function sampleReaction(tryIndex: number): Omit<Reaction, 'id'> {
+  return {
+    kind: SAMPLE_REACTIONS[tryIndex % SAMPLE_REACTIONS.length],
+    intensity: SAMPLE_INTENSITIES[tryIndex % SAMPLE_INTENSITIES.length],
+  };
+}
 
 /**
  * The student's settings (/alumno/ajustes, ficha 05): appearance, the tutor's reactions, the
@@ -106,7 +114,6 @@ export class SettingsPage {
   }
 
   protected trySample(): void {
-    const kind = SAMPLE_REACTIONS[this.samples++ % SAMPLE_REACTIONS.length];
-    this.sample.set({ id: crypto.randomUUID(), kind, intensity: SAMPLE_INTENSITY });
+    this.sample.set({ id: crypto.randomUUID(), ...sampleReaction(this.samples++) });
   }
 }

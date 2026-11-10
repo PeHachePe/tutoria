@@ -145,16 +145,25 @@
       >
         Animados y con volumen. Sin ellos, emojis planos, más ligeros para conexiones lentas.
       </p>
-      <div>
+      <div class="flex flex-col items-start gap-2">
         <button
           matButton="tonal"
           type="button"
+          aria-describedby="settings-try-hint"
           [disabled]="settings.reactions() === 'off'"
           (click)="trySample()"
         >
           <mat-icon>play_arrow</mat-icon>
           <ng-container i18n="@@settings.reactions.try">Probar una reacción</ng-container>
         </button>
+        <p
+          id="settings-try-hint"
+          class="text-body-small text-on-surface-variant"
+          i18n="@@settings.reactions.try.hint"
+        >
+          Cada prueba cambia de reacción y de intensidad. En el chat, la intensidad la elige el
+          tutor según el momento.
+        </p>
       </div>
     </section>
 

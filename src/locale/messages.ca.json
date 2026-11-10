@@ -292,6 +292,7 @@
     "settings.reactions.emojis": "Emojis 3D",
     "settings.reactions.emojis.hint": "Animats i amb volum. Sense, emojis plans, més lleugers per a connexions lentes.",
     "settings.reactions.try": "Provar una reacció",
+    "settings.reactions.try.hint": "Cada prova canvia de reacció i d'intensitat. Al xat, la intensitat la tria el tutor segons el moment.",
     "settings.tutor": "Tutor",
     "settings.tutor.proactive": "El tutor em pot escriure per iniciativa pròpia",
     "settings.tutor.proactive.hint": "Si portes una estona sense avançar o superes alguna cosa que se't resistia, t'escriu sense que li ho demanis.",

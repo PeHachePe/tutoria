@@ -19,7 +19,7 @@ Que el alumno adapte TutorIA a su gusto: aspecto, idioma, reacciones del tutor (
 - Cuatro tarjetas en dos columnas desde 1024 px y en una sola por debajo:
   - **Apariencia:** tema (claro, oscuro, sistema) e idioma, con botones conmutadores; bajo el idioma, «Al cambiarlo, la página se vuelve a cargar».
   - **Mascota:** la mascota en vista previa en directo y tres interruptores: auriculares con micro, pajarita de cuadros (los dos activados por defecto) y puntero de hueso al pasar por encima.
-  - **Reacciones del tutor:** completas, reducidas o desactivadas, con una línea que explica la elegida; «Emojis 3D»; «Probar una reacción», que lanza una reacción alegre distinta cada vez con la opción elegida (y la mascota de la vista previa se mueve con ella).
+  - **Reacciones del tutor:** completas, reducidas o desactivadas, con una línea que explica la elegida; «Emojis 3D»; «Probar una reacción», que lanza una reacción alegre distinta cada vez, pasando por las tres intensidades, con la opción elegida (y la mascota de la vista previa se mueve con ella).
   - **Tutor:** «El tutor puede escribirme por iniciativa propia» (activado por defecto; actúa desde el paso 6.2) y «Hablar con el tutor por voz», deshabilitado con «Pronto podrás…» hasta el 6.1.
 - Abajo, a todo el ancho, **Privacidad**, con el enlace «Ver los datos registrados».
 - Tema e idioma siguen también en la barra, como acceso rápido.
@@ -44,7 +44,7 @@ Solo el de con datos: la pantalla no lee nada que tarde.
 
 - [x] Cada ajuste se aplica al momento y sigue tras recargar, por usuario (otro alumno en el mismo navegador tiene los suyos).
 - [x] La mascota de la vista previa, la del tutor y la del catálogo llevan los accesorios elegidos.
-- [x] «Probar una reacción» respeta el modo y los emojis elegidos.
+- [x] «Probar una reacción» respeta el modo y los emojis elegidos, y enseña las tres intensidades.
 - [x] Sin scroll horizontal a 375 px.
 
 ## Fuera de alcance
