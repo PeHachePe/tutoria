@@ -83,18 +83,23 @@
           >
             Pajarita de cuadros
           </mat-slide-toggle>
-          <mat-slide-toggle
-            [checked]="settings.mascotBoneCursor()"
-            (change)="settings.setMascotBoneCursor($event.checked)"
-            i18n="@@settings.mascot.boneCursor"
-          >
-            Puntero de hueso al pasar por encima
-          </mat-slide-toggle>
+          <!-- Only with a mouse or trackpad: a touch screen has no pointer to change.
+               On a wrapper, because Material's own display wins over the utility -->
+          <div class="not-any-pointer-fine:hidden">
+            <mat-slide-toggle
+              [checked]="settings.mascotBoneCursor()"
+              (change)="settings.setMascotBoneCursor($event.checked)"
+              i18n="@@settings.mascot.boneCursor"
+            >
+              Puntero de hueso al pasar por encima
+            </mat-slide-toggle>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- The tutor's reactions (RF-10, CU-03 4a) -->
+    <!-- Toggle hints start under their label: ps-14 is the switch (52px) plus the label padding (4px) -->
     <section
       aria-labelledby="settings-reactions"
       class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
@@ -140,7 +145,7 @@
       </mat-slide-toggle>
       <p
         id="settings-emojis-hint"
-        class="-mt-2 text-body-small text-on-surface-variant"
+        class="ps-14 -mt-2 text-body-small text-on-surface-variant"
         i18n="@@settings.reactions.emojis.hint"
       >
         Animados y con volumen. Sin ellos, emojis planos, más ligeros para conexiones lentas.
@@ -184,7 +189,7 @@
         </mat-slide-toggle>
         <p
           id="settings-proactive-hint"
-          class="text-body-small text-on-surface-variant"
+          class="ps-14 text-body-small text-on-surface-variant"
           i18n="@@settings.tutor.proactive.hint"
         >
           Si llevas un rato sin avanzar o superas algo que se te resistía, te escribe sin que se lo
@@ -201,7 +206,7 @@
         </mat-slide-toggle>
         <p
           id="settings-voice-hint"
-          class="text-body-small text-on-surface-variant"
+          class="ps-14 text-body-small text-on-surface-variant"
           i18n="@@settings.tutor.voice.hint"
         >
           Pronto podrás hablarle y escuchar sus respuestas. Nunca se graba el audio.
