@@ -36,7 +36,7 @@ select ok(
   'a teacher sees the events of their students'
 );
 select is((select count(*) from app_user), 25::bigint, 'a teacher reads themselves and their 24 students');
-select is((select count(*) from test where is_hidden), 8::bigint, 'a teacher reads the hidden tests');
+select is((select count(*) from test where is_hidden), 16::bigint, 'a teacher reads the hidden tests');
 select is((select count(*) from exercise), 8::bigint, 'teachers share the whole exercise bank');
 select lives_ok(
   $$ insert into class_session (group_id, number) values ('20000000-0000-4000-8000-000000000001', 9) $$,

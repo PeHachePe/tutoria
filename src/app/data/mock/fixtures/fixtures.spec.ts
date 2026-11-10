@@ -58,7 +58,7 @@ describe('seed fixtures', () => {
     expect(SEED.enrollments.some((e) => e.userId === DISABLED_STUDENT_ID)).toBe(false);
   });
 
-  it('has the 8 exercises with 3 or 4 visible tests and a hidden one at the end', () => {
+  it('has the 8 exercises with 3 or 4 visible tests and two hidden ones at the end', () => {
     expect(SEED.exercises).toHaveLength(8);
     for (const exercise of SEED.exercises) {
       const tests = SEED.tests.filter((test) => test.exerciseId === exercise.id);
@@ -66,7 +66,7 @@ describe('seed fixtures', () => {
 
       expect(tests.length - hidden.length).toBeGreaterThanOrEqual(3);
       expect(tests.length - hidden.length).toBeLessThanOrEqual(4);
-      expect(hidden).toEqual([tests[tests.length - 1]]);
+      expect(hidden).toEqual(tests.slice(-2));
       expect(tests.map((test) => test.position)).toEqual(tests.map((_, index) => index));
       expect(exercise.statement).toContain(`\`${exercise.functionName}\``);
     }

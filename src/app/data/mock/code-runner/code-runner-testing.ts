@@ -2,7 +2,8 @@ import type { Provider } from '@angular/core';
 
 import { CODE_RUNNER_WORKER } from './code-runner-worker';
 import { runJob } from './run-job';
-import type { RunMessage, RunRequest } from './run-protocol';
+import type { RunRequest } from '../../code-runner/run-result';
+import type { RunMessage } from './run-protocol';
 
 /** What a fake Worker does with the request it gets. */
 export type WorkerScript = (request: RunRequest, worker: FakeWorker) => void;

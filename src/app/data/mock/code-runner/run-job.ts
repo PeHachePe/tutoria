@@ -1,6 +1,6 @@
-import type { RunLoadError } from '../../attempt';
+import type { RunLoadError, RunRequest, TestOutcome } from '../../code-runner/run-result';
 import { normalizeOutput } from './output-value';
-import type { RunMessage, RunRequest, TestOutcome } from './run-protocol';
+import type { RunMessage } from './run-protocol';
 
 type Loaded = { readonly fn: (...args: unknown[]) => unknown } | { readonly error: RunLoadError };
 

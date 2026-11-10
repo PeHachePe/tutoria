@@ -1,5 +1,11 @@
 import { DataError, type DataErrorKind } from '../data-error';
-import { check, toDataError, unwrap } from './supabase-error';
+import {
+  FunctionsFetchError,
+  FunctionsHttpError,
+  FunctionsRelayError,
+} from '@supabase/supabase-js';
+
+import { check, toDataError, toFunctionDataError, unwrap } from './supabase-error';
 
 describe('toDataError', () => {
   it.each<[string, DataErrorKind]>([
@@ -62,5 +68,28 @@ describe('unwrap', () => {
 
   it('lets an answer without data and without an error through', () => {
     expect(() => check({ data: null, error: null, status: 204 })).not.toThrow();
+  });
+});
+
+describe('toFunctionDataError', () => {
+  it('reads the status the Edge Function answered with', () => {
+    const error = new FunctionsHttpError(new Response(null, { status: 429 }));
+
+    expect(toFunctionDataError(error)).toMatchObject({
+      kind: 'rate_limited',
+      cause: expect.anything(),
+    });
+  });
+
+  it('is a network error without an answer, and unavailable when the relay fails', () => {
+    expect(toFunctionDataError(new FunctionsFetchError(new TypeError('x'))).kind).toBe('network');
+    expect(toFunctionDataError(new FunctionsRelayError(new Response())).kind).toBe('unavailable');
+  });
+
+  it('is unknown for any other failure', () => {
+    expect(toFunctionDataError(new Error('Something else'))).toMatchObject({
+      kind: 'unknown',
+      message: 'Something else',
+    });
   });
 });

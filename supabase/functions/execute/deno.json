@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "@jitl/quickjs-singlefile-mjs-release-sync": "npm:@jitl/quickjs-singlefile-mjs-release-sync@0.31.0",
+    "@std/assert": "jsr:@std/assert@1.0.13",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.119.0",
+    "quickjs-emscripten-core": "npm:quickjs-emscripten-core@0.31.0"
+  },
+  "lock": false
+}

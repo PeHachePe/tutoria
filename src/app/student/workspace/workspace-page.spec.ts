@@ -18,7 +18,7 @@ import type { ExerciseDetail } from '../../data/exercise';
 import type { TutorEvent } from '../../data/tutor';
 import { TutorService } from '../../data/tutor-service';
 import { ExerciseService } from '../../data/exercise-service';
-import { buildRunResult } from '../../data/mock/code-runner/build-run-result';
+import { buildRunResult } from '../../data/code-runner/run-result';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
@@ -53,7 +53,7 @@ function runReturning(...values: unknown[]): RunResult {
   return buildRunResult(SUM_TESTS, { outcomes: values.map((value) => ({ ok: true, value })) });
 }
 
-const ALL_PASSED = runReturning(6, 5, 0, 10, 5);
+const ALL_PASSED = runReturning(6, 5, 0, 10, 5, -10);
 const SOME_FAILED = runReturning(6, 5, Number.NaN, 10, 4);
 
 function attemptOf(exerciseId: string, status: StoredAttemptStatus = 'in_progress'): Attempt {
@@ -223,7 +223,7 @@ describe('WorkspacePage', () => {
     ]);
     expect(
       within(statement).getByText(
-        'Y 1 comprobación oculta: verás si la superas, pero no sus datos.',
+        'Y 2 comprobaciones ocultas: verás si las superas, pero no sus datos.',
       ),
     ).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Código' })).toBeTruthy();
@@ -240,10 +240,10 @@ describe('WorkspacePage', () => {
     expect(screen.getByText('Con fallos')).toBeTruthy();
   });
 
-  it('counts several hidden checks, and none', async () => {
-    await renderPage({ getDetail: () => Promise.resolve({ ...SUM, hiddenTestCount: 2 }) });
+  it('counts a single hidden check, and none', async () => {
+    await renderPage({ getDetail: () => Promise.resolve({ ...SUM, hiddenTestCount: 1 }) });
     expect(
-      screen.getByText('Y 2 comprobaciones ocultas: verás si las superas, pero no sus datos.'),
+      screen.getByText('Y 1 comprobación oculta: verás si la superas, pero no sus datos.'),
     ).toBeTruthy();
   });
 
@@ -576,13 +576,13 @@ describe('WorkspacePage', () => {
         'function suma(v) {}',
       );
       const results = screen.getByRole('group', { name: 'Resultados de las pruebas' });
-      expect(text(results)).toContain('3 de 5 superadas');
+      expect(text(results)).toContain('3 de 6 superadas');
       expect(text(results)).toContain('No superada: suma([])');
       expect(text(results)).toMatch(/Obtenido:\s?NaN/);
       expect(text(document.querySelector('p[aria-live="polite"]'))).toBe(
-        '3 de 5 pruebas superadas.',
+        '3 de 6 pruebas superadas.',
       );
-      expect(text(document.querySelector('app-status-chip'))).toContain('Con fallos · 3/5');
+      expect(text(document.querySelector('app-status-chip'))).toContain('Con fallos · 3/6');
       expect(submitButton().getAttribute('aria-disabled')).toBe('true');
     });
 

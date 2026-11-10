@@ -23,6 +23,7 @@ export interface FakeRequest {
 export interface FakeReply {
   readonly status?: number;
   readonly body?: unknown;
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 type Answer = FakeReply | ((request: FakeRequest) => FakeReply);
@@ -79,7 +80,10 @@ export class FakeSupabaseServer {
       : { status: 404, body: { message: 'No route', code: 'PGRST125' } };
     const status = reply.status ?? 200;
     const body = reply.body === undefined || status === 204 ? null : JSON.stringify(reply.body);
-    return new Response(body, { status, headers: { 'Content-Type': 'application/json' } });
+    return new Response(body, {
+      status,
+      headers: { 'Content-Type': 'application/json', ...reply.headers },
+    });
   };
 
   /** Lets `user` sign in with any password; the client then sends their token. */

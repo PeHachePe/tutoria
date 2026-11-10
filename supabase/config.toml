@@ -340,6 +340,13 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Step 2.3 · Runs the student's code in QuickJS, inside the function (D-042). The gateway only lets
+# requests with a valid session token through.
+[functions.execute]
+enabled = true
+verify_jwt = true
+import_map = "./functions/execute/deno.json"
+
 [analytics]
 enabled = true
 port = 55327

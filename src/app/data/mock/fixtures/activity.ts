@@ -13,7 +13,7 @@ import { DAM_GROUP_ID, DAM_STUDENT_IDS, DAW_GROUP_ID, DAW_STUDENT_IDS } from './
  */
 
 type Step =
-  /** Runs the tests; `failing` are the positions of the tests that fail (4 is the hidden one). */
+  /** Runs the tests; `failing` are the positions of the tests that fail (from 3 or 4, the hidden ones). */
   | { readonly kind: 'run'; readonly failing: readonly number[] }
   | { readonly kind: 'hint' }
   | { readonly kind: 'question'; readonly message: string; readonly elusion: boolean }

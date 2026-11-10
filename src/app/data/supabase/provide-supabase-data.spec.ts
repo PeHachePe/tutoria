@@ -11,9 +11,9 @@ import { provideSupabaseData } from './provide-supabase-data';
 import { SUPABASE_CLIENT } from './supabase-client';
 import { SupabaseAttemptService } from './supabase-attempt-service';
 import { SupabaseAuthService } from './supabase-auth-service';
+import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
-import { UnavailableCodeRunnerService } from './unavailable-code-runner-service';
 import { UnavailableTutorService } from './unavailable-tutor-service';
 
 describe('provideSupabaseData', () => {
@@ -38,10 +38,10 @@ describe('provideSupabaseData', () => {
     expect(TestBed.inject(ExerciseService)).toBeInstanceOf(SupabaseExerciseService);
     expect(TestBed.inject(AttemptService)).toBeInstanceOf(SupabaseAttemptService);
     expect(TestBed.inject(EventService)).toBeInstanceOf(SupabaseEventService);
+    expect(TestBed.inject(CodeRunnerService)).toBeInstanceOf(SupabaseCodeRunnerService);
   });
 
-  it('leaves the runner and the tutor unavailable until their Edge Functions exist', () => {
-    expect(TestBed.inject(CodeRunnerService)).toBeInstanceOf(UnavailableCodeRunnerService);
+  it('leaves the tutor unavailable until its Edge Function exists', () => {
     expect(TestBed.inject(TutorService)).toBeInstanceOf(UnavailableTutorService);
   });
 

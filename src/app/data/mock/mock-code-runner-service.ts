@@ -1,11 +1,17 @@
 import { inject, Service } from '@angular/core';
 
 import type { RunResult } from '../attempt';
+import {
+  buildRunResult,
+  runEventDetail,
+  type RunOutcome,
+  type RunRequest,
+  type TestOutcome,
+} from '../code-runner/run-result';
 import { CodeRunnerService } from '../code-runner-service';
 import { DataError } from '../data-error';
-import { buildRunResult, type WorkerOutcome } from './code-runner/build-run-result';
 import { CODE_RUNNER_WORKER } from './code-runner/code-runner-worker';
-import type { RunMessage, RunRequest, TestOutcome } from './code-runner/run-protocol';
+import type { RunMessage } from './code-runner/run-protocol';
 import { findOwnAttempt, findRow, now } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -49,7 +55,7 @@ export class MockCodeRunnerService extends CodeRunnerService {
   }
 
   /** Runs the request in a new Worker and gathers what it reports until it ends or runs out of time. */
-  private execute(request: RunRequest): Promise<WorkerOutcome> {
+  private execute(request: RunRequest): Promise<RunOutcome> {
     return new Promise((resolve, reject) => {
       const worker = this.createWorker();
       const outcomes: TestOutcome[] = [];
@@ -58,7 +64,7 @@ export class MockCodeRunnerService extends CodeRunnerService {
         clearTimeout(timer);
         worker.terminate();
       };
-      const finish = (outcome: WorkerOutcome) => {
+      const finish = (outcome: RunOutcome) => {
         stop();
         resolve(outcome);
       };
@@ -92,7 +98,6 @@ export class MockCodeRunnerService extends CodeRunnerService {
   /** What the server keeps of a run: the code, the new status and the `run` event (2.8). */
   private record(attemptId: string, code: string, result: RunResult): void {
     const timestamp = now();
-    const failedTestIds = result.results.filter((test) => !test.passed).map((test) => test.testId);
     this.db.update('attempts', (rows) =>
       rows.map((row) =>
         row.id === attemptId
@@ -107,11 +112,7 @@ export class MockCodeRunnerService extends CodeRunnerService {
         attemptId,
         type: 'run',
         timestamp,
-        detail: {
-          passed: result.results.length - failedTestIds.length,
-          failed: failedTestIds.length,
-          failedTestIds,
-        },
+        detail: runEventDetail(result),
       },
     ]);
   }

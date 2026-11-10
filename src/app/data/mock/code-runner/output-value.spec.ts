@@ -1,4 +1,4 @@
-import { normalizeOutput, outputsEqual } from './output-value';
+import { normalizeOutput } from './output-value';
 
 describe('normalizeOutput', () => {
   it('keeps JSON values as they are', () => {
@@ -39,33 +39,5 @@ describe('normalizeOutput', () => {
     const shared = [1];
 
     expect(normalizeOutput([shared, shared])).toEqual([[1], [1]]);
-  });
-});
-
-describe('outputsEqual', () => {
-  it('compares as JSON', () => {
-    expect(outputsEqual(6, 6)).toBe(true);
-    expect(outputsEqual([1, 2], [1, 2])).toBe(true);
-    expect(outputsEqual('6', 6)).toBe(false);
-    expect(outputsEqual([1, 2], [2, 1])).toBe(false);
-    expect(outputsEqual(-0, 0)).toBe(true);
-  });
-
-  it('ignores the order of the keys of an object', () => {
-    expect(outputsEqual({ a: 1, b: { c: 2, d: 3 } }, { b: { d: 3, c: 2 }, a: 1 })).toBe(true);
-    expect(outputsEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
-  });
-
-  it('never takes undefined, NaN or Infinity for null', () => {
-    expect(outputsEqual(undefined, null)).toBe(false);
-    expect(outputsEqual(Number.NaN, null)).toBe(false);
-    expect(outputsEqual(Infinity, null)).toBe(false);
-    expect(outputsEqual([undefined], [null])).toBe(false);
-    expect(outputsEqual(Number.NaN, Number.NaN)).toBe(true);
-  });
-
-  it('never mistakes those values for strings with the same text', () => {
-    expect(outputsEqual(Number.NaN, 'NaN')).toBe(false);
-    expect(outputsEqual(undefined, 'undefined')).toBe(false);
   });
 });

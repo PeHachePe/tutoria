@@ -77,7 +77,7 @@ describe('MockCodeRunnerService', () => {
     const result = await service.run(ATTEMPT_ID, SAMPLE_CODE[3].solved);
 
     expect(result.status).toBe('passed');
-    expect(result.results).toHaveLength(5);
+    expect(result.results).toHaveLength(6);
     expect(result.results[0]).toEqual({
       testId: expect.any(String),
       passed: true,
@@ -97,7 +97,7 @@ describe('MockCodeRunnerService', () => {
         attemptId: ATTEMPT_ID,
         type: 'run',
         timestamp: NOW,
-        detail: { passed: 5, failed: 0, failedTestIds: [] },
+        detail: { passed: 6, failed: 0, failedTestIds: [] },
       },
     ]);
     expect(workers).toHaveLength(1);
@@ -116,7 +116,7 @@ describe('MockCodeRunnerService', () => {
     expect(db.tables().attempts.find((attempt) => attempt.id === other.id)).toEqual(other);
   });
 
-  it('fails with the typical mistake, counting the hidden test among the failed ones', async () => {
+  it('fails with the typical mistake, counting the hidden tests among the failed ones', async () => {
     const result = await service.run(ATTEMPT_ID, SAMPLE_CODE[3].partial);
 
     expect(result.status).toBe('tests_failed');
@@ -125,7 +125,7 @@ describe('MockCodeRunnerService', () => {
     const [event] = db.tables().events;
     expect(event.detail).toEqual({
       passed: 0,
-      failed: 5,
+      failed: 6,
       failedTestIds: result.results.map((test) => test.testId),
     });
   });
@@ -154,6 +154,7 @@ describe('MockCodeRunnerService', () => {
     expect(result.status).toBe('tests_failed');
     expect(result.results.map((test) => [test.passed, test.timeout])).toEqual([
       [true, false],
+      [false, true],
       [false, true],
       [false, true],
       [false, true],

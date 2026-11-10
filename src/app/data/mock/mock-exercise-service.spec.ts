@@ -164,7 +164,7 @@ describe('MockExerciseService', () => {
       expect(detail.visibleTests.map((test) => test.id)).toEqual(
         [0, 1, 2, 3].map((p) => testId(3, p)),
       );
-      expect(detail.hiddenTestCount).toBe(1);
+      expect(detail.hiddenTestCount).toBe(2);
     });
 
     it('hides from a student the exercises not assigned to their groups', async () => {
@@ -196,7 +196,7 @@ describe('MockExerciseService', () => {
 
       const { exercise, tests } = await service.getWithTests(exerciseId(1));
       expect(exercise).toEqual(SEED.exercises[0]);
-      expect(tests.map((test) => test.isHidden)).toEqual([false, false, false, true]);
+      expect(tests.map((test) => test.isHidden)).toEqual([false, false, false, true, true]);
     });
 
     it('is not available to students', async () => {

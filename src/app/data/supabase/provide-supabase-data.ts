@@ -12,15 +12,15 @@ import { keepaliveFetch } from './keepalive-fetch';
 import { SUPABASE_CLIENT, type SupabaseConfig } from './supabase-client';
 import { SupabaseAttemptService } from './supabase-attempt-service';
 import { SupabaseAuthService } from './supabase-auth-service';
+import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
-import { UnavailableCodeRunnerService } from './unavailable-code-runner-service';
 import { UnavailableTutorService } from './unavailable-tutor-service';
 
 /**
- * The Supabase version of every data service, with the only client of the app (4.4). The runner
- * and the tutor stay unavailable until their Edge Functions exist (steps 2.3 and 2.4); the rest of
- * the services join in their own steps.
+ * The Supabase version of every data service, with the only client of the app (4.4). The tutor
+ * stays unavailable until its Edge Function exists (step 2.4); the rest of the services join in
+ * their own steps.
  */
 export function provideSupabaseData(config: SupabaseConfig): EnvironmentProviders {
   return makeEnvironmentProviders([
@@ -35,7 +35,7 @@ export function provideSupabaseData(config: SupabaseConfig): EnvironmentProvider
     { provide: ExerciseService, useClass: SupabaseExerciseService },
     { provide: AttemptService, useClass: SupabaseAttemptService },
     { provide: EventService, useClass: SupabaseEventService },
-    { provide: CodeRunnerService, useClass: UnavailableCodeRunnerService },
+    { provide: CodeRunnerService, useClass: SupabaseCodeRunnerService },
     { provide: TutorService, useClass: UnavailableTutorService },
   ]);
 }

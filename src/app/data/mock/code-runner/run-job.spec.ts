@@ -1,4 +1,5 @@
-import type { RunMessage, RunRequest } from './run-protocol';
+import type { RunRequest } from '../../code-runner/run-result';
+import type { RunMessage } from './run-protocol';
 import { runJob } from './run-job';
 
 const SUM =

@@ -13,8 +13,11 @@ interface ExerciseFixture {
   readonly statement: string;
   /** Visible tests, the edge case among them: `[input, expectedOutput]`. */
   readonly visible: readonly (readonly [readonly unknown[], unknown])[];
-  /** The hidden test: the student only sees whether it passed. */
-  readonly hidden: readonly [readonly unknown[], unknown];
+  /**
+   * Two hidden tests, after the visible ones: the student only sees whether they passed. One more
+   * edge case each, so returning a fixed value cannot pass them by chance.
+   */
+  readonly hidden: readonly (readonly [readonly unknown[], unknown])[];
 }
 
 function multiplicationTable(n: number): string {
@@ -35,7 +38,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[7], 3],
       [[1], 0],
     ],
-    hidden: [[25], 12],
+    hidden: [
+      [[25], 12],
+      [[-4], 0],
+    ],
   },
   {
     title: 'Tabla de multiplicar',
@@ -49,7 +55,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[7], multiplicationTable(7)],
       [[0], multiplicationTable(0)],
     ],
-    hidden: [[-3], multiplicationTable(-3)],
+    hidden: [
+      [[-3], multiplicationTable(-3)],
+      [[10], multiplicationTable(10)],
+    ],
   },
   {
     title: 'Suma de los elementos de un vector',
@@ -64,7 +73,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[[]], 0],
       [[[-2, 2, 10]], 10],
     ],
-    hidden: [[[7, -3, 1]], 5],
+    hidden: [
+      [[[7, -3, 1]], 5],
+      [[[-4, -6]], -10],
+    ],
   },
   {
     title: 'Máximo de un vector',
@@ -79,7 +91,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[[4]], 4],
       [[[]], null],
     ],
-    hidden: [[[1, 7, 7, 3]], 7],
+    hidden: [
+      [[[1, 7, 7, 3]], 7],
+      [[[-3, 0, -1]], 0],
+    ],
   },
   {
     title: 'Invertir un vector',
@@ -94,7 +109,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[[7]], [7]],
       [[[]], []],
     ],
-    hidden: [[[1, 2, 3, 4, 5, 6]], [6, 5, 4, 3, 2, 1]],
+    hidden: [
+      [[[1, 2, 3, 4, 5, 6]], [6, 5, 4, 3, 2, 1]],
+      [[[2, 2, 5]], [5, 2, 2]],
+    ],
   },
   {
     title: 'Contar vocales en una cadena',
@@ -109,7 +127,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [['Canción'], 3],
       [[''], 0],
     ],
-    hidden: [['Murciélago'], 5],
+    hidden: [
+      [['Murciélago'], 5],
+      [['Él y ÚLTIMO'], 4],
+    ],
   },
   {
     title: 'Media de un vector con dos decimales',
@@ -124,7 +145,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[[1, 2]], '1.50'],
       [[[]], '0.00'],
     ],
-    hidden: [[[1, 1, 2]], '1.33'],
+    hidden: [
+      [[[1, 1, 2]], '1.33'],
+      [[[2, 3, 3]], '2.67'],
+    ],
   },
   {
     title: 'Buscar la primera aparición de un valor',
@@ -139,7 +163,10 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[[1, 2, 3], 9], -1],
       [[[], 5], -1],
     ],
-    hidden: [[[5, 3, 5], 5], 0],
+    hidden: [
+      [[[5, 3, 5], 5], 0],
+      [[[1, 2, 3], 3], 2],
+    ],
   },
 ];
 
@@ -169,12 +196,12 @@ export const EXERCISES: readonly Exercise[] = EXERCISE_FIXTURES.map((fixture, in
 }));
 
 export const TESTS: readonly Test[] = EXERCISE_FIXTURES.flatMap((fixture, index) =>
-  [...fixture.visible, fixture.hidden].map(([input, expectedOutput], position) => ({
+  [...fixture.visible, ...fixture.hidden].map(([input, expectedOutput], position) => ({
     id: testId(index + 1, position),
     exerciseId: exerciseId(index + 1),
     input,
     expectedOutput,
-    isHidden: position === fixture.visible.length,
+    isHidden: position >= fixture.visible.length,
     position,
   })),
 );

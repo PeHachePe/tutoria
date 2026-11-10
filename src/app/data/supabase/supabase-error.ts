@@ -1,3 +1,9 @@
+import {
+  FunctionsFetchError,
+  FunctionsHttpError,
+  FunctionsRelayError,
+} from '@supabase/supabase-js';
+
 import { DataError, type DataErrorKind } from '../data-error';
 
 /** What a failure of supabase-js carries, from PostgREST or from Auth. */
@@ -47,6 +53,8 @@ const KIND_OF_STATUS: Readonly<Record<number, DataErrorKind>> = {
   502: 'unavailable',
   503: 'unavailable',
   504: 'unavailable',
+  // An Edge Function went over its CPU time or memory (WORKER_LIMIT)
+  546: 'unavailable',
 };
 
 /** Translates a failure of Supabase into the only error the data services throw (4.2). */
@@ -56,6 +64,23 @@ export function toDataError(failure: SupabaseFailure): DataError {
     (failure.status !== undefined && KIND_OF_STATUS[failure.status]) ||
     'unknown';
   return new DataError(kind, failure.message, { cause: failure });
+}
+
+/**
+ * Translates a failure of `functions.invoke()`: by the status the Edge Function answered with
+ * (`_shared/http.ts`), or `network` without an answer. The relay fails when the function does not
+ * exist or cannot start.
+ */
+export function toFunctionDataError(error: Error): DataError {
+  if (error instanceof FunctionsHttpError) {
+    return toDataError({ message: error.message, status: (error.context as Response).status });
+  }
+  if (error instanceof FunctionsFetchError)
+    return toDataError({ message: error.message, status: 0 });
+  if (error instanceof FunctionsRelayError) {
+    return new DataError('unavailable', error.message, { cause: error });
+  }
+  return toDataError({ message: error.message });
 }
 
 /** An answer of PostgREST: its data, or its error with the HTTP status. */
