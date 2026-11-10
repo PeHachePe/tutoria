@@ -13,12 +13,13 @@ test.describe('mascota', () => {
     const mascots = section.locator('app-mascot');
     await expect(mascots).toHaveCount(2);
     await expect(section.getByTestId('mascot-headset')).toHaveCount(2);
-    await expect(section.getByTestId('mascot-bow-tie')).toHaveCount(0);
+    // Since step 1.9 the bow tie is on by default
+    await expect(section.getByTestId('mascot-bow-tie')).toHaveCount(2);
 
     await section.getByRole('radio', { name: 'Chat abierto' }).click();
     await expect(mascots.first()).toHaveClass(/mascot-chat/);
     await section.getByRole('switch', { name: 'Pajarita' }).click();
-    await expect(section.getByTestId('mascot-bow-tie')).toHaveCount(2);
+    await expect(section.getByTestId('mascot-bow-tie')).toHaveCount(0);
     await section.getByRole('switch', { name: 'Auriculares' }).click();
     await expect(section.getByTestId('mascot-headset')).toHaveCount(0);
   });
@@ -66,7 +67,7 @@ test.describe('mascota', () => {
     const cursor = await page
       .locator('app-mascot')
       .evaluate((host) => getComputedStyle(host).cursor);
-    expect(cursor).toMatch(/^url\("data:image\/svg\+xml,.+"\) 7 7, pointer$/);
+    expect(cursor).toMatch(/^url\("data:image\/svg\+xml,.+"\) 5 5, pointer$/);
   });
 
   test('es el favicon, en SVG y con un .ico de respaldo', async ({ page, request }) => {

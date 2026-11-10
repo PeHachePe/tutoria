@@ -265,6 +265,11 @@ test.describe('barra de desarrollo', () => {
     await page.getByRole('option', { name: 'Lucía Martín Gómez' }).click();
 
     await expect(page).toHaveURL('/alumno');
+    // Lucía has not seen the notice on her registered data yet, so it covers her catalog first
+    await page
+      .getByRole('dialog', { name: 'Antes de empezar: tus datos' })
+      .getByRole('button', { name: 'Entendido' })
+      .click();
     await expect(page.getByRole('heading', { level: 1, name: 'Ejercicios' })).toBeVisible();
   });
 });
