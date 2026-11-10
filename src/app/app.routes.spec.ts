@@ -19,13 +19,17 @@ import type { Role } from './data/user';
 import { studentRoutes } from './student/student.routes';
 import { teacherRoutes } from './teacher/teacher.routes';
 
+const NOTICE_SEEN_AT = '2026-09-01T08:00:00.000Z';
+
 describe('app routes', () => {
   async function visit(role: Role | null, url: string) {
     TestBed.configureTestingModule({
       // jsdom has no viewport: the deferred editor of the workspace stays as its placeholder
       deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
-        provideSessionOf(role),
+        // The data notice of the student area is not under test: open after render, it would race
+        // the assertions and hide the page behind its dialog on a slow machine
+        provideSessionOf(role, { privacyNoticeSeenAt: NOTICE_SEEN_AT }),
         provideRouter(routes, withComponentInputBinding()),
         { provide: TitleStrategy, useExisting: AppTitleStrategy },
         {
