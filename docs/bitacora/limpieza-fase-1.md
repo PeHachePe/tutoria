@@ -61,7 +61,7 @@ Iteración 2: el test de los contenidos de las fixtures se actualiza; `npm run c
 
 El autor pidió la revisión y, sobre la propuesta, preguntó si el explorador de datos aportaba algo y dejó a Claude decidir («aplica lo que consideres»), con la regla de Tailwind primero sin sobrejustificar el CSS.
 
-- Iteración 2: dio por buenos los ejercicios y pidió reformular lo que hiciera falta o añadir los que Claude viera oportunos.
+- Iteración 2: dio por buenos los ejercicios y pidió reformular lo que hiciera falta o añadir los que Claude viera oportunos. Lo dio por bueno al ejecutar el commit `4012772`.
 
 ## Capturas
 
