@@ -18,7 +18,7 @@ const ACCOUNT_LINKS: readonly NavLink[] = [
   { path: APP_PATHS.student.settings, label: $localize`:@@nav.settings:Ajustes`, icon: 'settings' },
   {
     path: APP_PATHS.student.data,
-    label: $localize`:@@nav.myData:Mis datos`,
+    label: $localize`:@@nav.myData:Datos registrados`,
     icon: 'shield_person',
   },
 ];

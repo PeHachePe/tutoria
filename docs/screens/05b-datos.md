@@ -25,7 +25,7 @@ Como la figura 23:
 
 ## Aviso de la primera vez
 
-- Diálogo «Antes de empezar: tus datos» con un resumen, «Nunca graba el audio» destacado, «Ver los detalles» (lleva aquí) y «Entendido».
+- Diálogo «Antes de empezar: tus datos» con un resumen de lo que se registra, «Nunca graba el audio» destacado, quién lo ve (docente y administración) y qué recibe el proveedor de IA (sin nombre ni correo), «Ver los detalles» (lleva aquí) y «Entendido».
 - Lo abre el shell del alumno en cualquiera de sus páginas, también si entra directo a un ejercicio por un enlace; no en esta pantalla, que ya cuenta como vista.
 - No se cierra con Esc ni pulsando fuera: hay que elegir uno de los dos botones. Se recuerda por usuario.
 

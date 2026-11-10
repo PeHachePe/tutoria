@@ -57,6 +57,9 @@ const SAMPLE_REACTIONS: readonly ReactionKind[] = [
   'lightbulb',
 ];
 
+/** The middle intensity: a try shows what a usual reaction looks like, not the biggest one. */
+const SAMPLE_INTENSITY = 2;
+
 /**
  * The student's settings (/alumno/ajustes, ficha 05): appearance, the tutor's reactions, the
  * mascot and the tutor. Each choice applies and is saved at once, so there is no form to submit.
@@ -104,6 +107,6 @@ export class SettingsPage {
 
   protected trySample(): void {
     const kind = SAMPLE_REACTIONS[this.samples++ % SAMPLE_REACTIONS.length];
-    this.sample.set({ id: crypto.randomUUID(), kind, intensity: 2 });
+    this.sample.set({ id: crypto.randomUUID(), kind, intensity: SAMPLE_INTENSITY });
   }
 }

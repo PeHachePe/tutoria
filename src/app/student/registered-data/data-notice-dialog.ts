@@ -45,7 +45,12 @@ import { SettingsStore } from '../settings/settings-store';
           <span i18n="@@dataNotice.never"><strong>Nunca graba el audio</strong> de tu voz.</span>
         </p>
         <p i18n="@@dataNotice.purpose">
-          Lo ve tu docente, para saber cuándo ayudarte y mejorar las actividades, no para sancionar.
+          Lo ven tu docente y la administración de TutorIA, para saber cuándo ayudarte y mejorar las
+          actividades, no para sancionar.
+        </p>
+        <p i18n="@@dataNotice.ai">
+          Para que el tutor te responda, un proveedor externo de inteligencia artificial recibe el
+          enunciado, tu código y la conversación, pero no tu nombre ni tu correo.
         </p>
       </div>
     </mat-dialog-content>

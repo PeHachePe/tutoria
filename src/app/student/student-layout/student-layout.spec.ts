@@ -91,7 +91,7 @@ describe('StudentLayout', () => {
     expect(screen.getByRole('menuitem', { name: /Ajustes/ }).getAttribute('href')).toBe(
       '/alumno/ajustes',
     );
-    expect(screen.getByRole('menuitem', { name: /Mis datos/ }).getAttribute('href')).toBe(
+    expect(screen.getByRole('menuitem', { name: /Datos registrados/ }).getAttribute('href')).toBe(
       '/alumno/datos',
     );
   });

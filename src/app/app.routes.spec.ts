@@ -70,7 +70,7 @@ describe('app routes', () => {
     ['student', '/alumno', 'Ejercicios', 'Ejercicios · TutorIA'],
     ['student', '/alumno/ejercicio/abc', 'Ejercicio', 'Ejercicio · TutorIA'],
     ['student', '/alumno/ajustes', 'Ajustes', 'Ajustes · TutorIA'],
-    ['student', '/alumno/datos', 'Datos registrados', 'Mis datos · TutorIA'],
+    ['student', '/alumno/datos', 'Datos registrados', 'Datos registrados · TutorIA'],
     ['teacher', '/docente', 'Sesión en vivo', 'Sesión en vivo · TutorIA'],
     ['teacher', '/docente/en-vivo/abc', 'Detalle del intento', 'Detalle del intento · TutorIA'],
     ['teacher', '/docente/historico', 'Histórico', 'Histórico · TutorIA'],

@@ -25,10 +25,12 @@ describe('DataNoticeDialog', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('sums up the registered data and says the audio is never recorded', async () => {
+  it('sums up the registered data, who sees it and what reaches the AI provider', async () => {
     const notice = await screen.findByRole('dialog', { name: 'Antes de empezar: tus datos' });
 
     expect(notice.textContent).toContain('Nunca graba el audio');
+    expect(notice.textContent).toContain('tu docente y la administración');
+    expect(notice.textContent).toContain('un proveedor externo de inteligencia artificial');
     expect(screen.getByRole('link', { name: 'Ver los detalles' }).getAttribute('href')).toBe(
       '/alumno/datos',
     );

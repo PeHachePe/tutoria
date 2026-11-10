@@ -52,7 +52,7 @@ export const studentRoutes: Routes = [
       },
       {
         path: SEGMENTS.student.data,
-        title: $localize`:@@route.myData.title:Mis datos`,
+        title: $localize`:@@route.myData.title:Datos registrados`,
         component: RegisteredDataPage,
       },
     ],

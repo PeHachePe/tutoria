@@ -50,7 +50,7 @@ test.describe('alumno', () => {
     );
 
     await page.getByRole('button', { name: 'Menú de usuario' }).click();
-    await expect(page.getByRole('menuitem', { name: 'Mis datos' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Datos registrados' })).toBeVisible();
 
     await page.getByRole('menuitem', { name: 'Ajustes' }).click();
     await expect(page).toHaveURL('/alumno/ajustes');
