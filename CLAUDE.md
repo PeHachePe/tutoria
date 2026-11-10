@@ -13,7 +13,7 @@ En código, estructura y nombres mandan las buenas prácticas de Angular 22: la 
 ## Reglas innegociables
 
 - **Commits:** cuando el humano da el paso por bueno, el agente los prepara y el humano los ejecuta (la configuración global de Claude Code prohíbe `git commit` al agente). El agente deja escrito el mensaje de cada uno en inglés con Conventional Commits, con el paso al final del asunto (`feat(auth): role guards (step 0.6)`) y un cuerpo que explique qué cambia y por qué, sin línea `Co-Authored-By`, y le pasa al humano los comandos `git add` y `git commit -F`. **Nunca** `git push` ni nada que reescriba el historial (`--amend`, `rebase`, `reset`).
-- No toques ficheros `.env*` ni pongas secretos en el cliente. Las claves de IA, Judge0 y `service_role` solo van en los secretos de las Edge Functions.
+- No toques ficheros `.env*` ni pongas secretos en el cliente. Las claves de IA y `service_role` solo van en los secretos de las Edge Functions.
 - **Un paso cada vez, cada uno en su propia sesión:** lee el paso del plan, las secciones que cita, las reglas transversales (§4.8) y su ficha; propón un plan corto, espera el visto bueno, implementa, cierra el paso (abajo) y **para**. Si en esta sesión ya cerraste uno, pide al humano una sesión nueva.
 - Si el plan, la especificación y el código no coinciden, pregunta antes de decidir.
 - En inglés, todo lo que es código: identificadores, comentarios, nombres de ficheros, carpetas y scripts de npm, y commits. En español, los textos de la interfaz y la documentación de `docs/`.
@@ -23,9 +23,9 @@ En código, estructura y nombres mandan las buenas prácticas de Angular 22: la 
 Se desarrolla en macOS (zsh) y, alguna vez, en Windows. Todo tiene que funcionar en los dos: los scripts de `package.json` los ejecuta `sh` en el Mac y `cmd` en Windows, así que nada de comandos propios de un sistema (`rm`, `cp`, `export`, `set`…). Los scripts auxiliares y los hooks, en Node, con rutas construidas con `path` y `os.homedir()`. En la terminal del agente (zsh) sí valen los comandos de Unix.
 
 - `npm start`: servidor de desarrollo con datos simulados; `npm run start:local`, contra Supabase local (`db:start` antes).
-- `npm run format` y `npm run check` (formato, lint y tests unitarios). El lint hace cumplir buenas prácticas de Angular: no desactives reglas para salir del paso.
+- `npm run format` y `npm run check` (formato, lint, tests unitarios y los de Deno de las Edge Functions, que también se lanzan solos con `npm run test:functions`). El lint hace cumplir buenas prácticas de Angular: no desactives reglas para salir del paso.
 - `npm run e2e`: Playwright (desde el paso 0.6).
-- `npm run db:start`, `db:stop`, `db:reset` (migraciones y seed desde cero), `db:test` (pgTAP) y `db:types` (tipos en `src/app/data/supabase/`): Supabase en local, con Docker abierto y en los puertos 553xx (D-040).
+- `npm run db:start`, `db:stop`, `db:reset` (migraciones y seed desde cero), `db:test` (pgTAP) y `db:types` (tipos en `src/app/data/supabase/`): Supabase en local, con Docker abierto y en los puertos 553xx (D-040). `db:start` también sirve las Edge Functions; si se crea una con Supabase ya arrancado, hay que reiniciarlo.
 - `npm run emojis`: trae de los repositorios oficiales de Fluent Emoji los emojis de las reacciones que falten y borra los que sobren (`-- --force` los rehace todos; necesita red y tarda con los animados).
 
 ## Angular en este proyecto

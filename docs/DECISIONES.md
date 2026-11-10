@@ -1089,3 +1089,48 @@ Preguntó también si la IA podría componer las animaciones (iconos, si late o 
 - Dos diferencias con el simulado, aceptadas: `listAssignments` de un grupo ajeno devuelve una lista vacía (la RLS lo oculta) en lugar de `forbidden`, y `process_event.detail` de un evento sin detalle queda como `NULL` de SQL (PostgREST no envía el `null` de JSON); los dos se leen igual en la aplicación.
 
 **Aprobación:** el autor aprobó el plan con todas las mejoras propuestas (sesión caducada con borrador local, sesión entre pestañas, catálogo en una consulta, aviso en local y control de la pestaña activa).
+
+## D-042 · Ejecución real con QuickJS dentro de la Edge Function (10/11/2026)
+
+**Contexto:** el plan preveía, para el 2.3, una Edge Function `execute` que enviara el código a un Judge0 alojado con capa gratuita. Al planear el paso, el autor preguntó si había alternativas más libres. Las comparamos:
+
+- los Judge0 o similares alojados (RapidAPI, Sulu, Piston, Wandbox, Glot, JDoodle…) tienen cuotas pequeñas o ninguna garantía, y algunos piden permiso a sus autores;
+- montarlos en un servidor propio exige una máquina Linux siempre encendida, y en el Mac Judge0 no funciona en Docker (cgroups v1);
+- ejecutar en el navegador no vale: el cliente no es de fiar y podría ponerse `passed`.
+
+Además, cualquier servicio externo gratuito recibe el código del alumnado sin un acuerdo de tratamiento de datos, lo que choca con la minimización de §2.10.
+
+**Decisión:**
+
+- **QuickJS en WebAssembly** (`quickjs-emscripten-core` y su variante `singlefile` síncrona, 0.31.0) **dentro de la propia función**. Por dentro solo hay JavaScript puro: ni red, ni ficheros, ni temporizadores, ni `Deno`, ni los secretos.
+- **Límites:**
+  - 250 ms por prueba y 1 s por ejecución, con carga del código incluida, muy por debajo de los 2 s de CPU que da Supabase;
+  - 32 MB de memoria y 256 KB de pila: con 512 KB se desborda la pila del propio Edge Runtime;
+  - 100.000 caracteres para el valor devuelto y 50.000 para el código.
+- **Cada ejecución, su runtime:** nada pasa de una a otra. Si falla el propio motor, se vuelve a cargar.
+- **Bucle infinito por prueba:** se corta solo esa prueba y las siguientes siguen. En el simulado, un bucle infinito deja sin tiempo a las que faltan. Es mejor información para el alumnado, aceptada como diferencia hasta igualar el simulado (pendiente).
+- **Mensajes como en el navegador:** el desbordamiento de pila se muestra como `RangeError: Maximum call stack size exceeded`. Los demás mensajes de QuickJS pueden diferir algo de los de V8 (por ejemplo, `'x' is not defined` frente a `x is not defined`). Aceptado.
+- **Interfaz `CodeSandbox`** (`supabase/functions/execute/code-sandbox.ts`): la función solo conoce `run(request) → RunOutcome`. Otro lenguaje, u otro motor como Judge0, es otra clase en `index.ts`, sin tocar el front.
+- **Código compartido con la app:** `src/app/data/code-runner/run-result.ts`, que la Edge Function importa tal cual. Tiene los tipos del resultado, `buildRunResult()`, `outputsEqual()`, `runEventDetail()` y la codificación de los valores para viajar como JSON. El Edge Runtime resuelve todas las importaciones, también las de tipos, y solo con extensión, así que ese fichero no importa nada. `attempt.ts` reexporta sus tipos, y el simulado y la función comparan con el mismo código. `RunResult.status` pasa a `RunStatus` (`tests_failed` | `passed`), lo único que puede dejar una ejecución.
+- **Valores que JSON no tiene:** `undefined`, `NaN` y `±Infinity` viajan etiquetados (`EncodedValue`). Todo objeto lleva su etiqueta, también los del alumno, así que ninguno se confunde con una. La app los recupera con `decodeRunResult()`.
+- **Escritura atómica:** la función RPC `record_run`, solo para `service_role`, guarda el código, el estado y el evento `run` en una transacción. Primero el código y después el estado: en una sola actualización, una ejecución que repite el estado anterior con código nuevo parecería una edición al trigger, que la devolvería a `in_progress`.
+- **Límite de 10 ejecuciones por minuto:** se cuentan los eventos `run` del usuario por `received_at`, sin tabla nueva y con un índice parcial. La respuesta 429 lleva `Retry-After`.
+- **El intento tiene que ser del usuario:** se comprueba explícitamente, porque con `service_role` no hay RLS y un docente puede leer los de su grupo. Un intento ajeno da 404, como uno que no existe; una cuenta desactivada, 403; uno entregado, 409.
+- **Tests de Deno** de la función con `deno` como dependencia de npm (2.5.6), que funciona igual en Windows: `npm run test:functions`, dentro de `npm run check`.
+
+**Alternativas:**
+
+- **Judge0 alojado:** el plan original. Tiene cuenta, clave, cuota diaria y una petición externa por ejecución, y el código sale a un tercero.
+- **Judge0 o Piston en un servidor propio:** coste o mantenimiento, y no funciona en local en el Mac.
+- **`node:vm` en un programa enviado a Judge0:** no aísla (`this.constructor.constructor('return process')()`), y obliga a leer una salida que el alumno puede manipular.
+- **Copiar el código compartido en `supabase/functions/_shared/`:** dos copias de la comparación que se pueden separar.
+
+**Consecuencias:**
+
+- Sin cuenta ni secretos nuevos: `execute` solo usa las variables que Supabase da a toda función. `npm run db:start` la sirve.
+- Cambian los pasos 2.3 y 3.x y §2.5, §2.10, §3, §4.2, §4.3, §4.4 y los riesgos de `docs/PLAN.md`, y `CLAUDE.md`.
+- La memoria del TFM nombra Judge0 en la planificación, en §2.2.2, en las tecnologías, en la tabla de componentes y en la bibliografía. Se actualiza en la PEC3 (pendiente).
+- Al desplegar (fase 3) hay que confirmar que `supabase functions deploy` empaqueta el fichero de `src/` (pendiente).
+- **A petición del autor, dentro del paso:** dos pruebas ocultas por ejercicio en lugar de una, cada una con un caso límite más (fila del 2.2 en `PENDIENTES.md`). Cambia §2.5: el ejercicio 3 tiene ahora seis pruebas, y la nueva oculta es `[[-4, -6]]` → `-10`.
+
+**Aprobación:** el autor eligió QuickJS tras comparar las alternativas, con la condición de poder pasar fácilmente a Judge0 en el futuro.
