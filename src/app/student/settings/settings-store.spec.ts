@@ -28,7 +28,6 @@ describe('SettingsStore', () => {
     expect(store.mascotHeadset()).toBe(true);
     expect(store.mascotBowTie()).toBe(true);
     expect(store.mascotBoneCursor()).toBe(true);
-    expect(store.dataNoticeSeen()).toBe(false);
   });
 
   it('remembers the reactions each user chose', () => {
@@ -98,15 +97,5 @@ describe('SettingsStore', () => {
 
     set(true);
     expect(get()).toBe(true);
-  });
-
-  it('remembers per user that the notice on the registered data was seen', () => {
-    store.markDataNoticeSeen();
-    expect(store.dataNoticeSeen()).toBe(true);
-
-    userId.set('u2');
-    expect(store.dataNoticeSeen()).toBe(false);
-    userId.set('u1');
-    expect(store.dataNoticeSeen()).toBe(true);
   });
 });

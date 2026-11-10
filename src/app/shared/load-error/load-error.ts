@@ -2,20 +2,23 @@ import { Component, computed, input, output } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 
+import { isSessionExpired, SignInAgain } from '../sign-in-again/sign-in-again';
 import { isRetryable, loadErrorMessage } from './load-error-message';
 
 /**
  * Error state of a screen or a zone that could not load its data: what happened and a button to try
- * again (4.2, 5.4), or, when the user has no access, the way out the screen projects inside (such as a
+ * again (4.2, 5.4), «Volver a entrar» if the session expired, or, when the user has no access, the way out the screen projects inside (such as a
  * link back). It is announced as an alert when it appears.
  */
 @Component({
   selector: 'app-load-error',
-  imports: [MatButton, MatIcon],
+  imports: [MatButton, MatIcon, SignInAgain],
   template: `
     <mat-icon>cloud_off</mat-icon>
     <p class="flex-1">{{ message() }}</p>
-    @if (retryable()) {
+    @if (expired()) {
+      <app-sign-in-again appearance="tonal" />
+    } @else if (retryable()) {
       <button matButton="tonal" type="button" (click)="retry.emit()" i18n="@@loadError.retry">
         Reintentar
       </button>
@@ -36,4 +39,5 @@ export class LoadError {
 
   protected readonly message = computed(() => loadErrorMessage(this.error()));
   protected readonly retryable = computed(() => isRetryable(this.error()));
+  protected readonly expired = computed(() => isSessionExpired(this.error()));
 }

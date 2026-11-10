@@ -8,6 +8,8 @@ import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
 import { DataError } from '../../data/data-error';
 import { AttemptStore } from './attempt-store';
+import { readDraft, saveDraft } from './code-draft';
+import { FakeTabChannel, provideTestEditingTab, takenByOtherTab } from './editing-tab-testing';
 
 function attemptOf(exerciseId: string, status: StoredAttemptStatus = 'in_progress'): Attempt {
   return {
@@ -52,9 +54,11 @@ describe('AttemptStore', () => {
   let run: ReturnType<typeof vi.fn<CodeRunnerService['run']>>;
   let store: AttemptStore;
   let authService: FakeAuthService;
+  let channel: FakeTabChannel;
 
   beforeEach(() => {
     authService = new FakeAuthService();
+    channel = new FakeTabChannel();
     openOrCreate = vi.fn<AttemptService['openOrCreate']>();
     saveCode = vi.fn<AttemptService['saveCode']>();
     submit = vi.fn<AttemptService['submit']>();
@@ -62,6 +66,7 @@ describe('AttemptStore', () => {
     TestBed.configureTestingModule({
       providers: [
         AttemptStore,
+        ...provideTestEditingTab(channel),
         { provide: AttemptService, useValue: { openOrCreate, saveCode, submit } },
         { provide: CodeRunnerService, useValue: { run } },
         { provide: AuthService, useValue: authService },
@@ -69,6 +74,8 @@ describe('AttemptStore', () => {
     });
     store = TestBed.inject(AttemptStore);
   });
+
+  afterEach(() => localStorage.clear());
 
   it('starts without an attempt', () => {
     expect(store.attempt()).toBeUndefined();
@@ -689,6 +696,215 @@ describe('AttemptStore', () => {
 
       await expect(submitting).resolves.toBe(false);
       expect(store.actionError()).toBeUndefined();
+    });
+  });
+
+  describe('the local draft (D-041)', () => {
+    const attempt = { ...attemptOf('exercise-3', 'tests_failed'), currentCode: 'on the server' };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      saveCode.mockImplementation((_id, code) => Promise.resolve(savedAs(attempt, code)));
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('keeps what the student types until the server has it', async () => {
+      openOrCreate.mockResolvedValue(attempt);
+      await store.open('exercise-3');
+
+      store.updateCode('typed');
+      expect(readDraft(attempt.id)).toEqual({ code: 'typed', base: 'on the server' });
+
+      await vi.advanceTimersByTimeAsync(800);
+      expect(readDraft(attempt.id)).toBeUndefined();
+    });
+
+    it('keeps the draft when the save fails', async () => {
+      saveCode.mockRejectedValue(new DataError('unauthorized'));
+      openOrCreate.mockResolvedValue(attempt);
+      await store.open('exercise-3');
+
+      store.updateCode('typed');
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(readDraft(attempt.id)).toEqual({ code: 'typed', base: 'on the server' });
+    });
+
+    it('moves the draft on to what the server has when the student typed during the save', async () => {
+      const answer = deferred<Attempt>();
+      saveCode.mockReturnValueOnce(answer.promise);
+      openOrCreate.mockResolvedValue(attempt);
+      await store.open('exercise-3');
+
+      store.updateCode('first');
+      await vi.advanceTimersByTimeAsync(800);
+      store.updateCode('second');
+      answer.resolve(savedAs(attempt, 'first'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(readDraft(attempt.id)).toEqual({ code: 'second', base: 'first' });
+    });
+
+    it('brings the draft back on opening, says so and saves it', async () => {
+      saveDraft(attempt.id, { code: 'not saved', base: 'on the server' });
+      openOrCreate.mockResolvedValue(attempt);
+
+      await store.open('exercise-3');
+
+      expect(store.attempt()?.currentCode).toBe('not saved');
+      expect(store.status()).toBe('in_progress');
+      expect(store.draftRestored()).toBe(true);
+      expect(store.saveStatus()).toBe('pending');
+      await vi.advanceTimersByTimeAsync(800);
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'not saved');
+      expect(readDraft(attempt.id)).toBeUndefined();
+    });
+
+    it('stops saying the draft came back once the student types', async () => {
+      saveDraft(attempt.id, { code: 'not saved', base: 'on the server' });
+      openOrCreate.mockResolvedValue(attempt);
+      await store.open('exercise-3');
+
+      store.updateCode('not saved, and more');
+
+      expect(store.draftRestored()).toBe(false);
+    });
+
+    it.each([
+      ['the server changed since (another device saved)', 'older code', 'not saved', attempt],
+      ['it holds what the server already has', 'older code', 'on the server', attempt],
+      [
+        'the attempt was submitted',
+        'on the server',
+        'not saved',
+        { ...attempt, status: 'submitted' as const },
+      ],
+    ])('drops the draft when %s', async (_case, base, code, opened) => {
+      saveDraft(attempt.id, { code, base });
+      openOrCreate.mockResolvedValue(opened);
+
+      await store.open('exercise-3');
+
+      expect(store.attempt()?.currentCode).toBe('on the server');
+      expect(store.draftRestored()).toBe(false);
+      expect(readDraft(attempt.id)).toBeUndefined();
+    });
+
+    it('drops the draft once a run saved the same code', async () => {
+      run.mockResolvedValue({ status: 'tests_failed', results: [] });
+      openOrCreate.mockResolvedValue(attempt);
+      await store.open('exercise-3');
+
+      store.updateCode('typed');
+      await store.run();
+
+      expect(readDraft(attempt.id)).toBeUndefined();
+    });
+
+    it('keeps the draft when the student typed during the run', async () => {
+      const answer = deferred<RunResult>();
+      run.mockReturnValueOnce(answer.promise);
+      openOrCreate.mockResolvedValue(attempt);
+      await store.open('exercise-3');
+
+      store.updateCode('ran');
+      const running = store.run();
+      await vi.advanceTimersByTimeAsync(0);
+      store.updateCode('ran, and more');
+      answer.resolve({ status: 'tests_failed', results: [] });
+      await running;
+
+      expect(readDraft(attempt.id)?.code).toBe('ran, and more');
+    });
+
+    it('drops the draft once the attempt is submitted', async () => {
+      const passed = { ...attempt, status: 'passed' as const };
+      saveDraft(attempt.id, { code: 'on the server', base: 'older' });
+      openOrCreate.mockResolvedValue(passed);
+      submit.mockResolvedValue({ ...passed, status: 'submitted', finalCode: 'on the server' });
+      await store.open('exercise-3');
+      saveDraft(attempt.id, { code: 'stale', base: 'on the server' });
+
+      await store.submit();
+
+      expect(readDraft(attempt.id)).toBeUndefined();
+    });
+  });
+
+  describe('another tab taking the attempt (D-041)', () => {
+    const attempt = attemptOf('exercise-3', 'passed');
+
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      openOrCreate.mockResolvedValue(attempt);
+      saveCode.mockImplementation((_id, code) => Promise.resolve(savedAs(attempt, code)));
+      await store.open('exercise-3');
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('takes the attempt for this tab when it opens it', () => {
+      expect(channel.sent).toEqual([{ attemptId: attempt.id, tabId: expect.any(String) }]);
+      expect(store.editable()).toBe(true);
+    });
+
+    it('stops editing here, saving at once what this tab still had', () => {
+      store.updateCode('typed here');
+
+      channel.fromOtherTab(takenByOtherTab(attempt.id));
+
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'typed here');
+      expect(store.editingElsewhere()).toBe(true);
+      expect(store.editable()).toBe(false);
+      expect(store.canRun()).toBe(false);
+      store.updateCode('ignored');
+      expect(store.attempt()?.currentCode).toBe('typed here');
+    });
+
+    it('does not submit while the attempt is taken elsewhere', async () => {
+      channel.fromOtherTab(takenByOtherTab(attempt.id));
+
+      expect(store.canSubmit()).toBe(false);
+      await expect(store.submit()).resolves.toBe(false);
+    });
+
+    it('continues here: reads the attempt again, with what the other tab saved, and takes it back', async () => {
+      channel.fromOtherTab(takenByOtherTab(attempt.id));
+      openOrCreate.mockResolvedValue({ ...attempt, currentCode: 'saved by the other tab' });
+
+      await store.continueHere();
+
+      expect(store.editable()).toBe(true);
+      expect(store.attempt()?.currentCode).toBe('saved by the other tab');
+      expect(channel.sent).toHaveLength(2);
+    });
+
+    it('stays read only when continuing here fails, or the student opened another exercise', async () => {
+      channel.fromOtherTab(takenByOtherTab(attempt.id));
+      openOrCreate.mockRejectedValueOnce(new DataError('network'));
+
+      await store.continueHere();
+      expect(store.editingElsewhere()).toBe(true);
+
+      const answer = deferred<Attempt>();
+      openOrCreate.mockReturnValueOnce(answer.promise);
+      const continuing = store.continueHere();
+      openOrCreate.mockResolvedValueOnce(attemptOf('exercise-4'));
+      await store.open('exercise-4');
+      answer.resolve(attempt);
+      await continuing;
+      expect(store.attempt()?.exerciseId).toBe('exercise-4');
+    });
+
+    it('does nothing on continuing here without an attempt', async () => {
+      openOrCreate.mockReturnValueOnce(new Promise(() => undefined));
+      void store.open('exercise-5');
+      openOrCreate.mockClear();
+
+      await store.continueHere();
+
+      expect(openOrCreate).not.toHaveBeenCalled();
     });
   });
 });

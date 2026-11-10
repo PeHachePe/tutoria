@@ -99,7 +99,7 @@ export class BrowserSignals {
 
   /** A submitted attempt is only read: nothing the student does there is a signal. */
   private openAttemptId(): string | undefined {
-    return this.store.readonly() ? undefined : this.store.attempt()?.id;
+    return this.store.editable() ? this.store.attempt()?.id : undefined;
   }
 }
 

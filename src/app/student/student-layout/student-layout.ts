@@ -3,6 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatToolbar } from '@angular/material/toolbar';
 import { isActive, Router, RouterLink, RouterOutlet } from '@angular/router';
 
+import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS, SEGMENTS } from '../../core/app-paths';
 import { Brand } from '../../shared/brand/brand';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
@@ -11,7 +12,6 @@ import { SkipLink } from '../../shared/skip-link/skip-link';
 import { ThemeMenu } from '../../shared/theme-menu/theme-menu';
 import { UserMenu } from '../../shared/user-menu/user-menu';
 import { DataNoticeDialog } from '../registered-data/data-notice-dialog';
-import { SettingsStore } from '../settings/settings-store';
 
 /** Settings and registered data live in the user menu: the bar keeps room for the exercise. */
 const ACCOUNT_LINKS: readonly NavLink[] = [
@@ -75,12 +75,12 @@ export class StudentLayout {
   protected readonly accountLinks = ACCOUNT_LINKS;
 
   constructor() {
-    const settings = inject(SettingsStore);
+    const auth = inject(AuthStore);
     const dialog = inject(MatDialog);
     // The notice on the registered data, before working (RF-07): on any page of the area, so a link
     // straight to an exercise shows it too. The data page counts as seen, so it does not cover it.
     afterNextRender(() => {
-      if (!settings.dataNoticeSeen()) {
+      if (!auth.privacyNoticeSeen()) {
         dialog.open(DataNoticeDialog, { disableClose: true, autoFocus: 'dialog' });
       }
     });

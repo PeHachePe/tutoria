@@ -5,25 +5,23 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { provideSessionOf, restoreSession, userWith } from '../../auth/auth-testing';
+import { AuthStore } from '../../auth/auth-store';
+import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
 import { RegisteredDataPage } from '../registered-data/registered-data-page';
-import { settingKey } from '../settings/settings-store';
 import { READING_PAGE_CLASS, StudentLayout, WIDE_PAGE_CLASS } from './student-layout';
 
 @Component({ template: '<h1>Página</h1>' })
 class Page {}
 
 describe('StudentLayout', () => {
-  const noticeKey = settingKey('dataNoticeSeen', userWith('student').id);
-
-  afterEach(() => localStorage.clear());
-
   /** The student of provideSessionOf('student') has seen the notice, unless a test says otherwise. */
   async function renderAt(url: string, { noticeSeen = true } = {}) {
-    if (noticeSeen) localStorage.setItem(noticeKey, 'true');
     TestBed.configureTestingModule({
       providers: [
-        provideSessionOf('student'),
+        provideSessionOf(
+          'student',
+          noticeSeen ? { privacyNoticeSeenAt: '2026-09-01T08:00:00.000Z' } : {},
+        ),
         provideRouter([
           {
             path: 'alumno',
@@ -101,11 +99,11 @@ describe('StudentLayout', () => {
 
     const notice = await screen.findByRole('dialog', { name: 'Antes de empezar: tus datos' });
     expect(within(notice).getByRole('link', { name: 'Ver los detalles' })).toBeTruthy();
-    expect(localStorage.getItem(noticeKey)).toBeNull();
+    expect(TestBed.inject(AuthStore).privacyNoticeSeen()).toBe(false);
 
     await userEvent.setup().click(within(notice).getByRole('button', { name: 'Entendido' }));
 
-    expect(localStorage.getItem(noticeKey)).toBe('true');
+    expect(TestBed.inject(AuthStore).privacyNoticeSeen()).toBe(true);
   });
 
   it('does not show the notice again once seen', async () => {
@@ -121,6 +119,6 @@ describe('StudentLayout', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Datos registrados' })).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(localStorage.getItem(noticeKey)).toBe('true');
+    expect(TestBed.inject(AuthStore).privacyNoticeSeen()).toBe(true);
   });
 });

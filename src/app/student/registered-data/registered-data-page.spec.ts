@@ -1,16 +1,19 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
 
 import { AuthStore } from '../../auth/auth-store';
-import { SettingsStore } from '../settings/settings-store';
 import { RegisteredDataPage } from './registered-data-page';
 
 describe('RegisteredDataPage', () => {
+  const markPrivacyNoticeSeen = vi.fn(() => Promise.resolve());
+
   async function renderPage() {
     await render(RegisteredDataPage, {
-      providers: [provideRouter([]), { provide: AuthStore, useValue: { userId: signal('u1') } }],
+      providers: [
+        provideRouter([]),
+        { provide: AuthStore, useValue: { userId: signal('u1'), markPrivacyNoticeSeen } },
+      ],
     });
   }
 
@@ -47,6 +50,6 @@ describe('RegisteredDataPage', () => {
   it('counts as seeing the notice on the registered data', async () => {
     await renderPage();
 
-    expect(TestBed.inject(SettingsStore).dataNoticeSeen()).toBe(true);
+    expect(markPrivacyNoticeSeen).toHaveBeenCalled();
   });
 });

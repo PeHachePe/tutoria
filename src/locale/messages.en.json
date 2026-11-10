@@ -309,6 +309,13 @@
     "settings.reactions.reduced": "Reduced",
     "settings.reactions.reduced.hint": "Just a small emoji, with no effects around it.",
     "settings.reactions.off": "Off",
-    "settings.reactions.off.hint": "The tutor answers without reactions."
+    "settings.reactions.off.hint": "The tutor answers without reactions.",
+    "loadError.unavailable": "This service is not available right now. Try again later.",
+    "signInAgain": " Sign in again ",
+    "workspace.actionError.unavailable": "This service is not available right now: try again later.",
+    "workspace.editingElsewhere": " This exercise is open in another tab. Here you can only read it, so that one tab does not erase the changes of the other. ",
+    "workspace.continueHere": " Continue here ",
+    "workspace.draftRestored": "We recovered the code that had not been saved. It is being saved now.",
+    "tutor.error.unavailable": "It is not available right now: try again later."
   }
 }

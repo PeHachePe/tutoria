@@ -9,6 +9,8 @@ export interface AppUser {
   readonly email: string;
   readonly role: Role;
   readonly status: UserStatus;
+  /** When the student accepted the notice on the registered data (RF-07), or null before. */
+  readonly privacyNoticeSeenAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

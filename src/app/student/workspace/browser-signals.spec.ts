@@ -30,7 +30,7 @@ function at(ms: number): string {
 
 describe('BrowserSignals', () => {
   let attempt: ReturnType<typeof signal<Attempt | undefined>>;
-  let readonly: ReturnType<typeof signal<boolean>>;
+  let editable: ReturnType<typeof signal<boolean>>;
   let log: ReturnType<typeof vi.fn<EventLogger['log']>>;
   let flush: ReturnType<typeof vi.fn<EventLogger['flush']>>;
   let signals: BrowserSignals;
@@ -39,13 +39,13 @@ describe('BrowserSignals', () => {
     vi.useFakeTimers();
     vi.setSystemTime(START);
     attempt = signal<Attempt | undefined>(attemptOf('attempt-1'));
-    readonly = signal(false);
+    editable = signal(true);
     log = vi.fn<EventLogger['log']>();
     flush = vi.fn<EventLogger['flush']>(() => Promise.resolve());
     TestBed.configureTestingModule({
       providers: [
         BrowserSignals,
-        { provide: AttemptStore, useValue: { attempt, readonly } },
+        { provide: AttemptStore, useValue: { attempt, editable } },
         { provide: EventLogger, useValue: { log, flush } },
       ],
     });
@@ -70,7 +70,7 @@ describe('BrowserSignals', () => {
       attempt.set(undefined);
       signals.pasted(120);
       attempt.set(attemptOf('attempt-1'));
-      readonly.set(true);
+      editable.set(false);
       signals.pasted(120);
 
       expect(log).not.toHaveBeenCalled();
@@ -154,7 +154,7 @@ describe('BrowserSignals', () => {
     });
 
     it('records nothing without an attempt open for changes', async () => {
-      readonly.set(true);
+      editable.set(false);
       signals.left();
       await vi.advanceTimersByTimeAsync(MIN_AWAY_MS);
       signals.hidden();

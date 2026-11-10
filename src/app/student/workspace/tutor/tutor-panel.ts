@@ -25,6 +25,7 @@ import { AttemptStore } from '../attempt-store';
 import { TutorStore, type TutorTurn } from '../tutor-store';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
 import { TutorComposer } from './tutor-composer';
+import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { tutorErrorMessage } from './tutor-error-message';
 
 /** Questions the empty chat suggests, so nobody has to think how to start. */
@@ -57,6 +58,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
     Skeleton,
     HintLevelMeter,
     TutorComposer,
+    SignInAgain,
   ],
   templateUrl: './tutor-panel.html',
   host: {
@@ -80,6 +82,7 @@ export class TutorPanel {
   readonly minimize = output<void>();
 
   protected readonly store = inject(TutorStore);
+  protected readonly isSessionExpired = isSessionExpired;
   private readonly attempt = inject(AttemptStore);
   private readonly user = inject(AuthStore).user;
   private readonly locale = inject(LOCALE_ID);

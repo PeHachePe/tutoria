@@ -25,6 +25,7 @@ import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { AttemptStore } from '../attempt-store';
 import { BrowserSignals } from '../browser-signals';
+import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { actionErrorMessage } from './action-error-message';
 import { RunResults } from './run-results';
 import { SaveIndicator } from './save-indicator';
@@ -55,6 +56,7 @@ export const CODE_ZONE_ID = 'code-zone';
     CodeEditor,
     SaveIndicator,
     RunResults,
+    SignInAgain,
   ],
   templateUrl: './code-zone.html',
   host: {
@@ -107,6 +109,9 @@ export class CodeZone {
   /** The note that replaces the buttons once submitted, which takes the focus then. */
   private readonly submittedNote = viewChild<ElementRef<HTMLElement>>('submittedNote');
 
+  protected readonly actionSessionExpired = computed(() =>
+    isSessionExpired(this.store.actionError()?.error),
+  );
   protected readonly actionErrorMessage = computed(() => {
     const failure = this.store.actionError();
     return failure && actionErrorMessage(failure);

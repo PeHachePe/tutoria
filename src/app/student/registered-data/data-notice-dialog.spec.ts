@@ -6,18 +6,19 @@ import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { AuthStore } from '../../auth/auth-store';
-import { SettingsStore } from '../settings/settings-store';
 import { DataNoticeDialog } from './data-notice-dialog';
 
 @Component({ template: '' })
 class Page {}
 
 describe('DataNoticeDialog', () => {
+  const markPrivacyNoticeSeen = vi.fn(() => Promise.resolve());
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([{ path: 'alumno/datos', component: Page }]),
-        { provide: AuthStore, useValue: { userId: signal('u1') } },
+        { provide: AuthStore, useValue: { userId: signal('u1'), markPrivacyNoticeSeen } },
       ],
     });
     TestBed.inject(MatDialog).open(DataNoticeDialog);
@@ -39,6 +40,6 @@ describe('DataNoticeDialog', () => {
   it('counts as seen when the student goes to the details', async () => {
     await userEvent.setup().click(await screen.findByRole('link', { name: 'Ver los detalles' }));
 
-    expect(TestBed.inject(SettingsStore).dataNoticeSeen()).toBe(true);
+    expect(markPrivacyNoticeSeen).toHaveBeenCalled();
   });
 });

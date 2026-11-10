@@ -1,9 +1,9 @@
 import { inject } from '@angular/core';
 import { CanMatchFn, Router } from '@angular/router';
 
-import { APP_PATHS, REDIRECT_PARAM } from '../core/app-paths';
 import type { Role } from '../data/user';
 import { AuthStore } from './auth-store';
+import { loginRedirect } from './login-redirect';
 
 /**
  * Lets the given roles match the route (2.2). Without a session it sends the user to the login,
@@ -19,9 +19,7 @@ export function roleGuard(...roles: Role[]): CanMatchFn {
         segments.map((segment) => segment.path),
         { queryParams },
       );
-      return router.createUrlTree([APP_PATHS.login], {
-        queryParams: { [REDIRECT_PARAM]: router.serializeUrl(asked) },
-      });
+      return loginRedirect(router, router.serializeUrl(asked));
     }
     return roles.includes(role);
   };

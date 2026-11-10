@@ -9,6 +9,8 @@ function advice(error: unknown): string {
       return $localize`:@@tutor.error.rateLimited:Has preguntado muchas veces seguidas: espera un momento.`;
     case 'unauthorized':
       return $localize`:@@tutor.error.unauthorized:Tu sesión ha caducado: vuelve a entrar para continuar.`;
+    case 'unavailable':
+      return $localize`:@@tutor.error.unavailable:Ahora mismo no está disponible: inténtalo más tarde.`;
     default:
       return $localize`:@@tutor.error.unknown:Inténtalo de nuevo.`;
   }

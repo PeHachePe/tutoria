@@ -12,6 +12,9 @@ describe('tutorErrorMessage', () => {
     expect(tutorErrorMessage(new DataError('unauthorized'))).toBe(
       'El tutor no ha podido responder. Tu sesión ha caducado: vuelve a entrar para continuar.',
     );
+    expect(tutorErrorMessage(new DataError('unavailable'))).toBe(
+      'El tutor no ha podido responder. Ahora mismo no está disponible: inténtalo más tarde.',
+    );
     expect(tutorErrorMessage(new Error('boom'))).toBe(
       'El tutor no ha podido responder. Inténtalo de nuevo.',
     );

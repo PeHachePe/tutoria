@@ -24,6 +24,12 @@ describe('loadErrorMessage', () => {
     );
   });
 
+  it('asks to try later when the service is not available', () => {
+    expect(loadErrorMessage(new DataError('unavailable'))).toBe(
+      'Este servicio no está disponible ahora mismo. Inténtalo más tarde.',
+    );
+  });
+
   it.each<unknown>([new DataError('invalid'), new DataError('unknown'), new Error('boom'), 'boom'])(
     'gives a generic message for anything else (%s)',
     (error) => {

@@ -12,6 +12,8 @@ export function loadErrorMessage(error: unknown): string {
       return $localize`:@@loadError.noAccess:No tienes acceso a este contenido.`;
     case 'rate_limited':
       return $localize`:@@loadError.rateLimited:Demasiadas peticiones. Espera un momento e inténtalo de nuevo.`;
+    case 'unavailable':
+      return $localize`:@@loadError.unavailable:Este servicio no está disponible ahora mismo. Inténtalo más tarde.`;
     default:
       return $localize`:@@loadError.unknown:No se ha podido cargar. Inténtalo de nuevo.`;
   }

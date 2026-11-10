@@ -75,9 +75,13 @@
         <p class="min-w-40 flex-1 text-body-medium" i18n="@@tutor.loadError">
           No se ha podido cargar la conversación.
         </p>
-        <button matButton type="button" (click)="store.reload()" i18n="@@tutor.retryLoad">
-          Reintentar
-        </button>
+        @if (isSessionExpired(store.loadError())) {
+          <app-sign-in-again />
+        } @else {
+          <button matButton type="button" (click)="store.reload()" i18n="@@tutor.retryLoad">
+            Reintentar
+          </button>
+        }
       </div>
     } @else if (items().length === 0) {
       <!-- An empty chat greets, says what to expect and offers a way to start -->
@@ -170,9 +174,13 @@
             >
               <mat-icon class="shrink-0">error</mat-icon>
               <p class="min-w-40 flex-1 text-body-medium">{{ errorMessage(turn) }}</p>
-              <button matButton type="button" (click)="retry(turn)" i18n="@@tutor.retry">
-                Reintentar
-              </button>
+              @if (isSessionExpired(turn.error)) {
+                <app-sign-in-again />
+              } @else {
+                <button matButton type="button" (click)="retry(turn)" i18n="@@tutor.retry">
+                  Reintentar
+                </button>
+              }
             </div>
           } @else {
             <div class="flex max-w-[92%] flex-col items-start gap-0.5 self-start">

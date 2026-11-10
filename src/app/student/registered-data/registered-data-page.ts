@@ -3,8 +3,8 @@ import { MatAnchor } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
+import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
-import { SettingsStore } from '../settings/settings-store';
 
 /** What the app records while the student works (2.8): each item, in plain words. */
 const RECORDED: readonly {
@@ -64,6 +64,6 @@ export class RegisteredDataPage {
   protected readonly settingsPath = APP_PATHS.student.settings;
 
   constructor() {
-    inject(SettingsStore).markDataNoticeSeen();
+    void inject(AuthStore).markPrivacyNoticeSeen();
   }
 }

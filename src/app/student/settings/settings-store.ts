@@ -11,7 +11,6 @@ const STORAGE_KEYS = {
   mascotHeadset: 'tutoria.mascot-headset',
   mascotBowTie: 'tutoria.mascot-bow-tie',
   mascotBoneCursor: 'tutoria.mascot-bone-cursor',
-  dataNoticeSeen: 'tutoria.data-notice-seen',
 } as const;
 
 export type SettingName = keyof typeof STORAGE_KEYS;
@@ -23,9 +22,9 @@ export function settingKey(setting: SettingName, userId: string): string {
 
 /**
  * The student's settings (4.5, ficha 05), remembered per user in this browser: how the tutor's
- * reactions show (1.8), whether the tutor may speak first (it does from step 6.2), the mascot's
- * accessories and whether the notice on the registered data was seen (RF-07). The colour mode is
- * for the whole browser, because the login uses it too: ThemeService keeps it.
+ * reactions show (1.8), whether the tutor may speak first (it does from step 6.2) and the mascot's
+ * accessories. The colour mode is for the whole browser, because the login uses it too:
+ * ThemeService keeps it. Whether the data notice was seen is part of the user (AuthStore, RF-07).
  */
 @Service()
 export class SettingsStore {
@@ -40,7 +39,6 @@ export class SettingsStore {
   private readonly mascotHeadsetState = this.flag('mascotHeadset', true);
   private readonly mascotBowTieState = this.flag('mascotBowTie', true);
   private readonly mascotBoneCursorState = this.flag('mascotBoneCursor', true);
-  private readonly dataNoticeSeenState = this.flag('dataNoticeSeen', false);
 
   readonly reactions = this.reactionsState.asReadonly();
   readonly reactionEmojis = this.reactionEmojisState.asReadonly();
@@ -48,7 +46,6 @@ export class SettingsStore {
   readonly mascotHeadset = this.mascotHeadsetState.asReadonly();
   readonly mascotBowTie = this.mascotBowTieState.asReadonly();
   readonly mascotBoneCursor = this.mascotBoneCursorState.asReadonly();
-  readonly dataNoticeSeen = this.dataNoticeSeenState.asReadonly();
 
   setReactions(mode: ReactionMode): void {
     this.update('reactions', this.reactionsState, mode);
@@ -72,10 +69,6 @@ export class SettingsStore {
 
   setMascotBoneCursor(on: boolean): void {
     this.update('mascotBoneCursor', this.mascotBoneCursorState, on);
-  }
-
-  markDataNoticeSeen(): void {
-    this.update('dataNoticeSeen', this.dataNoticeSeenState, true);
   }
 
   /** Read again for each user who signs in; a choice without a user lasts until the page closes. */

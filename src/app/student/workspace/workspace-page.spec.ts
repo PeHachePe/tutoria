@@ -22,6 +22,7 @@ import { buildRunResult } from '../../data/mock/code-runner/build-run-result';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
+import { FakeTabChannel, provideTestEditingTab, takenByOtherTab } from './editing-tab-testing';
 import { CODE_SHARE, paneShareKey, STATEMENT_SHARE, tutorFloatingKey } from './pane-share';
 import { SettingsStore } from '../settings/settings-store';
 import { TutorStore } from './tutor-store';
@@ -120,6 +121,7 @@ describe('WorkspacePage', () => {
     const submitAttempt = vi.fn(submit);
     const runTests = vi.fn(run);
     const sendEvents = vi.fn<EventService['send']>(() => Promise.resolve());
+    const channel = new FakeTabChannel();
     TestBed.configureTestingModule({
       // The editor is deferred: each test chooses the state of the block, since jsdom has no viewport.
       deferBlockBehavior: DeferBlockBehavior.Manual,
@@ -127,6 +129,7 @@ describe('WorkspacePage', () => {
         { provide: PageReloader, useValue: { reload } },
         provideRouter([]),
         AttemptStore,
+        ...provideTestEditingTab(channel),
         TutorStore,
         BrowserSignals,
         { provide: TutorService, useValue: { ask: () => tutorAnswer() } },
@@ -169,7 +172,7 @@ describe('WorkspacePage', () => {
     } else {
       fixture.detectChanges();
     }
-    return { fixture, reload, save, submitAttempt, runTests, sendEvents };
+    return { fixture, reload, save, submitAttempt, runTests, sendEvents, channel };
   }
 
   /** Renders the deferred editor block in a state, and waits for the page to settle. */
@@ -665,6 +668,20 @@ describe('WorkspacePage', () => {
       expect(screen.queryByRole('alert')).toBeNull();
     });
 
+    it('offers to sign in again instead of retrying when the session expired', async () => {
+      const { fixture } = await renderPage({
+        run: () => Promise.reject(new DataError('unauthorized')),
+      });
+
+      await userEvent.setup().click(runButton());
+      await fixture.whenStable();
+      const alert = screen.getByRole('alert');
+
+      expect(text(alert)).toContain('Tu sesión ha caducado');
+      expect(within(alert).getByRole('button', { name: 'Volver a entrar' })).toBeTruthy();
+      expect(within(alert).queryByRole('button', { name: 'Reintentar' })).toBeNull();
+    });
+
     it('submits a passed attempt after confirming, and moves the focus to the note', async () => {
       const { fixture, submitAttempt } = await renderPage({
         run: () => Promise.resolve(ALL_PASSED),
@@ -1042,5 +1059,47 @@ describe('WorkspacePage', () => {
 
       expect(screen.queryByRole('button', { name: 'Mira el bucle.' })).toBeNull();
     });
+  });
+
+  it('says the code came back from the local draft, and keeps saying it until the student types', async () => {
+    localStorage.setItem(
+      `tutoria.code-draft.attempt-${SUM.exercise.id}`,
+      JSON.stringify({ code: 'function sumar() {}', base: '' }),
+    );
+    const { fixture } = await renderPage();
+    await showEditor(fixture);
+
+    expect(text(screen.getByRole('status'))).toContain(
+      'Hemos recuperado el código que no llegó a guardarse. Ya se está guardando.',
+    );
+    expect(editorView().state.doc.toString()).toBe('function sumar() {}');
+
+    type(' ');
+    await fixture.whenStable();
+    expect(screen.queryByText(/Hemos recuperado el código/)).toBeNull();
+    localStorage.clear();
+  });
+
+  it('only shows the code when another tab takes the exercise, until the student continues here', async () => {
+    const { fixture, channel } = await renderPage();
+    await showEditor(fixture);
+    expect(editorView().state.readOnly).toBe(false);
+
+    channel.fromOtherTab(takenByOtherTab(`attempt-${SUM.exercise.id}`));
+    await fixture.whenStable();
+
+    const notice = screen.getByRole('status');
+    expect(text(notice)).toContain('Este ejercicio está abierto en otra pestaña');
+    expect(editorView().state.readOnly).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Ejecutar pruebas' }).getAttribute('aria-disabled'),
+    ).toBe('true');
+
+    await userEvent.setup().click(within(notice).getByRole('button', { name: 'Seguir aquí' }));
+    await fixture.whenStable();
+    await showEditor(fixture);
+
+    expect(screen.queryByText(/abierto en otra pestaña/)).toBeNull();
+    expect(editorView().state.readOnly).toBe(false);
   });
 });

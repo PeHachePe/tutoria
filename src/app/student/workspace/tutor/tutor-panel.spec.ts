@@ -346,6 +346,39 @@ describe('TutorPanel', () => {
     expect(within(conversation()).getByText(/Respuesta a question/)).toBeTruthy();
   });
 
+  it('offers to sign in again when the conversation could not load because the session expired', async () => {
+    const { fixture } = await renderPanel({
+      history: () => Promise.reject(new DataError('unauthorized')),
+    });
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(screen.getByRole('alert').textContent).toContain(
+        'No se ha podido cargar la conversación.',
+      );
+    });
+
+    expect(screen.getByRole('button', { name: 'Volver a entrar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull();
+  });
+
+  it('offers to sign in again when an answer failed because the session expired', async () => {
+    const { fixture } = await renderPanel({
+      ask: () => ({
+        [Symbol.asyncIterator]: () => ({
+          next: () => Promise.reject(new DataError('unauthorized')),
+        }),
+      }),
+    });
+    const user = userEvent.setup();
+
+    await user.type(screen.getByRole('textbox', { name: 'Pregunta al tutor' }), '¿Y esto?{Enter}');
+    await fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toContain('Tu sesión ha caducado');
+    expect(screen.getByRole('button', { name: 'Volver a entrar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull();
+  });
+
   it('shows the past conversation by day, with who says what', async () => {
     await renderPanel({
       interactions: [

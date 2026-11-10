@@ -17,4 +17,14 @@ export abstract class AuthService {
 
   /** User of the restored session, or null if nobody is signed in. */
   abstract currentUser(): Promise<AppUser | null>;
+
+  /**
+   * Calls `listener` with the id of the signed-in user, or null, each time the session changes
+   * outside this page: in another tab, or because it expired and could not be renewed. It may also
+   * call it with the same user (a renewed token). Returns the function that stops watching.
+   */
+  abstract watchSession(listener: (userId: string | null) => void): () => void;
+
+  /** Records that the signed-in user saw the notice on the registered data (RF-07). */
+  abstract markPrivacyNoticeSeen(): Promise<AppUser>;
 }

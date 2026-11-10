@@ -22,7 +22,7 @@ En código, estructura y nombres mandan las buenas prácticas de Angular 22: la 
 
 Se desarrolla en macOS (zsh) y, alguna vez, en Windows. Todo tiene que funcionar en los dos: los scripts de `package.json` los ejecuta `sh` en el Mac y `cmd` en Windows, así que nada de comandos propios de un sistema (`rm`, `cp`, `export`, `set`…). Los scripts auxiliares y los hooks, en Node, con rutas construidas con `path` y `os.homedir()`. En la terminal del agente (zsh) sí valen los comandos de Unix.
 
-- `npm start`: servidor de desarrollo con datos simulados.
+- `npm start`: servidor de desarrollo con datos simulados; `npm run start:local`, contra Supabase local (`db:start` antes).
 - `npm run format` y `npm run check` (formato, lint y tests unitarios). El lint hace cumplir buenas prácticas de Angular: no desactives reglas para salir del paso.
 - `npm run e2e`: Playwright (desde el paso 0.6).
 - `npm run db:start`, `db:stop`, `db:reset` (migraciones y seed desde cero), `db:test` (pgTAP) y `db:types` (tipos en `src/app/data/supabase/`): Supabase en local, con Docker abierto y en los puertos 553xx (D-040).

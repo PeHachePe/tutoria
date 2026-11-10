@@ -467,6 +467,10 @@ export type Database = {
         Args: never;
         Returns: Database['public']['Enums']['user_role'];
       };
+      hidden_test_count: {
+        Args: { target_exercise_id: string };
+        Returns: number;
+      };
       is_admin: { Args: never; Returns: boolean };
       is_assigned_to_me: {
         Args: { target_exercise_id: string };

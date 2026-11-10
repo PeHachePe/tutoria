@@ -9,8 +9,8 @@ import {
 import { MatIcon } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
+import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
-import { SettingsStore } from '../settings/settings-store';
 
 /**
  * The notice on the registered data (RF-07), the first time the student enters, before working: a
@@ -77,11 +77,11 @@ import { SettingsStore } from '../settings/settings-store';
   `,
 })
 export class DataNoticeDialog {
-  private readonly settings = inject(SettingsStore);
+  private readonly auth = inject(AuthStore);
 
   protected readonly dataPath = APP_PATHS.student.data;
 
   protected acknowledge(): void {
-    this.settings.markDataNoticeSeen();
+    void this.auth.markPrivacyNoticeSeen();
   }
 }

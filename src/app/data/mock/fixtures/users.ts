@@ -73,6 +73,8 @@ function user(
     email: `${email}@tutoria.test`,
     role,
     status,
+    // Every account starts without having seen the data notice, so the demo shows it
+    privacyNoticeSeenAt: null,
     createdAt: CREATED_AT,
     updatedAt: CREATED_AT,
   };

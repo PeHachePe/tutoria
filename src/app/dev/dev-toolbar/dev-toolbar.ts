@@ -38,6 +38,7 @@ const FAILURE_OPTIONS: readonly { readonly kind: DataErrorKind; readonly label: 
   { kind: 'forbidden', label: 'Sin permiso' },
   { kind: 'not_found', label: 'No encontrado' },
   { kind: 'rate_limited', label: 'Demasiadas peticiones' },
+  { kind: 'unavailable', label: 'Servicio no disponible' },
   { kind: 'invalid', label: 'Datos no válidos' },
   { kind: 'unknown', label: 'Error desconocido' },
 ];

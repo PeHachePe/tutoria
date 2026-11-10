@@ -15,6 +15,10 @@ describe('actionErrorMessage', () => {
       'unauthorized',
       'No se han podido ejecutar las pruebas. Tu sesión ha caducado: vuelve a entrar para continuar.',
     ],
+    [
+      'unavailable',
+      'No se han podido ejecutar las pruebas. Este servicio no está disponible ahora mismo: inténtalo más tarde.',
+    ],
     ['unknown', 'No se han podido ejecutar las pruebas. Inténtalo de nuevo.'],
   ] as const)('explains a failed run with %s', (kind, message) => {
     expect(actionErrorMessage({ action: 'run', error: new DataError(kind) })).toBe(message);

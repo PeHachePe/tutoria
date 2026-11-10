@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
+import { AuthStore } from '../../auth/auth-store';
 import { DataError } from '../../data/data-error';
 import { LoadError } from './load-error';
 
@@ -23,6 +24,17 @@ describe('LoadError', () => {
 
     expect(screen.getByRole('alert').textContent).toContain('No tienes acceso a este contenido');
     expect(screen.getByRole('link', { name: 'Volver a los ejercicios' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull();
+  });
+
+  it('offers to sign in again instead of retrying when the session expired', async () => {
+    await render(LoadError, {
+      inputs: { error: new DataError('unauthorized') },
+      providers: [{ provide: AuthStore, useValue: { signInAgain: vi.fn() } }],
+    });
+
+    expect(screen.getByRole('alert').textContent).toContain('Tu sesión ha caducado');
+    expect(screen.getByRole('button', { name: 'Volver a entrar' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull();
   });
 });

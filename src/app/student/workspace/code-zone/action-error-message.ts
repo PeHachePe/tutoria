@@ -15,6 +15,8 @@ function advice(error: unknown): string {
       return $localize`:@@workspace.actionError.rateLimited:Has ejecutado muchas veces seguidas: espera un momento.`;
     case 'unauthorized':
       return $localize`:@@workspace.actionError.unauthorized:Tu sesión ha caducado: vuelve a entrar para continuar.`;
+    case 'unavailable':
+      return $localize`:@@workspace.actionError.unavailable:Este servicio no está disponible ahora mismo: inténtalo más tarde.`;
     default:
       return $localize`:@@workspace.actionError.unknown:Inténtalo de nuevo.`;
   }

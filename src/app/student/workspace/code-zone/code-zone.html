@@ -8,7 +8,7 @@
     Código
   </h2>
   <div class="ms-auto flex items-center gap-1">
-    @if (!store.readonly()) {
+    @if (store.editable()) {
       <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
     }
     <!-- A toggle button: same name, and aria-pressed says whether the code is expanded. On
@@ -28,12 +28,37 @@
     }
   </div>
 </div>
+@if (store.editingElsewhere() && !store.readonly()) {
+  <div
+    role="status"
+    class="flex flex-wrap items-center gap-2 rounded-lg bg-warning-container px-3 py-2 text-on-warning-container"
+  >
+    <mat-icon class="shrink-0">tab</mat-icon>
+    <p class="min-w-48 flex-1 text-body-medium" i18n="@@workspace.editingElsewhere">
+      Este ejercicio está abierto en otra pestaña. Aquí solo puedes leerlo, para que una pestaña no
+      borre los cambios de la otra.
+    </p>
+    <button matButton type="button" (click)="store.continueHere()" i18n="@@workspace.continueHere">
+      Seguir aquí
+    </button>
+  </div>
+} @else if (store.draftRestored()) {
+  <p
+    role="status"
+    class="flex items-center gap-2 rounded-lg bg-info-container px-3 py-2 text-body-small text-on-info-container"
+  >
+    <mat-icon class="shrink-0">history</mat-icon>
+    <span i18n="@@workspace.draftRestored"
+      >Hemos recuperado el código que no llegó a guardarse. Ya se está guardando.</span
+    >
+  </p>
+}
 <!-- CodeMirror comes in a chunk of its own, downloaded when the zone shows (4.7) -->
 @defer (on viewport; prefetch on idle) {
   <!-- A new editor for each attempt and when it becomes read only: it starts with its code and
        a clean undo history, so it needs no effect to follow outside changes (D-029) -->
   @if (editor(); as current) {
-    @if (store.readonly()) {
+    @if (!store.editable()) {
       <app-code-editor
         class="min-h-24 flex-1"
         [initialCode]="current.code"
@@ -136,9 +161,13 @@
   >
     <mat-icon class="shrink-0">error</mat-icon>
     <p class="min-w-48 flex-1 text-body-medium">{{ message }}</p>
-    <button matButton type="button" (click)="retryAction()" i18n="@@workspace.retryAction">
-      Reintentar
-    </button>
+    @if (actionSessionExpired()) {
+      <app-sign-in-again />
+    } @else {
+      <button matButton type="button" (click)="retryAction()" i18n="@@workspace.retryAction">
+        Reintentar
+      </button>
+    }
   </div>
 }
 <!-- Always in the page, so screen readers hear each new summary -->

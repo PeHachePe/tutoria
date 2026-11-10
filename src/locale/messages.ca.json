@@ -309,6 +309,13 @@
     "settings.reactions.reduced": "Reduïdes",
     "settings.reactions.reduced.hint": "Només un emoji petit, sense efectes al voltant.",
     "settings.reactions.off": "Desactivades",
-    "settings.reactions.off.hint": "El tutor respon sense reaccions."
+    "settings.reactions.off.hint": "El tutor respon sense reaccions.",
+    "loadError.unavailable": "Aquest servei no està disponible ara mateix. Torna-ho a provar més tard.",
+    "signInAgain": " Torna a entrar ",
+    "workspace.actionError.unavailable": "Aquest servei no està disponible ara mateix: torna-ho a provar més tard.",
+    "workspace.editingElsewhere": " Aquest exercici està obert en una altra pestanya. Aquí només el pots llegir, perquè una pestanya no esborri els canvis de l’altra. ",
+    "workspace.continueHere": " Continua aquí ",
+    "workspace.draftRestored": "Hem recuperat el codi que no s’havia arribat a desar. Ja s’està desant.",
+    "tutor.error.unavailable": "Ara mateix no està disponible: torna-ho a provar més tard."
   }
 }

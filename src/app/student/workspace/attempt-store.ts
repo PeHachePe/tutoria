@@ -5,6 +5,8 @@ import type { Attempt, RunResult } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
 import { createDebouncer } from '../../shared/create-debouncer';
+import { clearDraft, readDraft, saveDraft } from './code-draft';
+import { EditingTab } from './editing-tab';
 
 /** The code is saved once the student stops typing for this long (4.5). */
 const AUTOSAVE_DELAY_MS = 800;
@@ -31,6 +33,7 @@ export interface ActionError {
 export class AttemptStore {
   private readonly attempts = inject(AttemptService);
   private readonly runner = inject(CodeRunnerService);
+  private readonly tabs = inject(EditingTab);
   private readonly autosave = createDebouncer(AUTOSAVE_DELAY_MS);
 
   private readonly attemptState = signal<Attempt | undefined>(undefined);
@@ -46,6 +49,7 @@ export class AttemptStore {
   private readonly runningIdState = signal<string | undefined>(undefined);
   private readonly submittingIdState = signal<string | undefined>(undefined);
   private readonly actionErrorState = signal<ActionError | undefined>(undefined);
+  private readonly draftRestoredState = signal(false);
   /** The save on its way, which a run waits for before sending the code. */
   private saving: Promise<void> = Promise.resolve();
   /** Exercise of the latest `open()`, so an answer that arrives late does not overwrite the new one. */
@@ -57,6 +61,12 @@ export class AttemptStore {
   readonly status = computed(() => this.attemptState()?.status ?? 'not_started');
   /** A submitted attempt only shows its code (2.4). */
   readonly readonly = computed(() => this.status() === 'submitted');
+  /** Another tab of this browser took the attempt: this one only shows it (D-041). */
+  readonly editingElsewhere = this.tabs.elsewhere;
+  /** The student can change the code here: an open attempt, not submitted, not taken elsewhere. */
+  readonly editable = computed(
+    () => !!this.attemptState() && !this.readonly() && !this.editingElsewhere(),
+  );
 
   readonly hasUnsavedChanges = computed(
     () => (this.attemptState()?.currentCode ?? '') !== this.savedCodeState(),
@@ -72,6 +82,8 @@ export class AttemptStore {
   /** Results of the last run in this visit: they are not stored, so a reload starts without them. */
   readonly lastRun = this.lastRunState.asReadonly();
   readonly actionError = this.actionErrorState.asReadonly();
+  /** The code came back from the local draft: the server did not have it (D-041). */
+  readonly draftRestored = this.draftRestoredState.asReadonly();
   readonly running = computed(() => this.isCurrent(this.runningIdState()));
   readonly submitting = computed(() => this.isCurrent(this.submittingIdState()));
 
@@ -92,9 +104,11 @@ export class AttemptStore {
   });
 
   private readonly busy = computed(() => this.running() || this.submitting());
-  readonly canRun = computed(() => !!this.attemptState() && !this.readonly() && !this.busy());
+  readonly canRun = computed(() => this.editable() && !this.busy());
   /** Only a passed attempt can be submitted (2.4). */
-  readonly canSubmit = computed(() => this.status() === 'passed' && !this.busy());
+  readonly canSubmit = computed(
+    () => this.status() === 'passed' && !this.editingElsewhere() && !this.busy(),
+  );
 
   constructor() {
     // Neither leaving the screen nor signing out loses what the student typed in the last 800 ms:
@@ -112,26 +126,54 @@ export class AttemptStore {
     this.openingId = exerciseId;
     this.attemptState.set(undefined);
     const attempt = await this.attempts.openOrCreate(exerciseId);
-    if (this.openingId === exerciseId) {
-      this.attemptState.set(attempt);
-      this.savedCodeState.set(attempt.currentCode);
-      this.saveFailedState.set(false);
-      this.changedState.set(false);
-      this.lastRunState.set(undefined);
-      this.lastRunCodeState.set(undefined);
-      this.actionErrorState.set(undefined);
-    }
+    if (this.openingId === exerciseId) this.take(attempt);
     return attempt;
+  }
+
+  /**
+   * «Seguir aquí», after another tab took the attempt: reads it again, as that tab may have saved
+   * newer code, and takes it back. On failure it stays read only, and the student can try again.
+   */
+  async continueHere(): Promise<void> {
+    const current = this.attemptState();
+    if (!current) return;
+    try {
+      const attempt = await this.attempts.openOrCreate(current.exerciseId);
+      if (this.attemptState()?.id === attempt.id) this.take(attempt);
+    } catch {
+      // Still taken elsewhere here: the notice and its button stay
+    }
+  }
+
+  /** Shows the attempt the server returned, with the local draft if newer, and claims this tab. */
+  private take(attempt: Attempt): void {
+    const draft = this.restorableDraft(attempt);
+    this.attemptState.set(
+      draft === undefined ? attempt : { ...attempt, currentCode: draft, status: 'in_progress' },
+    );
+    this.savedCodeState.set(attempt.currentCode);
+    this.saveFailedState.set(false);
+    this.changedState.set(draft !== undefined);
+    this.draftRestoredState.set(draft !== undefined);
+    this.lastRunState.set(undefined);
+    this.lastRunCodeState.set(undefined);
+    this.actionErrorState.set(undefined);
+    // What the server missed goes to it as soon as possible
+    if (draft !== undefined) this.autosave.schedule(() => void this.startSave());
+    // If another tab takes it, what this one still had goes to the server at once
+    this.tabs.claim(attempt.id, () => this.autosave.flush());
   }
 
   /** Keeps the code the student types and saves it once they stop typing. */
   updateCode(code: string): void {
     const attempt = this.attemptState();
-    if (!attempt || this.readonly() || code === attempt.currentCode) return;
+    if (!attempt || !this.editable() || code === attempt.currentCode) return;
     // Editing invalidates the last run, as the server will do on saving (2.4).
     this.attemptState.set({ ...attempt, currentCode: code, status: 'in_progress' });
+    saveDraft(attempt.id, { code, base: this.savedCodeState() });
     this.saveFailedState.set(false);
     this.changedState.set(true);
+    this.draftRestoredState.set(false);
     this.autosave.schedule(() => void this.startSave());
   }
 
@@ -168,6 +210,7 @@ export class AttemptStore {
       this.lastRunState.set(result);
       this.lastRunCodeState.set(code);
       this.savedCodeState.set(code);
+      if (current.currentCode === code) clearDraft(attempt.id);
       // Code typed while it ran is newer than the run: the attempt stays in progress until saved
       this.attemptState.set({
         ...current,
@@ -197,6 +240,7 @@ export class AttemptStore {
       if (this.attemptState()?.id !== attempt.id) return false;
       this.attemptState.set(submitted);
       this.savedCodeState.set(submitted.currentCode);
+      clearDraft(attempt.id);
       return true;
     } catch (error) {
       if (this.attemptState()?.id === attempt.id) {
@@ -212,6 +256,22 @@ export class AttemptStore {
   private saveBeforeLeaving(): Promise<void> {
     this.autosave.flush();
     return this.saving;
+  }
+
+  /**
+   * The code of the local draft, if it is newer than the server's: the attempt is open for changes
+   * and the server has not changed it since the draft began (another device). Any other is dropped.
+   */
+  private restorableDraft(attempt: Attempt): string | undefined {
+    const draft = readDraft(attempt.id);
+    const usable =
+      draft &&
+      attempt.status !== 'submitted' &&
+      draft.base === attempt.currentCode &&
+      draft.code !== attempt.currentCode;
+    if (usable) return draft.code;
+    if (draft) clearDraft(attempt.id);
+    return undefined;
   }
 
   private isCurrent(attemptId: string | undefined): boolean {
@@ -246,6 +306,12 @@ export class AttemptStore {
           currentCode: current.currentCode,
           status: current.status,
         });
+        // The draft now starts from what the server has, or is no longer needed
+        if (current.currentCode === code) {
+          clearDraft(saved.id);
+        } else {
+          saveDraft(saved.id, { code: current.currentCode, base: code });
+        }
       }
     } catch {
       if (this.attemptState()?.id === attempt.id) this.saveFailedState.set(true);
