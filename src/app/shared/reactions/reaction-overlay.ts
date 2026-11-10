@@ -12,6 +12,7 @@ import {
   untracked,
 } from '@angular/core';
 
+import { EmojiPrefetcher } from './emoji-prefetcher';
 import type { Reaction, ReactionMode } from './reaction';
 import {
   prefetchedEmojis,
@@ -167,9 +168,10 @@ export class ReactionOverlay {
   constructor() {
     // A boundary with the browser, not state: it only warms the cache for the first reactions
     const destroyRef = inject(DestroyRef);
+    const prefetcher = inject(EmojiPrefetcher);
     afterNextRender(() => {
       const timer = setTimeout(() => {
-        prefetch(prefetchedEmojis(this.emojis()));
+        prefetcher.prefetch(prefetchedEmojis(this.emojis()));
       }, PREFETCH_DELAY_MS);
       destroyRef.onDestroy(() => clearTimeout(timer));
     });
@@ -214,14 +216,5 @@ function shapeClasses({ shape, tone }: ReactionParticle): string {
       return `reaction-${shape}`;
     default:
       return `reaction-${shape} ${colours.confetti}`;
-  }
-}
-
-/** Asks the browser for each emoji with a low priority, so the first reactions find them ready. */
-function prefetch(emojis: readonly string[]): void {
-  for (const emoji of emojis) {
-    const image = new Image();
-    image.fetchPriority = 'low';
-    image.src = emoji;
   }
 }
