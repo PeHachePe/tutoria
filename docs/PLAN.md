@@ -271,7 +271,7 @@ type TutorEvent =
   | { type: 'done'; interactionId: string | null; silent: boolean }; // silent: the model chose not to intervene
 ```
 
-**Instrucción de sistema v0** (vive en el servidor; se itera y se versiona en `docs/prompt-history.md`, donde está la v1 del paso 2.4, con el idioma de la petición y el catálogo de reacciones; cada interacción guarda su `prompt_version` y su `model`):
+**Instrucción de sistema v0** (vive en el servidor; se itera y se versiona en `docs/prompt-history.md`, donde está la v1 del paso 2.4, con el idioma de la petición, el catálogo de reacciones, el humor y las reacciones de teatro abiertas a cualquier momento relajado (D-043); cada interacción guarda su `prompt_version` y su `model`):
 
 ```text
 Eres el tutor de programación de un grupo de primer curso de Formación Profesional de
