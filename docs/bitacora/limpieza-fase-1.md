@@ -1,6 +1,6 @@
 # Limpieza al cerrar la fase 1
 
-10/11/2026 · Sesión de Claude Code · Commit pendiente
+10/11/2026 · Sesión de Claude Code · Commit `5eef82a`
 
 ## Objetivo
 
@@ -12,6 +12,7 @@ Dejar el proyecto lo más pulido posible antes de la fase 2: quitar lo innecesar
 - `src/styles.css` lo más limpio posible y repartido en ficheros específicos si es mejor idea.
 - Usar siempre Tailwind en lo posible; SCSS y CSS cuando Tailwind complique o ensucie, sin sobrejustificarlo.
 - Si los «datos simulados» del modo de desarrollo (`/dev/datos`) son necesarios o aportan algo; «aplica lo que consideres».
+- **Iteración 2:** que Claude reformule los ejercicios de las fixtures que lo necesiten y añada más si lo ve conveniente.
 
 ## Qué hizo Claude
 
@@ -22,6 +23,7 @@ Dejar el proyecto lo más pulido posible antes de la fase 2: quitar lo innecesar
 5. Agrupó en `core/i18n/` los cuatro ficheros del idioma (`locale`, `load-locale`, `language-service`, `localized-paginator-intl`, con sus tests). `page-reloader` se queda en `core/`, porque también lo usan la zona de código y la barra de desarrollo.
 6. Quitó el `export` de `AUTOSAVE_DELAY_MS`, `WIDE_LAYOUT`, `NARROW_WORKSPACE_QUERY`, `CENTRE`, `amount`, `swing` y `LOCALES`, que solo usa su propio fichero.
 7. Actualizó §4.1 y §4.8 del plan, el bloque del proyecto en `CLAUDE.md` y propuso D-039.
+8. **Iteración 2**, los 8 ejercicios de las fixtures (pendiente del 0.5). El 8 pasa a «Buscar la primera aparición de un valor»: pedía dejar de recorrer el vector en cuanto encontrara el valor, que las pruebas no pueden comprobar, y ahora pide la primera aparición contando desde 0, que sí comprueban sus pruebas con valores repetidos (la eficiencia queda para el tutor). El 2 cambia «Bucles anidados» por «Bucles», porque la tabla de un número se hace con un solo bucle. El «sin `reverse()`» del 5 se mantiene: es la práctica del ejercicio, y la ven el tutor y el docente en el código. No se añaden ejercicios: los 8 son la batería de §2.5 y de la memoria, cubren las cuatro sesiones del grupo de ejemplo, y el docente podrá crear más en el 4.3. Se regenera `seed.sql` y se quita la fila del 0.5 de `PENDIENTES.md`.
 
 ## Comandos e instalaciones
 
@@ -53,9 +55,13 @@ Unitarios: 796 (−23, los del explorador) · e2e: 38. Sin tests nuevos; el del 
 
 En el navegador: entrada de página, `eyebrow`, `scroll-shadows`, los puntos y el cursor del chat, la entrada de cada turno, el parpadeo de la mascota y el cursor de mano en los botones.
 
+Iteración 2: el test de los contenidos de las fixtures se actualiza; `npm run check` en verde y `seed.sql` al día.
+
 ## Validación humana
 
 El autor pidió la revisión y, sobre la propuesta, preguntó si el explorador de datos aportaba algo y dejó a Claude decidir («aplica lo que consideres»), con la regla de Tailwind primero sin sobrejustificar el CSS.
+
+- Iteración 2: dio por buenos los ejercicios y pidió reformular lo que hiciera falta o añadir los que Claude viera oportunos.
 
 ## Capturas
 
@@ -68,6 +74,8 @@ No es una pantalla.
 | 17 min   | 201               | 52.643           | 12.742.502 leídos / 156.784 escritos | 4,86 $            | +322 / −1397 | 52       | ≈ 35 min      |
 
 Las líneas incluyen la documentación; la mayor parte de lo borrado es el explorador.
+
+Iteración 2: ≈ 6 min de Claude y ≈ 15 min humanas (estimadas), 3 ficheros de código, el plan y `seed.sql`.
 
 ## Para la presentación
 

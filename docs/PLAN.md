@@ -181,16 +181,16 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 
 **Batería inicial (seed):**
 
-| #   | Título                               | Dificultad | Contenidos                                              | Sesión |
-| --- | ------------------------------------ | ---------- | ------------------------------------------------------- | ------ |
-| 1   | Contar números pares                 | Inicial    | Bucles, rangos, condicionales                           | 1      |
-| 2   | Tabla de multiplicar                 | Inicial    | Bucles anidados, salida formateada (devuelve un string) | 1      |
-| 3   | Suma de los elementos de un vector   | Media      | Vectores, acumulador, vector vacío                      | 2      |
-| 4   | Máximo de un vector                  | Media      | Vectores, comparación, casos límite                     | 2      |
-| 5   | Invertir un vector                   | Avanzada   | Vectores, índices, intercambio                          | 3      |
-| 6   | Contar vocales en una cadena         | Ampliación | Cadenas, recorrido y conteo                             | 4      |
-| 7   | Media de un vector con dos decimales | Ampliación | Acumuladores, formato de salida                         | 4      |
-| 8   | Buscar un valor con parada temprana  | Ampliación | Condición compuesta, bandera                            | 4      |
+| #   | Título                                  | Dificultad | Contenidos                                     | Sesión |
+| --- | --------------------------------------- | ---------- | ---------------------------------------------- | ------ |
+| 1   | Contar números pares                    | Inicial    | Bucles, rangos, condicionales                  | 1      |
+| 2   | Tabla de multiplicar                    | Inicial    | Bucles, salida formateada (devuelve un string) | 1      |
+| 3   | Suma de los elementos de un vector      | Media      | Vectores, acumulador, vector vacío             | 2      |
+| 4   | Máximo de un vector                     | Media      | Vectores, comparación, casos límite            | 2      |
+| 5   | Invertir un vector                      | Avanzada   | Vectores, índices, intercambio                 | 3      |
+| 6   | Contar vocales en una cadena            | Ampliación | Cadenas, recorrido y conteo                    | 4      |
+| 7   | Media de un vector con dos decimales    | Ampliación | Acumuladores, formato de salida                | 4      |
+| 8   | Buscar la primera aparición de un valor | Ampliación | Búsqueda secuencial, condición compuesta       | 4      |
 
 Enunciado literal del ejercicio 3, modelo de redacción para todos: _«Escribe una función `suma` que reciba un vector de números enteros y devuelva la suma de todos sus elementos. Si el vector está vacío, la función debe devolver 0.»_
 

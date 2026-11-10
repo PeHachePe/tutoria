@@ -75,13 +75,13 @@ describe('seed fixtures', () => {
   it('gives every exercise the contents of the table in 2.5', () => {
     expect(SEED.exercises.map((exercise) => exercise.topics)).toEqual([
       ['Bucles', 'rangos', 'condicionales'],
-      ['Bucles anidados', 'salida formateada'],
+      ['Bucles', 'salida formateada'],
       ['Vectores', 'acumulador', 'vector vacío'],
       ['Vectores', 'comparación', 'casos límite'],
       ['Vectores', 'índices', 'intercambio'],
       ['Cadenas', 'recorrido y conteo'],
       ['Acumuladores', 'formato de salida'],
-      ['Condición compuesta', 'bandera'],
+      ['Búsqueda secuencial', 'condición compuesta'],
     ]);
   });
 

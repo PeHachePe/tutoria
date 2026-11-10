@@ -40,7 +40,7 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Tabla de multiplicar',
     difficulty: 'initial',
-    topics: ['Bucles anidados', 'salida formateada'],
+    topics: ['Bucles', 'salida formateada'],
     functionName: 'tablaMultiplicar',
     statement:
       'Escribe una función `tablaMultiplicar` que reciba un número entero `n` y devuelva su tabla de multiplicar del 1 al 10 como un único texto. Cada línea sigue el formato `n x i = resultado` y las líneas se separan con un salto de línea (`\\n`), sin salto al final. Si `n` es 0, todas las líneas dan 0.',
@@ -127,12 +127,12 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     hidden: [[[1, 1, 2]], '1.33'],
   },
   {
-    title: 'Buscar un valor con parada temprana',
+    title: 'Buscar la primera aparición de un valor',
     difficulty: 'extension',
-    topics: ['Condición compuesta', 'bandera'],
+    topics: ['Búsqueda secuencial', 'condición compuesta'],
     functionName: 'buscar',
     statement:
-      'Escribe una función `buscar` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, dejando de recorrer el vector en cuanto lo encuentre. Si el valor no aparece, la función debe devolver -1.',
+      'Escribe una función `buscar` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, contando desde 0. Si el valor aparece varias veces, cuenta solo la primera. Si no aparece, la función debe devolver -1.',
     visible: [
       [[[4, 8, 15], 8], 1],
       [[[4, 8, 8], 8], 1],
