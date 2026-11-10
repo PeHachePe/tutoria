@@ -67,7 +67,7 @@ describe('ReactionOverlay', () => {
     expect(confetti[0].className).toMatch(/bg-reaction-/);
   });
 
-  it('shows the emoji of each piece over its icon once it loads, 3D or flat', async () => {
+  it('shows the emoji of each piece over its icon once it loads, animated or still', async () => {
     const { fixture, play } = await renderOverlay();
 
     await play(party);
@@ -84,43 +84,41 @@ describe('ReactionOverlay', () => {
 
     fixture.componentRef.setInput('emojis', false);
     await play({ ...party, id: 'r2' });
-    const flat = [...pieces()].filter((piece) => piece.classList.contains('reaction-beat')).pop()!;
-    expect(flat.querySelector('img')!.getAttribute('src')).toMatch(/^reactions\/flat\/.+\.svg$/);
+    const still = [...pieces()].filter((piece) => piece.classList.contains('reaction-beat')).pop()!;
+    expect(still.querySelector('img')!.getAttribute('src')).toMatch(/^reactions\/still\/.+\.webp$/);
   });
 
-  it('shows the flat emoji while the 3D one loads, and keeps it if the 3D one fails', async () => {
+  it('shows the still emoji while the animated one loads, and keeps it if that one fails', async () => {
     const { fixture, play } = await renderOverlay();
 
     await play(party);
     const hero = pieces().find((piece) => piece.classList.contains('reaction-beat'))!;
-    const flat = hero.querySelector<HTMLImageElement>('img.reaction-emoji-flat')!;
+    const flat = hero.querySelector<HTMLImageElement>('img.reaction-emoji-still')!;
     const threeD = hero.querySelector<HTMLImageElement>('img.reaction-emoji')!;
     expect(flat.getAttribute('src')).toBe(
-      threeD.getAttribute('src')!.replace(/^reactions\/(.+)\.webp$/, 'reactions/flat/$1.svg'),
+      threeD.getAttribute('src')!.replace(/^reactions\/(.+)\.webp$/, 'reactions/still/$1.webp'),
     );
     expect(flat.getAttribute('loading')).toBe('eager');
 
-    // The light flat one arrives first and stands in; the 3D one fails and never takes its place
+    // The light still one arrives first and stands in; the animated one fails and never takes its place
     flat.dispatchEvent(new Event('load'));
     threeD.dispatchEvent(new Event('error'));
     await fixture.whenStable();
-    expect(hero.classList).toContain('reaction-flat-ready');
+    expect(hero.classList).toContain('reaction-still-ready');
     expect(hero.classList).not.toContain('reaction-emoji-ready');
 
-    // The small 3D pieces around it have their flat one too
-    const small = pieces()
-      .map((piece) => piece.querySelector('img.reaction-emoji-flat')?.getAttribute('src'))
-      .filter((src) => src && src !== flat.getAttribute('src'));
-    expect(small.every((src) => /^reactions\/flat\/.+\.svg$/.test(src!))).toBe(true);
+    // The small pieces around it are still already: no stand-in
+    const stillCount = overlay().querySelectorAll('img.reaction-emoji-still').length;
+    expect(stillCount).toBeLessThan(overlay().querySelectorAll('img.reaction-emoji').length);
   });
 
-  it('needs no stand-in for a flat emoji', async () => {
+  it('needs no stand-in for a still emoji', async () => {
     const { fixture, play } = await renderOverlay();
 
     fixture.componentRef.setInput('emojis', false);
     await play(party);
 
-    expect(overlay().querySelector('img.reaction-emoji-flat')).toBeNull();
+    expect(overlay().querySelector('img.reaction-emoji-still')).toBeNull();
   });
 
   it('loads the emoji of the reaction on its way, while its answer arrives', async () => {
@@ -145,6 +143,38 @@ describe('ReactionOverlay', () => {
     expect(preload()).toBeNull();
   });
 
+  it('downloads the animated emoji little by little when the student wants them', async () => {
+    vi.useFakeTimers();
+    const fetched: string[] = [];
+    vi.stubGlobal(
+      'Image',
+      class {
+        fetchPriority = '';
+        onload: (() => void) | null = null;
+        set src(url: string) {
+          fetched.push(url);
+          setTimeout(() => this.onload?.(), 1);
+        }
+      },
+    );
+    try {
+      const { fixture } = await renderOverlay();
+      await fixture.whenStable();
+
+      await vi.advanceTimersByTimeAsync(2000);
+      const animated = () => fetched.filter((url) => /^reactions\/[a-z0-9-]+\.webp$/.test(url));
+      expect(animated()).toEqual([]);
+      await vi.advanceTimersByTimeAsync(10);
+      // The most used first: thinking
+      expect(animated()[0]).toBe('reactions/thinking-face.webp');
+      expect(animated().length).toBeGreaterThan(1);
+      fixture.destroy();
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it('fetches the light emoji ahead once the page has settled', async () => {
     vi.useFakeTimers();
     const fetched: string[] = [];
@@ -163,7 +193,7 @@ describe('ReactionOverlay', () => {
       expect(fetched).toEqual([]);
 
       await vi.advanceTimersByTimeAsync(2000);
-      expect(fetched).toContain('reactions/flat/red-heart.svg');
+      expect(fetched).toContain('reactions/still/winking-face.webp');
       fixture.destroy();
     } finally {
       vi.unstubAllGlobals();

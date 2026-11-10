@@ -85,7 +85,7 @@ export interface ReactionContext {
   readonly intensity: 1 | 2 | 3;
   /** A number in [0, 1) on each call, such as `Math.random`. */
   readonly random: () => number;
-  /** The animated 3D emoji the student wants, or the light flat 2D ones (D-036). */
+  /** The animated emoji the student wants, or the still 3D ones, a few KB each (D-043). */
   readonly emoji: boolean;
   /**
    * Which of its options this reaction takes (its emoji, what it throws): fixed by its id, so the
@@ -95,20 +95,21 @@ export interface ReactionContext {
 }
 
 /**
- * Where an emoji lives (`npm run emojis`): animated 3D in public/reactions/ (small and still in
- * mini/, for the pieces around the big one), or flat 2D in flat/ when the 3D ones are off.
+ * Where an emoji lives (`npm run emojis`): the animated ones in public/reactions/, the still 3D
+ * version of each big one in still/ (sharper and a few KB) and the small still ones around the big
+ * one in mini/ (D-043).
  */
-export function emojiUrl(name: string, threeD: boolean, small = false): string {
-  if (!threeD) return `reactions/flat/${name}.svg`;
-  return small ? `reactions/mini/${name}.webp` : `reactions/${name}.webp`;
+export function emojiUrl(name: string, animated: boolean, small = false): string {
+  if (small) return `reactions/mini/${name}.webp`;
+  return animated ? `reactions/${name}.webp` : `reactions/still/${name}.webp`;
 }
 
 /**
- * The flat 2D version of a 3D emoji, a few kilobytes, which stands in while the animated one loads or
- * if it fails; null for an emoji that is already flat.
+ * The still 3D version of an animated emoji, the same drawing without moving, which stands in while
+ * the animated one loads or if it fails; null for an emoji that is already still.
  */
-export function flatEmojiOf(url: string): string | null {
-  const name = /^reactions\/(?:mini\/)?([a-z0-9-]+)\.webp$/.exec(url)?.[1];
+export function stillEmojiOf(url: string): string | null {
+  const name = /^reactions\/([a-z0-9-]+)\.webp$/.exec(url)?.[1];
   return name ? emojiUrl(name, false) : null;
 }
 
@@ -147,7 +148,7 @@ export const MINI_EMOJIS: Readonly<Record<string, string>> = {
   celebration: 'party-popper',
 };
 
-/** The small emoji of an icon, 3D or flat, when it has one. */
+/** The small still emoji of an icon, when it has one. */
 function mini(icon: string | null, { emoji }: ReactionContext): string | null {
   const name = icon ? MINI_EMOJIS[icon] : undefined;
   return name ? emojiUrl(name, emoji, true) : null;

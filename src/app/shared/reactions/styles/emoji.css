@@ -1,10 +1,11 @@
-/* The emoji of a reaction (1.8, D-036), animated 3D or flat 2D: a piece that has one never shows its
-   icon, which looks poor beside them; the emoji appears as soon as it has loaded, and the rest of
-   the choreography goes on around it meanwhile. Pieces without one show their icons. A 3D emoji has
-   its light flat version behind (D-043), which shows while the 3D one loads, or if it fails. */
+/* The emoji of a reaction (1.8, D-036): animated, or still 3D (D-043). An animated one has its still
+   version behind, which shows while it loads, or if it fails. Once one of them has loaded, the icon
+   of the piece steps aside, as it looks poor beside them; until then the icon shows, so a piece is
+   never empty, and the rest of the choreography goes on around it. Pieces without one show their
+   icons. */
 
 .reaction-emoji,
-.reaction-emoji-flat {
+.reaction-emoji-still {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -14,13 +15,13 @@
 }
 
 .reaction-emoji-ready > .reaction-emoji,
-.reaction-flat-ready:not(.reaction-emoji-ready) > .reaction-emoji-flat {
+.reaction-still-ready:not(.reaction-emoji-ready) > .reaction-emoji-still {
   opacity: 1;
 }
 
 /* Its icon steps aside, and so do the shadow and the glow: the emoji bring their own shading, and a
    drop shadow over a piece with an image drew a blurred box around it */
-.reaction-has-emoji {
+.reaction-has-emoji:is(.reaction-emoji-ready, .reaction-still-ready) {
   color: transparent !important;
   filter: none !important;
 }

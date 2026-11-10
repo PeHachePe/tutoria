@@ -33,7 +33,7 @@ export class SettingsStore {
   private readonly reactionsState = this.setting<ReactionMode>('reactions', (saved) =>
     toReactionMode(saved),
   );
-  /** The animated 3D emoji of the reactions; without them, the light flat 2D ones. */
+  /** The animated emoji of the reactions; without them, the same ones still, a few KB (D-043). */
   private readonly reactionEmojisState = this.flag('reactionEmojis', true);
   private readonly proactiveState = this.flag('proactive', true);
   private readonly mascotHeadsetState = this.flag('mascotHeadset', true);

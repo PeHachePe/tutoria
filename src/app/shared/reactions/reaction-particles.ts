@@ -82,7 +82,7 @@ export interface ReactionRecipe {
   readonly parts: readonly ReactionPart[];
 }
 
-/** An emoji of a recipe, by its name: emojiUrl finds its file, 3D or flat. */
+/** An emoji of a recipe, by its name: emojiUrl finds its file, animated or still. */
 const emoji = (name: string) => name;
 
 /**
@@ -326,20 +326,52 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
 };
 
 /**
- * The emoji to fetch ahead, once the page has settled: in 3D, the small ones, the bomb and the flat
- * version of the big ones, which stand in while a big 3D one loads (the big 3D ones load one at a
- * time, as soon as the tutor chooses a reaction, `reactionEmoji`); flat, all of them, which are light.
+ * The reactions from the one the tutor uses most to the one it uses least, so that their animated
+ * emoji download in that order (D-043).
  */
-export function prefetchedEmojis(threeD: boolean): readonly string[] {
-  const small = [...Object.values(MINI_EMOJIS), 'bomb'];
-  const big = Object.values(REACTION_RECIPES).flatMap((recipe) => recipe.emojis);
-  const flatBig = big.map((name) => emojiUrl(name, false));
-  if (threeD) {
-    return [
-      ...new Set([...small.map((name) => emojiUrl(name, true, name !== 'bomb')), ...flatBig]),
-    ];
-  }
-  return [...new Set([...flatBig, ...small.map((name) => emojiUrl(name, false))])];
+const REACTIONS_BY_USE: readonly ReactionKind[] = [
+  'thinking',
+  'lightbulb',
+  'cheer',
+  'party',
+  'laugh',
+  'applause',
+  'hearts',
+  'empathy',
+  'mind-blown',
+  'rocket',
+  'fire',
+  'secret',
+  'wink',
+  'seriously',
+  'grumpy',
+  'throw',
+  'eyes',
+  'sleepy',
+];
+
+/** Every big emoji, by name, in the order of REACTIONS_BY_USE: those of the recipes, what is thrown and the bomb. */
+function bigEmojis(): readonly string[] {
+  const recipes = REACTIONS_BY_USE.flatMap((kind) => REACTION_RECIPES[kind].emojis);
+  return [...new Set([...recipes, ...PROJECTILES.map((projectile) => projectile.emoji), 'bomb'])];
+}
+
+/**
+ * The light emoji to fetch ahead, once the page has settled: the small ones around the big one and
+ * the still 3D version of every big one, a few KB each. They stand in while an animated one loads,
+ * and they are the emoji themselves when the animations are off (D-043).
+ */
+export function prefetchedEmojis(): readonly string[] {
+  const small = Object.values(MINI_EMOJIS).map((name) => emojiUrl(name, false, true));
+  return [...new Set([...small, ...bigEmojis().map((name) => emojiUrl(name, false))])];
+}
+
+/**
+ * The animated emoji, a few hundred KB each, for the background download: those of the reactions
+ * the tutor uses most first (D-043).
+ */
+export function animatedEmojis(): readonly string[] {
+  return bigEmojis().map((name) => emojiUrl(name, true));
 }
 
 /** Which of its options a reaction takes, from its id: always the same for the same reaction. */

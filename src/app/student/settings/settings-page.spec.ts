@@ -60,7 +60,7 @@ describe('SettingsPage', () => {
 
   it('chooses how the reactions show, explains each mode and turns the rest off without them', async () => {
     const { user, settings } = await renderPage();
-    const emojis = screen.getByRole('switch', { name: 'Emojis 3D' });
+    const emojis = screen.getByRole('switch', { name: 'Emojis animados' });
 
     expect(screen.getByText('Emojis, confeti y efectos de 2 a 3 segundos.')).toBeTruthy();
     await user.click(emojis);

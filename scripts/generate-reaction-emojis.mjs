@@ -2,7 +2,8 @@
 // Brings the emoji of the tutor's reactions (step 1.8, D-036) from Microsoft's official Fluent
 // Emoji repositories (MIT) and leaves them in public/reactions/ as light WebP files, one per emoji:
 // animated ones from Fluent Emoji Animated (animated PNGs of about 2 MB, turned into animated WebP)
-// and, for those with no animation, the still 3D ones from Fluent Emoji. Only the emoji the
+// and, for those with no animation, the still 3D ones from Fluent Emoji; in still/, the still 3D
+// version of each big one, and in mini/, the small ones around it. Only the emoji the
 // reactions use are downloaded, into a temporary folder, and the licenses go with them.
 // It needs the network; the output is committed, so the app never fetches anything from outside.
 // It only makes the emoji that are missing and removes those no longer used; `-- --force` makes
@@ -136,26 +137,28 @@ const MINIS = [
 /** Side of the small ones: enough for the pieces around, a few KB each. */
 const MINI_SIZE = 64;
 
+/**
+ * Side and quality of the still 3D version of each big emoji (D-043): a few KB each, sharper than
+ * the animated ones. It stands in while the animated one loads or if it fails, and it is the emoji
+ * of the students who turn the animations off.
+ */
+const STILL_SIZE = 256;
+const STILL_QUALITY = 85;
+
 const force = process.argv.includes('--force');
 const output = join(process.cwd(), 'public', 'reactions');
 const miniOutput = join(output, 'mini');
-/** The flat 2D versions, SVG, for students who turn the 3D emoji off. */
-const flatOutput = join(output, 'flat');
+const stillOutput = join(output, 'still');
 const downloads = mkdtempSync(join(tmpdir(), 'tutoria-emojis-'));
 mkdirSync(miniOutput, { recursive: true });
-mkdirSync(flatOutput, { recursive: true });
+mkdirSync(stillOutput, { recursive: true });
+// The flat 2D ones of before D-043: the still 3D ones take their place
+rmSync(join(output, 'flat'), { recursive: true, force: true });
 
 /** Its file name in the repositories: lower case, underscores for spaces, hyphens kept. */
 const snake = (name) => name.toLowerCase().replaceAll(' ', '_');
 const kebab = (name) => name.toLowerCase().replaceAll(' ', '-');
 const encode = (path) => path.split('/').map(encodeURIComponent).join('/');
-
-/** The flat 2D version of an emoji: every emoji in the still repository has one. */
-function flatSource({ name, skinTone }) {
-  const folder = skinTone ? `${name}/Default` : name;
-  const tone = skinTone ? '_default' : '';
-  return `${raw(STILL)}/assets/${encode(`${folder}/Flat/${snake(name)}_flat${tone}.svg`)}`;
-}
 
 function source({ name, skinTone, still }) {
   const folder = skinTone ? `${name}/Default` : name;
@@ -186,7 +189,7 @@ function feather(frame, width, height) {
   return Buffer.from(pixels);
 }
 
-async function toWebp(input, file, side) {
+async function toWebp(input, file, side, quality = QUALITY) {
   // Exactly the bytes of the file: the memory behind a Buffer can be larger and shared with other
   // reads, and the decoder read leftovers of the previous emoji (the egg came out a bulb)
   const bytes = readFileSync(input);
@@ -201,10 +204,10 @@ async function toWebp(input, file, side) {
         .toBuffer(),
     ),
   );
-  if (frames.length === 1) return sharp(frames[0]).webp({ quality: QUALITY }).toFile(file);
+  if (frames.length === 1) return sharp(frames[0]).webp({ quality, effort: 6 }).toFile(file);
   const delay = png.frames.map((frame) => Math.max(Math.round(frame.delay), MIN_FRAME_MS));
   return sharp(frames, { join: { animated: true } })
-    .webp({ quality: QUALITY, effort: 6, delay, loop: 0 })
+    .webp({ quality, effort: 6, delay, loop: 0 })
     .toFile(file);
 }
 
@@ -235,29 +238,25 @@ try {
       console.log(`${kebab(emoji.name)}.webp  ${Math.round(size / 1024)} KB`);
     }
   }
-  // The flat 2D ones: SVG, taken as they are, one per emoji of both lists
-  const flats = [
-    ...new Map([...EMOJIS, ...MINIS].map((emoji) => [kebab(emoji.name), emoji])).values(),
-  ];
-  const usedFlats = new Set(flats.map(({ name }) => `${kebab(name)}.svg`));
-  for (const file of readdirSync(flatOutput)) {
-    if (file.endsWith('.svg') && !usedFlats.has(file)) {
-      rmSync(join(flatOutput, file));
-      console.log(`flat/${file}  borrado`);
+  // The still 3D version of each big emoji, sharper and a few KB: the animated ones stand on it
+  const usedStills = new Set(EMOJIS.map(({ name }) => `${kebab(name)}.webp`));
+  for (const file of readdirSync(stillOutput)) {
+    if (file.endsWith('.webp') && !usedStills.has(file)) {
+      rmSync(join(stillOutput, file));
+      console.log(`still/${file}  borrado`);
     }
   }
-  for (const emoji of flats) {
-    const file = join(flatOutput, `${kebab(emoji.name)}.svg`);
+  for (const emoji of EMOJIS) {
+    const file = join(stillOutput, `${kebab(emoji.name)}.webp`);
     if (!force && existsSync(file)) continue;
-    const url = flatSource(emoji);
-    const response = await fetch(url);
-    const svg = await response.text();
-    if (!response.ok || !svg.trimStart().startsWith('<svg')) {
-      throw new Error(`${emoji.name} (${url}): no es un SVG (${response.status})`);
-    }
-    writeFileSync(file, svg);
+    const input = join(downloads, `${kebab(emoji.name)}-still.png`);
+    const url = source({ ...emoji, still: true });
+    await download(url, input);
+    const { size } = await toWebp(input, file, STILL_SIZE, STILL_QUALITY).catch((error) => {
+      throw new Error(`${emoji.name} (${url}): ${error?.message ?? error}`);
+    });
     made++;
-    console.log(`flat/${kebab(emoji.name)}.svg  ${Math.round(svg.length / 1024)} KB`);
+    console.log(`still/${kebab(emoji.name)}.webp  ${Math.round(size / 1024)} KB`);
   }
   await download(`${raw(ANIMATED)}/LICENSE`, join(output, 'LICENSE-fluentui-emoji-animated.txt'));
   await download(`${raw(STILL)}/LICENSE`, join(output, 'LICENSE-fluentui-emoji.txt'));

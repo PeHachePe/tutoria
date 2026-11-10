@@ -1,6 +1,7 @@
 import { type Intensity, REACTION_KINDS, type ReactionKind } from '../../data/tutor';
 import { MINI_EMOJIS, PROJECTILES } from './reaction-blocks';
 import {
+  animatedEmojis,
   prefetchedEmojis,
   REACTION_RECIPES,
   reactionEmoji,
@@ -11,7 +12,7 @@ import {
 
 const INTENSITIES: Intensity[] = [1, 2, 3];
 const FULL_3D: ReactionOptions = { mode: 'full', reducedMotion: false, emoji: true };
-const FULL_FLAT: ReactionOptions = { ...FULL_3D, emoji: false };
+const FULL_STILL: ReactionOptions = { ...FULL_3D, emoji: false };
 
 const half = () => 0.5;
 const full = (
@@ -68,7 +69,7 @@ describe('reactionParticles', () => {
     expect(heroSize(3)).toBeGreaterThan(heroSize(1));
   });
 
-  it('shows one of its emoji, chosen by its id, animated in 3D or flat', () => {
+  it('shows one of its emoji, chosen by its id, animated or still', () => {
     const hero = (id: string, options = FULL_3D) =>
       reactionParticles({ id, kind: 'hearts', intensity: 1 }, options, half).find(
         (particle) => particle.motion === 'beat',
@@ -77,12 +78,12 @@ describe('reactionParticles', () => {
     expect(hero('a')).toMatchObject({ icon: 'favorite', x: 50, y: 50 });
     expect(hero('a').image).toBe(reactionEmoji({ id: 'a', kind: 'hearts' }, true));
     expect(hero('a').image).toMatch(/^reactions\/[a-z-]+\.webp$/);
-    expect(hero('a', FULL_FLAT).image).toMatch(/^reactions\/flat\/[a-z-]+\.svg$/);
+    expect(hero('a', FULL_STILL).image).toMatch(/^reactions\/still\/[a-z-]+\.webp$/);
     const shown = new Set(Array.from({ length: 40 }, (_, index) => hero(`id-${index}`).image));
     expect(shown.size).toBeGreaterThan(3);
   });
 
-  it('gives the pieces around their small emoji, in 3D or flat, and keeps confetti plain', () => {
+  it('gives the pieces around their small still emoji, and keeps confetti plain', () => {
     const rain = (options: ReactionOptions) =>
       full('hearts', 2, { options }).filter((particle) => particle.motion === 'rain');
 
@@ -93,8 +94,9 @@ describe('reactionParticles', () => {
         expect(piece.image).toBeNull();
       }
     }
-    expect(rain(FULL_FLAT).find((piece) => piece.shape === 'icon')!.image).toMatch(
-      /^reactions\/flat\//,
+    // Small and still already: the same with the animations off
+    expect(rain(FULL_STILL).find((piece) => piece.shape === 'icon')!.image).toMatch(
+      /^reactions\/mini\//,
     );
   });
 
@@ -217,31 +219,46 @@ describe('reactionParticles', () => {
   it('only fades its emoji in and out, without moving, with reduced motion', () => {
     const particles = reactionParticles(
       { id: 'r1', kind: 'party', intensity: 3 },
-      { ...FULL_FLAT, reducedMotion: true },
+      { ...FULL_STILL, reducedMotion: true },
       half,
     );
 
     expect(particles).toEqual([
       expect.objectContaining({ icon: 'celebration', motion: 'fade', drift: 0, last: true }),
     ]);
-    expect(particles[0].image).toMatch(/^reactions\/flat\//);
+    expect(particles[0].image).toMatch(/^reactions\/still\//);
   });
 
-  it('fetches ahead the light emoji: the small 3D ones, the bomb and the flat big ones, or every flat one', () => {
-    const threeD = prefetchedEmojis(true);
-    expect(threeD).toContain('reactions/bomb.webp');
-    expect(threeD).toContain('reactions/mini/red-heart.webp');
-    // The flat big ones stand in while a 3D one loads, so the first reaction is never empty
-    expect(threeD).toContain('reactions/flat/winking-face.svg');
-    expect(
-      threeD.some((url) => /^reactions\/[a-z-]+\.webp$/.test(url) && url !== 'reactions/bomb.webp'),
-    ).toBe(false);
+  it('fetches ahead the light emoji: the small ones and the still version of every big one', () => {
+    const light = prefetchedEmojis();
+    expect(light).toContain('reactions/mini/red-heart.webp');
+    // The still big ones stand in while an animated one loads, so the first reaction is never empty
+    expect(light).toContain('reactions/still/winking-face.webp');
+    expect(light).toContain('reactions/still/pie.webp');
+    expect(light).toContain('reactions/still/bomb.webp');
+    expect(light.every((url) => /^reactions\/(mini|still)\//.test(url))).toBe(true);
+    expect(new Set(light).size).toBe(light.length);
+  });
 
-    const flat = prefetchedEmojis(false);
-    expect(flat).toContain('reactions/flat/bomb.svg');
-    expect(flat).toContain('reactions/flat/winking-face.svg');
-    expect(flat).toContain('reactions/flat/red-heart.svg');
-    expect(new Set(flat).size).toBe(flat.length);
+  it('downloads the animated ones in the background, those of the most used reactions first', () => {
+    const animated = animatedEmojis();
+    const order = (name: string) => animated.indexOf(`reactions/${name}.webp`);
+
+    expect(animated.every((url) => /^reactions\/[a-z0-9-]+\.webp$/.test(url))).toBe(true);
+    expect(new Set(animated).size).toBe(animated.length);
+    // Every big emoji has its still version: the same list
+    expect(animated.map((url) => url.replace('reactions/', 'reactions/still/'))).toEqual(
+      prefetchedEmojis().filter((url) => url.startsWith('reactions/still/')),
+    );
+    // Thinking and the bulb come before the jokes and sleep
+    expect(order('thinking-face')).toBeLessThan(order('pouting-face'));
+    expect(order('light-bulb')).toBeLessThan(order('yawning-face'));
+    for (const kind of REACTION_KINDS) {
+      for (const name of REACTION_RECIPES[kind].emojis)
+        expect(order(name), name).toBeGreaterThanOrEqual(0);
+    }
+    expect(order('bomb')).toBeGreaterThanOrEqual(0);
+    expect(order('tomato')).toBeGreaterThanOrEqual(0);
   });
 
   it('places the pieces somewhere else each time', () => {
