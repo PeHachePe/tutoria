@@ -14,6 +14,7 @@ import {
 
 import { EmojiPrefetcher } from './emoji-prefetcher';
 import type { Reaction, ReactionMode } from './reaction';
+import { flatEmojiOf } from './reaction-blocks';
 import {
   prefetchedEmojis,
   reactionEmoji,
@@ -52,7 +53,11 @@ export const MAX_PLAYING_REACTIONS = 3;
 /** A reaction on screen, with its pieces drawn once so they never jump. */
 interface PlayingReaction {
   readonly id: string;
-  readonly pieces: readonly (TimedParticle & { readonly classes: string })[];
+  readonly pieces: readonly (TimedParticle & {
+    readonly classes: string;
+    /** The flat emoji that stands in for a 3D one while it loads, or if it fails. */
+    readonly fallback: string | null;
+  })[];
 }
 
 /**
@@ -68,7 +73,8 @@ interface PlayingReaction {
  * (reactions.css) start on their own, and the one that ends last removes its reaction.
  *
  * Its emoji, animated 3D or flat 2D as the student wants, show as soon as they load, never the
- * icons behind them. The light ones are fetched ahead once the page has settled, and the big 3D one
+ * icons behind them. While a 3D one loads, or if it fails, its flat version stands in, so a reaction
+ * is never empty. The light ones are fetched ahead once the page has settled, and the big 3D one
  * of each reaction as soon as the tutor chooses it (`upcoming`), while its answer arrives.
  */
 @Component({
@@ -101,6 +107,7 @@ interface PlayingReaction {
           [class]="piece.classes"
           [class.reaction-has-emoji]="piece.image !== null"
           [class.reaction-emoji-ready]="piece.image !== null && loaded().has(piece.image)"
+          [class.reaction-flat-ready]="piece.fallback !== null && loaded().has(piece.fallback)"
           [style.--x]="piece.x + '%'"
           [style.--y]="piece.y + '%'"
           [style.--drift]="piece.drift + 'px'"
@@ -114,6 +121,18 @@ interface PlayingReaction {
           [attr.data-ends]="piece.last ? reaction.id : null"
         >
           {{ piece.icon }}
+          @if (piece.fallback; as fallback) {
+            <!-- The light flat one stands in while the 3D one loads, or if it fails -->
+            <img
+              class="reaction-emoji-flat"
+              [ngSrc]="fallback"
+              [width]="emojiSize"
+              [height]="emojiSize"
+              alt=""
+              [loading]="'eager'"
+              (load)="markLoaded(fallback)"
+            />
+          }
           @if (piece.image; as image) {
             <!-- Eager: a reaction lasts two or three seconds, it cannot wait for lazy loading -->
             <img
@@ -192,6 +211,7 @@ export class ReactionOverlay {
     const options = { mode: this.mode(), reducedMotion, emoji: this.emojis() };
     return reactionParticles(reaction, options, Math.random).map((particle) => ({
       ...particle,
+      fallback: particle.image ? flatEmojiOf(particle.image) : null,
       classes: [`reaction-${particle.motion}`, shapeClasses(particle)].join(' '),
     }));
   }

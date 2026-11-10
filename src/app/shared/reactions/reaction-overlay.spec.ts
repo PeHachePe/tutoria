@@ -72,7 +72,7 @@ describe('ReactionOverlay', () => {
 
     await play(party);
     const hero = pieces().find((piece) => piece.classList.contains('reaction-beat'))!;
-    const image = hero.querySelector('img')!;
+    const image = hero.querySelector('img.reaction-emoji')!;
     expect(image.getAttribute('src')).toMatch(/^reactions\/[a-z-]+\.webp$/);
     expect(image.getAttribute('loading')).toBe('eager');
     expect(hero.classList).toContain('reaction-has-emoji');
@@ -86,6 +86,41 @@ describe('ReactionOverlay', () => {
     await play({ ...party, id: 'r2' });
     const flat = [...pieces()].filter((piece) => piece.classList.contains('reaction-beat')).pop()!;
     expect(flat.querySelector('img')!.getAttribute('src')).toMatch(/^reactions\/flat\/.+\.svg$/);
+  });
+
+  it('shows the flat emoji while the 3D one loads, and keeps it if the 3D one fails', async () => {
+    const { fixture, play } = await renderOverlay();
+
+    await play(party);
+    const hero = pieces().find((piece) => piece.classList.contains('reaction-beat'))!;
+    const flat = hero.querySelector<HTMLImageElement>('img.reaction-emoji-flat')!;
+    const threeD = hero.querySelector<HTMLImageElement>('img.reaction-emoji')!;
+    expect(flat.getAttribute('src')).toBe(
+      threeD.getAttribute('src')!.replace(/^reactions\/(.+)\.webp$/, 'reactions/flat/$1.svg'),
+    );
+    expect(flat.getAttribute('loading')).toBe('eager');
+
+    // The light flat one arrives first and stands in; the 3D one fails and never takes its place
+    flat.dispatchEvent(new Event('load'));
+    threeD.dispatchEvent(new Event('error'));
+    await fixture.whenStable();
+    expect(hero.classList).toContain('reaction-flat-ready');
+    expect(hero.classList).not.toContain('reaction-emoji-ready');
+
+    // The small 3D pieces around it have their flat one too
+    const small = pieces()
+      .map((piece) => piece.querySelector('img.reaction-emoji-flat')?.getAttribute('src'))
+      .filter((src) => src && src !== flat.getAttribute('src'));
+    expect(small.every((src) => /^reactions\/flat\/.+\.svg$/.test(src!))).toBe(true);
+  });
+
+  it('needs no stand-in for a flat emoji', async () => {
+    const { fixture, play } = await renderOverlay();
+
+    fixture.componentRef.setInput('emojis', false);
+    await play(party);
+
+    expect(overlay().querySelector('img.reaction-emoji-flat')).toBeNull();
   });
 
   it('loads the emoji of the reaction on its way, while its answer arrives', async () => {

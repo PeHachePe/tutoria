@@ -326,15 +326,20 @@ export const REACTION_RECIPES: Record<ReactionKind, ReactionRecipe> = {
 };
 
 /**
- * The emoji to fetch ahead, once the page has settled: in 3D, the small ones and the bomb (the big
- * ones load one at a time, as soon as the tutor chooses a reaction, `reactionEmoji`); flat, all of
- * them, which are light.
+ * The emoji to fetch ahead, once the page has settled: in 3D, the small ones, the bomb and the flat
+ * version of the big ones, which stand in while a big 3D one loads (the big 3D ones load one at a
+ * time, as soon as the tutor chooses a reaction, `reactionEmoji`); flat, all of them, which are light.
  */
 export function prefetchedEmojis(threeD: boolean): readonly string[] {
   const small = [...Object.values(MINI_EMOJIS), 'bomb'];
-  if (threeD) return [...new Set(small.map((name) => emojiUrl(name, true, name !== 'bomb')))];
   const big = Object.values(REACTION_RECIPES).flatMap((recipe) => recipe.emojis);
-  return [...new Set([...big, ...small].map((name) => emojiUrl(name, false)))];
+  const flatBig = big.map((name) => emojiUrl(name, false));
+  if (threeD) {
+    return [
+      ...new Set([...small.map((name) => emojiUrl(name, true, name !== 'bomb')), ...flatBig]),
+    ];
+  }
+  return [...new Set([...flatBig, ...small.map((name) => emojiUrl(name, false))])];
 }
 
 /** Which of its options a reaction takes, from its id: always the same for the same reaction. */

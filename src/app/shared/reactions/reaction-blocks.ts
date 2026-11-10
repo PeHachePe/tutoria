@@ -104,6 +104,15 @@ export function emojiUrl(name: string, threeD: boolean, small = false): string {
 }
 
 /**
+ * The flat 2D version of a 3D emoji, a few kilobytes, which stands in while the animated one loads or
+ * if it fails; null for an emoji that is already flat.
+ */
+export function flatEmojiOf(url: string): string | null {
+  const name = /^reactions\/(?:mini\/)?([a-z0-9-]+)\.webp$/.exec(url)?.[1];
+  return name ? emojiUrl(name, false) : null;
+}
+
+/**
  * The emoji that take the place of the icons around the big one, by the icon they replace. An icon
  * without one stays an icon.
  */

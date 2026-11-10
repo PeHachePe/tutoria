@@ -227,11 +227,15 @@ describe('reactionParticles', () => {
     expect(particles[0].image).toMatch(/^reactions\/flat\//);
   });
 
-  it('fetches ahead the light emoji: the small 3D ones and the bomb, or every flat one', () => {
+  it('fetches ahead the light emoji: the small 3D ones, the bomb and the flat big ones, or every flat one', () => {
     const threeD = prefetchedEmojis(true);
     expect(threeD).toContain('reactions/bomb.webp');
     expect(threeD).toContain('reactions/mini/red-heart.webp');
-    expect(threeD.every((url) => url.endsWith('.webp'))).toBe(true);
+    // The flat big ones stand in while a 3D one loads, so the first reaction is never empty
+    expect(threeD).toContain('reactions/flat/winking-face.svg');
+    expect(
+      threeD.some((url) => /^reactions\/[a-z-]+\.webp$/.test(url) && url !== 'reactions/bomb.webp'),
+    ).toBe(false);
 
     const flat = prefetchedEmojis(false);
     expect(flat).toContain('reactions/flat/bomb.svg');
