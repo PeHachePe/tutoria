@@ -7,6 +7,12 @@ import { DataError, DataErrorKind } from '../data/data-error';
 import type { AppUser } from '../data/user';
 import { loginRedirect } from './login-redirect';
 
+/**
+ * Why the user is on the login without having signed out: the session ended elsewhere (another tab,
+ * or it could not be renewed) or it expired while working («Volver a entrar»).
+ */
+export type SessionEnd = 'ended' | 'expired';
+
 export type SignInResult =
   | { readonly ok: true; readonly user: AppUser }
   | { readonly ok: false; readonly error: DataErrorKind };
@@ -24,6 +30,7 @@ export class AuthStore {
   private readonly reloader = inject(PageReloader);
 
   private readonly userState = signal<AppUser | null>(null);
+  private readonly sessionEndState = signal<SessionEnd | null>(null);
   /** Not state: nothing is drawn from it, so a plain set instead of a signal. */
   private readonly beforeSignOutTasks = new Set<() => Promise<void>>();
   /** Signing in or out here: the changes of session it causes are not news from elsewhere. */
@@ -35,6 +42,8 @@ export class AuthStore {
   readonly userId = computed(() => this.userState()?.id);
   readonly role = computed(() => this.userState()?.role);
   readonly signedIn = computed(() => this.userState() !== null);
+  /** Why the session ended without signing out, for the login to say so; null otherwise. */
+  readonly sessionEnd = this.sessionEndState.asReadonly();
   /** The student accepted the notice on the registered data (RF-07). */
   readonly privacyNoticeSeen = computed(() => !!this.userState()?.privacyNoticeSeenAt);
 
@@ -57,6 +66,7 @@ export class AuthStore {
     try {
       const user = await this.auth.signIn(credentials);
       this.userState.set(user);
+      this.sessionEndState.set(null);
       return { ok: true, user };
     } catch (error) {
       return { ok: false, error: error instanceof DataError ? error.kind : 'unknown' };
@@ -100,6 +110,7 @@ export class AuthStore {
   async signInAgain(): Promise<void> {
     const returnUrl = this.router.url;
     await this.signOut();
+    this.sessionEndState.set('expired');
     await this.router.navigateByUrl(loginRedirect(this.router, returnUrl));
   }
 
@@ -125,6 +136,7 @@ export class AuthStore {
       // Signed out in another tab, or expired without renewal: back here after signing in again
       const returnUrl = this.router.url;
       this.userState.set(null);
+      this.sessionEndState.set('ended');
       void this.router.navigateByUrl(loginRedirect(this.router, returnUrl));
     } else {
       // Another user signed in in another tab: every screen has to read its data again

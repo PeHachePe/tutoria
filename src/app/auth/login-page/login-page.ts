@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { email, form, FormField, FormRoot, required, submit } from '@angular/forms/signals';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatCard } from '@angular/material/card';
@@ -62,6 +62,16 @@ export class LoginPage {
   protected readonly appName = APP_NAME;
   protected readonly demoAccounts = inject(DEMO_ACCOUNTS);
   protected readonly passwordVisible = signal(false);
+  protected readonly sessionEndMessage = computed(() => {
+    switch (this.auth.sessionEnd()) {
+      case 'ended':
+        return $localize`:@@login.sessionEnded:Se ha cerrado tu sesión, quizá en otra pestaña. Vuelve a entrar para seguir donde lo dejaste.`;
+      case 'expired':
+        return $localize`:@@login.sessionExpired:Tu sesión ha caducado. Vuelve a entrar para seguir donde lo dejaste.`;
+      default:
+        return null;
+    }
+  });
 
   protected readonly model = signal({ email: '', password: '' });
   protected readonly loginForm = form(

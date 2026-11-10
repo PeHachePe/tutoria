@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { screen, within } from '@testing-library/angular';
+import { screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { AuthStore } from '../../auth/auth-store';
@@ -23,6 +23,7 @@ describe('StudentLayout', () => {
           noticeSeen ? { privacyNoticeSeenAt: '2026-09-01T08:00:00.000Z' } : {},
         ),
         provideRouter([
+          { path: 'login', component: Page },
           {
             path: 'alumno',
             component: StudentLayout,
@@ -104,6 +105,15 @@ describe('StudentLayout', () => {
     await userEvent.setup().click(within(notice).getByRole('button', { name: 'Entendido' }));
 
     expect(TestBed.inject(AuthStore).privacyNoticeSeen()).toBe(true);
+  });
+
+  it('closes the notice when the area is left, as when the session ends in another tab', async () => {
+    await renderAt('/alumno', { noticeSeen: false });
+    expect(await screen.findByRole('dialog', { name: 'Antes de empezar: tus datos' })).toBeTruthy();
+
+    await TestBed.inject(Router).navigateByUrl('/login');
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('does not show the notice again once seen', async () => {

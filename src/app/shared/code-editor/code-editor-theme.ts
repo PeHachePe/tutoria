@@ -39,10 +39,14 @@ const editorTheme = EditorView.theme({
     borderTopLeftRadius: 'inherit',
     borderBottomLeftRadius: 'inherit',
   },
-  '.cm-activeLine, .cm-activeLineGutter': {
+  // Translucent: the selection is drawn in a layer under the text, which an opaque line would hide
+  '.cm-activeLine': {
+    backgroundColor: 'color-mix(in srgb, var(--mat-sys-on-surface) 5%, transparent)',
+  },
+  '.cm-activeLineGutter': {
+    color: 'var(--mat-sys-on-surface)',
     backgroundColor: 'var(--mat-sys-surface-container)',
   },
-  '.cm-activeLineGutter': { color: 'var(--mat-sys-on-surface)' },
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection':
     { backgroundColor: 'var(--mat-sys-primary-container)' },
   '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': {

@@ -15,6 +15,8 @@
     "login.submit": "Entrar",
     "login.help": " ¿No tienes cuenta o has olvidado la contraseña? Pídesela a tu docente. ",
     "login.demoAccounts": "Cuentas de demostración",
+    "login.sessionEnded": "Se ha cerrado tu sesión, quizá en otra pestaña. Vuelve a entrar para seguir donde lo dejaste.",
+    "login.sessionExpired": "Tu sesión ha caducado. Vuelve a entrar para seguir donde lo dejaste.",
     "login.errors.emailRequired": "Introduce tu correo",
     "login.errors.emailInvalid": "El correo no es válido",
     "login.errors.passwordRequired": "Introduce tu contraseña",

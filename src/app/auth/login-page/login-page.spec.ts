@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { AuthService } from '../../data/auth-service';
 import { DataError } from '../../data/data-error';
 import type { AppUser } from '../../data/user';
+import { AuthStore } from '../auth-store';
 import { FakeAuthService, userWith } from '../auth-testing';
 import { DEMO_ACCOUNTS, DemoAccount } from '../demo-accounts';
 import { LoginPage } from './login-page';
@@ -205,5 +206,37 @@ describe('LoginPage', () => {
     await renderLogin();
 
     expect(screen.getByRole('button', { name: 'Cambiar el tema' })).toBeTruthy();
+  });
+
+  describe('when the session ended without signing out', () => {
+    it('says it closed, maybe in another tab, and that signing in brings back the page', async () => {
+      await renderLogin();
+      service.currentUser.mockResolvedValue(STUDENT);
+      await TestBed.inject(AuthStore).restore();
+
+      service.sessionListener?.(null);
+
+      expect((await screen.findByRole('status')).textContent).toContain(
+        'Se ha cerrado tu sesión, quizá en otra pestaña. Vuelve a entrar para seguir donde lo dejaste.',
+      );
+    });
+
+    it('says it expired after «Volver a entrar»', async () => {
+      await renderLogin();
+
+      await TestBed.inject(AuthStore).signInAgain();
+
+      expect((await screen.findByRole('status')).textContent).toContain(
+        'Tu sesión ha caducado. Vuelve a entrar para seguir donde lo dejaste.',
+      );
+    });
+
+    it('says nothing after signing out on purpose', async () => {
+      await renderLogin();
+
+      await TestBed.inject(AuthStore).signOut();
+
+      expect(screen.queryByRole('status')).toBeNull();
+    });
   });
 });

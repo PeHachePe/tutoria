@@ -1,4 +1,4 @@
-import { afterNextRender, Component, computed, inject } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatToolbar } from '@angular/material/toolbar';
 import { isActive, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -77,12 +77,15 @@ export class StudentLayout {
   constructor() {
     const auth = inject(AuthStore);
     const dialog = inject(MatDialog);
+    const destroyRef = inject(DestroyRef);
     // The notice on the registered data, before working (RF-07): on any page of the area, so a link
     // straight to an exercise shows it too. The data page counts as seen, so it does not cover it.
     afterNextRender(() => {
-      if (!auth.privacyNoticeSeen()) {
-        dialog.open(DataNoticeDialog, { disableClose: true, autoFocus: 'dialog' });
-      }
+      if (auth.privacyNoticeSeen()) return;
+      const notice = dialog.open(DataNoticeDialog, { disableClose: true, autoFocus: 'dialog' });
+      // It goes with the area: Material only closes dialogs on the browser's back and forward, and
+      // a session ended in another tab sends the page to the login with the notice still open
+      destroyRef.onDestroy(() => notice.close());
     });
   }
 }

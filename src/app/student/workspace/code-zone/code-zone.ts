@@ -3,6 +3,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   Injector,
@@ -82,6 +83,7 @@ export class CodeZone {
   /** Pastes from outside the code, recorded for the attempt open for changes (2.8). */
   protected readonly signals = inject(BrowserSignals);
   private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly pageReloader = inject(PageReloader);
 
@@ -141,7 +143,11 @@ export class CodeZone {
   /** «Entregar» asks first: once submitted, the code cannot change (2.4). */
   protected async confirmSubmit(): Promise<void> {
     if (!this.store.canSubmit()) return;
-    const confirmed = await firstValueFrom(this.dialog.open(SubmitDialog).afterClosed());
+    const confirmation = this.dialog.open(SubmitDialog);
+    // It goes with the zone, as the data notice with the area (StudentLayout)
+    const removeClose = this.destroyRef.onDestroy(() => confirmation.close());
+    const confirmed = await firstValueFrom(confirmation.afterClosed());
+    removeClose();
     if (confirmed) await this.submit();
   }
 

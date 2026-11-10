@@ -38,7 +38,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
   - la intensidad (1 a 3) da más piezas y más grandes, y algunas partes solo salen en la más alta;
   - si llega otra respuesta mientras dura, se suma sin cortar la anterior (hasta tres);
   - la mascota del panel (o la flotante) se mueve con ellas;
-  - las respuestas del historial, las que fallan a mitad y las intervenciones que el tutor decide callar no reaccionan.
+  - las respuestas del historial, las que fallan a mitad y las intervenciones que el tutor decide callar no reaccionan;
+  - ejecutar las pruebas también reacciona (2.2, D-041): fiesta cuando pasan todas, aplausos más discretos si siguen pasando al volver a ejecutar, ánimo cuando pasan más que en la ejecución anterior y nada con fallos, que solo desanimaría. Gana la reacción más reciente, del tutor o de la ejecución.
   - En el tutor simulado, siempre con intensidad 3: las pistas de nivel 1, 2 y 3 dan pensando, bombilla y cohete; pedir la solución, por turnos, guiño, secreto, «¿en serio?», lanzamiento y enfado; las preguntas, aplausos, mente explotando, risas o fuego; el enunciado, corazones; el código vacío, ánimo; el ejercicio superado, fiesta; sus intervenciones, ojos o empatía.
 
 ## Interacciones
@@ -87,6 +88,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] En el móvil, el punto de la pestaña «Tutor» aparece con una respuesta nueva y se va al abrirla.
 - [ ] El tutor pasa de fijo a flotante y de vuelta, y se recuerda al recargar; flotante, se abre con el foco en la pregunta y se minimiza con el botón, la mascota o Esc, con el foco de vuelta en la mascota.
 - [ ] Plegado, una respuesta nueva asoma en el bocadillo, se anuncia y abre el tutor.
+- [ ] Ejecutar con todo superado lanza la fiesta, y volver a ejecutar sin romper nada, aplausos; mejorar lanza el ánimo; con fallos no sale nada.
 - [ ] Cada respuesta nueva lanza su reacción con su emoji y mueve la mascota; dos seguidas se suman sin cortarse; sin «Emojis 3D», emojis planos; reducidas, su emoji pequeño; desactivadas, nada; con «reducir movimiento», su emoji se desvanece sin moverse.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 

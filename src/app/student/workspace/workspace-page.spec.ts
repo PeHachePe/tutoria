@@ -706,6 +706,21 @@ describe('WorkspacePage', () => {
       expect(screen.getAllByRole('link', { name: 'Volver a los ejercicios' })).toHaveLength(2);
     });
 
+    it('closes «¿Entregar el ejercicio?» when the page goes away with it open', async () => {
+      const { fixture, submitAttempt } = await renderPage({
+        run: () => Promise.resolve(ALL_PASSED),
+      });
+      await userEvent.setup().click(runButton());
+      await fixture.whenStable();
+      await userEvent.setup().click(submitButton());
+      expect(await screen.findByRole('dialog')).toBeTruthy();
+
+      fixture.destroy();
+
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(submitAttempt).not.toHaveBeenCalled();
+    });
+
     it('does not submit when the student keeps reviewing', async () => {
       const { fixture, submitAttempt } = await renderPage({
         run: () => Promise.resolve(ALL_PASSED),
@@ -1048,6 +1063,31 @@ describe('WorkspacePage', () => {
       expect(pieces()).toBe(playing);
       expect(moving()).toBe(false);
       localStorage.clear();
+    });
+
+    it('celebrates a run that passes every test, and the next answer of the tutor plays too', async () => {
+      const run = vi
+        .fn<CodeRunnerService['run']>()
+        .mockResolvedValueOnce(SOME_FAILED)
+        .mockResolvedValueOnce(ALL_PASSED);
+      const { fixture } = await renderPage({ run });
+      const overlay = () => screen.getByTestId('reaction-overlay');
+      const runTests = () =>
+        userEvent.setup().click(screen.getByRole('button', { name: /Ejecutar pruebas/ }));
+
+      // A run with failures gets no reaction
+      await runTests();
+      await fixture.whenStable();
+      expect(overlay().querySelectorAll('.reaction-piece')).toHaveLength(0);
+
+      await runTests();
+      await fixture.whenStable();
+      const celebrating = overlay().querySelectorAll('.reaction-piece').length;
+      expect(celebrating).toBeGreaterThan(0);
+
+      await TestBed.inject(TutorStore).requestHint();
+      await fixture.whenStable();
+      expect(overlay().querySelectorAll('.reaction-piece').length).toBeGreaterThan(celebrating);
     });
 
     it('does not bring back an answer already read in the column', async () => {

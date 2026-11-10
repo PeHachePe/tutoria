@@ -8,6 +8,7 @@ import {
   inject,
   Injector,
   input,
+  linkedSignal,
   resource,
   signal,
   viewChild,
@@ -27,6 +28,7 @@ import { ExerciseService } from '../../data/exercise-service';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
+import type { Reaction } from '../../shared/reactions/reaction';
 import { ReactionOverlay } from '../../shared/reactions/reaction-overlay';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
@@ -123,8 +125,19 @@ export class WorkspacePage {
   private readonly settings = inject(SettingsStore);
   protected readonly reactionMode = this.settings.reactions;
   protected readonly reactionEmojis = this.settings.reactionEmojis;
-  /** The emotion of each new answer floats over the screen (1.8). */
-  protected readonly reaction = this.tutor.reaction;
+  /**
+   * The latest reaction floats over the screen (1.8): the emotion of each new answer of the tutor,
+   * or the celebration of a run. Whichever changed last wins, so each one plays once.
+   */
+  protected readonly reaction = linkedSignal<
+    readonly [Reaction | null, Reaction | null],
+    Reaction | null
+  >({
+    source: () => [this.tutor.reaction(), this.store.runReaction()] as const,
+    computation: ([answer, run], previous) =>
+      previous && run !== previous.source[1] ? run : (answer ?? run),
+    equal: (a, b) => a?.id === b?.id,
+  });
   protected readonly upcomingReaction = this.tutor.upcomingReaction;
   /** Turned off, the folded mascot does not move with the answers either. */
   protected readonly mascotReaction = computed(() =>

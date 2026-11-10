@@ -17,6 +17,17 @@
         <app-mascot mood="joy" [bowTie]="true" class="size-24 shrink-0 sm:size-28 lg:size-32" />
       </header>
 
+      @if (sessionEndMessage(); as message) {
+        <!-- Why the user is here without having signed out: the redirect brings them back -->
+        <p
+          role="status"
+          class="flex items-start gap-2 rounded-lg bg-info-container p-3 text-body-medium text-on-info-container"
+        >
+          <mat-icon class="shrink-0">info</mat-icon>
+          <span>{{ message }}</span>
+        </p>
+      }
+
       <form [formRoot]="loginForm" class="flex flex-col gap-1">
         <mat-form-field>
           <mat-label i18n="@@login.email">Correo</mat-label>

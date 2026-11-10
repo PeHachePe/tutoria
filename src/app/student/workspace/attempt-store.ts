@@ -5,8 +5,10 @@ import type { Attempt, RunResult } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
 import { createDebouncer } from '../../shared/create-debouncer';
+import type { Reaction } from '../../shared/reactions/reaction';
 import { clearDraft, readDraft, saveDraft } from './code-draft';
 import { EditingTab } from './editing-tab';
+import { runReaction } from './run-reaction';
 
 /** The code is saved once the student stops typing for this long (4.5). */
 const AUTOSAVE_DELAY_MS = 800;
@@ -50,6 +52,7 @@ export class AttemptStore {
   private readonly submittingIdState = signal<string | undefined>(undefined);
   private readonly actionErrorState = signal<ActionError | undefined>(undefined);
   private readonly draftRestoredState = signal(false);
+  private readonly runReactionState = signal<Reaction | null>(null);
   /** The save on its way, which a run waits for before sending the code. */
   private saving: Promise<void> = Promise.resolve();
   /** Exercise of the latest `open()`, so an answer that arrives late does not overwrite the new one. */
@@ -82,6 +85,8 @@ export class AttemptStore {
   /** Results of the last run in this visit: they are not stored, so a reload starts without them. */
   readonly lastRun = this.lastRunState.asReadonly();
   readonly actionError = this.actionErrorState.asReadonly();
+  /** How the screen celebrates the last run: every test passing, or more than before (1.8). */
+  readonly runReaction = this.runReactionState.asReadonly();
   /** The code came back from the local draft: the server did not have it (D-041). */
   readonly draftRestored = this.draftRestoredState.asReadonly();
   readonly running = computed(() => this.isCurrent(this.runningIdState()));
@@ -157,6 +162,7 @@ export class AttemptStore {
     this.draftRestoredState.set(draft !== undefined);
     this.lastRunState.set(undefined);
     this.lastRunCodeState.set(undefined);
+    this.runReactionState.set(null);
     this.actionErrorState.set(undefined);
     // What the server missed goes to it as soon as possible
     if (draft !== undefined) this.autosave.schedule(() => void this.startSave());
@@ -207,6 +213,8 @@ export class AttemptStore {
       const result = await this.runner.run(attempt.id, code);
       const current = this.attemptState();
       if (current?.id !== attempt.id) return;
+      const reaction = runReaction(this.lastRunState(), result);
+      if (reaction) this.runReactionState.set({ id: crypto.randomUUID(), ...reaction });
       this.lastRunState.set(result);
       this.lastRunCodeState.set(code);
       this.savedCodeState.set(code);

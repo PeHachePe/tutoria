@@ -317,6 +317,8 @@
     "workspace.continueHere": " Continua aquí ",
     "workspace.draftRestored": "Hem recuperat el codi que no s’havia arribat a desar. Ja s’està desant.",
     "tutor.error.unavailable": "Ara mateix no està disponible: torna-ho a provar més tard.",
-    "login.errors.disabled": "El teu compte està desactivat. Si creus que és un error, parla amb el teu docent"
+    "login.errors.disabled": "El teu compte està desactivat. Si creus que és un error, parla amb el teu docent",
+    "login.sessionEnded": "S’ha tancat la teva sessió, potser en una altra pestanya. Torna a entrar per continuar on ho havies deixat.",
+    "login.sessionExpired": "La teva sessió ha caducat. Torna a entrar per continuar on ho havies deixat."
   }
 }

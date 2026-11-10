@@ -37,6 +37,7 @@ Que cualquier usuario entre con su correo y su contraseña y llegue al inicio de
   - `network`: «No hay conexión. Comprueba la red e inténtalo de nuevo».
   - `rate_limited`: «Demasiados intentos. Espera un momento e inténtalo de nuevo».
   - cualquier otro: «No se ha podido entrar. Inténtalo de nuevo».
+- **Llegar sin haber cerrado sesión:** si la sesión se cerró en otra pestaña o no se pudo renovar, un aviso dice «Se ha cerrado tu sesión, quizá en otra pestaña. Vuelve a entrar para seguir donde lo dejaste»; tras «Volver a entrar», «Tu sesión ha caducado…». Al entrar, se vuelve a la página en la que estaba (D-041).
 - **Mostrar u ocultar la contraseña:** cambia el tipo del campo sin perder lo escrito.
 - **Acceso rápido (desarrollo):** rellena el formulario con la cuenta y lo envía, con el mismo «Entrando…».
 - **Con sesión abierta**, `/login` lleva al inicio del rol (`guestGuard`, ya hecho en el 0.6).

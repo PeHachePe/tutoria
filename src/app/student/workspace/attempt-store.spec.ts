@@ -386,6 +386,25 @@ describe('AttemptStore', () => {
 
     afterEach(() => vi.useRealTimers());
 
+    it('celebrates the first run that passes every test, and not one with failures', async () => {
+      run.mockResolvedValueOnce(failing).mockResolvedValueOnce(passing);
+
+      await store.run();
+      expect(store.runReaction()).toBeNull();
+
+      await store.run();
+      expect(store.runReaction()).toEqual({ id: expect.any(String), kind: 'party', intensity: 3 });
+    });
+
+    it('forgets the reaction of the runs when it opens an exercise', async () => {
+      run.mockResolvedValueOnce(passing);
+      await store.run();
+
+      await store.open('exercise-3');
+
+      expect(store.runReaction()).toBeNull();
+    });
+
     it('starts without results, ready to run and not to submit', () => {
       expect(store.lastRun()).toBeUndefined();
       expect(store.testCount()).toBeUndefined();

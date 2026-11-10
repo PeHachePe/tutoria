@@ -174,6 +174,26 @@ describe('AuthStore', () => {
       });
     });
 
+    it('remembers why the session ended, until the user signs in again', async () => {
+      expect(store.sessionEnd()).toBeNull();
+
+      service.sessionListener?.(null);
+      expect(store.sessionEnd()).toBe('ended');
+
+      service.signIn.mockResolvedValue(STUDENT);
+      await store.signIn(CREDENTIALS);
+      expect(store.sessionEnd()).toBeNull();
+
+      await store.signInAgain();
+      expect(store.sessionEnd()).toBe('expired');
+    });
+
+    it('gives no reason when the user signs out on purpose', async () => {
+      await store.signOut();
+
+      expect(store.sessionEnd()).toBeNull();
+    });
+
     it('reloads the page when another user signs in in another tab', () => {
       service.sessionListener?.('someone-else');
 
