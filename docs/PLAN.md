@@ -514,7 +514,7 @@ interface TestResult {
 }
 ```
 
-Los servicios de datos lanzan un `DataError` tipado (`network`, `unauthorized`, `forbidden`, `not_found`, `rate_limited`, `invalid`, `unknown`), y las pantallas muestran el estado de error con opción de reintentar.
+Los servicios de datos lanzan un `DataError` tipado (`network`, `unauthorized`, `forbidden`, `not_found`, `rate_limited`, `unavailable`, `invalid`, `unknown`), y las pantallas muestran el estado de error con opción de reintentar.
 
 ### 4.3 Datos simulados
 
@@ -562,11 +562,11 @@ export const environment = {
   devRoutes,
 };
 
-// environment.local.ts — local Supabase; runner and tutor still simulated until steps 2.3 and 2.4
+// environment.local.ts — local Supabase; runner and tutor unavailable until steps 2.3 and 2.4 (D-041)
 export const environment = {
-  dataProviders: [provideSupabaseData(SUPABASE_LOCAL), provideMockCodeRunner(), provideMockTutor()],
-  devProviders: [],
-  devRoutes: [],
+  dataProviders: [provideSupabaseData({ url, publishableKey })],
+  devProviders: [provideDemoAccounts()],
+  devRoutes,
 };
 
 // app.config.ts
@@ -1227,9 +1227,10 @@ Commit: `feat: student flow (mock)`.
 
 - Cliente único.
 - Versiones con Supabase de `AuthService` (correo y contraseña), `ExerciseService`, `AttemptService` (entrega por RPC) y `EventService`.
-- Configuración `local` según 4.4 (`environment.local.ts`, configuración en `angular.json` y script `start:local`), con ejecución y tutor todavía simulados.
+- Configuración `local` según 4.4 (`environment.local.ts`, configuración en `angular.json` y script `start:local`). La ejecución y el tutor no pueden seguir simulados, porque los simulados leen los intentos de MockDb y solo el servidor pone `passed`: quedan «no disponibles» hasta el 2.3 y el 2.4 (D-041).
+- Sesión caducada con «Volver a entrar», borrador local del código, sesión sincronizada entre pestañas y una sola pestaña editando cada intento (D-041).
 
-✅ Las pantallas de la fase 1 funcionan igual contra Supabase local.
+✅ Las pantallas de la fase 1 funcionan igual contra Supabase local, salvo ejecutar, entregar y el tutor, que llegan en el 2.3 y el 2.4.
 🧪 Smoke e2e contra local.
 
 **2.3 · Ejecución real: Edge Function `execute` con Judge0 (≈5 h)**

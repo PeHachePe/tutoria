@@ -1052,3 +1052,38 @@ Preguntó también si la IA podría componer las animaciones (iconos, si late o 
 - En la nube, la contraseña de demostración no puede ser la del repositorio (`PENDIENTES.md`).
 
 **Aprobación:** propuesta; el autor aprobó el plan del paso («añádelo y ya») y objetó la retirada del consentimiento, que se quitó.
+
+## D-041 · Servicios de Supabase, sesión y edición segura del código (10/11/2026)
+
+**Contexto:** el paso 2.2 conecta las pantallas de la fase 1 con Supabase local. Al planearlo salió un choque: el plan quería la ejecución y el tutor simulados en `local`, pero los simulados leen la sesión y los intentos de MockDb, y el cliente no puede poner un intento en `passed`. Con datos reales aparecían además tres riesgos que con los simulados apenas existían: la sesión caduca de verdad, la red se corta y dos pestañas con el mismo ejercicio se pisan el código.
+
+**Decisión:**
+
+- **Cliente único detrás de un token:** `createClient()` de `@supabase/supabase-js` una sola vez, en `provideSupabaseData(config)`, y los servicios lo reciben con `inject(SUPABASE_CLIENT)`. En los tests se usa el cliente real con un `fetch` que hace de servidor (`supabase-testing.ts`), así se prueban las consultas que de verdad se envían, sin dobles de la cadena de PostgREST.
+- **Errores:** `toDataError()` traduce los códigos de Postgres, PostgREST y Auth (`P0002`, `PGRST116`, `22P02` → `not_found`; `P0001` y las violaciones de restricciones → `invalid`; `42501` → `forbidden`; `invalid_credentials`, `user_banned`… → `unauthorized`) y, sin código conocido, el estado HTTP (0 → `network`; 502–504 → `unavailable`). `DataErrorKind` gana `unavailable`: el servicio no responde o no existe todavía.
+- **Ejecución y tutor en `local`:** `UnavailableCodeRunnerService` y `UnavailableTutorService` lanzan `unavailable` hasta el 2.3 y el 2.4, y las pantallas dicen «no está disponible ahora mismo». El resto de la fase 1 funciona igual contra Supabase.
+- **Catálogo en dos peticiones en paralelo:** las asignaciones de los grupos del alumno con su ejercicio y el título de su sesión (filtro sobre `class_group!inner(enrollment!inner(user_id))`), y sus intentos con las pistas (`tutor_interaction`). El número de pruebas ocultas llega con la función nueva `hidden_test_count()`, porque la RLS no deja leerlas.
+- **Los métodos del docente** que solo leen, borran o asignan funcionan ya. Crear y editar ejercicios devuelve `unavailable` hasta el 4.3: escribir el ejercicio y reemplazar sus pruebas tiene que ser atómico, con una función de la base de datos.
+- **Escrituras con la pestaña oculta:** el `fetch` del cliente añade `keepalive` a las escrituras mientras la página está oculta, para que el último lote de eventos y el último guardado lleguen aunque se cierre la pestaña (D-031). Solo entonces, porque el navegador limita lo que pueden llevar esas peticiones.
+- **Sesión:** `AuthService` gana `watchSession()`. Si la sesión termina fuera de la página (otra pestaña cierra sesión o caduca sin renovarse), `AuthStore` lleva al login con la vuelta a la misma página; si entra otro usuario, recarga. Con `unauthorized`, los errores ofrecen «Volver a entrar» en lugar de «Reintentar». Cerrar sesión solo cierra este dispositivo (`scope: 'local'`).
+- **Borrador local del código:** lo que el editor tiene y el servidor no se guarda por intento en localStorage, junto con el código del servidor del que parte. Al abrir el ejercicio se recupera si el servidor no ha cambiado desde entonces, con el aviso «Hemos recuperado el código…», y se guarda.
+- **Una pestaña edita cada intento:** con `BroadcastChannel`, la pestaña que abre un intento lo toma, y las demás guardan al momento lo que tenían y pasan a solo lectura con «Seguir aquí», que vuelve a leer el intento y lo recupera.
+- **Aviso de datos:** pasa de localStorage a `app_user.privacy_notice_seen_at`, en `AuthStore` (`privacyNoticeSeen`, `markPrivacyNoticeSeen()`); el aviso se cierra al momento y, si el servidor falla, vuelve a salir en la siguiente visita.
+- **Configuración `local`:** `environment.local.ts` con la URL y la clave publicable de todo Supabase local, que es pública por diseño; `npm run start:local`. Lleva las cuentas de demostración del login y `/dev/ui`, no la barra de desarrollo, que actúa sobre MockDb.
+
+**Alternativas:**
+
+- Simular la ejecución en `local` con las pruebas visibles: «Entregar» fallaría igual, porque solo el servidor pone `passed`.
+- Un servicio que cree el cliente en su constructor, como el tutorial de Angular de Supabase: no se puede sustituir en los tests.
+- Dobles a mano de la cadena `from().select().eq()`: frágiles y no prueban la petición real.
+- `keepalive` en todas las peticiones: el límite del navegador podría hacer fallar escrituras normales.
+- Borrador con la fecha del servidor como referencia: tras ejecutar, el servidor cambia la fecha sin devolverla y se descartaría un borrador válido.
+- Avisar de la otra pestaña sin bloquear: el último guardado seguiría ganando.
+
+**Consecuencias:**
+
+- §4.2 y §4.4 de `docs/PLAN.md` y `CLAUDE.md` (`start:local`) se actualizan.
+- El 2.3 y el 2.4 sustituyen los dos servicios no disponibles en `provideSupabaseData()`, y el 4.3 añade la función que guarda un ejercicio con sus pruebas.
+- Dos diferencias con el simulado, aceptadas: `listAssignments` de un grupo ajeno devuelve una lista vacía (la RLS lo oculta) en lugar de `forbidden`, y `process_event.detail` de un evento sin detalle queda como `NULL` de SQL (PostgREST no envía el `null` de JSON); los dos se leen igual en la aplicación.
+
+**Aprobación:** el autor aprobó el plan con todas las mejoras propuestas (sesión caducada con borrador local, sesión entre pestañas, catálogo en una consulta, aviso en local y control de la pestaña activa).
