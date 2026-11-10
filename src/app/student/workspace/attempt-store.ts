@@ -7,7 +7,7 @@ import { CodeRunnerService } from '../../data/code-runner-service';
 import { createDebouncer } from '../../shared/create-debouncer';
 
 /** The code is saved once the student stops typing for this long (4.5). */
-export const AUTOSAVE_DELAY_MS = 800;
+const AUTOSAVE_DELAY_MS = 800;
 
 /**
  * Where the code stands against the server: `pending` while the autosave waits for the student to

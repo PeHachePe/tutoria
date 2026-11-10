@@ -144,15 +144,15 @@ function mini(icon: string | null, { emoji }: ReactionContext): string | null {
   return name ? emojiUrl(name, emoji, true) : null;
 }
 
-export const CENTRE = 50;
+const CENTRE = 50;
 
 /** How many pieces for a base amount: as many at intensity 1, half as many more at 2, twice at 3. */
-export function amount(base: number, { intensity }: ReactionContext): number {
+function amount(base: number, { intensity }: ReactionContext): number {
   return Math.round(base * (1 + (intensity - 1) * 0.5));
 }
 
 /** A number in [-1, 1): to one side or the other. */
-export function swing(random: () => number): number {
+function swing(random: () => number): number {
   return random() * 2 - 1;
 }
 

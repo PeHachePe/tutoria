@@ -125,7 +125,7 @@
             {{ dayLabel }}
           </p>
         }
-        <div class="tutor-turn flex flex-col gap-1">
+        <div class="flex animate-tutor-turn-in flex-col gap-1 motion-reduce:animate-none">
           @if (turn.studentMessage !== null) {
             <div class="flex max-w-[85%] flex-col items-end gap-0.5 self-end">
               <p
@@ -181,7 +181,9 @@
               >
                 <span class="sr-only" i18n="@@tutor.tutorSays">Tutor:</span>
                 @if (turn.status === 'answering' && !turn.answer) {
-                  <span class="tutor-typing" aria-hidden="true"
+                  <span
+                    class="inline-flex gap-1 py-1.5 *:size-1.5 *:animate-tutor-typing *:rounded-full *:bg-on-surface-variant *:motion-reduce:animate-none *:motion-reduce:opacity-60 *:nth-2:[animation-delay:150ms] *:nth-3:[animation-delay:300ms]"
+                    aria-hidden="true"
                     ><span></span><span></span><span></span
                   ></span>
                   <span class="sr-only" i18n="@@tutor.typing">El tutor está escribiendo…</span>
@@ -199,7 +201,11 @@
                     }
                   </span>
                   @if (turn.status === 'answering') {
-                    <span class="tutor-caret" aria-hidden="true"></span>
+                    <span
+                      class="ms-0.5 inline-block h-[1em] w-0.5 animate-tutor-caret bg-current align-text-bottom motion-reduce:animate-none"
+                      aria-hidden="true"
+                      data-testid="tutor-caret"
+                    ></span>
                   }
                 }
               </p>

@@ -6,8 +6,8 @@ import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { RouterLink } from '@angular/router';
 
 import { APP_PATHS } from '../../core/app-paths';
-import { LanguageService } from '../../core/language-service';
-import { AppLocale, LANGUAGE_OPTIONS } from '../../core/locale';
+import { LanguageService } from '../../core/i18n/language-service';
+import { AppLocale, LANGUAGE_OPTIONS } from '../../core/i18n/locale';
 import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { Intensity, ReactionKind } from '../../data/tutor';
 import { Mascot } from '../../shared/mascot/mascot';

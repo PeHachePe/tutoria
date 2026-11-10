@@ -1,4 +1,4 @@
-import type { AppLocale } from '../core/locale';
+import type { AppLocale } from '../core/i18n/locale';
 
 export type HintLevel = 1 | 2 | 3;
 

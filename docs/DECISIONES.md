@@ -995,3 +995,20 @@ Preguntó también si la IA podría componer las animaciones (iconos, si late o 
 - Que el alumno vio el aviso solo queda en su navegador; como prueba del consentimiento (RGPD art. 7.1) habría que guardarlo en el servidor (`PENDIENTES.md`).
 
 **Aprobación:** el autor aprobó el plan del paso con sus propuestas y pidió los cambios de la mascota durante el paso; la forma técnica, por delegación del autor en el agente.
+
+## D-039 · Tailwind primero y estilos globales repartidos en `src/styles/` (10/11/2026)
+
+**Contexto:** al cerrar la fase 1, el autor pidió una revisión general de limpieza, `src/styles.css` lo más limpio posible y usar siempre Tailwind cuando sea viable, con CSS o SCSS como último recurso. `src/styles.css` mezclaba tokens, animaciones, base y utilidades, y el chat del tutor tenía su propio CSS.
+
+**Decisión:**
+
+- **Tailwind primero:** lo que Tailwind expresa sin ensuciar la plantilla se hace con sus clases, también las animaciones (`--animate-*` y `@keyframes` en `@theme`, con `motion-reduce:animate-none`). El chat del tutor y la entrada de las páginas pasan a clases y `tutor-chat.css` desaparece. La mascota y las reacciones siguen en CSS: combinan estados y partes de un SVG que en clases serían ilegibles.
+- **`src/styles.css` solo importa:** Tailwind, `src/styles/` (`tokens.css`, `animations.css`, `base.css`, `utilities.css`) y los parciales de la mascota y las reacciones. `_theme-colors.scss` pasa a `src/styles/`; `src/theme.scss` sigue siendo el único sitio de Material.
+- **Sin el explorador `/dev/datos`:** lo que hacía (ver lo que ve cada usuario, ejecutar y entregar, la regla de acceso) ya lo cubren el catálogo, la pantalla de trabajo y los tests. La barra de desarrollo conserva el cambio de usuario, la red simulada, el reinicio de los datos y los eventos.
+- **`core/i18n/`** agrupa los cuatro ficheros del idioma de la interfaz (D-023).
+
+**Alternativas:** dejar `src/styles.css` en un solo fichero, que crece con cada fase; pasar también la mascota y las reacciones a Tailwind, con plantillas llenas de variantes anidadas; mantener el explorador, unas 1.000 líneas con sus tests para lo que ya hacen las pantallas.
+
+**Consecuencias:** cambian §4.1 y §4.8 de `docs/PLAN.md` y el bloque del proyecto en `CLAUDE.md`. Los tests que buscaban el cursor del chat por su clase usan `data-testid` (es decorativo y `aria-hidden`).
+
+**Aprobación:** el autor («aplica lo que consideres»).

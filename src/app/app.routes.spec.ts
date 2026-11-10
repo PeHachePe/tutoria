@@ -8,7 +8,7 @@ import { routes } from './app.routes';
 import { provideSessionOf, restoreSession } from './auth/auth-testing';
 import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
-import { provideLocalizedPaginator } from './core/localized-paginator-intl';
+import { provideLocalizedPaginator } from './core/i18n/localized-paginator-intl';
 import { AttemptService } from './data/attempt-service';
 import { CodeRunnerService } from './data/code-runner-service';
 import { EventService } from './data/event-service';

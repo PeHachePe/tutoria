@@ -157,7 +157,7 @@
         <!-- A new answer while folded: its first words, in a bubble that opens the tutor -->
         <button
           type="button"
-          class="tutor-turn max-w-72 rounded-2xl rounded-ee-sm border border-outline-variant bg-surface-container-high px-3 py-2 text-start text-body-medium text-on-surface shadow-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+          class="max-w-72 animate-tutor-turn-in motion-reduce:animate-none rounded-2xl rounded-ee-sm border border-outline-variant bg-surface-container-high px-3 py-2 text-start text-body-medium text-on-surface shadow-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
           (click)="toggleTutor()"
         >
           <span class="line-clamp-3">{{ latestAnswer() }}</span>

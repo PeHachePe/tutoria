@@ -2,7 +2,7 @@
 // calls $localize when it is evaluated.
 
 /** The languages of the interface. Spanish is the source: the texts of the templates (D-023). */
-export const LOCALES = ['es', 'en', 'ca'] as const;
+const LOCALES = ['es', 'en', 'ca'] as const;
 
 export type AppLocale = (typeof LOCALES)[number];
 

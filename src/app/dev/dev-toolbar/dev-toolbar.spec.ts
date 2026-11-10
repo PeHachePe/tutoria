@@ -90,10 +90,7 @@ describe('DevToolbar', () => {
       a.textContent?.trim(),
       a.getAttribute('href'),
     ]);
-    expect(links).toEqual([
-      ['Muestrario', '/dev/ui'],
-      ['Datos simulados', '/dev/datos'],
-    ]);
+    expect(links).toEqual([['Muestrario', '/dev/ui']]);
   });
 
   it('closes with the close button or Escape, giving the focus back to the toggle', async () => {

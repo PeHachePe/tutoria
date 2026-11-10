@@ -4,8 +4,8 @@ import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 
-import { LanguageService } from '../../core/language-service';
-import { AppLocale, LANGUAGE_OPTIONS } from '../../core/locale';
+import { LanguageService } from '../../core/i18n/language-service';
+import { AppLocale, LANGUAGE_OPTIONS } from '../../core/i18n/locale';
 
 /**
  * Language of the interface, in the bar of the login and of the shells: an icon button that opens

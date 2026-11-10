@@ -1,7 +1,7 @@
 import { inject, LOCALE_ID, Service } from '@angular/core';
 
 import { AppLocale, isAppLocale, saveLocale, SOURCE_LOCALE } from './locale';
-import { PageReloader } from './page-reloader';
+import { PageReloader } from '../page-reloader';
 
 /**
  * Language of the interface for the language menus. The translations are loaded before the app

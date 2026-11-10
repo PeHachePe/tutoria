@@ -58,7 +58,7 @@ const ADMINISTRATION: NavSection = {
 const CURRENT_PAGE_LINK = '[aria-current="page"]';
 
 /** From this width the side menu stays open beside the content; below it, it slides over it. */
-export const WIDE_LAYOUT = '(min-width: 1024px)';
+const WIDE_LAYOUT = '(min-width: 1024px)';
 
 /** Whether the docked menu was left folded to icons, so it stays so on the next visit. */
 export const SIDE_MENU_FOLDED_KEY = 'tutoria.side-menu-folded';

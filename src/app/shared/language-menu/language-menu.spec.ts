@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { LanguageService } from '../../core/language-service';
+import { LanguageService } from '../../core/i18n/language-service';
 import { LanguageMenu } from './language-menu';
 
 describe('LanguageMenu', () => {

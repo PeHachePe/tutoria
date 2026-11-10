@@ -58,7 +58,7 @@ export const COMPACT_WORKSPACE_QUERY = '(max-width: 767.98px)';
  * Tablets (below Tailwind's `lg`): the tutor column would narrow the code too much, so the tutor
  * folds into the floating mascot, as it does with the code expanded (D-033).
  */
-export const NARROW_WORKSPACE_QUERY = '(max-width: 1023.98px)';
+const NARROW_WORKSPACE_QUERY = '(max-width: 1023.98px)';
 
 /** Narrowest the tutor column gets, whatever the share: below it, the hints read badly (D-030). */
 const TUTOR_MIN_WIDTH = '16rem';

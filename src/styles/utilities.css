@@ -1,0 +1,35 @@
+/* ── Utilities of our own ──────────────────────────────────────────────────────────────────────────
+   Combinations that several templates repeat, written once with the theme tokens and used like any
+   Tailwind class (`class="eyebrow"`). Each one is in the /dev/ui showcase. */
+
+/* Overline: the short text in small capitals above a heading or a group, which says what kind of
+   content follows. Examples: «Error 404» over the title of the 404 page, the section titles of the
+   staff side menu («Seguimiento», «Gestión»). Small and bold, spaced out so the capitals read well,
+   in the secondary text colour of the theme. Write it in normal case: the CSS turns it upper case,
+   so screen readers do not spell it out letter by letter. */
+@utility eyebrow {
+  font-size: var(--mat-sys-label-small-size);
+  line-height: var(--mat-sys-label-small-line-height);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* Scroll shadows: a zone that scrolls on its own (the statement of the workspace) shows a soft shade
+   at the edge that has more content to see, and none once it reaches that end, so the user knows it
+   scrolls. How: two covers in the panel colour scroll with the content (`local`) and hide the two
+   shades, which stay fixed to the edges (`scroll`). Only CSS, so it needs no script nor any test. The
+   shade is a tint of the text colour, so it shows on light and dark panels alike. Use it on an
+   element with `overflow-y-auto` over a `bg-panel` surface. */
+@utility scroll-shadows {
+  --scroll-shade: color-mix(in srgb, var(--mat-sys-on-surface) 22%, transparent);
+  background:
+    linear-gradient(var(--app-panel) 30%, transparent) top / 100% 2.5rem no-repeat local,
+    linear-gradient(transparent, var(--app-panel) 70%) bottom / 100% 2.5rem no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--scroll-shade), transparent) top / 100% 0.75rem
+      no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--scroll-shade), transparent) bottom / 100%
+      0.75rem no-repeat scroll;
+  background-color: var(--app-panel);
+}

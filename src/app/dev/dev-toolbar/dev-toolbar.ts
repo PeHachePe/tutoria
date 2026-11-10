@@ -43,10 +43,7 @@ const FAILURE_OPTIONS: readonly { readonly kind: DataErrorKind; readonly label: 
 ];
 
 /** The development pages of dev.routes.ts: no screen of the app links to them. */
-const DEV_PAGES = [
-  { path: DEV_PATHS.showcase, label: 'Muestrario' },
-  { path: DEV_PATHS.data, label: 'Datos simulados' },
-] as const;
+const DEV_PAGES = [{ path: DEV_PATHS.showcase, label: 'Muestrario' }] as const;
 
 const RECENT_EVENT_COUNT = 8;
 

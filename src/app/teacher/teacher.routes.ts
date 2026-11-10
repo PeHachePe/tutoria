@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 
 import { SEGMENTS } from '../core/app-paths';
 import { provideFormFieldDefaults } from '../core/form-field-defaults';
-import { provideLocalizedPaginator } from '../core/localized-paginator-intl';
+import { provideLocalizedPaginator } from '../core/i18n/localized-paginator-intl';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
 

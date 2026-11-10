@@ -18,14 +18,14 @@ type TranslatedLocale = Exclude<AppLocale, typeof SOURCE_LOCALE>;
 const BUNDLES: Record<TranslatedLocale, () => Promise<LocaleBundle>> = {
   en: async () => {
     const [messages, data] = await Promise.all([
-      import('../../locale/messages.en.json'),
+      import('../../../locale/messages.en.json'),
       import('@angular/common/locales/en'),
     ]);
     return { translations: messages.default.translations, data: data.default };
   },
   ca: async () => {
     const [messages, data] = await Promise.all([
-      import('../../locale/messages.ca.json'),
+      import('../../../locale/messages.ca.json'),
       import('@angular/common/locales/ca'),
     ]);
     return { translations: messages.default.translations, data: data.default };

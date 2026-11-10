@@ -27,7 +27,7 @@
 <main
   id="contenido"
   tabindex="-1"
-  class="mx-auto w-full px-4 py-6 routed-pages outline-none sm:px-6"
+  class="mx-auto w-full px-4 py-6 outline-none sm:px-6 [&>:not(router-outlet)]:animate-page-in [&>:not(router-outlet)]:motion-reduce:animate-none"
   [class]="onExercise() ? widePageClass : readingPageClass"
 >
   <router-outlet />

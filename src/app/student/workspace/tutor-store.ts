@@ -1,6 +1,6 @@
 import { computed, inject, linkedSignal, resource, Service } from '@angular/core';
 
-import { LanguageService } from '../../core/language-service';
+import { LanguageService } from '../../core/i18n/language-service';
 import { AttemptService } from '../../data/attempt-service';
 import {
   type Emotion,

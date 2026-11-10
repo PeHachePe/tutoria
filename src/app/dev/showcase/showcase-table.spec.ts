@@ -6,7 +6,7 @@ import { MatPaginatorHarness } from '@angular/material/paginator/testing';
 import { MatSortHarness } from '@angular/material/sort/testing';
 import { MatTableHarness } from '@angular/material/table/testing';
 
-import { LocalizedPaginatorIntl } from '../../core/localized-paginator-intl';
+import { LocalizedPaginatorIntl } from '../../core/i18n/localized-paginator-intl';
 import { ShowcaseTable } from './showcase-table';
 
 describe('ShowcaseTable', () => {

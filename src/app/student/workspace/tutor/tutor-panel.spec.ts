@@ -249,13 +249,13 @@ describe('TutorPanel', () => {
       fixture.detectChanges();
       expect(within(conversation()).getByText(/Respuesta a hint/)).toBeTruthy();
     });
-    expect(document.querySelector('.tutor-caret')).toBeTruthy();
+    expect(document.querySelector('[data-testid="tutor-caret"]')).toBeTruthy();
     expect(live.textContent?.trim()).toBe('');
 
     rest.resolve();
     await vi.waitFor(() => {
       fixture.detectChanges();
-      expect(document.querySelector('.tutor-caret')).toBeNull();
+      expect(document.querySelector('[data-testid="tutor-caret"]')).toBeNull();
     });
     expect(live.textContent?.trim()).toBe('Respuesta a hint, mira `total`.');
     expect(mascots()[0].classList).not.toContain('mascot-thinking');

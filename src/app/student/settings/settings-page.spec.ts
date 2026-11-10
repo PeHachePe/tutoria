@@ -5,7 +5,7 @@ import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { AuthStore } from '../../auth/auth-store';
-import { LanguageService } from '../../core/language-service';
+import { LanguageService } from '../../core/i18n/language-service';
 import { ThemeService } from '../../core/theme-service';
 import { MASCOT_ACCESSORIES } from '../../shared/mascot/mascot-accessories';
 import { sampleReaction, SettingsPage } from './settings-page';

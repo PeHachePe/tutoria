@@ -2,8 +2,8 @@
 
 import { bootstrapApplication } from '@angular/platform-browser';
 
-import { loadLocale } from './app/core/load-locale';
-import { pickLocale, readSavedLocale } from './app/core/locale';
+import { loadLocale } from './app/core/i18n/load-locale';
+import { pickLocale, readSavedLocale } from './app/core/i18n/locale';
 
 // The translations must be in place before any module that calls $localize when it is evaluated
 // (route titles, menu labels…), so the app is imported only after loading them (D-023).

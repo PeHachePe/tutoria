@@ -3,7 +3,7 @@
 // so ThemeService only has to change `color-scheme` on <html>.
 @use 'sass:map';
 @use '@angular/material' as mat;
-@use './theme-colors' as brand;
+@use './styles/theme-colors' as brand;
 
 $font-family: 'Roboto Variable', Roboto, system-ui, sans-serif;
 
@@ -207,21 +207,6 @@ body {
   @include mat.icon-button-overrides(
     (
       icon-color: currentColor,
-    )
-  );
-}
-
-// A form field for code (the /dev/datos textarea until CodeMirror arrives in step 1.4). The input
-// inherits the field's font, so the font token of the field is the only place to change it.
-.app-code-field {
-  @include mat.form-field-overrides(
-    (
-      container-text-font: #{ui-monospace,
-      'Cascadia Code',
-      Consolas,
-      monospace},
-      container-text-size: var(--mat-sys-body-medium-size),
-      container-text-line-height: 1.5,
     )
   );
 }

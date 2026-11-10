@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { LOCALE_STORAGE_KEY } from './locale';
 import { LanguageService } from './language-service';
-import { PageReloader } from './page-reloader';
+import { PageReloader } from '../page-reloader';
 
 describe('LanguageService', () => {
   const reload = vi.fn();
