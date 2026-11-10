@@ -1,3 +1,4 @@
+import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { EditingTab } from './editing-tab';
@@ -56,5 +57,18 @@ describe('EditingTab', () => {
     TestBed.configureTestingModule({ providers: [EditingTab] });
 
     expect(() => TestBed.inject(EditingTab).claim('attempt-1')).not.toThrow();
+  });
+
+  it('opens a new channel each time the workspace opens, as the last one closed on leaving', () => {
+    TestBed.resetTestingModule();
+    const root = TestBed.inject(EnvironmentInjector);
+    const first = createEnvironmentInjector([EditingTab], root);
+    first.get(EditingTab).claim('attempt-1');
+    first.destroy();
+
+    const second = createEnvironmentInjector([EditingTab], root);
+
+    expect(() => second.get(EditingTab).claim('attempt-2')).not.toThrow();
+    second.destroy();
   });
 });

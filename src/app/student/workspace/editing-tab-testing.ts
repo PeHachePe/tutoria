@@ -1,6 +1,6 @@
 import type { Provider } from '@angular/core';
 
-import { EDITING_TAB_CHANNEL, EditingTab } from './editing-tab';
+import { EditingTab, OPEN_EDITING_TAB_CHANNEL } from './editing-tab';
 
 /**
  * Test helpers: a BroadcastChannel in memory. `fromOtherTab()` delivers a message as another tab
@@ -25,7 +25,7 @@ export class FakeTabChannel extends EventTarget {
 
 /** EditingTab on a fake channel, for the stores and pages that need it. */
 export function provideTestEditingTab(channel = new FakeTabChannel()): Provider[] {
-  return [EditingTab, { provide: EDITING_TAB_CHANNEL, useValue: channel }];
+  return [EditingTab, { provide: OPEN_EDITING_TAB_CHANNEL, useValue: () => channel }];
 }
 
 /** What another tab posts when it takes the attempt. */

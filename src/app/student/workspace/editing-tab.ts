@@ -6,10 +6,14 @@ interface ClaimMessage {
   readonly tabId: string;
 }
 
-/** The channel between the tabs of this browser, replaced in the tests. */
-export const EDITING_TAB_CHANNEL = new InjectionToken<BroadcastChannel>('EDITING_TAB_CHANNEL', {
-  factory: () => new BroadcastChannel('tutoria.editing-tab'),
-});
+/**
+ * Opens the channel between the tabs of this browser; replaced in the tests. A function, not the
+ * channel: each workspace opens its own and closes it on leaving, so the next one needs a new one.
+ */
+export const OPEN_EDITING_TAB_CHANNEL = new InjectionToken<() => BroadcastChannel>(
+  'OPEN_EDITING_TAB_CHANNEL',
+  { factory: () => () => new BroadcastChannel('tutoria.editing-tab') },
+);
 
 /**
  * Only one tab edits an attempt at a time (D-041). The autosave of two tabs would overwrite each
@@ -19,7 +23,7 @@ export const EDITING_TAB_CHANNEL = new InjectionToken<BroadcastChannel>('EDITING
  */
 @Service({ autoProvided: false })
 export class EditingTab {
-  private readonly channel = inject(EDITING_TAB_CHANNEL);
+  private readonly channel = inject(OPEN_EDITING_TAB_CHANNEL)();
   private readonly tabId = crypto.randomUUID();
   private attemptId: string | undefined;
   private onTaken: (() => void) | undefined;
