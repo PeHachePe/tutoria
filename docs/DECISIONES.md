@@ -1134,3 +1134,43 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **A petición del autor, dentro del paso:** dos pruebas ocultas por ejercicio en lugar de una, cada una con un caso límite más (fila del 2.2 en `PENDIENTES.md`). Cambia §2.5: el ejercicio 3 tiene ahora seis pruebas, y la nueva oculta es `[[-4, -6]]` → `-10`.
 
 **Aprobación:** el autor eligió QuickJS tras comparar las alternativas, con la condición de poder pasar fácilmente a Judge0 en el futuro.
+
+## D-043 · Tutor real: sin streaming, petición reintentable y espera visible (10/11/2026)
+
+**Contexto:** el paso 2.4 crea la Edge Function `tutor`. Quedaban por decidir el streaming (RF-23, D-017) y cuatro pendientes que apuntaban a este paso: el idioma de la respuesta, el reintento que subía el nivel dos veces, el catálogo de reacciones en el prompt y un límite de peticiones. Al planearlo, el autor recordó que cualquier mejora de UX o de producto es bienvenida.
+
+**Decisión:**
+
+- **Sin streaming en la v1.** Antes de que el alumno lea nada, la respuesta tiene que ser un JSON válido y no contener código. Con streaming, un reintento obligaría a borrar texto ya leído, y la emoción llega en el mismo JSON que el mensaje, así que tampoco se adelantaría. Con un modelo Flash la espera es de 1–3 s y la cubren los tres puntos y la mascota. La función responde `{ events }` con `meta`, `delta` y `done` juntos; el contrato del cliente no cambia, así que activarlo después solo toca el servidor.
+- **El texto aparece poco a poco:** `SupabaseTutorService` trocea el texto ya validado en `delta` de tres palabras cada 40 ms, igual que el simulado (`data/tutor/typing.ts`, compartido). Con `prefers-reduced-motion`, sale de golpe.
+- **Voz (fase 6):** el diseño sirve para una conversación por voz (reconocimiento en el navegador → tutor → síntesis), con una pausa de 1–2 s. Si se nota, el servidor puede validar y enviar la respuesta frase a frase sin cambiar el cliente (pendiente del 6.1). Una llamada de voz en tiempo real con el proveedor (audio directo) choca con §2.10 y con la validación, y se descarta.
+- **Contrato compartido sin imports** (`data/tutor/tutor-contract.ts`), como `run-result.ts` en D-042: tipos de los eventos, catálogo de reacciones con el uso de cada una (`REACTION_USES`, que sale de las recetas) y el cálculo del nivel (`reachedHintLevel`, `answerHintLevel`), que usan el simulado, `TutorStore` y la función.
+- **`requestId` en `TutorRequest`:** el id del turno, que el chat reutiliza al reintentar. Si la función ya guardó la respuesta de esa petición, la devuelve sin llamar al modelo: un reintento ya no sube el nivel dos veces ni gasta cuota. `tutor_interaction.request_id` es único; dos peticiones iguales a la vez reciben la primera respuesta guardada. El simulado no lo necesita: falla antes de registrar.
+- **Prompt v1** (`docs/prompt-history.md`): la v0 más el idioma de la petición, el catálogo de reacciones con su uso y las bromas solo ante peticiones de la solución. Lo que escribe el alumno va entre etiquetas que el prompt declara datos, nunca instrucciones, y el alumno no puede cerrarlas antes de tiempo.
+- **Contexto:** enunciado, ejemplos (las pruebas ocultas solo como número, nunca sus valores), código, las 6 últimas interacciones y la última ejecución. Si el código que llega es el de esa ejecución (el intento no ha vuelto a `in_progress`), el modelo recibe los ejemplos que fallan con su entrada y su resultado esperado; si no, se le dice que la ejecución fue de una versión anterior.
+- **El código se prueba antes de preguntar** (iteración 1, a raíz de una prueba del autor: escribió «PIKACHU» dentro de la función y el tutor siguió con la pista anterior, porque solo sabía que «fallaban 6 de 6»). La función `tutor` ejecuta el código actual con los ejemplos en el mismo sandbox de QuickJS que `execute` (`_shared/quickjs-sandbox.ts`, que pasa a compartirse) y el modelo recibe qué devuelve cada uno o qué error lanza, aunque el alumno no haya ejecutado. Las pruebas ocultas no se ejecutan ahí, para que sus valores nunca lleguen al modelo; de ellas solo se cuenta cuántas fallaron en la última ejecución. El resultado va entre etiquetas de datos, porque el mensaje de un error lo escribe el alumno. El prompt pide empezar por el error si el código no carga, lanza uno o no define la función.
+- **Validación (§2.6):** zod y la detección de código (bloques con ``` y líneas con aspecto de código). Como mucho, dos llamadas al modelo: si la primera respuesta no vale, una segunda que refuerza la regla incumplida. Si tampoco vale, la respuesta por defecto en el idioma del alumno; en una intervención proactiva, silencio, porque un mensaje genérico interrumpiría para nada. El modelo recibe además el formato como `json_schema`, que Gemini y Ollama aceptan.
+- **Registro atómico:** la función de base de datos `record_tutor_interaction` (solo `service_role`) guarda la respuesta y su evento (`hint_requested` o `proactive_intervention`) y rechaza los intentos entregados. `tutor_interaction.model` guarda qué modelo respondió, para comparar modelos en el 2.5 y en la memoria.
+- **Límite:** 6 llamadas por minuto y usuario (respuestas e intervenciones calladas, que también gastan una llamada), con `latest_tutor_calls()` y 429 con `Retry-After`. `secondsToWait()` y el límite del código pasan a `_shared/limits.ts`, compartidos con `execute`.
+- **Proveedor:** `LlmProvider` con `OpenAICompatibleProvider` (URL base y modelo de `app_setting.ai_provider`, clave en el secreto `AI_API_KEY`, opcional para Ollama), con 15 s como máximo por llamada. Si el proveedor falla o tarda, 503: el chat dice «no disponible» con «Reintentar».
+- **Espera visible:** `DataError` guarda cuándo se puede reintentar (`retryAt`, del `Retry-After`) y el nuevo `<app-retry-button>` cuenta los segundos con el botón deshabilitado («Reintentar en 40 s»). Lo usan el chat y «Ejecutar»; el simulado pide 10 s al fallar con `rate_limited` desde la barra de desarrollo.
+- **Modelo de desarrollo: `gemini-3.5-flash-lite`** (en el seed y en `app_setting`). La prueba real descubrió que `gemini-2.5-flash`, el del plan, ya no se ofrece a cuentas nuevas (404), y que `gemini-3.8-flash`, el otro recomendado por Google para proyectos nuevos, estaba saturado (503 o más de 30 s). 3.5 Flash-Lite, estable, respondía en ~1 s. El modelo final se sigue eligiendo en el 2.5 con la batería de elusión.
+- **Saturación pasajera del proveedor:** ante un 5xx, el proveedor espera 1 s y repite una vez; un 4xx (clave o modelo mal) no se repite. El log guarda el mensaje del proveedor (hasta 200 caracteres), no el cuerpo entero, que puede repetir la petición. Sin esto, la mitad de las peticiones de la prueba real fallaban con «high demand».
+- **Una configuración de Deno** para todas las funciones (`supabase/functions/deno.json`, con zod 4.6.7).
+- **Secretos en local:** `supabase/functions/.env`, que `supabase start` carga, no estaba en `.gitignore`; ahora sí.
+
+**Alternativas:**
+
+- Streaming del JSON con validación a medida que llega: más complejo, y obliga a retirar texto ya mostrado si aparece código.
+- Streaming frase a frase ya en el 2.4: no hace falta con respuestas cortas en texto; queda para el 6.1 si la voz lo pide.
+- Que el reintento no cuente como pista (lo decide el cliente): no evita la segunda llamada al modelo y deja el nivel en manos del cliente.
+- `response_format: json_object`: la documentación de Gemini no lo garantiza; `json_schema` sí.
+- Contar el límite con una tabla propia: las interacciones y los eventos ya tienen la hora.
+
+**Consecuencias:**
+
+- Cambian §2.3 (`tutor_interaction`), §2.6 (petición, respuesta, prompt y validación), §4.4 y el paso 2.4 de `docs/PLAN.md`. En la memoria, RF-23 pasa a «respuesta completa validada, que aparece de forma progresiva» (pendiente para la PEC3).
+- `provideSupabaseData()` usa ya `SupabaseTutorService`; `UnavailableTutorService` desaparece.
+- El 2.5 compara modelos con `tutor_interaction.model` y puede ajustar la latencia (`reasoning_effort`) por modelo.
+
+**Aprobación:** el autor aprobó el plan sin streaming y con las seis mejoras propuestas (texto progresivo, espera visible, contexto de la ejecución, modelo guardado, tiempo máximo y respuesta por defecto en su idioma), tras preguntar cómo encajaba con las emociones y con la voz. El modelo de desarrollo y el reintento ante saturación salieron de la prueba real, después de que el autor señalara la lista actual de modelos de Gemini.
