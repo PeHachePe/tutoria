@@ -116,6 +116,7 @@
             "coverageExclude": [
               "src/main.ts",
               "src/environments/**",
+              "src/app/data/supabase/database.types.ts",
               "src/**/*.spec.ts",
               "src/**/*-testing.ts"
             ],

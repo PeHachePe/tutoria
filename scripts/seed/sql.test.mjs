@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildSeedSql, insertStatement, SEED_TABLES, sqlLiteral, toSnakeCase } from './sql.mjs';
+import {
+  authUsersStatement,
+  buildSeedSql,
+  insertStatement,
+  SEED_TABLES,
+  sqlLiteral,
+  toSnakeCase,
+} from './sql.mjs';
 
 describe('toSnakeCase', () => {
   it('turns camelCase keys into column names', () => {
@@ -66,6 +73,59 @@ describe('insertStatement', () => {
   it('writes a comment for a table without rows', () => {
     assert.equal(insertStatement('attempt', []), '-- attempt: no rows\n');
   });
+
+  it('updates the rows that already exist when given a conflict key', () => {
+    const sql = insertStatement('app_user', [{ id: 'u1', name: 'Ana', role: 'admin' }], [], 'id');
+
+    assert.equal(
+      sql,
+      'insert into app_user (id, name, role) values\n' +
+        "  ('u1', 'Ana', 'admin')\n" +
+        'on conflict (id) do update set name = excluded.name, role = excluded.role;\n',
+    );
+  });
+});
+
+describe('authUsersStatement', () => {
+  const users = [
+    {
+      id: 'u1',
+      name: "Ana O'Neil",
+      email: 'ana@tutoria.test',
+      role: 'admin',
+      status: 'active',
+      createdAt: 'd1',
+    },
+    {
+      id: 'u2',
+      name: 'Raúl',
+      email: 'raul@tutoria.test',
+      role: 'student',
+      status: 'disabled',
+      createdAt: 'd2',
+    },
+  ];
+
+  it('creates each account with its identity and the hashed test password', () => {
+    const sql = authUsersStatement(users, "pass'word");
+
+    assert.match(sql, /insert into auth\.users \(/);
+    assert.match(sql, /insert into auth\.identities \(/);
+    assert.match(sql, /extensions\.crypt\('pass''word', extensions\.gen_salt\('bf'\)\)/);
+    assert.match(sql, /\('u1', 'ana@tutoria\.test', 'Ana O''Neil', 'active', 'd1'\)/);
+    assert.match(sql, /\('u2', 'raul@tutoria\.test', 'Raúl', 'disabled', 'd2'\)/);
+  });
+
+  it('bans the disabled accounts in Supabase Auth too', () => {
+    assert.match(authUsersStatement(users, 'p'), /case when status = 'disabled' then/);
+  });
+
+  it('never puts the role in the metadata, which users can edit', () => {
+    const sql = authUsersStatement(users, 'p');
+
+    assert.doesNotMatch(sql, /'admin'/);
+    assert.match(sql, /jsonb_build_object\('name', name\)/);
+  });
 });
 
 describe('buildSeedSql', () => {
@@ -74,12 +134,16 @@ describe('buildSeedSql', () => {
     seed.users = [{ id: 'u1', name: 'Ana' }];
     seed.aiProvider = { baseUrl: 'https://example.test', model: 'm' };
 
-    const sql = buildSeedSql(seed);
+    const sql = buildSeedSql(seed, 'p');
 
-    const order = [...sql.matchAll(/^(?:insert into |-- )(\w+)/gm)].map((match) => match[1]);
+    const order = [...sql.matchAll(/^(?:insert into (?:auth\.)?|with |-- )(\w+)/gm)].map(
+      (match) => match[1],
+    );
     assert.deepEqual(order, [
       'Generated',
       'The',
+      'seed_user',
+      'identities',
       'app_user',
       'class_group',
       'enrollment',
@@ -92,6 +156,7 @@ describe('buildSeedSql', () => {
       'process_event',
       'app_setting',
     ]);
+    assert.match(sql, /on conflict \(id\) do update set name = excluded\.name;/);
     assert.match(
       sql,
       /\('ai_provider', '\{"baseUrl":"https:\/\/example.test","model":"m"\}'::jsonb\)/,

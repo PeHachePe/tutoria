@@ -16,7 +16,7 @@ import { parseArgs } from 'node:util';
 import { buildSeedSql } from './seed/sql.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const FIXTURES = path.join(ROOT, 'src', 'app', 'data', 'mock', 'fixtures', 'seed.ts');
+const FIXTURES = path.join(ROOT, 'src', 'app', 'data', 'mock', 'fixtures');
 const OUTPUT = path.join(ROOT, 'supabase', 'seed.sql');
 
 registerHooks({
@@ -40,8 +40,10 @@ registerHooks({
 });
 
 const { values } = parseArgs({ options: { check: { type: 'boolean', default: false } } });
-const { SEED } = await import(pathToFileURL(FIXTURES).href);
-const sql = buildSeedSql(SEED);
+const { SEED } = await import(pathToFileURL(path.join(FIXTURES, 'seed.ts')).href);
+// The same test password as the mock data: these accounts only exist in local Supabase.
+const { MOCK_PASSWORD } = await import(pathToFileURL(path.join(FIXTURES, 'users.ts')).href);
+const sql = buildSeedSql(SEED, MOCK_PASSWORD);
 
 if (values.check) {
   const current = existsSync(OUTPUT) ? readFileSync(OUTPUT, 'utf8') : '';

@@ -129,16 +129,16 @@ Detalle por pantalla:
 
 En **negrita**, lo que cambia respecto al modelo de la memoria.
 
-- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, created_at, updated_at). El nombre evita la palabra reservada `user`.
+- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), created_at, updated_at). El nombre evita la palabra reservada `user`.
 - `class_group` (id, name, school_year, teacher_id → app_user)
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
-- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
+- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **kind** (por defecto `code`, D-029), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
 - **`class_session`** (id, group_id → class_group, number, title (opcional); única por grupo y número, D-034): las sesiones de clase de cada grupo, con el título que les da el docente («Vectores»); sin título se muestran como «Sesión N».
 - `exercise_assignment` (id, group_id → class_group, exercise_id → exercise, session; única por terna; `(group_id, session)` → `class_session (group_id, number)`)
 - `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), current_code, final_code, status, started_at, finished_at, **updated_at**)
 - `tutor_interaction` (id, attempt_id → attempt, trigger `question`/`hint`/`proactive`, hint_level 1–3, **student_message**, transcript, emotion, intensity, **elusion**, **prompt_version**, **created_at**)
-- `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`)
+- `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`, **received_at**: la hora de llegada, que el cliente no puede falsear, D-040)
 - **`app_setting`** (key, value `jsonb`, updated_at). De momento solo `ai_provider`: URL base y modelo del adaptador de IA activo. La clave del proveedor nunca se guarda aquí, sino en los secretos del servidor.
 
 `attempt.assignment_id` resuelve la simplificación que ya señalaba la memoria del TFM («el desarrollo valorará incorporar esa referencia directa»): el histórico por sesión deja de reconstruirse a partir de fechas.

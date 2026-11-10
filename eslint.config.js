@@ -6,6 +6,10 @@ const angular = require('angular-eslint');
 
 module.exports = defineConfig([
   {
+    // Written by `npm run db:types` from the database schema (Supabase CLI): not our code (D-010)
+    ignores: ['src/app/data/supabase/database.types.ts'],
+  },
+  {
     files: ['**/*.ts'],
     extends: [
       eslint.configs.recommended,

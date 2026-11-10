@@ -1012,3 +1012,43 @@ Preguntó también si la IA podría componer las animaciones (iconos, si late o 
 **Consecuencias:** cambian §4.1 y §4.8 de `docs/PLAN.md` y el bloque del proyecto en `CLAUDE.md`. Los tests que buscaban el cursor del chat por su clase usan `data-testid` (es decorativo y `aria-hidden`).
 
 **Aprobación:** el autor («aplica lo que consideres»).
+
+## D-040 · Supabase local: privilegios, transiciones del intento y aviso de datos (10/11/2026)
+
+**Contexto:** el paso 2.1 crea el esquema, la RLS, el seed y los tests de pgTAP. El plan (§2.3 y §2.4) dice qué reglas hay, pero no cómo se hacen cumplir, y quedaban en `PENDIENTES.md` varias filas para este paso: la seguridad del intento y de `process_event` (1.6), `class_session` (1.2b), `exercise.kind` (1.4) y el aviso de datos en el servidor (1.9).
+
+**Decisión:**
+
+- **Cuatro migraciones por tema:** tablas, seguridad, transiciones del intento y alta de usuarios. El orden de los tipos y las tablas sigue §2.3.
+- **Privilegios desde cero:** se revoca lo que Supabase concede por defecto a `anon` y `authenticated` (también para las tablas y funciones futuras) y se concede solo lo necesario. El visitante anónimo no lee nada. En `attempt`, el cliente solo actualiza `current_code`; en `app_user`, solo `privacy_notice_seen_at`; en `process_event`, solo inserta, y nunca `id` ni `received_at`. Lo demás de `app_user` (nombre, rol, estado) lo cambia la Edge Function `admin-users` con `service_role` (fase 5).
+- **Funciones auxiliares `security definer`:** las cuatro del plan y cinco más que evitan repetir consultas en las políticas (`is_staff`, `teaches_student`, `is_assigned_to_me`, `can_read_attempt`, `can_record_event`). `current_app_role()` es null para un usuario desactivado, así que ninguna política le deja pasar, además del bloqueo de Supabase Auth.
+- **Banco compartido:** cualquier docente o administrador crea, edita y borra ejercicios y pruebas, como en el servicio simulado. Los grupos y las matrículas los gestiona el administrador; las sesiones y las asignaciones, también el docente de cada grupo.
+- **Transiciones:**
+  - el trigger vuelve a `in_progress` solo si el código cambia de verdad y la misma actualización no fija el estado, porque `execute` guardará el código con su resultado;
+  - el cambio de código se rechaza si el intento está `submitted`;
+  - `open_attempt` crea el intento (único por alumno y ejercicio) o devuelve el que hay. Al alumno solo le deja abrir lo asignado; al docente, cualquier ejercicio, sin asignación;
+  - `submit_attempt` congela el código y registra el evento `submit`.
+
+  Los errores llevan `P0002` (será `not_found`) o `P0001` (será `invalid`) para el 2.2.
+
+- **Aviso de datos:** solo `app_user.privacy_notice_seen_at`, que prueba que se informó al alumno. El registro de eventos forma parte de la función educativa (RGPD art. 6.1.e), no se basa en el consentimiento: no se ofrece retirarlo, porque quitaría al docente justo la señal de foco y pegado, que se lee de forma formativa (§2.8).
+- **Seed:** crea primero las cuentas de `auth.users`, con su identidad de correo, la contraseña de prueba de las fixtures y las cuentas desactivadas bloqueadas hasta 2999; el trigger crea cada `app_user` y su inserción lo completa con `on conflict`, como preveía D-018. `updated_at` solo se mueve si la actualización no lo fija, para que el seed conserve las fechas de las fixtures.
+- **Configuración local:** puertos 553xx en lugar de 543xx, para convivir con otros proyectos de Supabase del Mac; registro público desactivado en `[auth]`. En `[auth.email]` tiene que quedar activado, porque si no se desactiva también el inicio de sesión con correo.
+- **Tipos generados:** `npm run db:types` escribe `src/app/data/supabase/database.types.ts` y lo formatea; se excluye del lint y de la cobertura porque lo genera el CLI (D-010).
+
+**Alternativas:**
+
+- Políticas sin funciones auxiliares, más largas y con riesgo de recursión entre tablas.
+- Columnas de `app_user` editables con un trigger que vigile qué cambia, en lugar del permiso por columna.
+- Crear el intento con un `insert` del cliente.
+- Ofrecer la retirada del consentimiento (`process_tracking_withdrawn_at`), que se llegó a escribir y se quitó tras la objeción del autor (se perdería la señal).
+- Parar el otro proyecto de Supabase para usar los puertos por defecto.
+
+**Consecuencias:**
+
+- §2.3 de `docs/PLAN.md` añade `privacy_notice_seen_at`, `kind` y `received_at`, y `CLAUDE.md` añade los scripts `db:*`.
+- El 2.2 tiene que traducir los SQLSTATE a `DataError` y usar `open_attempt` y `submit_attempt`.
+- Una tabla nueva necesita sus permisos explícitos en su migración.
+- En la nube, la contraseña de demostración no puede ser la del repositorio (`PENDIENTES.md`).
+
+**Aprobación:** propuesta; el autor aprobó el plan del paso («añádelo y ya») y objetó la retirada del consentimiento, que se quitó.
