@@ -31,7 +31,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Flotante** (con el código ampliado, en la tableta o por elección del alumno, D-033): la mascota abajo a la derecha. Al pulsarla, el tutor se abre en un panel sobre la esquina del código (24rem de ancho) y la mascota saca la lengua; en su cabecera están «Fijar el tutor a la derecha» (no en la tableta) y «Minimizar el tutor». Plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
 - **Reacciones flotantes (1.8, D-035 a D-037):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos la reacción que eligió el tutor (o la de su emoción) en una capa sobre toda la pantalla:
-  - un emoji grande en el centro (animado en 3D, o plano si el alumno desactiva «Emojis 3D»), con un halo y ondas de luz a su compás, y alrededor coronas, lluvia de emojis pequeños y confeti; nunca sale igual;
+  - un emoji grande en el centro (animado en 3D, o el mismo en 3D estático si el alumno desactiva «Emojis animados» o mientras el animado carga, D-043), con un halo y ondas de luz a su compás, y alrededor coronas, lluvia de emojis pequeños y confeti; nunca sale igual;
   - dieciocho reacciones: corazones, ánimo, fiesta, pensando, bombilla, cohete, fuego, aplausos, mente explotando, risas, guiño, secreto, «¿en serio?», lanzamiento (pelota, huevo, tarta, tomate o caca, que se estampan con un 💥 y dejan su mancha), enfado de broma (que en la intensidad 3 explota con una bomba y un fogonazo), ojos vigilantes, empatía y sueño;
   - las bromas son para cuando el alumno pide la solución, nunca para sus errores;
   - el emoji de cada reacción se descarga en cuanto el tutor la elige, mientras escribe; si no llega a tiempo, sigue la coreografía hasta que aparece;
@@ -89,7 +89,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] El tutor pasa de fijo a flotante y de vuelta, y se recuerda al recargar; flotante, se abre con el foco en la pregunta y se minimiza con el botón, la mascota o Esc, con el foco de vuelta en la mascota.
 - [ ] Plegado, una respuesta nueva asoma en el bocadillo, se anuncia y abre el tutor.
 - [ ] Ejecutar con todo superado lanza la fiesta, y volver a ejecutar sin romper nada, aplausos; mejorar lanza el ánimo; con fallos no sale nada.
-- [ ] Cada respuesta nueva lanza su reacción con su emoji y mueve la mascota; dos seguidas se suman sin cortarse; sin «Emojis 3D», emojis planos; reducidas, su emoji pequeño; desactivadas, nada; con «reducir movimiento», su emoji se desvanece sin moverse.
+- [ ] Cada respuesta nueva lanza su reacción con su emoji y mueve la mascota; dos seguidas se suman sin cortarse; sin «Emojis animados», los mismos emojis estáticos; reducidas, su emoji pequeño; desactivadas, nada; con «reducir movimiento», su emoji se desvanece sin moverse.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 
 ## Fuera de alcance

@@ -1178,10 +1178,10 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 - Un catálogo de reacciones (`REACTION_KINDS`) separado de la emoción: la emoción es el dato para el docente y la reacción, solo cómo se ve. El evento `meta` lleva la que elige el tutor y, sin ella, vale la de la emoción (§2.6). `TutorStore.reaction` la da cuando la respuesta llega completa: ni las silenciosas ni las que fallan a mitad reaccionan.
 - Cada reacción es una receta declarativa (`REACTION_RECIPES`): cuándo usarla (para el prompt del tutor real), su icono, sus emojis, sus colores y unos bloques reutilizables con sus parámetros (latido, halo y ondas, corona, lluvia, llamas, vuelo, lanzamiento, ojos, vapor y explosión). Una parte puede reservarse para unas intensidades (`minIntensity`, `maxIntensity`). Añadir una reacción es su nombre en el catálogo y su receta; un emoji, su nombre en `npm run emojis`; un movimiento nuevo, su fichero en `styles/`.
-- Emojis oficiales de Microsoft (Fluent Emoji, MIT, D-037): animados en 3D para el centro, pequeños y estáticos en 3D para las piezas de alrededor, o planos en 2D si el alumno desactiva «Emojis 3D». Cada reacción elige el suyo por su id, y se descarga en cuanto el tutor la elige, mientras escribe; los ligeros se precargan. Los genera `npm run emojis` en `public/reactions/`.
+- Emojis oficiales de Microsoft (Fluent Emoji, MIT, D-037): animados en 3D para el centro, pequeños y estáticos en 3D para las piezas de alrededor, o estáticos en 3D si el alumno desactiva «Emojis animados» (en el 1.8 eran planos en 2D; D-043). Cada reacción elige el suyo por su id. Los estáticos, de pocos KB, se precargan y sustituyen al animado mientras carga; los animados se descargan poco a poco en segundo plano (D-043). Los genera `npm run emojis` en `public/reactions/`.
 - `<app-reaction-overlay>` sobre toda la pantalla, con `aria-hidden` y sin capturar el puntero: 2 a 3 segundos, en un sitio distinto cada vez, hasta tres reacciones a la vez sin cortarse, y una paleta viva propia (tokens `--app-reaction-*`) para el confeti y los efectos.
 - Dieciocho reacciones: corazones, ánimo, fiesta, pensando, bombilla, cohete, fuego, aplausos, mente explotando, risas y, para cuando se pide la solución, guiño, secreto, «¿en serio?», lanzamiento (pelota, huevo, tarta, tomate o caca, con su mancha) y enfado de broma, que en la intensidad 3 explota; y, para el tutor proactivo, ojos vigilantes, empatía y sueño.
-- Completas, reducidas (su emoji, pequeño) o desactivadas (RF-10, CU-03 4a), y emojis 3D o planos, en un `SettingsStore` mínimo guardado por usuario que el 1.9 amplía. Con `prefers-reduced-motion`, su emoji aparece y se desvanece sin moverse; nunca hay más de un destello (WCAG 2.3.1).
+- Completas, reducidas (su emoji, pequeño) o desactivadas (RF-10, CU-03 4a), y emojis animados o estáticos (D-043), en un `SettingsStore` mínimo guardado por usuario que el 1.9 amplía. Con `prefers-reduced-motion`, su emoji aparece y se desvanece sin moverse; nunca hay más de un destello (WCAG 2.3.1).
 - La mascota del tutor se mueve con cada reacción.
 - Sección «Reacciones» en el muestrario `/dev/ui`, con un botón por reacción que lanza el componente real, la intensidad (3 al abrir) y los dos ajustes.
 
@@ -1189,7 +1189,7 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 
 **1.9 · Ajustes del alumno y datos registrados (≈2,5 h)** · fichas `05-ajustes` y `05b-datos` · Figuras 14 y 23
 
-- Tema (claro, oscuro o sistema), reacciones (completas, reducidas o desactivadas, y emojis 3D o planos, que `SettingsStore` ya guarda desde el 1.8), proactividad (sin efecto hasta el paso 6.2) y voz (deshabilitada hasta el 6.1).
+- Tema (claro, oscuro o sistema), reacciones (completas, reducidas o desactivadas, y emojis animados o estáticos, que `SettingsStore` ya guarda desde el 1.8), proactividad (sin efecto hasta el paso 6.2) y voz (deshabilitada hasta el 6.1).
 - Accesorios de la mascota (auriculares y pajarita, 1.1b) y el puntero de hueso, que se puede quitar; todas las mascotas del alumno los llevan (`MASCOT_ACCESSORIES`, D-038).
 - Idioma también en los ajustes, además de la barra.
 - Persistidos por usuario en localStorage.
