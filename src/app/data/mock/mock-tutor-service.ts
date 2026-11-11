@@ -31,8 +31,8 @@ export class MockTutorService extends TutorService {
 
   private async *answer(request: TutorRequest): AsyncGenerator<TutorEvent> {
     const { answer, interactionId } = await this.network.request(() => this.record(request));
-    const { emotion, intensity, reaction, hintLevel, text, silent } = answer;
-    yield { type: 'meta', emotion, intensity, hintLevel, reaction };
+    const { emotion, intensity, reaction, hintLevel, text, silent, elusion } = answer;
+    yield { type: 'meta', emotion, intensity, hintLevel, reaction, elusion };
     for await (const chunk of typeOut(text, this.typingMs)) {
       yield { type: 'delta', text: chunk };
     }

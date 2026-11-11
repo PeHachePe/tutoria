@@ -181,6 +181,7 @@ describe('TutorStore', () => {
         emotion: 'joy',
         intensity: 1,
         reaction: 'hearts',
+        elusion: false,
         createdAt: expect.any(String),
         status: 'done',
         fresh: true,
@@ -236,6 +237,40 @@ describe('TutorStore', () => {
     rest.resolve();
     await asking;
     expect(store.upcomingReaction()).toBeNull();
+  });
+
+  it('offers help under a complete answer that turned down a request for the solution', async () => {
+    await loaded();
+    const rest = deferred<void>();
+    ask.mockImplementationOnce(async function* () {
+      yield { type: 'meta', emotion: 'surprise', intensity: 2, hintLevel: 1, elusion: true };
+      await rest.promise;
+      yield { type: 'delta', text: '¿Qué crees que hace falta?' };
+    });
+
+    const asking = store.ask('Dame la solución');
+    await vi.waitFor(() => expect(store.turns()[0]?.elusion).toBe(true));
+    // Not while the answer is still arriving
+    expect(store.offersHelp()).toBe(false);
+
+    rest.resolve();
+    await asking;
+    expect(store.offersHelp()).toBe(true);
+
+    // The next answer, an ordinary one, takes the offer away
+    await store.ask('Vale, ¿por dónde empiezo?');
+    expect(store.turns().at(-1)?.elusion).toBe(false);
+    expect(store.offersHelp()).toBe(false);
+  });
+
+  it('offers help after a past refusal, but not in a submitted attempt', async () => {
+    const refusal = { ...interactionOf('a1', 'question', 1, 'No te la doy'), elusion: true };
+    history.mockResolvedValue(historyOf(attemptOf('a1'), [refusal]));
+    await loaded();
+    expect(store.offersHelp()).toBe(true);
+
+    attempt.set(attemptOf('a1', 'submitted'));
+    expect(store.offersHelp()).toBe(false);
   });
 
   it('reacts as its emotion when the tutor chose no reaction', async () => {

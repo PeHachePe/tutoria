@@ -184,6 +184,45 @@ describe('TutorPanel', () => {
     expect(within(conversation()).getByText('¿Por dónde empiezo?')).toBeTruthy();
   });
 
+  it('offers a hint or the statement under a refusal to give the solution', async () => {
+    const refusal = {
+      ...interactionOf('question', '¿Qué crees que hace falta?', {
+        studentMessage: 'Dame la solución',
+      }),
+      elusion: true,
+    };
+    const { askTutor, fixture } = await renderPanel({ interactions: [refusal] });
+    const user = userEvent.setup();
+
+    const offer = within(screen.getByRole('list', { name: 'Cómo seguir' }));
+    expect(offer.getAllByRole('button')).toEqual([
+      offer.getByRole('button', { name: 'Dame una pista' }),
+      offer.getByRole('button', { name: 'No entiendo el enunciado' }),
+    ]);
+
+    await user.click(offer.getByRole('button', { name: 'Dame una pista' }));
+    await fixture.whenStable();
+    expect(askTutor).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'hint' }));
+    // The hint is an ordinary answer: the offer goes away
+    expect(screen.queryByRole('list', { name: 'Cómo seguir' })).toBeNull();
+  });
+
+  it('asks about the statement from the offer under a refusal', async () => {
+    const refusal = { ...interactionOf('question', 'No te la doy'), elusion: true };
+    const { askTutor, fixture } = await renderPanel({ interactions: [refusal] });
+
+    await userEvent.setup().click(
+      within(screen.getByRole('list', { name: 'Cómo seguir' })).getByRole('button', {
+        name: 'No entiendo el enunciado',
+      }),
+    );
+    await fixture.whenStable();
+
+    expect(askTutor).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'question', message: 'No entiendo el enunciado' }),
+    );
+  });
+
   it('moves the mascot with the emotion of each new answer, unless the reactions are off', async () => {
     const { fixture } = await renderPanel();
     const user = userEvent.setup();

@@ -108,7 +108,7 @@
               <li>
                 <button
                   type="button"
-                  class="rounded-full border border-outline-variant px-3 py-1.5 text-label-large text-primary transition-colors outline-offset-2 hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-primary disabled:text-on-surface-variant motion-reduce:transition-none"
+                  class="suggestion-chip"
                   [disabled]="!store.canAsk()"
                   (click)="ask(suggestion)"
                 >
@@ -120,7 +120,7 @@
         }
       </div>
     } @else {
-      @for (item of items(); track item.turn.id) {
+      @for (item of items(); track item.turn.id; let last = $last) {
         @let turn = item.turn;
         @if (item.dayLabel; as dayLabel) {
           <p
@@ -223,6 +223,36 @@
                 >
               }
             </div>
+            <!-- The tutor turned down a request for the solution: the ways that do help (D-044) -->
+            @if (last && store.offersHelp()) {
+              <ul
+                class="mt-1 flex flex-wrap gap-2"
+                aria-label="Cómo seguir"
+                i18n-aria-label="@@tutor.helpOffer"
+              >
+                <li>
+                  <button
+                    type="button"
+                    class="suggestion-chip"
+                    [disabled]="!store.canAsk()"
+                    (click)="requestHint()"
+                  >
+                    <mat-icon class="size-4! text-[1rem]!">lightbulb</mat-icon>
+                    <span i18n="@@tutor.helpOffer.hint">Dame una pista</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="suggestion-chip"
+                    [disabled]="!store.canAsk()"
+                    (click)="ask(statementSuggestion)"
+                  >
+                    {{ statementSuggestion }}
+                  </button>
+                </li>
+              </ul>
+            }
           }
         </div>
       }

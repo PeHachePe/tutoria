@@ -150,6 +150,21 @@
         }
       </div>
     </div>
+
+    <!-- suggestion-chip (src/styles/utilities.css): answers sent in one click, as in the tutor chat -->
+    <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+      <h3 class="text-title-medium">Sugerencias del tutor</h3>
+      <ul class="flex flex-wrap gap-2" aria-label="Ejemplo de sugerencias">
+        <li><button type="button" class="suggestion-chip">¿Por dónde empiezo?</button></li>
+        <li>
+          <button type="button" class="suggestion-chip">
+            <mat-icon class="size-4! text-[1rem]!">lightbulb</mat-icon>
+            Dame una pista
+          </button>
+        </li>
+        <li><button type="button" class="suggestion-chip" disabled>Mientras responde</button></li>
+      </ul>
+    </div>
   </section>
 
   <section aria-labelledby="mascot-title" class="flex flex-col gap-3">

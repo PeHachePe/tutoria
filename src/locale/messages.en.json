@@ -319,6 +319,8 @@
     "tutor.error.unavailable": "It is not available right now: try again later.",
     "login.errors.disabled": "Your account is disabled. If you think this is a mistake, talk to your teacher",
     "login.sessionEnded": "Your session was closed, perhaps in another tab. Sign in again to continue where you left off.",
-    "login.sessionExpired": "Your session has expired. Sign in again to continue where you left off."
+    "login.sessionExpired": "Your session has expired. Sign in again to continue where you left off.",
+    "tutor.helpOffer": "How to go on",
+    "tutor.helpOffer.hint": "Give me a hint"
   }
 }

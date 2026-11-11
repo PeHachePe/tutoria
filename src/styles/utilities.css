@@ -33,3 +33,12 @@
       0.75rem no-repeat scroll;
   background-color: var(--app-panel);
 }
+
+/* Suggestion chip: a short answer the student can send with one click, in their own words. Examples:
+   the questions the empty tutor chat suggests («¿Por dónde empiezo?») and, under a refusal to give
+   the solution, «Dame una pista» (D-044). A rounded outline in the primary colour that fills on
+   hover, with the focus ring of the app; disabled while the tutor answers. Use it on a <button>.
+   The same Tailwind classes the chips had in the template, written once (D-039). */
+@utility suggestion-chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-outline-variant px-3 py-1.5 text-label-large text-primary transition-colors outline-offset-2 hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-primary disabled:text-on-surface-variant motion-reduce:transition-none;
+}

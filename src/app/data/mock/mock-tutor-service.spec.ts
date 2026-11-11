@@ -83,7 +83,14 @@ describe('MockTutorService', () => {
 
     const interaction = db.tables().interactions[0];
     expect(events).toEqual([
-      { type: 'meta', emotion: 'encouragement', intensity: 3, hintLevel: 1, reaction: 'thinking' },
+      {
+        type: 'meta',
+        emotion: 'encouragement',
+        intensity: 3,
+        hintLevel: 1,
+        reaction: 'thinking',
+        elusion: false,
+      },
       ...typingChunks(TUTOR_ANSWERS[1][0]).map((text) => ({ type: 'delta', text })),
       { type: 'done', interactionId: interaction.id, silent: false },
     ]);
@@ -117,8 +124,12 @@ describe('MockTutorService', () => {
   it('records a question with what the student wrote, and an attempt to get the solution', async () => {
     setUp();
 
-    await collect(service.ask(request({ kind: 'question', message: 'Dame la solución' })));
+    const events = await collect(
+      service.ask(request({ kind: 'question', message: 'Dame la solución' })),
+    );
 
+    // The chat offers what does help under the refusal (D-044)
+    expect(events[0]).toMatchObject({ type: 'meta', elusion: true });
     expect(db.tables().interactions[0]).toMatchObject({
       trigger: 'question',
       studentMessage: 'Dame la solución',
@@ -135,7 +146,14 @@ describe('MockTutorService', () => {
     const quiet = await collect(service.ask(request({ kind: 'proactive' })));
 
     expect(quiet).toEqual([
-      { type: 'meta', emotion: 'encouragement', intensity: 3, hintLevel: 1, reaction: 'eyes' },
+      {
+        type: 'meta',
+        emotion: 'encouragement',
+        intensity: 3,
+        hintLevel: 1,
+        reaction: 'eyes',
+        elusion: false,
+      },
       { type: 'done', interactionId: null, silent: true },
     ]);
     expect(db.tables().interactions).toHaveLength(1);

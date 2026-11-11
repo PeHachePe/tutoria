@@ -34,6 +34,8 @@ export interface TutorTurn {
   readonly intensity: Intensity | null;
   /** The reaction the tutor chose, or the one of its emotion. */
   readonly reaction: ReactionKind | null;
+  /** The student asked for the solution: the chat offers what does help (D-044). */
+  readonly elusion: boolean;
   readonly createdAt: string;
   readonly status: TurnStatus;
   /** Why it failed, to say so. */
@@ -93,10 +95,14 @@ export class TutorStore {
   /** The last answer that arrived whole, read aloud once: never the chunks while they arrive. */
   readonly announcement = computed(() => this.freshAnswers().at(-1)?.answer ?? '');
   /**
-   * The emotion of the last answer that arrived whole, for the floating reactions (1.8). Its `meta`
-   * comes first, but it plays at the end: an answer lost halfway or an intervention the tutor keeps
-   * to itself must not react. The past turns never do.
+   * The last answer turned down a request for the solution: the chat offers a hint or the statement
+   * under it, so the refusal leads somewhere (D-044). Not once the attempt is submitted.
    */
+  readonly offersHelp = computed(() => {
+    const last = this.turnsState().at(-1);
+    return !this.readonly() && last?.status === 'done' && last.elusion;
+  });
+
   /**
    * The reaction of the answer still arriving, known from its `meta`: the overlay loads its emoji
    * while the text arrives, so it is ready when the answer is complete.
@@ -112,6 +118,11 @@ export class TutorStore {
     },
     { equal: (a, b) => a?.id === b?.id },
   );
+  /**
+   * The emotion of the last answer that arrived whole, for the floating reactions (1.8). Its `meta`
+   * comes first, but it plays at the end: an answer lost halfway or an intervention the tutor keeps
+   * to itself must not react. The past turns never do.
+   */
   readonly reaction = computed<Reaction | null>(
     () => {
       const last = this.freshAnswers().at(-1);
@@ -172,6 +183,7 @@ export class TutorStore {
         emotion: null,
         intensity: null,
         reaction: null,
+        elusion: false,
         createdAt: new Date().toISOString(),
         status: 'answering',
         fresh: true,
@@ -199,6 +211,7 @@ export class TutorStore {
               emotion: event.emotion,
               intensity: event.intensity,
               reaction: event.reaction ?? EMOTION_REACTIONS[event.emotion],
+              elusion: event.elusion ?? false,
             }));
             break;
           case 'delta':
@@ -231,6 +244,7 @@ function pastTurn(interaction: TutorInteraction): TutorTurn {
     intensity: interaction.intensity,
     // The past never reacts, so it does not need to know how
     reaction: null,
+    elusion: interaction.elusion,
     createdAt: interaction.createdAt,
     status: 'done',
     fresh: false,

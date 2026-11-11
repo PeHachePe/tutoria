@@ -90,6 +90,8 @@ export class TutorPanel {
   private readonly locale = inject(LOCALE_ID);
 
   protected readonly skeletonBubbles = SKELETON_BUBBLES;
+  /** Offered too under a refusal to give the solution (D-044). */
+  protected readonly statementSuggestion = SUGGESTIONS.statement;
   protected readonly maxHintLevel = MAX_HINT_LEVEL;
 
   protected readonly dockLabel = computed(() =>

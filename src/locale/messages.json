@@ -284,6 +284,8 @@
     "tutor.proactive": "El tutor se acerca",
     "tutor.tutorSays": "Tutor:",
     "tutor.typing": "El tutor está escribiendo…",
+    "tutor.helpOffer": "Cómo seguir",
+    "tutor.helpOffer.hint": "Dame una pista",
     "tutor.submitted": "Ejercicio entregado: puedes repasar la conversación, pero el tutor ya no da más pistas.",
     "tutor.anotherHint": "Otra pista",
     "tutor.requestHint": "Pedir pista",
