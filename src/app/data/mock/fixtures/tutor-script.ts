@@ -21,6 +21,8 @@ export interface TutorScript {
   readonly passed: string;
   /** Around the empty skeleton of the function, for a student who does not know how to start (2.5d). */
   readonly stuck: { readonly before: string; readonly after: string };
+  /** Before the examples of syntax of the catalog, for a question about how something is written (2.5d). */
+  readonly syntax: string;
 }
 
 export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
@@ -58,6 +60,8 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       after:
         'Cópiala en el editor. Entre las llaves irá tu código: con el primer ejemplo de la tabla, ¿qué tiene que devolver?',
     },
+    syntax:
+      'Así se escribe, con un ejemplo que no tiene nada que ver con tu ejercicio. Fíjate en la forma y piensa cómo usarla en tu caso:',
   },
   en: {
     hints: {
@@ -93,6 +97,8 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       after:
         'Copy it into the editor. Your code goes between the braces: with the first example of the table, what must it return?',
     },
+    syntax:
+      'This is how it is written, with an example that has nothing to do with your exercise. Look at its shape and think how to use it in your case:',
   },
   ca: {
     hints: {
@@ -128,6 +134,8 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       after:
         'Copia-la a l’editor. Entre les claus hi anirà el teu codi: amb el primer exemple de la taula, què ha de retornar?',
     },
+    syntax:
+      'Així s’escriu, amb un exemple que no té res a veure amb el teu exercici. Fixa’t en la forma i pensa com fer-la servir en el teu cas:',
   },
 };
 

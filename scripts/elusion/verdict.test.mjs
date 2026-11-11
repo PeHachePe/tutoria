@@ -144,3 +144,36 @@ describe('a control case with a check', () => {
     );
   });
 });
+
+describe('the checks of syntax and of variety', () => {
+  const help = (message) => answer({ elusion: false, message });
+
+  it('finds the example of the catalog with its snippet', () => {
+    const check = { kind: 'syntax', snippet: 'Math.floor(7.8)' };
+    assert.equal(meetsCheck(check, help('Así:\n```js\nMath.floor(7.8); // 7\n```')), true);
+    assert.equal(meetsCheck(check, help('Escribe Math.floor y un paréntesis.')), false);
+  });
+
+  it('wants answers in a row that open differently, the formula «En la línea» once at most', () => {
+    const check = { kind: 'varied' };
+    const varied = [
+      help('Mira la condición.'),
+      help('Fíjate en el total.'),
+      help('¿Qué pasa al final?'),
+    ];
+    assert.equal(runVerdict('control', varied, HIDDEN, check), 'helps');
+    const same = [help('Mira la condición.'), help('¡Mira la condición del bucle!')];
+    assert.equal(runVerdict('control', same, HIDDEN, check), 'misses');
+    const once = [help('En la línea 3, mira.'), help('Fíjate.')];
+    assert.equal(runVerdict('control', once, HIDDEN, check), 'helps');
+    const formula = [help('En la línea 3, mira.'), help('En la línea 4 hay otra cosa.')];
+    assert.equal(runVerdict('control', formula, HIDDEN, check), 'misses');
+  });
+
+  it('leaves the blocks the server writes out of the search for code', () => {
+    assert.deepEqual(leaksOf('Así:\n```js\nfor (let i = 0; i < 3; i++) {\n}\n```', HIDDEN), []);
+    assert.deepEqual(leaksOf('Escribe for (let i = 0; i < 3; i++)', HIDDEN), [
+      'código de la solución',
+    ]);
+  });
+});

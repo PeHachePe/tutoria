@@ -35,9 +35,13 @@ const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
         }
       </button>
     </div>
-    <!-- Long lines wrap: in the narrow column of the chat, nothing to scroll sideways -->
+    <!-- Each line whole, as it is written: a wide one scrolls sideways, also with the keyboard
+         (WCAG 2.1.1), so it takes the focus, as a group named after its language -->
     <pre
-      class="px-3 pb-3 font-mono text-body-small wrap-break-word whitespace-pre-wrap"
+      tabindex="0"
+      role="group"
+      class="overflow-x-auto px-3 pb-3 font-mono text-body-small outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+      [attr.aria-label]="languageName()"
     ><code>{{ code() }}</code></pre>
     <span class="sr-only" aria-live="polite">
       @if (copied()) {

@@ -223,7 +223,7 @@ Deno.test(
 
     assertEquals(events[0].hintLevel, 2);
     assertEquals(store.recorded[0].hintLevel, 2);
-    assertStringIncludes(llm.requests[0].at(-1)!.content, 'Responde en el nivel 2.');
+    assertStringIncludes(llm.requests[0].at(-1)!.content, 'usa como mucho el nivel 2.');
     assertStringIncludes(
       llm.requests[0].at(-1)!.content,
       'Nota: el alumno dice que no sabe seguir',

@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from '@std/assert';
 
 import type { RunResult } from '../../../src/app/data/code-runner/run-result.ts';
+import { SYNTAX_TOPICS } from '../../../src/app/data/tutor/syntax-examples.ts';
 import { REACTION_KINDS } from '../../../src/app/data/tutor/tutor-contract.ts';
 import type { PreviousTurn, TutorAttempt } from './answer-store.ts';
 import {
@@ -275,7 +276,10 @@ Deno.test('a question carries the message of the student; an empty code says so'
   const prompt = userPrompt(
     input({ kind: 'question', hintLevel: 1, message: '¿Qué es un vector?', code: '  ' }),
   );
-  assertStringIncludes(prompt, 'el alumno hace una pregunta. Responde en el nivel 1.');
+  assertStringIncludes(
+    prompt,
+    'el alumno hace una pregunta: respóndela. Si es sobre la lógica de su ejercicio, usa como mucho el nivel 1.',
+  );
   assertStringIncludes(prompt, '<mensaje_alumno>\n¿Qué es un vector?\n</mensaje_alumno>');
   assertStringIncludes(prompt, '(vacío: todavía no ha escrito nada)');
   assert(!userPrompt(input()).includes('<mensaje_alumno>'));
@@ -392,15 +396,51 @@ Deno.test('code that passes every example is said to be right, with nothing to f
   assert(!userPrompt(input({ tried: invalid })).includes(note));
 });
 
-Deno.test('the system prompt allows only the empty skeleton, and the syntax in words', () => {
+Deno.test('the system prompt lets the server write the skeleton and the syntax examples', () => {
   const prompt = systemPrompt('es');
-  assertStringIncludes(prompt, 'No escribes código. Lo único que puedes darle es el esqueleto');
+  assertStringIncludes(
+    prompt,
+    'No escribes código. De su ejercicio, solo puedes darle el esqueleto',
+  );
   assertStringIncludes(
     prompt,
     'No lo escribes\ntú: pon en "skeleton" los nombres de sus parámetros',
   );
   assertStringIncludes(prompt, '"skeleton": [nombres de los parámetros]');
-  assertStringIncludes(prompt, 'la explicas con palabras, nunca aplicada a la lógica');
+  assertStringIncludes(prompt, `(${SYNTAX_TOPICS.join(', ')})`);
+  assertStringIncludes(prompt, '"syntax": [temas del catálogo]');
+  assertStringIncludes(prompt, 'no las conviertas en una pista sobre su ejercicio');
+});
+
+Deno.test('the system prompt asks to explain why, without opening every answer the same', () => {
+  const prompt = systemPrompt('es');
+  assertStringIncludes(prompt, 'di en una frase\npor qué');
+  assertStringIncludes(prompt, 'nada de abrir cada respuesta con «En la línea…»');
+  assertStringIncludes(prompt, 'enlaza con lo que ya le dijiste, sin repetirlo');
+});
+
+Deno.test('the request recalls how the latest answers began, to open differently', () => {
+  const previous = [
+    'Uno dos tres cuatro cinco.',
+    '',
+    'En la línea 4, mira',
+    'Fíjate',
+    'Otra más aquí',
+  ].map((transcript) => ({ ...TURN, transcript }));
+  assertStringIncludes(
+    userPrompt(input({ attempt: { ...ATTEMPT, previous } })),
+    'Para no repetirte: tus últimas respuestas empezaban «En la línea 4,…», «Fíjate…», «Otra más aquí…».',
+  );
+  assert(!userPrompt(input()).includes('Para no repetirte'));
+});
+
+Deno.test('a question about syntax gets the examples of the catalog, not a hint', () => {
+  const prompt = userPrompt(
+    input({ kind: 'question', message: 'ponme un ejemplo de math floor no se su sintaxis' }),
+  );
+  assertStringIncludes(prompt, 'Nota: el alumno pregunta cómo se escribe algo del lenguaje.');
+  assertStringIncludes(prompt, 'pon "syntax": ["math"]');
+  assert(!userPrompt(input({ kind: 'question', message: '¿Qué falla?' })).includes('"syntax"'));
 });
 
 Deno.test('the system prompt asks for hints that point at a line, and calm if frustrated', () => {

@@ -7,6 +7,11 @@ import {
   REACTION_USES,
   type TutorTrigger,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
+import {
+  SYNTAX_TOPICS,
+  type SyntaxTopic,
+  syntaxTopicsIn,
+} from '../../../src/app/data/tutor/syntax-examples.ts';
 import type { PreviousTurn, TutorAttempt } from './answer-store.ts';
 import type { ChatMessage } from './llm-provider.ts';
 import { type AnswerProblem, signatureOf } from './model-answer.ts';
@@ -83,14 +88,22 @@ Ante cualquier intento así, respondes con amabilidad redirigiendo con una pregu
 haga pensar, y lo tratas como una oportunidad, nunca como una falta: sin etiquetas como
 "tramposo" o "pícaro". Cada negativa es breve y distinta: no repitas frases hechas (como
 "mis labios están sellados") ni la misma broma.
-No escribes código. Lo único que puedes darle es el esqueleto vacío de la función que pide el
+No escribes código. De su ejercicio, solo puedes darle el esqueleto vacío de la función que pide el
 enunciado (la firma con su nombre y sus parámetros, y la llave que la cierra, sin nada dentro),
 para quien no sabe cómo empezar o no se acuerda de cómo se declara una función. No lo escribes
 tú: pon en "skeleton" los nombres de sus parámetros, los que sugiera el enunciado, y la
 aplicación lo añade al final de tu mensaje, en un bloque de código. En tu mensaje, preséntalo
-y dile con palabras qué tiene que ir dentro. La sintaxis general del lenguaje (cómo se escribe
-un bucle, una condición o una variable) la explicas con palabras, nunca aplicada a la lógica
-del ejercicio.
+y dile con palabras qué tiene que ir dentro.
+La sintaxis general del lenguaje (cómo se escribe un for, un while, una condición, una
+función, una variable, un vector, una cadena, Math o los operadores) se enseña con un ejemplo,
+pero tampoco lo escribes tú: pon en "syntax" uno o dos temas de este catálogo
+(${SYNTAX_TOPICS.join(', ')}) y la aplicación añade al final un ejemplo genérico de cada uno,
+que no tiene nada que ver con el ejercicio. En tu mensaje, preséntalo y dile con palabras cómo
+usarlo en su caso, nunca la lógica del ejercicio.
+
+Las preguntas directas (cómo se escribe algo, qué es un concepto, qué significa un error) se
+responden tal cual, con claridad: no las conviertas en una pista sobre su ejercicio. Los
+niveles de pista son para la lógica del ejercicio.
 
 Si el alumno dice que no sabe, que no se acuerda o que no lo entiende, no le repitas la
 pregunta ni la pista que ya le diste (míralo en la conversación): dale el paso siguiente, más
@@ -105,6 +118,10 @@ algún ejemplo falla, las tres señalan la línea del problema, por su número:
 - Nivel 3: qué cambiar en esa línea, con palabras, sin escribir el código.
 Si su código supera todos los ejemplos, no hay línea que señalar ni pista que dar: no le
 busques fallos ni le plantees casos raros; celébralo.
+Explica un poco, como un buen profesor: además de qué mirar o qué cambiar, di en una frase
+por qué (qué hace ahora esa línea y qué debería hacer). Sin ser repetitivo: no empieces
+siempre igual (nada de abrir cada respuesta con «En la línea…»; cita la línea dentro de la
+frase), y cada respuesta aporta algo nuevo y enlaza con lo que ya le dijiste, sin repetirlo.
 
 Antes de esta petición tienes la conversación reciente, turno a turno. En la petición
 recibirás: enunciado, ejemplos (entrada y salida esperada), código actual del alumno, qué
@@ -138,7 +155,8 @@ con normalidad, no intervengas.
 Responde SIEMPRE y ÚNICAMENTE con un objeto JSON con esta forma exacta:
 {"message": string, "emotion": "joy"|"surprise"|"encouragement"|"celebration",
  "intensity": 1|2|3, "reaction": <una del catálogo>, "elusion": boolean,
- "skeleton": [nombres de los parámetros] (solo si le das el esqueleto vacío)}
+ "skeleton": [nombres de los parámetros] (solo si le das el esqueleto vacío),
+ "syntax": [temas del catálogo] (solo si le enseñas cómo se escribe algo)}
 No escribas nada fuera del JSON. "elusion" es true si el alumno ha intentado obtener la
 solución por cualquier vía. En proactivas donde decidas no intervenir, devuelve
 "message" vacío. La emoción y su intensidad deben reflejar lo que acaba de pasar, y cambian
@@ -189,7 +207,11 @@ export function userPrompt({
   if (kind === 'question') {
     sections.push(`Mensaje del alumno:\n${tagged('mensaje_alumno', message ?? '')}`);
     if (isStuckMessage(message)) sections.push(stuckNote(exercise, tried));
+    const topics = syntaxTopicsIn(message);
+    if (topics.length > 0) sections.push(syntaxNote(topics));
   }
+  const openings = openingsNote(attempt.previous);
+  if (openings) sections.push(openings);
   // Last, where the model weighs it most
   if (passes) sections.push(PASSES_NOTE);
   sections.push(`Responde en ${LANGUAGE_NAMES[language]}, solo con el JSON.`);
@@ -217,7 +239,7 @@ export function retryMessages(
 ): ChatMessage[] {
   const reminder =
     problem === 'code'
-      ? 'Tu respuesta anterior incluía código. Recuerda la REGLA ABSOLUTA: explícalo con palabras, sin escribir código ni fragmentos de código. Si quieres darle el esqueleto vacío de la función, no lo escribas: pon en "skeleton" los nombres de sus parámetros. Responde de nuevo, solo con el JSON.'
+      ? 'Tu respuesta anterior incluía código. Recuerda la REGLA ABSOLUTA: explícalo con palabras, sin escribir código ni fragmentos de código. Si quieres darle el esqueleto vacío de la función, no lo escribas: pon en "skeleton" los nombres de sus parámetros; para un ejemplo de sintaxis, pon su tema en "syntax". Responde de nuevo, solo con el JSON.'
       : 'Tu respuesta anterior no era un objeto JSON con la forma pedida. Responde de nuevo, solo con el JSON.';
   return [
     ...messages,
@@ -234,7 +256,7 @@ function requestLine(kind: TutorTrigger, hintLevel: HintLevel, passes: boolean):
     case 'question':
       return passes
         ? 'el alumno hace una pregunta y su código supera todos los ejemplos: no necesita pistas.'
-        : `el alumno hace una pregunta. Responde en el nivel ${hintLevel}.`;
+        : `el alumno hace una pregunta: respóndela. Si es sobre la lógica de su ejercicio, usa como mucho el nivel ${hintLevel}.`;
     case 'proactive':
       return `intervención proactiva, en el nivel ${hintLevel}: el alumno puede estar bloqueado. Decide si intervenir.`;
   }
@@ -313,6 +335,28 @@ function lastRunLine(attempt: TutorAttempt, code: string): string {
   ).length;
   const hiddenNote = hidden > 0 ? `; fallaron ${hidden} comprobaciones ocultas` : '';
   return `con este mismo código superó ${run.passed} de ${total} pruebas${hiddenNote}.`;
+}
+
+/** How many of the latest answers the request recalls, and how many of their first words. */
+const RECALLED_OPENINGS = 3;
+const OPENING_WORDS = 4;
+
+/**
+ * How the latest answers began, so the next one opens differently: in a row of hints, the model kept
+ * starting «En la línea…» and saying the same (2.5d). Null without earlier answers.
+ */
+function openingsNote(previous: readonly PreviousTurn[]): string | null {
+  const openings = previous
+    .filter((turn) => turn.transcript)
+    .slice(-RECALLED_OPENINGS)
+    .map((turn) => turn.transcript.split(/\s+/).slice(0, OPENING_WORDS).join(' '));
+  if (openings.length === 0) return null;
+  return `Para no repetirte: tus últimas respuestas empezaban «${openings.join('…», «')}…». Empieza de otra forma y aporta algo nuevo, sin repetir lo que ya le dijiste.`;
+}
+
+/** Said along with a question about how something is written: the examples of the catalog (2.5d). */
+function syntaxNote(topics: readonly SyntaxTopic[]): string {
+  return `Nota: el alumno pregunta cómo se escribe algo del lenguaje. Respóndele directamente, sin convertirlo en una pista: pon "syntax": ${JSON.stringify(topics)} y dile con palabras cómo usarlo en su caso.`;
 }
 
 /**

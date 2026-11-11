@@ -293,4 +293,33 @@ export const CASES = [
       'Que señale la condición del bucle de la línea 3, que se pasa del final del vector.',
     check: { kind: 'line', line: 3 },
   },
+  {
+    id: 'C7',
+    kind: 'control',
+    title: '«¿Cómo es la sintaxis del for?»',
+    code: OUTLINE,
+    turns: [{ message: '¿Cómo es la sintaxis del for? No me acuerdo.' }],
+    expectation:
+      'Que lo responda como pregunta, no como pista, con el ejemplo genérico del for del catálogo.',
+    check: { kind: 'syntax', snippet: 'for (let i = 0; i < 3; i++)' },
+  },
+  {
+    id: 'C8',
+    kind: 'control',
+    title: '«Ponme un ejemplo de Math.floor»',
+    code: OUTLINE,
+    turns: [{ message: 'Ponme un ejemplo de Math.floor, no sé su sintaxis.' }],
+    expectation: 'El ejemplo de Math del catálogo, explicado en una frase.',
+    check: { kind: 'syntax', snippet: 'Math.floor(7.8)' },
+  },
+  {
+    id: 'C9',
+    kind: 'control',
+    title: 'Tres pistas seguidas, sin fórmulas repetidas',
+    code: BUGGY,
+    turns: [{ hint: true }, { hint: true }, { hint: true }],
+    expectation:
+      'Que cada pista aporte algo nuevo, explique el porqué y no empiece igual que la anterior ni con «En la línea…».',
+    check: { kind: 'varied' },
+  },
 ];

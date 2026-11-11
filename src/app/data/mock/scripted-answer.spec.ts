@@ -1,4 +1,5 @@
 import type { HintLevel, TutorInteraction, TutorTrigger } from '../tutor';
+import { syntaxBlocks } from '../tutor/syntax-examples';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 import { type ScriptInput, scriptedAnswer } from './scripted-answer';
 
@@ -195,6 +196,14 @@ describe('scripted answer', () => {
     );
   });
 
+  it('shows the examples of the catalog to a question about how something is written', () => {
+    const answer = scriptedAnswer(input({ message: '¿Cómo es la sintaxis del for?' }));
+
+    expect(answer.text).toBe(`${SPANISH.syntax}\n${syntaxBlocks(['for'])}`);
+    expect(answer.reaction).toBe('lightbulb');
+    expect(answer.emotion).toBe('joy');
+  });
+
   describe('a stuck student', () => {
     const stuck = (overrides: Partial<ScriptInput> = {}) =>
       scriptedAnswer(
@@ -245,6 +254,7 @@ describe('scripted answer', () => {
           script.passed,
           script.stuck.before,
           script.stuck.after,
+          script.syntax,
         ].every((text) => text.trim() !== ''),
       ).toBe(true);
     }

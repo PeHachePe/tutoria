@@ -24,6 +24,10 @@ describe('CodeBlock', () => {
     const code = screen.getByRole('code');
     expect(code.textContent).toBe('function suma(vector) {\n}');
     expect(code.parentElement?.tagName).toBe('PRE');
+    // A wide line scrolls, also with the keyboard
+    const block = screen.getByRole('group', { name: 'JavaScript' });
+    expect(block).toBe(code.parentElement);
+    expect(block.getAttribute('tabindex')).toBe('0');
   });
 
   it('shows a language it does not know as it comes, and says «Código» without one', async () => {

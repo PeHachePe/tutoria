@@ -7,6 +7,7 @@ import {
   type FunctionSignature,
   signatureOf,
 } from './model-answer.ts';
+import { syntaxBlocks } from '../../../src/app/data/tutor/syntax-examples.ts';
 
 const answer = (fields: Record<string, unknown>) =>
   JSON.stringify({
@@ -29,46 +30,46 @@ Deno.test('checkAnswer accepts the answer of 2.6, also wrapped in a fenced block
       elusion: false,
     },
   };
-  assertEquals(checkAnswer(answer({}), false), expected);
-  assertEquals(checkAnswer('```json\n' + answer({}) + '\n```', false), expected);
+  assertEquals(checkAnswer(answer({})), expected);
+  assertEquals(checkAnswer('```json\n' + answer({}) + '\n```'), expected);
 });
 
 Deno.test('checkAnswer rejects broken JSON and a wrong shape', () => {
-  assertEquals(checkAnswer('{"message": "Hola", ', false), { ok: false, problem: 'invalid' });
-  assertEquals(checkAnswer('Hola, ¿qué tal?', false), { ok: false, problem: 'invalid' });
-  assertEquals(checkAnswer(answer({ intensity: 4 }), false), { ok: false, problem: 'invalid' });
-  assertEquals(checkAnswer(answer({ message: 7 }), false), { ok: false, problem: 'invalid' });
+  assertEquals(checkAnswer('{"message": "Hola", '), { ok: false, problem: 'invalid' });
+  assertEquals(checkAnswer('Hola, ¿qué tal?'), { ok: false, problem: 'invalid' });
+  assertEquals(checkAnswer(answer({ intensity: 4 })), { ok: false, problem: 'invalid' });
+  assertEquals(checkAnswer(answer({ message: 7 })), { ok: false, problem: 'invalid' });
 });
 
 Deno.test('checkAnswer rejects an unknown emotion', () => {
-  assertEquals(checkAnswer(answer({ emotion: 'anger' }), false), { ok: false, problem: 'invalid' });
+  assertEquals(checkAnswer(answer({ emotion: 'anger' })), { ok: false, problem: 'invalid' });
 });
 
 Deno.test('checkAnswer drops a reaction outside the catalog instead of asking again', () => {
-  const check = checkAnswer(answer({ reaction: 'stone' }), false);
+  const check = checkAnswer(answer({ reaction: 'stone' }));
   assertEquals(check.ok && check.answer.reaction, undefined);
 });
 
 Deno.test('checkAnswer takes a missing elusion as false', () => {
-  const check = checkAnswer(answer({ elusion: undefined }), false);
+  const check = checkAnswer(answer({ elusion: undefined }));
   assertEquals(check.ok && check.answer.elusion, false);
 });
 
 Deno.test('checkAnswer only lets an intervention of the tutor keep quiet', () => {
-  assertEquals(checkAnswer(answer({ message: '  ' }), false), { ok: false, problem: 'invalid' });
-  const quiet = checkAnswer(answer({ message: '  ' }), true);
+  assertEquals(checkAnswer(answer({ message: '  ' })), { ok: false, problem: 'invalid' });
+  const quiet = checkAnswer(answer({ message: '  ' }), { mayKeepQuiet: true });
   assertEquals(quiet.ok && quiet.answer.message, '');
 });
 
 Deno.test('checkAnswer rejects a message with code', () => {
   const code = 'Prueba esto:\n```js\nfunction suma(v) { return 0; }\n```';
-  assertEquals(checkAnswer(answer({ message: code }), false), {
+  assertEquals(checkAnswer(answer({ message: code })), {
     ok: false,
     problem: 'code',
     elusion: false,
   });
   // Turned down, it still says whether the student asked for the solution (D-044)
-  assertEquals(checkAnswer(answer({ message: code, elusion: true }), false), {
+  assertEquals(checkAnswer(answer({ message: code, elusion: true })), {
     ok: false,
     problem: 'code',
     elusion: true,
@@ -142,14 +143,16 @@ Deno.test('containsCode still finds any other code beside or inside the skeleton
 
 Deno.test('checkAnswer accepts the skeleton of the exercise and nothing else', () => {
   const skeleton = 'Así se empieza:\n```js\nfunction suma(vector) {\n}\n```';
-  const check = checkAnswer(answer({ message: skeleton }), false, SUMA);
+  const check = checkAnswer(answer({ message: skeleton }), { skeleton: SUMA });
   assertEquals(check.ok && check.answer.message, skeleton);
-  assertEquals(checkAnswer(answer({ message: skeleton }), false).ok, false);
+  assertEquals(checkAnswer(answer({ message: skeleton })).ok, false);
 });
 
 Deno.test('checkAnswer writes the skeleton the model asks for under its message', () => {
   const asked = (fields: Record<string, unknown>, signature = SUMA) => {
-    const check = checkAnswer(answer({ message: 'Así empieza:', ...fields }), false, signature);
+    const check = checkAnswer(answer({ message: 'Así empieza:', ...fields }), {
+      skeleton: signature,
+    });
     return check.ok && check.answer.message;
   };
   assertEquals(
@@ -167,13 +170,16 @@ Deno.test('checkAnswer writes the skeleton the model asks for under its message'
   );
   // Not asked, asked without a signature, a wrong shape, or already written: nothing is added
   assertEquals(asked({ skeleton: [] }), 'Así empieza:');
-  const check = checkAnswer(answer({ message: 'Hola', skeleton: ['v'] }), false);
+  const check = checkAnswer(answer({ message: 'Hola', skeleton: ['v'] }));
   assertEquals(check.ok && check.answer.message, 'Hola');
   assertEquals(asked({ skeleton: 'vector' }), 'Así empieza:');
   const written = 'Así:\n```js\nfunction suma(vector) {\n}\n```';
   assertEquals(asked({ message: written, skeleton: ['vector'] }), written);
   // A tutor that keeps quiet adds nothing
-  const quiet = checkAnswer(answer({ message: '', skeleton: ['v'] }), true, SUMA);
+  const quiet = checkAnswer(answer({ message: '', skeleton: ['v'] }), {
+    mayKeepQuiet: true,
+    skeleton: SUMA,
+  });
   assertEquals(quiet.ok && quiet.answer.message, '');
 });
 
@@ -183,4 +189,34 @@ Deno.test('signatureOf takes the number of parameters from the tests', () => {
     functionName: 'nada',
     parameters: undefined,
   });
+});
+
+Deno.test('checkAnswer writes the examples of syntax of the catalog the model asks for', () => {
+  const asked = (fields: Record<string, unknown>) => {
+    const check = checkAnswer(answer({ message: 'Así se escribe:', ...fields }), {
+      skeleton: SUMA,
+      examples: true,
+    });
+    return check.ok && check.answer.message;
+  };
+  assertEquals(asked({ syntax: ['for'] }), `Así se escribe:\n${syntaxBlocks(['for'])}`);
+  // After the skeleton, and only topics of the catalog
+  assertEquals(
+    asked({ skeleton: ['vector'], syntax: ['stone', 'math'] }),
+    `Así se escribe:\n\`\`\`js\nfunction suma(vector) {\n}\n\`\`\`\n${syntaxBlocks(['math'])}`,
+  );
+  assertEquals(asked({ syntax: ['stone'] }), 'Así se escribe:');
+  assertEquals(asked({ syntax: 'for' }), 'Así se escribe:');
+  // Not in a hint: it is about the student's code
+  const hint = checkAnswer(answer({ message: 'Mira la línea 3.', syntax: ['for'] }), {
+    skeleton: SUMA,
+  });
+  assertEquals(hint.ok && hint.answer.message, 'Mira la línea 3.');
+  // Never as the only thing an intervention says
+  const quiet = checkAnswer(answer({ message: '', syntax: ['for'] }), {
+    mayKeepQuiet: true,
+    skeleton: SUMA,
+    examples: true,
+  });
+  assertEquals(quiet.ok && quiet.answer.message, '');
 });

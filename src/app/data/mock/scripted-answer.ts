@@ -11,6 +11,7 @@ import {
   type TutorTrigger,
 } from '../tutor';
 import type { ContentLocale } from '../localized-text';
+import { syntaxBlocks, syntaxTopicsIn } from '../tutor/syntax-examples';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 
 /** What the scripted tutor looks at: the request, the attempt and the conversation so far. */
@@ -119,7 +120,12 @@ export function scriptedAnswer({
         const joke = ELUSION_REACTIONS[elusions % ELUSION_REACTIONS.length];
         return answer(script.elusion, 'surprise', joke, MAX_INTENSITY, true);
       }
-      // Stuck before writing the function: its empty skeleton, the one code the tutor gives (2.5d)
+      // How something is written: the examples of the catalog, as the server adds them (2.5d)
+      const topics = syntaxTopicsIn(message);
+      if (topics.length > 0) {
+        return answer([script.syntax, syntaxBlocks(topics)].join('\n'), 'joy', 'lightbulb');
+      }
+      // Stuck before writing the function: its empty skeleton, the one code of the exercise (2.5d)
       // Only once: stuck again, the next step is the hint of the level it went up to
       const gaveSkeleton = previous.some((interaction) => interaction.transcript.includes('```'));
       const hasFunction = code.includes(`function ${exerciseFunction.name}`);

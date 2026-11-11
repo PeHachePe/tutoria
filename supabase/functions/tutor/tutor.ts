@@ -193,7 +193,12 @@ async function askModel(provider: LlmProvider, input: PromptInput): Promise<Chec
   let elusion = false;
   for (let call = 1; call <= MODEL_CALLS; call++) {
     const raw = await provider.complete(messages, ANSWER_FORMAT);
-    const check = checkAnswer(raw, mayKeepQuiet, skeleton);
+    const check = checkAnswer(raw, {
+      mayKeepQuiet,
+      skeleton,
+      // Examples of syntax answer a question; a hint is about the student's code (2.5d)
+      examples: input.kind === 'question',
+    });
     const rejected = call - 1;
     if (check.ok) return { answer: check.answer.message ? check.answer : null, rejected };
     console.warn(`Answer ${call} of the model rejected: ${check.problem}`);

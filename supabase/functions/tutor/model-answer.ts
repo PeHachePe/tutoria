@@ -8,6 +8,7 @@ import {
   type ReactionKind,
   skeletonBlock,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
+import { SYNTAX_TOPICS, syntaxBlocks } from '../../../src/app/data/tutor/syntax-examples.ts';
 import type { AnswerFormat } from './llm-provider.ts';
 
 /** What the model answers (2.6), once checked. */
@@ -41,6 +42,7 @@ const answerSchema = z.object({
   elusion: z.boolean().default(false),
   // A wrong one is dropped, never a reason to ask again: the answer is still good without it
   skeleton: z.array(z.string()).optional().catch(undefined),
+  syntax: z.array(z.string()).optional().catch(undefined),
 });
 
 /** The shape the provider is asked to follow, when it can (`response_format`). */
@@ -56,6 +58,8 @@ export const ANSWER_FORMAT: AnswerFormat = {
       elusion: { type: 'boolean' },
       // The names of the parameters of the empty skeleton, which the server writes (2.5d)
       skeleton: { type: 'array', items: { type: 'string' } },
+      // The topics of the examples of syntax, which the server writes from its catalog (2.5d)
+      syntax: { type: 'array', items: { type: 'string', enum: [...SYNTAX_TOPICS] } },
     },
     required: ['message', 'emotion', 'intensity', 'reaction', 'elusion'],
   },
@@ -128,19 +132,30 @@ function isEmptySkeleton(block: string, { functionName, parameters }: FunctionSi
   );
 }
 
+/** What an answer may have, which depends on the request. */
+export interface AnswerRules {
+  /** An intervention of the tutor may say nothing; anything else needs a message. */
+  readonly mayKeepQuiet?: boolean;
+  /** The function of the exercise: its empty skeleton is the only code allowed (2.5d). */
+  readonly skeleton?: FunctionSignature;
+  /** Whether the examples of syntax the model asks for are added: only to a question (2.5d). */
+  readonly examples?: boolean;
+}
+
 /**
  * Checks what the model wrote: JSON with the shape of 2.6, a message unless the tutor chose to keep
  * quiet when it steps in on its own, and no code but the empty skeleton of the exercise's function,
  * when its signature is given (2.5d). When the model asks for the skeleton (`skeleton`, with the
  * names of its parameters), the server writes it under the message: the model does not have to get
  * a block of code right inside a JSON string, and nothing but the empty function can come out of it.
- * A reaction outside the catalog is dropped, not asked again (D-035). Models often wrap the JSON in a
- * fenced block: it is read from the outer braces.
+ * The same with the examples of syntax (`syntax`), taken from a fixed catalog, only for a question:
+ * a hint is about the student's code, not about how something is written. A reaction outside the
+ * catalog is dropped, not asked again (D-035). Models often wrap the JSON in a fenced block: it is
+ * read from the outer braces.
  */
 export function checkAnswer(
   raw: string,
-  mayKeepQuiet: boolean,
-  skeleton?: FunctionSignature,
+  { mayKeepQuiet = false, skeleton, examples = false }: AnswerRules = {},
 ): AnswerCheck {
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
@@ -152,24 +167,41 @@ export function checkAnswer(
   }
   const result = answerSchema.safeParse(parsed);
   if (!result.success) return { ok: false, problem: 'invalid' };
-  const { message, emotion, intensity, reaction, elusion, skeleton: names } = result.data;
+  const { message, emotion, intensity, reaction, elusion, skeleton: names, syntax } = result.data;
   const text = message.trim();
   if (!text && !mayKeepQuiet) return { ok: false, problem: 'invalid' };
   if (containsCode(text, skeleton)) return { ok: false, problem: 'code', elusion };
-  // Asked for, with something to say and not written already (the validator let only that through)
-  const addSkeleton = skeleton && names?.length && text && !text.includes('```');
+  const blocks = text ? serverBlocks(text, skeleton, names, examples ? syntax : undefined) : [];
   return {
     ok: true,
     answer: {
-      message: addSkeleton
-        ? `${text}\n${skeletonBlock(skeleton.functionName, skeleton.parameters ?? names.length, names)}`
-        : text,
+      message: [text, ...blocks].join('\n'),
       emotion,
       intensity: intensity as Intensity,
       reaction: isReactionKind(reaction) ? reaction : undefined,
       elusion,
     },
   };
+}
+
+/**
+ * The code the server writes under the message, never the model (2.5d): the empty skeleton, if asked
+ * for and not written already (the validator let only that through), and the examples of syntax of
+ * the catalog it asked for.
+ */
+function serverBlocks(
+  text: string,
+  skeleton: FunctionSignature | undefined,
+  names: readonly string[] | undefined,
+  syntax: readonly string[] | undefined,
+): string[] {
+  const blocks: string[] = [];
+  if (skeleton && names?.length && !text.includes('```')) {
+    blocks.push(skeletonBlock(skeleton.functionName, skeleton.parameters ?? names.length, names));
+  }
+  const examples = syntaxBlocks(syntax ?? []);
+  if (examples) blocks.push(examples);
+  return blocks;
 }
 
 function isReactionKind(reaction: string | undefined): reaction is ReactionKind {
