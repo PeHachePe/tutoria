@@ -7,10 +7,11 @@
 //
 // - It needs the local Supabase running (`npm run db:start`) with the key of the AI provider in
 //   supabase/functions/.env, as the real tutor does.
-// - It signs in as a student of the seed and, before each run, gives them a fresh attempt at
-//   exercise 3 with the local `service_role` (from `supabase status`, never in the app), so every case
-//   starts with an empty conversation. That student's attempt at exercise 3 is lost:
-//   `npm run db:reset` brings the seed back.
+// - It signs in as a student of the seed and, with the local `service_role` (from `supabase status`,
+//   never in the app), assigns their group an exercise of its own (`BATTERY_EXERCISE`, a frozen copy
+//   of exercise 3) and gives them a fresh attempt at it before each run, so every case starts with an
+//   empty conversation. It removes the exercise at the end, so the seed is left as it was and changes
+//   to the exercises of the seed never touch the battery (D-045).
 // - --models: the models to compare, of the provider in `app_setting.ai_provider` (by default, the
 //   one there), with no fallback, so each answer is of the model under test; the setting is restored
 //   at the end. --runs: how many times each case is sent (3; --quick, 1, as a regression check
@@ -33,7 +34,7 @@ import { parseArgs } from 'node:util';
 
 import { createClient } from '@supabase/supabase-js';
 
-import { CASES, FUNCTION_NAME } from './elusion/cases.mjs';
+import { BATTERY_EXERCISE, BATTERY_SESSION, CASES } from './elusion/cases.mjs';
 import { buildReport, resultFileName } from './elusion/report.mjs';
 import { runVerdict } from './elusion/verdict.mjs';
 import { importAppTs } from './import-app-ts.mjs';
@@ -43,7 +44,7 @@ const RESULTS_DIR = path.join(ROOT, 'docs', 'elusion');
 const REPORT_FILE = path.join(ROOT, 'docs', 'elusion-report.md');
 const CONCLUSIONS_FILE = path.join(RESULTS_DIR, 'conclusiones.md');
 
-/** A student of the seed in a group with exercise 3 assigned. */
+/** A student of the seed, enrolled in a group. */
 const STUDENT_EMAIL = 'daniel.mendoza@tutoria.test';
 const AI_PROVIDER_KEY = 'ai_provider';
 const DEFAULT_RUNS = 3;
@@ -121,14 +122,15 @@ async function runBattery() {
     password: MOCK_PASSWORD,
   });
   if (session.error) throw new Error(`Signing in failed: ${session.error.message}`);
-  const exercise = await exerciseOf(admin);
+  const userId = session.data.user.id;
+  const exercise = await createExercise(admin, userId);
   const original = await providerSetting(admin);
   const models = values.models?.split(',').map((model) => model.trim()) ?? [original.model];
 
   const battery = {
     url: local.url,
     publishableKey: local.publishableKey,
-    userId: session.data.user.id,
+    userId,
     admin,
     student,
     exercise,
@@ -156,10 +158,8 @@ async function runBattery() {
     }
   } finally {
     await setProvider(admin, original);
+    await removeExercise(admin, exercise);
   }
-  console.log(
-    `\nEl intento de ${STUDENT_EMAIL} en el ejercicio 3 ha cambiado: npm run db:reset lo restaura.`,
-  );
 }
 
 /**
@@ -196,19 +196,87 @@ function localSupabase() {
   };
 }
 
-async function exerciseOf(admin) {
-  const { data, error } = await admin
-    .from('exercise')
-    .select('id, test(input, expected_output, is_hidden)')
-    .eq('function_name', FUNCTION_NAME)
+/**
+ * Creates the exercise of the battery, with its tests, and assigns it to the student's group in a
+ * session of its own: open_attempt only opens assigned exercises, as the app does.
+ */
+async function createExercise(admin, userId) {
+  const enrollment = await admin
+    .from('enrollment')
+    .select('group_id, class_group(teacher_id)')
+    .eq('user_id', userId)
+    .limit(1)
     .single();
-  if (error) throw new Error(`Reading exercise 3 failed: ${error.message}`);
+  if (enrollment.error) throw new Error(`Reading the group failed: ${enrollment.error.message}`);
+  const groupId = enrollment.data.group_id;
+  const { id, title, statement, difficulty, topics, functionName, tests } = BATTERY_EXERCISE;
+  const steps = [
+    () =>
+      admin.from('exercise').upsert({
+        id,
+        title,
+        statement,
+        difficulty,
+        topics,
+        function_name: functionName,
+        created_by: enrollment.data.class_group.teacher_id,
+      }),
+    () => admin.from('test').delete().eq('exercise_id', id),
+    () =>
+      admin.from('test').insert(
+        tests.map(([input, expectedOutput, isHidden], position) => ({
+          exercise_id: id,
+          input,
+          expected_output: expectedOutput,
+          is_hidden: isHidden,
+          position,
+        })),
+      ),
+    () =>
+      admin
+        .from('class_session')
+        .upsert(
+          { group_id: groupId, ...BATTERY_SESSION },
+          { onConflict: 'group_id,number', ignoreDuplicates: true },
+        ),
+    () =>
+      admin
+        .from('exercise_assignment')
+        .upsert(
+          { group_id: groupId, exercise_id: id, session: BATTERY_SESSION.number },
+          { onConflict: 'group_id,exercise_id,session', ignoreDuplicates: true },
+        ),
+  ];
+  for (const step of steps) {
+    const { error } = await step();
+    if (error) throw new Error(`Creating the exercise of the battery failed: ${error.message}`);
+  }
   return {
-    id: data.id,
-    hiddenTests: data.test
-      .filter((test) => test.is_hidden)
-      .map((test) => ({ input: test.input, expectedOutput: test.expected_output })),
+    id,
+    groupId,
+    hiddenTests: tests
+      .filter(([, , isHidden]) => isHidden)
+      .map(([input, expectedOutput]) => ({ input, expectedOutput })),
   };
+}
+
+/** Removes the exercise of the battery with its attempts, tests, assignment and session. */
+async function removeExercise(admin, exercise) {
+  const steps = [
+    // An exercise with attempts cannot be deleted (`on delete restrict`); their turns go with them
+    () => admin.from('attempt').delete().eq('exercise_id', exercise.id),
+    () => admin.from('exercise').delete().eq('id', exercise.id),
+    () =>
+      admin
+        .from('class_session')
+        .delete()
+        .eq('group_id', exercise.groupId)
+        .eq('number', BATTERY_SESSION.number),
+  ];
+  for (const step of steps) {
+    const { error } = await step();
+    if (error) throw new Error(`Removing the exercise of the battery failed: ${error.message}`);
+  }
 }
 
 async function providerSetting(admin) {
