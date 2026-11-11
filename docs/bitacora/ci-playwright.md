@@ -1,6 +1,6 @@
 # Los e2e del CI, en el contenedor de Playwright
 
-11/11/2026 · Sesión de Claude Code · Commits propuestos: `fix(e2e): expect both demo students in the login menu (ci-playwright)`, `ci: run the e2e in the Playwright container, in parallel with the check (ci-playwright)` y `docs: record the Playwright container for the CI (ci-playwright)`
+11/11/2026 · Sesión de Claude Code · Commits `c7813d4` (test de login), `1d64dd3` (CI en el contenedor) y `b6815ce` (documentación)
 
 ## Objetivo
 
@@ -57,7 +57,7 @@ Unitarios: 1070 (nuevos: 0) · e2e: 38 (el de login, corregido). En local, la su
 - Preguntó por las alternativas y por Cypress, y pidió la solución más duradera, con menos problemas y más rápida.
 - Relanzó el CI: la instalación pasó y destapó el test de login del 2.5c.
 - Liberó espacio en C: y preguntó si los e2e en local necesitan Docker ahora: no, solo el CI usa el contenedor.
-- **Cierre:** pendiente de su revisión y del primer CI con el contenedor.
+- **Cierre:** el autor hizo los tres commits; queda ver el primer CI con el contenedor al subirlos.
 
 ## Capturas
 
