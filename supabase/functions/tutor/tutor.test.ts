@@ -2,6 +2,7 @@ import { assertEquals, assertStringIncludes } from '@std/assert';
 
 import type {
   AnswerStore,
+  ModelEndpoint,
   NewAnswer,
   ProviderSetting,
   RecordedAnswer,
@@ -23,6 +24,12 @@ const NOW = Date.parse('2026-11-10T10:00:00Z');
 const ATTEMPT_ID = '70000000-0000-4000-8000-000000000012';
 const REQUEST_ID = 'a0000000-0000-4000-8000-000000000001';
 const CODE = 'function suma(v) { return 0; }';
+const FLASH: ModelEndpoint = {
+  baseUrl: 'https://llm.test/v1',
+  model: 'flash',
+  keySecret: 'AI_API_KEY',
+  responseFormat: 'json_schema',
+};
 
 const ATTEMPT: TutorAttempt = {
   userId: 'hugo',
@@ -52,7 +59,7 @@ class FakeStore implements AnswerStore {
   attempt: TutorAttempt | null = ATTEMPT;
   answers: RecordedAnswer[] = [];
   calls: Date[] = [];
-  setting: ProviderSetting | null = { baseUrl: 'https://llm.test/v1', model: 'flash' };
+  setting: ProviderSetting | null = { models: [FLASH] };
   outcome: RecordOutcome | null = null;
   readonly recorded: NewAnswer[] = [];
 
@@ -159,7 +166,7 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
       { type: 'done', interactionId: 'i-new', silent: false },
     ],
   });
-  assertEquals(settings, [{ baseUrl: 'https://llm.test/v1', model: 'flash' }]);
+  assertEquals(settings, [{ models: [FLASH] }]);
   assertStringIncludes(llm.requests[0][1].content, 'Usa el nivel 2.');
   assertEquals(store.recorded, [
     {

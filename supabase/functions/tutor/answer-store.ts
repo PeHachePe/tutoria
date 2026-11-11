@@ -52,12 +52,27 @@ export interface RecordedAnswer {
   readonly elusion: boolean;
 }
 
-/** The provider the administrator chose (`app_setting.ai_provider`); its key is a secret. */
-export interface ProviderSetting {
+/** How a provider wants the format of the answer asked: the JSON schema, plain JSON, or nothing. */
+export type ResponseFormatMode = 'json_schema' | 'json_object' | 'none';
+
+/** One model the tutor can ask: where, which, with which key and how (D-044). */
+export interface ModelEndpoint {
+  /** Up to the version, without `/chat/completions`. */
   readonly baseUrl: string;
   readonly model: string;
-  /** The model that answers when the main one fails, of the same provider (D-044). */
-  readonly fallbackModel?: string;
+  /** Name of the secret with its key (`AI_API_KEY`…), never the key; null for none (Ollama). */
+  readonly keySecret: string | null;
+  readonly responseFormat: ResponseFormatMode;
+  /** How long it may take to answer; 15 s if the setting says nothing (MODEL_TIMEOUT_MS). */
+  readonly timeoutMs?: number;
+}
+
+/**
+ * The models the administrator chose (`app_setting.ai_provider`): the main one and its fallbacks,
+ * in order, of the same provider or of others with the chat API of OpenAI (D-044).
+ */
+export interface ProviderSetting {
+  readonly models: readonly [ModelEndpoint, ...ModelEndpoint[]];
 }
 
 /** What is kept of an answer: `answer` is null when the tutor chose to keep quiet. */

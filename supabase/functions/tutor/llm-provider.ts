@@ -1,3 +1,5 @@
+import type { ResponseFormatMode } from './answer-store.ts';
+
 /** One message of a conversation with the model, as the OpenAI chat API has them. */
 export interface ChatMessage {
   readonly role: 'system' | 'user' | 'assistant';
@@ -51,6 +53,8 @@ export interface OpenAICompatibleSettings {
   readonly timeoutMs?: number;
   /** Pause before the second try after a 5xx; 0 in the tests. */
   readonly overloadRetryMs?: number;
+  /** How the format of the answer is asked: the JSON schema by default (D-043). */
+  readonly responseFormat?: ResponseFormatMode;
 }
 
 /**
@@ -97,10 +101,7 @@ export class OpenAICompatibleProvider implements LlmProvider {
           model,
           messages,
           temperature: TEMPERATURE,
-          response_format: {
-            type: 'json_schema',
-            json_schema: { name: format.name, schema: format.schema },
-          },
+          ...responseFormatOf(this.settings.responseFormat ?? 'json_schema', format),
         }),
         signal: AbortSignal.timeout(timeoutMs),
       });
@@ -124,36 +125,76 @@ export class OpenAICompatibleProvider implements LlmProvider {
 }
 
 /**
- * The model of the setting and, if it fails, the fallback one (D-044): the free tier of Gemini runs
- * out or gets overloaded per model, so another model often answers when the first one cannot. Any
- * failure of the main model moves to the fallback, which then answers the rest of the request.
+ * Time a request may spend going down the chain of models: past it, no other model is tried and the
+ * student is told the tutor is not available, rather than left waiting. Two slow failures fit, plus
+ * a quick answer of the next model.
+ */
+export const FALLBACK_BUDGET_MS = 30_000;
+
+export interface FallbackOptions {
+  /** 30 s by default; the tests shorten it. */
+  readonly budgetMs?: number;
+  readonly now?: () => number;
+}
+
+/**
+ * The model of the setting and, if it fails, its fallback models in order, as many as the setting
+ * lists (D-044): the free tier of Gemini runs out or gets overloaded per model, so another model
+ * often answers when the first one cannot. Any failure of a model moves to the next one, which then
+ * answers the rest of the request, until one answers, the list ends or the time budget is spent.
  */
 export class FallbackProvider implements LlmProvider {
-  private current: LlmProvider;
+  private current = 0;
+  private startedAt: number | null = null;
+  private readonly budgetMs: number;
+  private readonly now: () => number;
 
   constructor(
-    private readonly main: LlmProvider,
-    private readonly fallback: LlmProvider,
+    private readonly models: readonly [LlmProvider, ...LlmProvider[]],
+    { budgetMs = FALLBACK_BUDGET_MS, now = Date.now }: FallbackOptions = {},
   ) {
-    this.current = main;
+    this.budgetMs = budgetMs;
+    this.now = now;
   }
 
   /** The model that gave the last answer: the main one until it fails. */
   get model(): string {
-    return this.current.model;
+    return this.models[this.current].model;
   }
 
   async complete(messages: readonly ChatMessage[], format: AnswerFormat): Promise<string> {
-    if (this.current === this.main) {
+    this.startedAt ??= this.now();
+    for (;;) {
       try {
-        return await this.main.complete(messages, format);
+        return await this.models[this.current].complete(messages, format);
       } catch (error) {
         if (!(error instanceof ProviderError)) throw error;
-        console.warn(`${error.message}; the fallback model ${this.fallback.model} answers`);
-        this.current = this.fallback;
+        const next = this.models[this.current + 1];
+        if (!next || this.now() - this.startedAt >= this.budgetMs) throw error;
+        console.warn(`${error.message}; the fallback model ${next.model} answers`);
+        this.current++;
       }
     }
-    return this.fallback.complete(messages, format);
+  }
+}
+
+/**
+ * The `response_format` of the request: the schema where the provider takes it (Gemini, OpenAI,
+ * Ollama), plain JSON where it only knows that, or nothing; the validator checks the answer anyway.
+ */
+function responseFormatOf(mode: ResponseFormatMode, format: AnswerFormat): Record<string, unknown> {
+  switch (mode) {
+    case 'json_schema':
+      return {
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: format.name, schema: format.schema },
+        },
+      };
+    case 'json_object':
+      return { response_format: { type: 'json_object' } };
+    case 'none':
+      return {};
   }
 }
 

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../src/app/data/supabase/database.types.ts';
 import type { HintLevel, Intensity } from '../../../src/app/data/tutor/tutor-contract.ts';
+import { providerSettingOf } from './provider-setting.ts';
 import type {
   AnswerStore,
   LastRun,
@@ -113,12 +114,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       .eq('key', AI_PROVIDER_KEY)
       .maybeSingle();
     if (error) throw new Error(`Reading the AI provider failed: ${error.message}`);
-    const value = data?.value as Partial<ProviderSetting> | null | undefined;
-    if (typeof value?.baseUrl !== 'string' || typeof value.model !== 'string') return null;
-    const { baseUrl, model, fallbackModel } = value;
-    return typeof fallbackModel === 'string' && fallbackModel !== model
-      ? { baseUrl, model, fallbackModel }
-      : { baseUrl, model };
+    return providerSettingOf(data?.value);
   }
 
   async recordAnswer(answer: NewAnswer): Promise<RecordOutcome> {
