@@ -18,7 +18,7 @@
   },
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.patterns": {
-    "*.ts": "${capture}.spec.ts, ${capture}.html",
+    "*.ts": "${capture}.spec.ts, ${capture}.test.ts, ${capture}.html",
     "*.mjs": "${capture}.test.mjs",
     "package.json": "package-lock.json, .editorconfig, .gitattributes, .gitignore, .postcssrc.json, .prettierrc, eslint.config.js",
     "tsconfig.json": "tsconfig.*.json"
