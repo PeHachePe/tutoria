@@ -1318,3 +1318,30 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **WebMCP para el docente** (preguntar quién está atascado o asignar ejercicios desde su agente) es una idea para cuando exista su panel (fase 4).
 
 **Aprobación:** el autor pidió el arreglo del tutor, las herramientas (buscar, navegar y los ajustes) y WebMCP abierto a todos para la demo, sin lo arriesgado; y que nuestra IA tenga más acceso que los agentes externos. Arquitectura y reparto de herramientas, por delegación del autor.
+
+## D-048 · Los e2e del CI, en el contenedor de Playwright y en paralelo (11/11/2026)
+
+**Contexto:** el CI falló al instalar Chromium (`npx playwright install --with-deps chromium`): `--with-deps` instala con `apt` las librerías de sistema del navegador, y el runner no resolvía por DNS los repositorios de Ubuntu. Nada del proyecto había cambiado: `ubuntu-latest` había pasado de Ubuntu 24.04 a 26.04, una imagen recién estrenada. Al relanzarlo pasó, pero el CI dependía de `apt`, de la imagen que GitHub ponga en `ubuntu-latest` y de que Playwright conozca los paquetes de esa versión de Ubuntu. El autor pidió la solución que sirva a largo plazo, dé menos problemas y, si puede ser, más rápida.
+
+**Decisión:**
+
+- Los e2e se ejecutan en la imagen oficial de Playwright (`mcr.microsoft.com/playwright:v<versión>-noble`), que trae Chromium y sus librerías: sin `apt` ni descarga del navegador. El runner sigue en `ubuntu-latest` y solo pone la máquina y Docker.
+- La etiqueta de la imagen sale sola del `package-lock.json` (un job previo de unos segundos la lee), así que al actualizar Playwright el CI usa la imagen que le corresponde sin tocar el workflow.
+- `@playwright/test` se fija con versión exacta, como la CLI de Supabase y Deno: Playwright solo cambia cuando lo decide el autor.
+- El CI pasa a tres jobs: `check` (formato, lint y tests, sin navegador: los unitarios usan jsdom) y `e2e` corren en paralelo, así que dura lo que el más lento y no la suma.
+- `--ipc=host` en el contenedor, como recomienda Playwright, porque Chromium necesita más memoria compartida de la que da Docker.
+
+**Alternativas:**
+
+- **Solo relanzar:** el fallo puede volver, y el CI seguiría dependiendo de `apt` y de `ubuntu-latest`.
+- **Fijar `runs-on: ubuntu-24.04`:** arregla el fallo, pero sigue usando `apt` y obliga a cambiar de versión a mano cuando GitHub retire la imagen.
+- **El Chrome que ya trae el runner (`channel: 'chrome'`):** sin instalar nada, pero su versión cambia cada semana, no es la que Playwright prueba y en local sería otro navegador.
+- **Cachear los navegadores:** las librerías de sistema seguirían saliendo de `apt`.
+- **Etiqueta escrita a mano:** había que acordarse de cambiarla con cada actualización de Playwright, y Dependabot no lo hace.
+
+**Consecuencias:**
+
+- `noble` es Ubuntu 24.04 (soporte hasta 2029). Pasar a la siguiente es cambiar esa palabra en el workflow cuando Playwright publique su imagen, o cuando deje de publicar la de 24.04: si al actualizar Playwright no existe, el CI falla al descargarla con un error claro. Queda en pendientes.
+- Si GitHub tiene una regla de protección de `master` que exige el check `check`, conviene añadir también `e2e`, que ahora es otro job.
+
+**Aprobación:** el autor pidió «la mejor solución, que sirva a largo plazo y la que menos problemas dé», y que sea más rápida si se puede. Diseño, por delegación del autor.
