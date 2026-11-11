@@ -90,7 +90,8 @@ test.describe('acceso', () => {
 
   test('las cuentas de demostración están en un menú y entran con un clic', async ({ page }) => {
     await page.getByRole('button', { name: 'Cuentas de demostración' }).click();
-    await expect(page.getByRole('menuitem', { name: /Alumna/ })).toBeVisible();
+    // One student per class, as their classes study different subjects (2.5c)
+    await expect(page.getByRole('menuitem', { name: /Alumna/ })).toHaveCount(2);
 
     await page.getByRole('menuitem', { name: /Docente/ }).click();
 
