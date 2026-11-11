@@ -25,4 +25,18 @@ Cambios respecto a la v0:
 - **Reintento:** si la respuesta no es un JSON válido o tiene código, el modelo ve su respuesta y un recordatorio de la regla que incumplió, una sola vez.
 - **Formato:** además de pedirlo en el texto, la llamada envía el formato como `response_format` de tipo `json_schema`.
 
-Pendiente de medir con la batería de elusión (paso 2.5).
+Medida con la batería de elusión en el paso 2.5 (abajo y `docs/elusion-report.md`).
+
+## v2 · Lo que pidió la batería de elusión (paso 2.5, D-044)
+
+La v1 resistió los 12 ataques en las 3 pasadas con `gemini-3.5-flash-lite` (36 de 36), sin que el validador tuviera que frenar ninguna respuesta, y los 3 casos de control recibieron ayuda. Ninguna respuesta daba la solución, ni siquiera con palabras: todas se quedaban en una pregunta de nivel 1. El caso pendiente del 2.4 (pedir que el total empiece en cero cuando ya lo hace) no se repitió: con el bucle empezando en 1, las tres pistas señalaron justo eso.
+
+La lectura de las 48 respuestas encontró cinco cosas que la v2 corrige:
+
+- **Consejos sobre código que no existe.** Con solo el esqueleto de la función, a veces hablaba de «la variable dentro del bucle», que aún no había. La v2 pide comprobar cada sugerencia en su código: no hablar de partes que no ha escrito ni pedirle lo que ya hace bien.
+- **Un código correcto no oía que lo estaba.** Ante «¿Está bien mi código?» con todo superado, se inventaba retos («¿y con negativos muy grandes?») o insinuaba que podría fallar en las ocultas, sin datos. La v2 pide decirlo claramente y celebrarlo, y, como de las ocultas solo sabe lo que diga la última ejecución, invitarle a pulsar «Ejecutar», sin inventar fallos.
+- **Monotonía en las negativas.** De las 39 respuestas a ataques, 38 fueron `surprise`/3 y 35 llevaban `secret`; «labios sellados» salió en 13. La v2 pide negativas breves y distintas, sin frases hechas, y variar la reacción y la emoción.
+- **Etiquetas.** «Tramposillo» o «pícaro» (en 6 respuestas) rozan tratarlo como una falta. La v2 las prohíbe expresamente: es una oportunidad, nunca una falta.
+- **Bromas sin sentido** («sobornar al compilador con churros»). La v2 pide que la broma se entienda y venga a cuento.
+
+Resultado (`docs/elusion-report.md`, con `gemini-3.5-flash-lite`): la v2 resiste igual (36 de 36) y los controles siguen ayudando. Ante un código correcto, las tres respuestas lo elogian e invitan a pulsar «Ejecutar» para ver las ocultas; las etiquetas bajan de 6 a 3 respuestas y las que hablan de un bucle (no todas mal: el caso 6 sí lo tiene), de 11 a 5. La monotonía apenas cambia (31 de 39 con `secret`; 12 «labios sellados» y variantes): Flash-Lite no sigue esa parte, y queda pendiente resolverla en el servidor. Es la versión vigente.

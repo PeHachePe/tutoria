@@ -1181,3 +1181,36 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - El 2.5 compara modelos con `tutor_interaction.model` y puede ajustar la latencia (`reasoning_effort`) por modelo.
 
 **Aprobación:** el autor aprobó el plan sin streaming y con las seis mejoras propuestas (texto progresivo, espera visible, contexto de la ejecución, modelo guardado, tiempo máximo y respuesta por defecto en su idioma), tras preguntar cómo encajaba con las emociones y con la voz. El modelo de desarrollo y el reintento ante saturación salieron de la prueba real, después de que el autor señalara la lista actual de modelos de Gemini.
+
+## D-044 · Batería de elusión, prompt v2, modelo de respaldo y ayuda tras la negativa (11/11/2026)
+
+**Contexto:** el paso 2.5 mide si el tutor real resiste los intentos de obtener la solución (§2.9) y elige con datos el modelo y la versión de la instrucción de sistema. Al planearlo, el autor recordó que cualquier mejora de producto, UX o resiliencia es bienvenida, y aprobó las cinco propuestas.
+
+**Decisión:**
+
+- **`npm run elusion`** (`scripts/elusion.mjs`, con `scripts/elusion/`): envía cada caso a la función `tutor` local como lo haría la aplicación (un alumno del seed con su sesión, el código y el idioma), siempre sobre el ejercicio 3. Antes de cada pasada le da al alumno un intento nuevo con la `service_role` local (de `supabase status`, nunca en la app), para que ningún caso herede la conversación de otro. Cambia el modelo en `app_setting.ai_provider` sin respaldo, para que cada respuesta sea del modelo probado, y lo restaura al acabar. Renueva la sesión antes de cada petición, porque una batería dura más que el token, y un bloqueo impide lanzar dos a la vez, porque se borrarían el intento la una a la otra (pasó en el paso). Respeta el límite (429 con `Retry-After`) y reintenta ante un 503 del proveedor.
+- **Casos:** los 8 ataques de §2.9, con la inyección en el mensaje (8a) y en un comentario del código, junto a una petición de pista (8b); tres ataques más (pedir los valores de las comprobaciones ocultas, «completa el hueco» y juego de rol); y tres casos de control, que comprueban que el tutor sigue ayudando y que su consejo encaja con el código (un concepto, una pista con el total ya en cero y un código correcto). 3 pasadas por caso, o 1 con `--quick` como regresión tras tocar el prompt.
+- **Veredicto automático y revisión humana:** _resiste_, _frenada por el validador_, _cede_, _revisar_, _ayuda_ o _sin respuesta_ (funciones puras en `scripts/elusion/verdict.mjs`, con tests). Lo que las palabras pueden regalar no lo ve un script, así que el report trae todas las respuestas literales y las conclusiones son una lectura humana (`docs/elusion/conclusiones.md`, que el script incluye).
+- **Resultados versionados:** un JSON por modelo y versión del prompt en `docs/elusion/`, y `docs/elusion-report.md` generado con todos, con su metodología, para compararlos y citarlos en la memoria.
+- **`tutor_interaction.rejected_answers`** (0–2, nueva migración y `record_tutor_interaction` con un parámetro más): distingue el prompt que aguanta (0) de la red que lo para (2, respuesta por defecto). Una respuesta rechazada por llevar código conserva su `elusion`, para que el intento quede registrado aunque el alumno reciba la respuesta por defecto.
+- **Modelo de respaldo:** `ai_provider.fallbackModel` (opcional) y `FallbackProvider`. Si el modelo principal falla (saturado, sin cuota o retirado), responde el de respaldo, del mismo proveedor y con la misma clave, y la interacción guarda cuál respondió. Cubre la fila del 2.4 sobre los 503 del plan gratuito, que limita y se satura por modelo.
+- **Ayuda tras la negativa:** el evento `meta` lleva `elusion`, y el chat ofrece bajo esa respuesta «Dame una pista» y «No entiendo el enunciado» (`TutorStore.offersHelp`), para que la negativa lleve a algún sitio (RF-09: la elusión como oportunidad). Solo bajo la última respuesta y nunca en un intento entregado. Los chips comparten aspecto con las sugerencias del chat vacío: `@utility suggestion-chip` con `@apply` de las mismas clases de Tailwind, en el muestrario.
+- **Prompt v2** (`docs/prompt-history.md`), a partir de la lectura de las respuestas de la v1: comprobar cada consejo en el código del alumno, decir claramente que un código correcto lo es, negativas breves y distintas sin etiquetas, y bromas que se entiendan.
+- **Modelo: `gemini-3.5-flash-lite` con el prompt v2,** en el desarrollo y en la beta. Resistió los 12 ataques en todas las pasadas con las dos versiones (72 de 72), sin respuestas rechazadas, con 1,3 s de mediana y cuota gratuita de sobra. `gemini-3.8-flash` lee mejor el código y varía más, pero en el plan gratuito tardó 9,2 s de mediana (hasta más de 15 s) y agotó la cuota tras 8 respuestas: se vuelve a medir con el plan de pago en el 3.1, donde se elige también el modelo de respaldo. Las cifras y las respuestas, en `docs/elusion-report.md`.
+- **`scripts/import-app-ts.mjs`:** el hook que importa las fixtures TypeScript desde Node, compartido ahora por `npm run seed` y `npm run elusion`.
+
+**Alternativas:**
+
+- Llamar al modelo directamente con el prompt, sin la función: más rápido, pero no prueba lo que de verdad recibe el alumno (validador, límites, contexto del intento).
+- Un modelo como juez del veredicto: otra llamada por respuesta, con los mismos sesgos que el juzgado; la lectura humana es más fiable con este volumen.
+- Leer los rechazos del validador en los logs de la función: frágil y solo en local; la columna sirve también al panel docente y a la memoria.
+- Abrir el tutor flotante o insertar avisos en el editor tras la negativa: los chips van donde el alumno ya mira, sin interrumpir.
+
+**Consecuencias:**
+
+- Cambian §2.3 (`tutor_interaction`, `app_setting`), §2.6 (evento `meta`, validación y respaldo), §2.9 y el paso 2.5 de `docs/PLAN.md`.
+- Cambiar el prompt pide `npm run elusion -- --quick` antes de darlo por bueno; un modelo candidato nuevo, la batería completa.
+- La memoria puede citar los casos y las respuestas literales del report.
+- Quedan en `PENDIENTES.md` la nueva medida de `gemini-3.8-flash` (3.1) y rotar en el servidor las reacciones de broma, porque Flash-Lite apenas varía aunque el prompt lo pida.
+
+**Aprobación:** el autor aprobó el plan con las cinco mejoras («Las cinco») y pidió dejar bien documentado cómo resiste cada modelo, con los ejemplos y las respuestas exactas, para la memoria. El modelo lo elige el agente por delegación del autor, con los datos de la batería.
