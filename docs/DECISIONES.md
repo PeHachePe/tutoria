@@ -1220,3 +1220,35 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Quedan en `PENDIENTES.md` la nueva medida de `gemini-3.8-flash` (3.1) y rotar en el servidor las reacciones de broma, porque Flash-Lite apenas varía aunque el prompt lo pida.
 
 **Aprobación:** el autor aprobó el plan con las cinco mejoras («Las cinco») y pidió dejar bien documentado cómo resiste cada modelo, con los ejemplos y las respuestas exactas, para la memoria. El modelo lo elige el agente por delegación del autor, con los datos de la batería.
+
+## D-045 · Ejercicios en los tres idiomas, código en inglés y batería de elusión independiente del seed (11/11/2026)
+
+**Contexto:** D-023 solo traducía la interfaz: al cambiar de idioma, título, enunciado y contenidos de los ejercicios seguían en español, y sus funciones también estaban en español (`suma`, `contarVocales`). Lo vio el autor en el paso 2.5 y pidió un paso propio, el 2.5b, antes de la beta (3.1). Al plantearlo, señaló dos cosas: que un ejercicio puede escribirse en inglés o en catalán, no solo en español, y que no tiene sentido que renombrar o editar ejercicios obligue a volver a pasar la batería de elusión, cuyo coste en cuota no compensa.
+
+**Decisión:**
+
+- **El código del ejercicio, siempre en inglés:** el nombre de la función y los textos que devuelve son los mismos en los tres idiomas, y el enunciado traducido los cita tal cual. Ni las pruebas ni `execute` dependen del idioma. Las funciones del seed pasan a `countEvens`, `multiplicationTable`, `sum`, `maximum`, `reverseArray`, `countVowels`, `average` y `firstIndexOf`, y el código de ejemplo de las fixtures pasa entero al inglés. Es la norma del seed y la recomendación del formulario (4.3), no una prohibición. Los datos de las pruebas son datos: `countVowels` sigue contando las vocales con tilde de «Murciélago».
+- **Idioma de origen en el propio ejercicio:** `exercise.source_locale` (`app_locale`: `es`/`en`/`ca`, por defecto `es`) dice en qué idioma están `title`, `statement` y `topics`, porque un docente puede escribir en cualquiera de los tres. Se llama `locale`, como el resto de la app (`AppLocale`), porque `language` ya es el lenguaje de programación.
+- **`exercise.translations` (`jsonb`):** los mismos tres textos en los otros idiomas, cada uno opcional. La restricción `exercise_translations_shape` (función `is_valid_exercise_translations`) exige un objeto con solo idiomas de la interfaz distintos del de origen, cada uno con título y enunciado no vacíos y una lista de textos. Así se lee el ejercicio en una sola fila, la RLS es la de `exercise` y el docente puede editar las traducciones (privilegio por columna).
+- **Una función pura sin imports, `exerciseText()`** (`data/exercise-text.ts`), elige el texto del idioma pedido o, sin traducción, el original con su idioma. La usan el catálogo, el espacio de trabajo y la Edge Function `tutor`, que la importa tal cual (D-042). Los servicios devuelven el ejercicio entero, porque el docente edita todos los idiomas: elegir el idioma es cosa de quien lo muestra.
+- **Sin traducción, el original y nunca un hueco:** el catálogo y el título de la pantalla de trabajo lo marcan con `lang` (WCAG 3.1.2), y el enunciado añade un aviso discreto con el idioma del original («Este enunciado solo está en español»).
+- **El tutor:** la función recibe el enunciado en el idioma en que responde o, sin traducción, el original. El prompt sigue en la v2: solo cambia el contenido. El tutor simulado responde en el idioma de la petición (`TUTOR_SCRIPTS`), como el real, para que la demo con datos simulados también funcione en inglés y catalán. Las conversaciones pasadas de las fixtures se quedan en español, porque ya ocurrieron.
+- **El seed, siempre traducido:** el tipo de las fixtures exige `en` y `ca`, así que un ejercicio del seed sin traducción no compila y `npm run check` falla. Los que creen los docentes pueden quedar sin traducir; para ellos está la caída al original. Seed v5.
+- **Batería de elusión independiente del seed:** buscaba el ejercicio 3 por `function_name = 'suma'`. Ahora el script crea su propio ejercicio (`BATTERY_EXERCISE`, una copia congelada del ejercicio 3 tal como era al pasar la batería, con `suma`), lo asigna al grupo del alumno en una sesión 99 y lo borra al terminar, con sus intentos. Los resultados de D-044 siguen siendo comparables, renombrar, editar o borrar ejercicios del seed ya no toca la batería y, de paso, la batería deja el seed como estaba (antes había que `db:reset`). Se comprobó con un solo caso (`--quick --only 1`: resiste), sin repetir la batería.
+
+**Alternativas:**
+
+- Una tabla `exercise_translation` (una fila por idioma): más normalizada, pero con su propia RLS, una consulta más en cada lectura y el mismo resultado para tres idiomas fijos.
+- Guardar todos los textos dentro del `jsonb`, sin columnas de origen: obligaba a rehacer columnas, seed, consultas y tipos sin ganar nada.
+- El español siempre como origen: el autor lo descartó, porque un docente puede escribir en inglés o en catalán.
+- Elegir el idioma en los servicios de datos: las pantallas no cambiarían, pero el docente necesita el ejercicio entero y la Edge Function, la misma lógica sin Angular.
+- Un script que compruebe las traducciones del seed, como `npm run i18n -- --check`: el tipo de las fixtures lo hace sin código nuevo.
+- Volver a pasar la batería con `sum`: gasta cuota y obliga a hacerlo cada vez que cambie el seed.
+
+**Consecuencias:**
+
+- Cambian §2.3, §2.5, §4.8 y los pasos 2.5b y 4.3 de `docs/PLAN.md`; el 4.3 añade una pestaña por idioma y «Traducir con IA» como borrador (con la cadena de modelos de D-044).
+- La memoria del TFM cita `suma` en el enunciado modelo: queda en `PENDIENTES.md`.
+- Los títulos de las sesiones (`class_session.title`) siguen sin traducir: los bloques del 2.5c los traducirán igual que los ejercicios.
+
+**Aprobación:** el autor aprobó el plan («Sí, adelante»), con dos correcciones durante el planteamiento: el idioma de origen no tiene por qué ser el español, y la batería no se repite ni debe depender del seed.

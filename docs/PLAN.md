@@ -132,7 +132,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), created_at, updated_at). El nombre evita la palabra reservada `user`.
 - `class_group` (id, name, school_year, teacher_id → app_user)
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
-- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **kind** (por defecto `code`, D-029), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
+- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **source_locale** (`es`/`en`/`ca`, por defecto `es`: el idioma de título, enunciado y contenidos) y **translations** (`jsonb`: los mismos textos en los otros idiomas, cada uno opcional, D-045), **kind** (por defecto `code`, D-029), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
 - **`class_session`** (id, group_id → class_group, number, title (opcional); única por grupo y número, D-034): las sesiones de clase de cada grupo, con el título que les da el docente («Vectores»); sin título se muestran como «Sesión N».
 - `exercise_assignment` (id, group_id → class_group, exercise_id → exercise, session; única por terna; `(group_id, session)` → `class_session (group_id, number)`)
@@ -176,8 +176,9 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - **Lenguaje de la v1: JavaScript.** Cada ejercicio pide una función con nombre (`function_name`). Cada prueba la llama con `input`, que es la lista de argumentos, y compara el valor devuelto con `expected_output` mediante igualdad de JSON. No hay lectura de teclado ni salida por consola: incluso los ejercicios de «salida formateada» devuelven un string. El campo `language` deja preparada la ampliación a Java.
 - **Pruebas visibles:** el alumno ve la entrada, el resultado esperado y el obtenido.
 - **Pruebas ocultas:** el alumno solo ve ✔ o ✘. Sirven para evitar que se programe «para las pruebas».
-- **Cómo se llaman en la interfaz del alumno:** «Ejemplos» para las visibles, como una tabla de llamadas y resultados esperados (`suma([1,2,3])` → `6`), y «comprobaciones ocultas» para las ocultas. «Prueba visible» y «prueba oculta» quedan para el docente y el código (iteración 2 del paso 0.5).
+- **Cómo se llaman en la interfaz del alumno:** «Ejemplos» para las visibles, como una tabla de llamadas y resultados esperados (`sum([1,2,3])` → `6`), y «comprobaciones ocultas» para las ocultas. «Prueba visible» y «prueba oculta» quedan para el docente y el código (iteración 2 del paso 0.5).
 - Siempre se ejecutan todas las pruebas, y la comparación se hace fuera del código del alumno.
+- **Idiomas (D-045):** el código del ejercicio va siempre en inglés (nombre de la función y textos que devuelve), igual en los tres idiomas; título, enunciado y contenidos se escriben en un idioma (`source_locale`) y se traducen a los otros (`translations`). El alumno los lee en el idioma de la interfaz o, si falta la traducción, en el original con un aviso. Es la norma del seed y la recomendación del formulario (4.3), no una prohibición: un docente puede escribir su contrato en español.
 
 **Batería inicial (seed):**
 
@@ -192,7 +193,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 | 7   | Media de un vector con dos decimales    | Ampliación | Acumuladores, formato de salida                | 4      |
 | 8   | Buscar la primera aparición de un valor | Ampliación | Búsqueda secuencial, condición compuesta       | 4      |
 
-Enunciado literal del ejercicio 3, modelo de redacción para todos: _«Escribe una función `suma` que reciba un vector de números enteros y devuelva la suma de todos sus elementos. Si el vector está vacío, la función debe devolver 0.»_
+Enunciado literal del ejercicio 3, modelo de redacción para todos: _«Escribe una función `sum` que reciba un vector de números enteros y devuelva la suma de todos sus elementos. Si el vector está vacío, la función debe devolver 0.»_
 
 Pruebas del ejercicio 3 (`input` es la lista de argumentos, por eso el vector va dentro de otra lista):
 
@@ -205,7 +206,7 @@ Pruebas del ejercicio 3 (`input` es la lista de argumentos, por eso el vector va
 | `[[7, -3, 1]]`  | `5`             | Sí     |
 | `[[-4, -6]]`    | `-10`           | Sí     |
 
-Los enunciados y las pruebas de los demás ejercicios los redacta el agente siguiendo el mismo formato: enunciado de 2 o 3 frases con la función nombrada y el caso límite explícito; 3 o 4 pruebas visibles, una de ellas el caso límite, y 2 ocultas, cada una con otro caso límite, para que devolver un valor fijo no las acierte por suerte (D-042). El desarrollador los valida.
+Los enunciados, sus traducciones al inglés y al catalán y las pruebas de los demás ejercicios los redacta el agente siguiendo el mismo formato: enunciado de 2 o 3 frases con la función nombrada y el caso límite explícito; 3 o 4 pruebas visibles, una de ellas el caso límite, y 2 ocultas, cada una con otro caso límite, para que devolver un valor fijo no las acierte por suerte (D-042). El desarrollador los valida.
 
 ### 2.6 Tutor de IA
 
@@ -753,7 +754,7 @@ Los bloques de plantilla de este documento van marcados como `angular`, no como 
 ### 4.8 Reglas transversales
 
 - En inglés, todo lo que es código: identificadores, comentarios, nombres de ficheros, carpetas y scripts de npm, y commits. En español, los textos de la interfaz y la documentación de `docs/`.
-- **Multiidioma (D-023):** todo texto de la interfaz se escribe en español y se marca para traducir: `i18n="@@area.name"` en las plantillas y `` $localize`:@@area.name:Texto` `` en el código, siempre con ID propio. Cada texto nuevo lleva su traducción en `src/locale/messages.en.json` y `messages.ca.json`; `npm run i18n` extrae los mensajes y dice cuáles faltan, y `npm run check` falla si queda alguno sin marcar (lint) o sin traducir.
+- **Multiidioma (D-023):** todo texto de la interfaz se escribe en español y se marca para traducir: `i18n="@@area.name"` en las plantillas y `` $localize`:@@area.name:Texto` `` en el código, siempre con ID propio. Cada texto nuevo lleva su traducción en `src/locale/messages.en.json` y `messages.ca.json`; `npm run i18n` extrae los mensajes y dice cuáles faltan, y `npm run check` falla si queda alguno sin marcar (lint) o sin traducir. Los ejercicios son datos y se traducen en la base (`exercise.translations`, D-045); los del seed llevan las dos traducciones o no compilan.
 - Signals primero: `computed()` y `linkedSignal()` para derivar; `effect()` solo en la frontera con APIs imperativas (CodeMirror, Web Speech, Realtime), con un comentario que lo justifique. Nada de `ngOnInit` ni otros hooks de ciclo de vida; para las librerías que tocan el DOM, `afterNextRender` y `DestroyRef`. RxJS, solo si una API ya es Observable y no hay alternativa sencilla.
 - **Buenas prácticas de Angular 22:** las del `CLAUDE.md` que genera `ng new`, las de `get_best_practices` y la guía de estilo oficial. Prevalecen sobre este plan (principio 5), así que aquí solo se añade lo propio del proyecto. `ng lint` hace cumplir las que se pueden comprobar: signals en lugar de decoradores antiguos, `host` en lugar de `@HostBinding`/`@HostListener`, `@Service()`, `NgOptimizedImage`, `class`/`style` en lugar de `ngClass`/`ngStyle`, rutas relativas con `./`, sin `OnPush` explícito y solo APIs estables (`eslint.config.js`).
 - **Accesibilidad:** cada pantalla pasa axe sin ninguna infracción y cumple los mínimos de WCAG AA (foco, contraste y ARIA), como exige el `CLAUDE.md` de Angular (5.4).
@@ -1138,7 +1139,7 @@ La mascota de TutorIA es una carlina, basada en la perra del autor (boceto v14 a
 **1.4 · Editor y autoguardado (≈3 h)** · ficha `03-trabajo` · D-029
 
 - `<app-code-editor>` según 4.7, con los paquetes de CodeMirror que usa (`@codemirror/view`, `state`, `language`, `commands`, `lang-javascript` y `@lezer/highlight`): números de línea, resaltado con los colores del tema y altura generosa.
-- Un intento nuevo empieza vacío, con el texto de ayuda «Escribe aquí la función `suma`» como _placeholder_ de CodeMirror, que desaparece al escribir (D-018).
+- Un intento nuevo empieza vacío, con el texto de ayuda «Escribe aquí la función `sum`» como _placeholder_ de CodeMirror, que desaparece al escribir (D-018).
 - Autoguardado a los 800 ms con indicador «Guardando…» / «Guardado», y «No se ha guardado» con «Reintentar» si falla (D-029).
 - No se pierde nada: se guarda al ocultar la pestaña, al cambiar de ejercicio y al salir de la pantalla, y el navegador pregunta antes de cerrar con cambios sin guardar.
 - Evento `paste` con la longitud del texto pegado (lo registra el `EventLogger` del 1.6).
@@ -1287,6 +1288,37 @@ Commit: `feat: student flow (mock)`.
 
 🧪 Veredicto y report del script (`node --test`), proveedor de respaldo y respuestas rechazadas (Deno), `record_tutor_interaction` con `rejected_answers` (pgTAP), `TutorStore.offersHelp` y los chips del chat.
 
+**2.5b · Ejercicios en los tres idiomas y código en inglés (≈4 h)** · D-045 · a petición del autor, antes de la beta (3.1)
+
+Hasta aquí, D-023 solo traduce la interfaz: título, enunciado y contenidos de los ejercicios salen en español, y sus funciones también están en español (`suma`).
+
+- **El código de los ejercicios, en inglés:** nombre de la función y textos que devuelve, iguales en los tres idiomas (`suma` → `sum`, `contarVocales` → `countVowels`…). El enunciado traducido los cita literalmente, así que ni las pruebas ni `execute` dependen del idioma. Es la norma del seed y la recomendación del formulario (4.3), no una prohibición. Se renombran en fixtures, `seed.sql` (`npm run seed`), la actividad de las fixtures, §2.5 y los tests y ejemplos que citan los ejercicios del seed.
+- **Textos traducidos:** `exercise.source_locale` (`es`/`en`/`ca`, por defecto `es`; `locale` como en el resto de la app, porque `language` ya es el lenguaje de programación) es el idioma en que están título, enunciado y contenidos, porque un docente puede escribir el ejercicio en cualquiera de los tres. `exercise.translations` (`jsonb`) guarda los otros idiomas, cada uno con título, enunciado y contenidos. Una restricción `check` valida la forma y que el idioma de origen no esté repetido entre las traducciones. Los servicios devuelven el ejercicio tal cual (el docente edita todos los idiomas), y una función pura sin imports, `exerciseText()`, elige el texto del idioma pedido: la usan el catálogo y el espacio de trabajo, y también la Edge Function `tutor`. Si falta la traducción, se muestra el original con su `lang` y un aviso discreto que dice su idioma («Este enunciado solo está en inglés»), nunca un hueco.
+- **Seed traducido y vigilado:** los 8 ejercicios tienen el español como origen, y el agente escribe sus traducciones al inglés y al catalán en las fixtures para que el autor las revise. El tipo de las fixtures exige las dos, así que, si falta una, `npm run check` falla al compilar. Ese control cubre solo el seed: lo que creen los docentes (4.3) puede quedar sin traducir, y para eso está la caída al original.
+- **Tutor:** la Edge Function `tutor` recibe el enunciado en el idioma en que responde o, si no está traducido, en el original, y el tutor simulado responde en el idioma de la petición (`TutorRequest.language`). Las interacciones pasadas de las fixtures se quedan en español: son conversaciones que ya ocurrieron.
+- **Batería de elusión independiente del seed:** hoy busca el ejercicio 3 por `function_name = 'suma'`, así que cualquier cambio en el seed (este renombrado, y en la fase 4 editar o borrar ejercicios) la rompería o obligaría a repasarla. El script crea su propio ejercicio fijo antes de cada ejecución (identificador propio, asignado al alumno de la batería) y lo borra al terminar. Ese ejercicio es una copia congelada del ejercicio 3 con su contrato de siempre, así que los resultados de D-044 siguen siendo comparables y no se repite la batería: basta un solo caso (`--only`) para comprobar el montaje.
+- **Formulario del docente (4.3):** se deja previsto una pestaña por idioma, «Traducir con IA» como borrador que el docente revisa (con la misma cadena de modelos del tutor, D-044) y la recomendación de escribir el contrato del código en inglés.
+
+🧪 Elección del texto por idioma y aviso con TDD (función pura y catálogo o espacio de trabajo en inglés); tutor simulado en los tres idiomas; `prompt.ts` con la traducción y su caída al español (Deno); la restricción de `translations` (pgTAP).
+✅ Con datos simulados y con Supabase local, catálogo, espacio de trabajo y tutor en inglés y catalán, con el código en inglés.
+
+- **Hecho así (D-045):** funciones `countEvens`, `multiplicationTable`, `sum`, `maximum`, `reverseArray`, `countVowels`, `average` y `firstIndexOf`; `app_locale` y `is_valid_exercise_translations()` en la migración; `exerciseText()` en `data/exercise-text.ts`; `TUTOR_SCRIPTS` para el tutor simulado; seed v5; `BATTERY_EXERCISE` en la sesión 99 del grupo del alumno de la batería, comprobada con `--quick --only 1`.
+
+**2.5c · Asignaturas, bloques y práctica (≈6 h)** · a petición del autor, antes de la beta (3.1), después del 2.5b
+
+Hasta aquí, cada grupo organiza sus ejercicios en sesiones numeradas («Sesión 2», D-034), hay un solo intento por alumno y ejercicio, y nada distingue una asignatura de otra. No sirve para un repaso, una recuperación ni varias asignaturas.
+
+- **Asignaturas:** tabla `subject` («Programación básica», «Programación avanzada»), con idioma de origen y traducciones como los ejercicios (2.5b), que gestiona el administrador. Cada grupo pertenece a una (`class_group.subject_id`). La asignatura no supone programación: el lenguaje, el editor y la corrección son del ejercicio según su `kind` (D-029), para que más adelante haya otros tipos (Matemáticas, con respuesta numérica o expresiones) sin cambiar este modelo. El catálogo del alumno muestra una pestaña por grupo, con el nombre de su asignatura, solo si tiene más de uno. Cada ejercicio del banco común puede indicar las asignaturas para las que sirve, para filtrar en el 4.3. El selector de grupo del panel docente muestra la asignatura.
+- **Bloques en lugar de sesiones:** `class_session` pasa a ser un bloque con título obligatorio y libre («Tema 1: Bucles», «Repaso del tema 1», «Recuperación del examen»), traducible como los ejercicios. El número solo ordena y deja de mostrarse. Un ejercicio puede estar en varios bloques del mismo grupo.
+- **Un intento por asignación:** `attempt` pasa de ser única por alumno y ejercicio a serlo por alumno, asignación y número. El mismo ejercicio en el tema y en su recuperación son dos intentos distintos.
+- **Practicar de nuevo:** en un ejercicio entregado, el alumno puede empezar un intento nuevo (número siguiente), con el editor vacío y la conversación desde cero. El anterior se sigue pudiendo «Repasar». Las estadísticas y el histórico usan el primer intento entregado de cada asignación; las repeticiones se ven como práctica («Repetido 2 veces») y no alteran los datos de la clase.
+- **Analítica:** el histórico (4.4) y la vista en vivo (4.1) eligen grupo y bloque en lugar de sesión.
+- **Seed más grande** (a petición del autor): tres asignaturas de FP que se pueden resolver en JavaScript («Programación básica», «Programación avanzada» y «Desarrollo web en entorno cliente»), con 20–30 ejercicios cada una repartidos en bloques, traducidos al inglés y al catalán (2.5b) y con sus pruebas visibles y ocultas. La actividad de las fixtures deja la mayoría sin empezar o a medias, con solo algunos entregados, para que la demo tenga trabajo por hacer.
+- **Memoria del TFM:** se contrasta con lo que dice de las sesiones y del histórico por sesión, y la desviación (12 entidades, bloques e intentos repetidos) se apunta en `DECISIONES.md` para la memoria.
+
+🧪 `open_attempt` con varios intentos por asignación y la práctica (pgTAP, también la RLS de `subject`); agrupación del catálogo por grupo y bloque y elección del intento que cuenta, con TDD.
+✅ Con datos simulados y con Supabase local, un alumno con dos asignaturas ve sus pestañas y sus bloques, repite un ejercicio entregado y hace la recuperación con un intento nuevo.
+
 Commit: `feat: real backend core`.
 
 #### Fase 3 · Beta pública y entrega de la PEC3 (≈10 h)
@@ -1339,6 +1371,7 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
 - Lista de ejercicios.
 - Formulario con Signal Forms: título, enunciado, dificultad, función, umbrales con slider y pruebas con `applyEach` (entrada, esperado, oculta).
+- Idiomas (D-045): el docente elige el idioma en que escribe y tiene una pestaña por cada uno de los otros, con «Traducir con IA», que deja un borrador para revisar (con la misma cadena de modelos del tutor, D-044); el formulario recomienda escribir el contrato del código (función y textos que devuelve) en inglés.
 - Asignación a grupo y sesión. Asignar a una sesión nueva crea su fila de `class_session`, y el título de cada sesión se edita en su cabecera (opcional, D-034).
 
 🧪 Validaciones del esquema del formulario.
@@ -1368,7 +1401,7 @@ Commit: `feat: teacher panel`.
 
 **5.2 · Grupos y matrícula** · ficha `11-grupos`
 
-- En `/docente/grupos` (RF-16): el docente crea sus grupos y matricula alumnos en ellos; el administrador ve todos y además cambia el docente de un grupo. Las cuentas solo las crea el administrador.
+- En `/docente/grupos` (RF-16): el docente crea sus grupos, cada uno de una asignatura (2.5c), y matricula en ellos a los alumnos que quiera; un alumno puede estar en grupos de varias asignaturas y con docentes distintos. El administrador ve todos y además cambia el docente de un grupo. Las cuentas solo las crea el administrador.
 - Las operaciones de grupos y matrícula pasan de `AdminService` a un servicio propio, porque ya no son solo del administrador.
 
 **5.3 · Sistema** · ficha `12-sistema`
