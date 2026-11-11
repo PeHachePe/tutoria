@@ -1,7 +1,10 @@
+import { undo } from '@codemirror/commands';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { render, screen } from '@testing-library/angular';
+import { TestBed } from '@angular/core/testing';
+import { render, screen, waitFor } from '@testing-library/angular';
 
 import { CodeEditor } from './code-editor';
+import { CodeFormatter } from './code-formatter';
 
 interface Options {
   readonly initialCode?: string;
@@ -117,6 +120,91 @@ describe('CodeEditor', () => {
     expect(view.state.readOnly).toBe(true);
     expect(textbox.getAttribute('aria-readonly')).toBe('true');
     expect(screen.queryByText(/Esc y después Tab/)).toBeNull();
+  });
+
+  describe('formatting', () => {
+    const MESSY = 'function f(a){\nreturn a+1}';
+    const TIDY = 'function f(a) {\n  return a + 1;\n}\n';
+    const BROKEN = 'f(\nx';
+
+    it('puts the code in order, reports it and lets Ctrl + Z undo it', async () => {
+      const { view, fixture, codeChange } = await renderEditor({ initialCode: MESSY });
+
+      await fixture.componentInstance.format();
+
+      expect(view.state.doc.toString()).toBe(TIDY);
+      expect(codeChange).toHaveBeenLastCalledWith(TIDY);
+      undo(view);
+      expect(view.state.doc.toString()).toBe(MESSY);
+    });
+
+    it('formats with Mayús + Alt + F, as VS Code does', async () => {
+      const { view } = await renderEditor({ initialCode: MESSY });
+
+      const handled = runScopeHandlers(
+        view,
+        // With Shift the key is «F»: CodeMirror finds the binding by its key code, as browsers send
+        new KeyboardEvent('keydown', { key: 'F', keyCode: 70, shiftKey: true, altKey: true }),
+        'editor',
+      );
+
+      expect(handled).toBe(true);
+      await waitFor(() => expect(view.state.doc.toString()).toBe(TIDY));
+    });
+
+    it('says the line of the error of a code it cannot read, until the code changes', async () => {
+      const { view, fixture, codeChange } = await renderEditor({ initialCode: BROKEN });
+
+      await fixture.componentInstance.format();
+      fixture.detectChanges();
+
+      expect(view.state.doc.toString()).toBe(BROKEN);
+      expect(codeChange).not.toHaveBeenCalled();
+      expect(screen.getByRole('status').textContent).toContain('error en la línea 2');
+
+      view.dispatch({ changes: { from: 4, insert: ')' }, userEvent: 'input.type' });
+      fixture.detectChanges();
+      expect(screen.queryByRole('status')).toBeNull();
+    });
+
+    it('changes nothing in a code already in order', async () => {
+      const { fixture, codeChange } = await renderEditor({ initialCode: TIDY });
+
+      await fixture.componentInstance.format();
+
+      expect(codeChange).not.toHaveBeenCalled();
+    });
+
+    it('does not format a read-only code', async () => {
+      const { view, fixture } = await renderEditor({ initialCode: MESSY, readonly: true });
+
+      await fixture.componentInstance.format();
+
+      expect(view.state.doc.toString()).toBe(MESSY);
+    });
+
+    it('keeps what the student typed while it was formatting', async () => {
+      const { view, fixture } = await renderEditor({ initialCode: MESSY });
+
+      const formatting = fixture.componentInstance.format();
+      view.dispatch({ changes: { from: 0, insert: '// ' }, userEvent: 'input.type' });
+      await formatting;
+
+      expect(view.state.doc.toString()).toBe(`// ${MESSY}`);
+    });
+  });
+
+  it('says so when it could not format at all, as when Prettier does not download', async () => {
+    const formatter: Pick<CodeFormatter, 'format'> = {
+      format: () => Promise.resolve({ ok: false }),
+    };
+    TestBed.overrideProvider(CodeFormatter, { useValue: formatter });
+    const { fixture } = await renderEditor({ initialCode: 'x' });
+
+    await fixture.componentInstance.format();
+    fixture.detectChanges();
+
+    expect(screen.getByRole('status').textContent).toContain('No se ha podido formatear el código');
   });
 
   it('closes CodeMirror when it is removed', async () => {

@@ -38,6 +38,19 @@ describe('CodeBlock', () => {
     expect(screen.getByText('Código')).toBeTruthy();
   });
 
+  it('colours JavaScript as the editor does, once its highlighter arrives', async () => {
+    await setup();
+
+    expect((await screen.findByText('function')).className).toBe('font-semibold text-primary');
+    expect(screen.getByRole('code').textContent).toBe('function suma(vector) {\n}');
+  });
+
+  it('leaves another language plain', async () => {
+    await setup('python');
+
+    expect(screen.getByRole('code').querySelectorAll('span')).toHaveLength(1);
+  });
+
   it('copies the code, says so and offers to copy again after a moment', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { fixture } = await setup();

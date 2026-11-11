@@ -133,7 +133,6 @@
     "workspace.editorLoading": "Carregant l'editor…",
     "workspace.editorPlaceholder": "Escriu aquí la funció {$functionName}",
     "workspace.reload": " Torna a carregar ",
-    "codeEditor.hint": " Tab sagna; Ctrl + Retorn executa les proves; per sortir de l'editor, Esc i després Tab. ",
     "saveIndicator.error": "No s'ha desat",
     "saveIndicator.retry": " Torna-ho a provar ",
     "saveIndicator.saved": "Desat",
@@ -342,6 +341,11 @@
     "codeBlock.copy": "Copia",
     "codeBlock.copiedAnnounce": "Codi copiat",
     "codeBlock.label": "Codi",
-    "tutor.moreHelp": "Més ajuda · nivell {$INTERPOLATION}"
+    "tutor.moreHelp": "Més ajuda · nivell {$INTERPOLATION}",
+    "codeEditor.hintFormat": " Tab sagna; Maj + Alt + F formata el codi; Ctrl + Retorn executa les proves; per sortir de l'editor, Esc i després Tab. ",
+    "codeEditor.formatErrorLine": "No es pot formatar: el codi té un error a la línia {$INTERPOLATION}. Corregeix-lo i torna-ho a provar.",
+    "codeEditor.formatError": "No s'ha pogut formatar el codi. Torna-ho a provar.",
+    "workspace.formatCode": "Formata el codi",
+    "workspace.formatCodeTooltip": "Formata el codi (Maj + Alt + F)"
   }
 }

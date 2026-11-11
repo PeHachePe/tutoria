@@ -1,6 +1,7 @@
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { syntaxHighlighting } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
-import { tags } from '@lezer/highlight';
+
+import { codeHighlighter } from './code-highlighter';
 
 /**
  * Look of the editor with the tokens of the active theme, so it follows light and dark mode without
@@ -60,30 +61,5 @@ const editorTheme = EditorView.theme({
   '.cm-placeholder': { color: 'var(--mat-sys-on-surface-variant)' },
 });
 
-/**
- * Colours of the code. Each one is a role of the Material palette, which keeps AA contrast over the
- * surfaces in both modes, and comments are also italic so colour is not the only difference.
- */
-const highlightStyle = HighlightStyle.define([
-  {
-    tag: [tags.keyword, tags.controlKeyword, tags.definitionKeyword, tags.moduleKeyword],
-    color: 'var(--mat-sys-primary)',
-    fontWeight: '600',
-  },
-  { tag: [tags.string, tags.special(tags.string), tags.regexp], color: 'var(--mat-sys-tertiary)' },
-  { tag: [tags.number, tags.bool, tags.null, tags.atom], color: 'var(--app-info)' },
-  {
-    tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-    color: 'var(--mat-sys-secondary)',
-  },
-  {
-    tag: [tags.definition(tags.variableName), tags.definition(tags.function(tags.variableName))],
-    color: 'var(--mat-sys-on-surface)',
-    fontWeight: '600',
-  },
-  { tag: tags.comment, color: 'var(--mat-sys-on-surface-variant)', fontStyle: 'italic' },
-  { tag: tags.invalid, color: 'var(--mat-sys-error)' },
-]);
-
-/** Theme and code colours of `<app-code-editor>`. */
-export const codeEditorTheme = [editorTheme, syntaxHighlighting(highlightStyle)];
+/** Theme and code colours of `<app-code-editor>`; the colours are those of the chat too (2.5d). */
+export const codeEditorTheme = [editorTheme, syntaxHighlighting(codeHighlighter)];

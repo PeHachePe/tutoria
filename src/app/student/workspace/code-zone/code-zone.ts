@@ -34,6 +34,11 @@ import { RunResults } from './run-results';
 import { SaveIndicator } from './save-indicator';
 import { SubmitDialog } from './submit-dialog';
 
+/** What the zone asks of the editor, without naming its class (see `editableEditor`). */
+interface FormattableEditor {
+  format(): Promise<void>;
+}
+
 /** Id of the zone, which the splitter beside it controls. */
 export const CODE_ZONE_ID = 'code-zone';
 
@@ -118,6 +123,11 @@ export class CodeZone {
   /** The note that replaces the buttons once submitted, which takes the focus then. */
   private readonly submittedNote = viewChild<ElementRef<HTMLElement>>('submittedNote');
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
+  /**
+   * The editor the student writes in, found by its name and not by its class: naming the class here
+   * would bring CodeMirror into the workspace and undo its `@defer` (4.7).
+   */
+  private readonly editableEditor = viewChild<FormattableEditor>('editableEditor');
 
   protected readonly actionSessionExpired = computed(() =>
     isSessionExpired(this.store.actionError()?.error),
@@ -146,6 +156,11 @@ export class CodeZone {
 
   protected toggleExpanded(): void {
     this.expanded.update((expanded) => !expanded);
+  }
+
+  /** «Formatear el código»: the editor puts it in order, or says why it cannot (2.5d). */
+  protected formatCode(): void {
+    void this.editableEditor()?.format();
   }
 
   /** «Entregar» asks first: once submitted, the code cannot change (2.4). */

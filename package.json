@@ -53,6 +53,7 @@
     "@lezer/highlight": "^1.2.5",
     "@supabase/supabase-js": "^2.119.0",
     "material-symbols": "^0.48.3",
+    "prettier": "^3.8.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -73,7 +74,6 @@
     "eslint": "^10.12.0",
     "jsdom": "^30.0.0",
     "postcss": "^8.5.3",
-    "prettier": "^3.8.1",
     "sharp": "^0.34.5",
     "supabase": "3.1.0",
     "tailwindcss": "^4.1.12",

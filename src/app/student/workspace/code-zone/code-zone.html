@@ -12,6 +12,18 @@
   <div class="ms-auto flex items-center gap-1">
     @if (store.editable()) {
       <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
+      <!-- Indentation and spaces in order, as «Format document» does in VS Code (2.5d) -->
+      <button
+        matIconButton
+        type="button"
+        aria-label="Formatear el código"
+        i18n-aria-label="@@workspace.formatCode"
+        matTooltip="Formatear el código (Mayús + Alt + F)"
+        i18n-matTooltip="@@workspace.formatCodeTooltip"
+        (click)="formatCode()"
+      >
+        <mat-icon>format_align_left</mat-icon>
+      </button>
     }
     <!-- A toggle button: same name, and aria-pressed says whether the code is expanded. On
          phones each zone already takes the whole screen. -->
@@ -82,6 +94,7 @@
       />
     } @else {
       <app-code-editor
+        #editableEditor
         class="min-h-24 flex-1"
         [initialCode]="current.code"
         [label]="editorLabel"

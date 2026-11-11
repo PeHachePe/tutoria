@@ -133,7 +133,6 @@
     "workspace.editorLoading": "Loading the editor…",
     "workspace.editorPlaceholder": "Write the function {$functionName} here",
     "workspace.reload": " Reload ",
-    "codeEditor.hint": " Tab indents; Ctrl + Enter runs the tests; to leave the editor, Esc and then Tab. ",
     "saveIndicator.error": "Not saved",
     "saveIndicator.retry": " Retry ",
     "saveIndicator.saved": "Saved",
@@ -342,6 +341,11 @@
     "codeBlock.copy": "Copy",
     "codeBlock.copiedAnnounce": "Code copied",
     "codeBlock.label": "Code",
-    "tutor.moreHelp": "More help · level {$INTERPOLATION}"
+    "tutor.moreHelp": "More help · level {$INTERPOLATION}",
+    "codeEditor.hintFormat": " Tab indents; Shift + Alt + F formats the code; Ctrl + Enter runs the tests; to leave the editor, Esc and then Tab. ",
+    "codeEditor.formatErrorLine": "It cannot be formatted: the code has an error on line {$INTERPOLATION}. Fix it and try again.",
+    "codeEditor.formatError": "The code could not be formatted. Try again.",
+    "workspace.formatCode": "Format the code",
+    "workspace.formatCodeTooltip": "Format the code (Shift + Alt + F)"
   }
 }

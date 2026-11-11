@@ -3,7 +3,7 @@ import { LOCALE_ID } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { screen, within } from '@testing-library/angular';
+import { screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
 
@@ -827,6 +827,33 @@ describe('WorkspacePage', () => {
       ).toBeTruthy();
       expect(screen.queryByRole('button', { name: 'Ejecutar pruebas' })).toBeNull();
       expect(screen.queryByText(/Ejecuta las pruebas para comprobar/)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Formatear el código' })).toBeNull();
+    });
+  });
+
+  describe('formatting the code', () => {
+    it('puts the code of the editor in order with its button, and saves it', async () => {
+      const { fixture } = await renderPage();
+      await showEditor(fixture);
+      const view = editorView();
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: 'function sum(v){\nreturn 0}' },
+        userEvent: 'input.type',
+      });
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Formatear el código' }));
+
+      await waitFor(() =>
+        expect(view.state.doc.toString()).toBe('function sum(v) {\n  return 0;\n}\n'),
+      );
+    });
+
+    it('does nothing before the editor has arrived', async () => {
+      await renderPage();
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Formatear el código' }));
+
+      expect(screen.queryByRole('textbox', { name: 'Código' })).toBeNull();
     });
   });
 

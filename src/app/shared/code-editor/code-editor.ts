@@ -6,6 +6,7 @@ import {
   inject,
   input,
   output,
+  signal,
   untracked,
 } from '@angular/core';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
@@ -25,6 +26,7 @@ import {
 
 import type { Language } from '../../data/exercise';
 import { codeEditorTheme } from './code-editor-theme';
+import { CodeFormatter } from './code-formatter';
 
 /**
  * Highlighting and indentation of each language an exercise can be written in. A new language
@@ -69,9 +71,28 @@ function pastedFromOutside(transaction: Transaction): number {
       <p
         [id]="hintId"
         class="hidden text-body-small text-on-surface-variant group-focus-within:block pointer-coarse:hidden"
-        i18n="@@codeEditor.hint"
+        i18n="@@codeEditor.hintFormat"
       >
-        Tab sangra; Ctrl + Intro ejecuta las pruebas; para salir del editor, Esc y después Tab.
+        Tab sangra; Mayús + Alt + F formatea el código; Ctrl + Intro ejecuta las pruebas; para salir
+        del editor, Esc y después Tab.
+      </p>
+    }
+    <!-- Formatting left the code as it was: it says why, until the code changes (2.5d) -->
+    @if (formatProblem(); as problem) {
+      <p
+        role="status"
+        class="flex items-center gap-2 rounded-lg bg-warning-container px-3 py-2 text-body-small text-on-warning-container"
+      >
+        @if (problem.line; as line) {
+          <span i18n="@@codeEditor.formatErrorLine"
+            >No se puede formatear: el código tiene un error en la línea {{ line }}. Corrígelo y
+            vuelve a probar.</span
+          >
+        } @else {
+          <span i18n="@@codeEditor.formatError"
+            >No se ha podido formatear el código. Vuelve a probar.</span
+          >
+        }
       </p>
     }
   `,
@@ -97,7 +118,11 @@ export class CodeEditor {
   readonly runShortcut = output();
 
   protected readonly hintId = `app-code-editor-hint-${nextId++}`;
+  /** Why the last «Formatear» left the code as it was: the line of its error, if it says one. */
+  protected readonly formatProblem = signal<{ readonly line?: number } | null>(null);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
+  private readonly formatter = inject(CodeFormatter);
+  private view: EditorView | undefined;
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -110,7 +135,33 @@ export class CodeEditor {
         }),
       });
       this.host.prepend(view.dom);
+      this.view = view;
       destroyRef.onDestroy(() => view.destroy());
+    });
+  }
+
+  /**
+   * Puts the code in order (2.5d): indentation, spaces, semicolons and braces, with the cursor on the
+   * same piece of code. It is one change of the history, so Ctrl + Z undoes it. Code that cannot be
+   * read stays as it is, and the editor says the line of its error. Nothing in a read only editor,
+   * nor if the student typed while it was formatting.
+   */
+  async format(): Promise<void> {
+    const view = this.view;
+    if (!view || this.readonly()) return;
+    const code = view.state.doc.toString();
+    const result = await this.formatter.format(code, view.state.selection.main.head);
+    if (!result.ok) {
+      this.formatProblem.set({ line: result.line });
+      return;
+    }
+    this.formatProblem.set(null);
+    if (result.code === code || view.state.doc.toString() !== code) return;
+    view.dispatch({
+      changes: { from: 0, to: code.length, insert: result.code },
+      selection: { anchor: result.cursor },
+      scrollIntoView: true,
+      userEvent: 'input.format',
     });
   }
 
@@ -134,7 +185,14 @@ export class CodeEditor {
         keymap.of(
           readonly
             ? []
-            : ['Mod-Enter', 'Ctrl-Enter'].map((key) => ({ key, run: () => this.requestRun() })),
+            : [
+                ...['Mod-Enter', 'Ctrl-Enter'].map((key) => ({
+                  key,
+                  run: () => this.requestRun(),
+                })),
+                // As «Format document» in VS Code (2.5d)
+                { key: 'Shift-Alt-f', run: () => this.requestFormat() },
+              ],
         ),
       ),
       placeholder(this.placeholder()),
@@ -157,8 +215,15 @@ export class CodeEditor {
     return true;
   }
 
+  private requestFormat(): boolean {
+    void this.format();
+    return true;
+  }
+
   private report(update: ViewUpdate): void {
     if (!update.docChanged) return;
+    // The code changed: whatever kept it from being formatted may be fixed
+    this.formatProblem.set(null);
     this.codeChange.emit(update.state.doc.toString());
     // CodeMirror marks every paste, from the keyboard, the context menu or a phone (2.8).
     const pastedLength = update.transactions

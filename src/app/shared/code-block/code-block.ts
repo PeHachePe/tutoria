@@ -1,7 +1,9 @@
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Component, computed, DestroyRef, inject, input, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, resource, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
+
+import type { HighlightedPiece } from '../code-editor/code-highlighter';
 
 /** How long «Copiado» stays before the button offers to copy again. */
 export const COPIED_FEEDBACK_MS = 2_000;
@@ -14,8 +16,12 @@ const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
   typescript: 'TypeScript',
 };
 
+/** How a block in JavaScript says its language, which is the one it is highlighted in. */
+const JAVASCRIPT = new Set(['js', 'javascript']);
+
 /**
- * A block of code, monospaced and scrolling sideways if it is wide, with its language and a button
+ * A block of code, monospaced, with the colours of the editor and scrolling sideways if it is wide,
+ * with its language and a button
  * to copy it (2.5d: the empty skeleton the tutor may give). Extra actions go in its content, beside
  * «Copiar».
  */
@@ -42,7 +48,7 @@ const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
       role="group"
       class="overflow-x-auto px-3 pb-3 font-mono text-body-small outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
       [attr.aria-label]="languageName()"
-    ><code>{{ code() }}</code></pre>
+    ><code>@for (piece of pieces(); track $index) {<span [class]="piece.classes">{{ piece.text }}</span>}</code></pre>
     <span class="sr-only" aria-live="polite">
       @if (copied()) {
         <span i18n="@@codeBlock.copiedAnnounce">Código copiado</span>
@@ -65,6 +71,20 @@ export class CodeBlock {
     if (!language) return $localize`:@@codeBlock.label:Código`;
     return LANGUAGE_NAMES[language.toLowerCase()] ?? language;
   });
+
+  /**
+   * Its JavaScript with the colours of the editor (2.5d). The highlighter, with the parser of
+   * CodeMirror, comes in a chunk of its own when a block needs it, so the chat does not bring it;
+   * until then, and for any other language, the code is plain.
+   */
+  private readonly highlighted = resource({
+    params: () => (JAVASCRIPT.has(this.language().toLowerCase()) ? this.code() : undefined),
+    loader: async ({ params }) =>
+      (await import('../code-editor/code-highlighter')).highlightJavaScript(params),
+  });
+  protected readonly pieces = computed<readonly HighlightedPiece[]>(() =>
+    this.highlighted.hasValue() ? this.highlighted.value() : [{ text: this.code(), classes: '' }],
+  );
 
   private feedback: ReturnType<typeof setTimeout> | undefined;
 
