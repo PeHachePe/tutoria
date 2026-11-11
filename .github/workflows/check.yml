@@ -1,6 +1,6 @@
 # Runs the same checks as `npm run check` on every push to master and every pull request:
-# formatting, lint, app unit tests with 100 % coverage (D-010) and the scripts' tests; then the
-# end-to-end tests with axe against the simulated data (D-011, step 0.6).
+# formatting, lint, app unit tests with 100 % coverage (D-010) and the scripts' tests; and, in
+# parallel, the end-to-end tests with axe against the simulated data (D-011, step 0.6).
 name: check
 
 on:
@@ -26,7 +26,37 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - run: npx playwright install --with-deps chromium
+
+  # The Playwright version in the lockfile, so the e2e container always matches it (D-048)
+  playwright-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: package-lock.json
+          sparse-checkout-cone-mode: false
+      - id: read
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    needs: playwright-version
+    runs-on: ubuntu-latest
+    # Playwright's own image brings Chromium and its system libraries: no `apt` on the runner, and
+    # the same system whatever `ubuntu-latest` points to (D-048). `noble` is Ubuntu 24.04: move to
+    # the next one when Playwright publishes it, or when it stops publishing this one.
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble
+      # Chromium needs more shared memory than Docker gives by default
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       # Against the `demo` build, served as static files (step 1.1e, D-025)
       - run: npm run e2e
       - uses: actions/upload-artifact@v6
