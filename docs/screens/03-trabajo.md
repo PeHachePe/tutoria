@@ -8,9 +8,10 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 
 ## Datos
 
-- Lee `ExerciseService.getDetail(id)` con `resource()`: el ejercicio, sus pruebas visibles y cuántas ocultas tiene.
-- Abre el intento con `AttemptStore.open(id)`, que llama a `AttemptService.openOrCreate`: recupera el último intento del alumno o crea uno en `in_progress` (2.4). El store se provee en la ruta y lo comparten el editor, los resultados, «Entregar» y el tutor (4.5).
-- Si el alumno no tiene el ejercicio asignado, los dos servicios responden `not_found`.
+- `:id` es la asignación: el ejercicio en un bloque de un grupo (2.5c, D-046). Lee `ExerciseService.getDetail(id)` con `resource()`: el ejercicio, su grupo con su asignatura, su bloque, sus pruebas visibles y cuántas ocultas tiene.
+- Abre el intento con `AttemptStore.open(id, número)`, que llama a `AttemptService.openOrCreate`: recupera el último intento del alumno en la asignación (o el de `?intento=N`, para repasarlo) o crea el 1 en `in_progress` (2.4). Después lista los intentos de la asignación (`AttemptService.list`) para el selector. El store se provee en la ruta y lo comparten el editor, los resultados, «Entregar» y el tutor (4.5).
+- «Practicar de nuevo» llama a `AttemptService.retry`; «Siguiente ejercicio» se calcula con `listAssigned` y `nextInBlock()` una vez entregado.
+- Si el alumno no puede ver la asignación (de otro grupo u oculta), los dos servicios responden `not_found`.
 - El código se guarda con `AttemptService.saveCode` 800 ms después del último cambio (paso 1.4, D-029).
 - Las pruebas se ejecutan con `CodeRunnerService.run`, que guarda el código y fija `passed` o `tests_failed`, y se entrega con `AttemptService.submit` (paso 1.5, D-030). Los resultados viven en el store mientras se está en la pantalla: no se guardan.
 - El reparto entre enunciado y código, y entre código y tutor, se recuerda por usuario en `localStorage`.
@@ -20,10 +21,10 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 ## Contenido y disposición
 
 - Referencia: boceto (figura 8 de la memoria), versión móvil y tableta (figura 15) y prototipo (figura 17).
-- Cabecera: volver a «Ejercicios», el `h1` con el título del ejercicio y los chips de dificultad y de estado del intento; tras ejecutar, el de estado añade las pruebas superadas («Con fallos · 3/5»), como el contador de la figura 17.
+- Cabecera: volver a «Ejercicios», encima del `h1` la asignatura (enlace a su pestaña del catálogo) y el bloque (2.5c), el `h1` con el título del ejercicio y los chips de dificultad y de estado del intento y, con más de un intento, el selector «Intento 2 de 3»; tras ejecutar, el de estado añade las pruebas superadas («Con fallos · 3/5»), como el contador de la figura 17.
 - Tres zonas:
   - **Enunciado:** el texto, con el código en monoespaciada; «Ejemplos» como tabla de llamadas y resultados esperados (`suma([1, 2, 3])` → `6`) y «Y N comprobaciones ocultas» (2.5). Se puede plegar. El texto no pasa de unos 65 caracteres por línea; cuando el panel mide 896 px o más (tutor flotante en una pantalla ancha), los ejemplos van a su derecha en lugar de debajo, con una consulta de contenedor sobre el propio panel (1.2b).
-  - **Código:** el editor (1.4), con el indicador de guardado junto al encabezado; debajo, «Ejecutar pruebas» y «Entregar», y los resultados (1.5), que se desplazan por dentro y ocupan como mucho el 40 % de la zona. Es la zona principal y se lleva el espacio que sobre. Un intento nuevo empieza vacío, con «Escribe aquí la función `suma`» como texto de ayuda (D-018); uno entregado solo muestra su código y, en lugar de los botones, «Entregado el …» con «Volver a los ejercicios».
+  - **Código:** el editor (1.4), con el indicador de guardado junto al encabezado; debajo, «Ejecutar pruebas» y «Entregar», y los resultados (1.5), que se desplazan por dentro y ocupan como mucho el 40 % de la zona. Es la zona principal y se lleva el espacio que sobre. Un intento nuevo empieza vacío, con «Escribe aquí la función `suma`» como texto de ayuda (D-018); uno entregado solo muestra su código y, en lugar de los botones, «Entregado el …» con «Practicar de nuevo» (solo en el último intento) y «Siguiente ejercicio» (el siguiente del bloque sin entregar) o, sin ninguno, «Volver a los ejercicios». Mientras se practica (intento 2 o siguientes), un aviso sobre el editor dice que no cuenta para la clase (2.5c).
   - **Resultados** (figura 17): el resumen («3 de 5 superadas» o «Todas superadas»); cada ejemplo con su llamada, el esperado y el obtenido, el error o «Tiempo agotado»; las pruebas que no llegaron a empezar tras un tiempo agotado, como «Sin ejecutar»; las comprobaciones ocultas, solo con su icono; si el código no carga o no tiene la función, solo eso, una vez. Si el código cambia después de ejecutar, una nota avisa de que son de la versión anterior. Antes de la primera ejecución, una línea invita a ejecutar.
   - **Tutor:** el chat (ficha 04).
 - Escritorio y tableta (desde 768 px), como en el prototipo: dos columnas. A la izquierda, el enunciado encima del código, con un separador entre los dos (el enunciado ocupa del 15 al 70 % de la columna; 45 % al empezar); a la derecha, el tutor, con un separador vertical entre el código y el tutor (el código ocupa del 50 al 80 % del ancho, 70 % al empezar, y el tutor nunca baja de 16rem). El alumno puede hacer flotante el tutor, y lo es siempre con el código ampliado y en la tableta (de 768 a 1023 px): entonces el enunciado y el código ocupan todo el ancho y el tutor se pliega en la mascota, abajo a la derecha (ficha 04, D-033). La pantalla ocupa el alto de la ventana y cada zona se desplaza por dentro.
@@ -31,7 +32,9 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 
 ## Interacciones
 
-- **Volver a los ejercicios:** navega al catálogo.
+- **Volver a los ejercicios:** navega al catálogo; la asignatura de la cabecera, a su pestaña.
+- **Selector de intentos** (2.5c): un menú con cada intento y su estado; el actual, marcado. El último abre sin número en la URL; los anteriores, con `?intento=N`, en solo lectura.
+- **Practicar de nuevo** (2.5c): abre un intento nuevo con el editor vacío y la conversación desde cero, quita el número de la URL y lleva el foco al encabezado «Código». Si falla, un aviso con «Reintentar».
 - **Plegar el enunciado:** en escritorio y tableta, el encabezado de la zona lo pliega o lo despliega y el código gana el espacio.
 - **Pestañas (móvil):** cambian de zona; con las flechas del teclado, como en las prácticas de ARIA.
 - **Reintentar** (error): vuelve a cargar lo que falló.

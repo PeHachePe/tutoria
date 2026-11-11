@@ -101,52 +101,55 @@ TutorIA es una aplicación web educativa para aprender programación en Formaci�
 - **Docente:** sigue a sus grupos en vivo, consulta el histórico, gestiona sus grupos y su matrícula (RF-16) y el banco de ejercicios, sus pruebas, sus umbrales y sus asignaciones.
 - **Administrador:** gestiona usuarios y la configuración del sistema; además puede entrar en todas las pantallas del docente con acceso a todos los grupos, incluida la gestión de grupos y matrícula. La cuenta del tribunal es de administrador.
 
-| Ruta                    | Pantalla                                                                 | Rol             | Capa     | Referencia de diseño   |
-| ----------------------- | ------------------------------------------------------------------------ | --------------- | -------- | ---------------------- |
-| `/login`                | Acceso                                                                   | Todos           | 1        | —                      |
-| `/alumno`               | Catálogo de ejercicios                                                   | Alumno          | 1        | Figuras 7 y 16 del TFM |
-| `/alumno/ejercicio/:id` | Pantalla de trabajo: enunciado, editor, pruebas y tutor                  | Alumno          | 1, 3 y 4 | Figuras 8, 15 y 17     |
-| `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                            | Alumno          | 1        | —                      |
-| `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve       | Alumno          | 1        | Figuras 14 y 23        |
-| `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId` | Docente y admin | 2        | Figuras 11–12 del TFM  |
-| `/docente/historico`    | Histórico del grupo                                                      | Docente y admin | 2        | Figuras 13–14 del TFM  |
-| `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                     | Docente y admin | 2        | Figuras 15–16 del TFM  |
-| `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos       | Docente y admin | 2        | —                      |
-| `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                | Admin           | —        | —                      |
-| `/admin/sistema`        | Ajustes del sistema: adaptador de IA activo                              | Admin           | —        | —                      |
-| `/dev/ui`               | Muestrario de componentes y temas (solo en desarrollo)                   | —               | —        | —                      |
+| Ruta                    | Pantalla                                                                  | Rol             | Capa     | Referencia de diseño   |
+| ----------------------- | ------------------------------------------------------------------------- | --------------- | -------- | ---------------------- |
+| `/login`                | Acceso                                                                    | Todos           | 1        | —                      |
+| `/alumno`               | Catálogo de ejercicios                                                    | Alumno          | 1        | Figuras 7 y 16 del TFM |
+| `/alumno/ejercicio/:id` | Pantalla de trabajo de una asignación: enunciado, editor, pruebas y tutor | Alumno          | 1, 3 y 4 | Figuras 8, 15 y 17     |
+| `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                             | Alumno          | 1        | —                      |
+| `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve        | Alumno          | 1        | Figuras 14 y 23        |
+| `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId`  | Docente y admin | 2        | Figuras 11–12 del TFM  |
+| `/docente/historico`    | Histórico del grupo                                                       | Docente y admin | 2        | Figuras 13–14 del TFM  |
+| `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                      | Docente y admin | 2        | Figuras 15–16 del TFM  |
+| `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos        | Docente y admin | 2        | —                      |
+| `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                 | Admin           | —        | —                      |
+| `/admin/sistema`        | Ajustes del sistema: adaptador de IA activo                               | Admin           | —        | —                      |
+| `/dev/ui`               | Muestrario de componentes y temas (solo en desarrollo)                    | —               | —        | —                      |
 
 Detalle por pantalla:
 
-- **Catálogo:** ejercicios agrupados por sesión (con su título, si lo tiene) con título, contenidos, dificultad, chip de estado, pistas pedidas con su nivel y botón (Empezar, Continuar o Repasar); progreso «n/N superados» global y por sesión, donde N es el número de ejercicios asignados y «superados» cuenta los superados y los entregados (D-027), con cuántos están listos para entregar; la tarjeta «Continúa donde lo dejaste» y, con todo entregado, la enhorabuena con la mascota (D-034).
-- **Pantalla de trabajo:** enunciado y pruebas visibles; editor; botón para ejecutar las pruebas con resultados ✔ (superada), ✘ (fallida) o ● (error o tiempo agotado); botón Entregar; panel del tutor tipo chat con nivel de pista visible y botón «Pedir pista»; reacciones flotantes.
-- **Sesión en vivo:** tabla por alumno con estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas y la señal derivada «atascado»; detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
-- **Histórico:** gráfica de la media de pistas solicitadas por sesión (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales.
-- **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a grupo y sesión. Un ejercicio con intentos no se borra, para conservar su historial.
+- **Catálogo:** con más de un grupo, una pestaña por grupo con el nombre de su asignatura, en la URL (`?grupo=`); ejercicios agrupados por bloque (por su título) con título, contenidos, dificultad, chip de estado, pistas pedidas con su nivel, «Repetido N veces» y botón (Empezar, Continuar o Repasar); progreso «n/N superados» del grupo de la pestaña y por bloque, donde N es el número de ejercicios asignados y «superados» cuenta los superados y los entregados (D-027), con cuántos están listos para entregar; la tarjeta «Continúa donde lo dejaste», que mira todos los grupos, y, con todo entregado, la enhorabuena con la mascota (D-034, D-046).
+- **Pantalla de trabajo:** la asignatura (enlace a su pestaña) y el bloque; enunciado y pruebas visibles; editor; botón para ejecutar las pruebas con resultados ✔ (superada), ✘ (fallida) o ● (error o tiempo agotado); botón Entregar y, una vez entregado, «Practicar de nuevo» y «Siguiente ejercicio» (el siguiente del bloque sin entregar); con varios intentos, un selector «Intento 2 de 3» (`?intento=`) y un aviso mientras se practica; panel del tutor tipo chat con nivel de pista visible y botón «Pedir pista»; reacciones flotantes (D-046).
+- **Sesión en vivo:** de un grupo y un bloque; tabla por alumno con estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas y la señal derivada «atascado»; detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
+- **Histórico:** gráfica de la media de pistas solicitadas por bloque (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales. Cuenta el intento que cuenta de cada asignación (el primero entregado); las prácticas no cambian los datos de la clase (D-046).
+- **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a un bloque de un grupo; ocultar o mostrar bloques y asignaciones. Un ejercicio con intentos no se borra, para conservar su historial.
 - **Datos registrados (RF-07):** qué registra la aplicación (tiempos, ejecuciones, pistas, pegados y salidas a otra ventana o pestaña, con su duración), qué no registra nunca (el audio), con qué finalidad (formativa, no sancionadora), quién lo ve (su docente) y qué servicios externos intervienen (reconocimiento de voz del navegador, proveedor de IA). La primera vez que el alumno entra, un aviso le resume esto con un enlace a la pantalla, antes de empezar a trabajar, como pide el RGPD citado en la memoria.
 
-### 2.3 Modelo de datos (11 entidades, PostgreSQL en Supabase)
+### 2.3 Modelo de datos (13 tablas, PostgreSQL en Supabase)
 
 En **negrita**, lo que cambia respecto al modelo de la memoria.
 
 - `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), created_at, updated_at). El nombre evita la palabra reservada `user`.
-- `class_group` (id, name, school_year, teacher_id → app_user)
+- **`subject`** (id, name, source_locale, translations `jsonb` con el nombre en los otros idiomas, D-046): la asignatura («Programación básica»), que gestiona el administrador. No supone programación: el editor y la corrección son del ejercicio según su `kind` (D-029).
+- `class_group` (id, name, school_year, teacher_id → app_user, **subject_id** → subject)
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
 - `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **source_locale** (`es`/`en`/`ca`, por defecto `es`: el idioma de título, enunciado y contenidos) y **translations** (`jsonb`: los mismos textos en los otros idiomas, cada uno opcional, D-045), **kind** (por defecto `code`, D-029), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
+- **`exercise_subject`** (exercise_id → exercise, subject_id → subject; clave por pareja): las asignaturas para las que sirve cada ejercicio del banco, para filtrarlo (4.3).
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
-- **`class_session`** (id, group_id → class_group, number, title (opcional); única por grupo y número, D-034): las sesiones de clase de cada grupo, con el título que les da el docente («Vectores»); sin título se muestran como «Sesión N».
-- `exercise_assignment` (id, group_id → class_group, exercise_id → exercise, session; única por terna; `(group_id, session)` → `class_session (group_id, number)`)
-- `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), current_code, final_code, status, started_at, finished_at, **updated_at**)
+- **`class_block`** (id, group_id → class_group, position, title, source_locale, translations, is_hidden; única por grupo y posición, D-034, D-046): los bloques de ejercicios de cada grupo, con el título libre que les da el docente («Tema 1: Bucles», «Recuperación del tema 2»), traducible. La posición solo ordena y no se muestra. Un bloque oculto no lo ve el alumno, ni sus ejercicios.
+- `exercise_assignment` (id, group_id → class_group, **block_id**, exercise_id → exercise, **is_hidden**; única por bloque y ejercicio; `(group_id, block_id)` → `class_block (group_id, id)`): un ejercicio puede estar en varios bloques del mismo grupo. Oculta, el alumno no la ve.
+- `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), **number** (1 cuenta para la clase; los siguientes son práctica), current_code, final_code, status, started_at, finished_at, **updated_at**; única por alumno, asignación y número, D-046)
 - `tutor_interaction` (id, attempt_id → attempt, **request_id** (única: la petición que respondió, D-043), trigger `question`/`hint`/`proactive`, hint_level 1–3, **student_message**, transcript, emotion, intensity, **elusion**, **prompt_version**, **model**, **rejected_answers** (0–2: respuestas del modelo que el validador rechazó antes de esta, D-044), **created_at**)
 - `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`, **received_at**: la hora de llegada, que el cliente no puede falsear, D-040)
 - **`app_setting`** (key, value `jsonb`, updated_at). De momento solo `ai_provider`: URL base, modelo y, opcional, los modelos de respaldo en orden (`fallbacks`, del mismo proveedor o de otros compatibles, D-044). Las claves nunca se guardan aquí, sino en los secretos del servidor: el ajuste solo nombra el secreto de cada proveedor (`AI_API_KEY`, `AI_<NOMBRE>_API_KEY`).
 
-`attempt.assignment_id` resuelve la simplificación que ya señalaba la memoria del TFM («el desarrollo valorará incorporar esa referencia directa»): el histórico por sesión deja de reconstruirse a partir de fechas.
+`attempt.assignment_id` resuelve la simplificación que ya señalaba la memoria del TFM («el desarrollo valorará incorporar esa referencia directa»): el histórico por bloque deja de reconstruirse a partir de fechas. El intento que cuenta de cada asignación es el primero entregado (`countedAttempt()`); las estadísticas y el histórico usan solo ese (D-046).
 
 **Seguridad por fila (RLS), obligatoria en todas las tablas:**
 
 - Funciones auxiliares `security definer`: `current_app_role()`, `is_admin()`, `teaches_group(group_id)` y `is_enrolled(group_id)`.
-- El alumno solo accede a sus filas y a los ejercicios asignados a sus grupos; de las pruebas, solo lee las que no son ocultas.
+- El alumno solo accede a sus filas y a los ejercicios asignados a sus grupos que puede ver (ni la asignación ni su bloque ocultos: `is_visible_assignment()`); de las pruebas, solo lee las que no son ocultas.
+- `subject` la leen todos los usuarios con sesión y solo la cambia el administrador; `exercise_subject`, el profesorado, como el banco.
 - El docente accede a los grupos de los que es `teacher_id` y, a través de `enrollment`, a los intentos y eventos de sus alumnos. El banco de ejercicios es compartido entre docentes.
 - El administrador accede a todo.
 - En `attempt`, el cliente solo puede actualizar `current_code` (privilegio por columna). El estado y `final_code` los escribe el servidor.
@@ -168,7 +171,8 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - Con el back-end real, el estado solo lo escribe el servidor:
   - la Edge Function `execute` pone `tests_failed` o `passed`;
   - un trigger devuelve el intento a `in_progress` cuando cambia el código;
-  - la función RPC `submit_attempt` pasa de `passed` a `submitted`.
+  - la función RPC `submit_attempt` pasa de `passed` a `submitted`;
+  - `open_attempt(asignación, número)` abre el último intento de la asignación (o el del número) y `retry_attempt(asignación)` crea el siguiente, vacío, cuando el último está entregado («Practicar de nuevo», D-046).
 - La señal «atascado» del panel no es un estado: es una lectura derivada de los eventos mediante la función pura `isStuck()`.
 
 ### 2.5 Ejercicios y pruebas
@@ -182,7 +186,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 
 **Batería inicial (seed):**
 
-| #   | Título                                  | Dificultad | Contenidos                                     | Sesión |
+| #   | Título                                  | Dificultad | Contenidos                                     | Bloque |
 | --- | --------------------------------------- | ---------- | ---------------------------------------------- | ------ |
 | 1   | Contar números pares                    | Inicial    | Bucles, rangos, condicionales                  | 1      |
 | 2   | Tabla de multiplicar                    | Inicial    | Bucles, salida formateada (devuelve un string) | 1      |
@@ -498,7 +502,7 @@ Son clases abstractas con los métodos de acceso a datos. Las pantallas y los st
 | `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`                                                                     | Respuestas guionizadas por nivel                              | Edge Function `tutor`                                              |
 | `EventService`      | enviar un lote de eventos                                                                                               | MockDb                                                        | Inserción en `process_event`                                       |
 | `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                                          | Simulador de alumnos                                          | Supabase Realtime                                                  |
-| `StatsService`      | estadísticas del grupo por sesión                                                                                       | Cálculo sobre MockDb                                          | RPC `group_session_stats`                                          |
+| `StatsService`      | estadísticas del grupo por bloque                                                                                       | Cálculo sobre MockDb                                          | RPC `group_block_stats`                                            |
 | `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                                      | MockDb                                                        | Edge Function `admin-users` y tablas                               |
 
 Resultado de una ejecución:
@@ -532,7 +536,7 @@ Los servicios de datos lanzan un `DataError` tipado (`network`, `unauthorized`, 
 - **Reglas de acceso:** los servicios simulados imitan la RLS de 2.3 (`data/mock/mock-access.ts`): un alumno no ve ejercicios que no tiene asignados ni intentos ajenos (`not_found`), un docente solo gestiona sus grupos (`forbidden`) y una cuenta desactivada no entra (`unauthorized`).
 - **Fixtures** (`data/mock/fixtures/`, identificadores UUID y fechas fijos):
   - un administrador, dos docentes, un alumno desactivado y dos grupos del curso 2026/27: «1.º DAW A», un grupo real de 24 alumnos (el tamaño que da la memoria), y «1.º DAM B», con 6 alumnos y otro docente, para comprobar que cada docente solo ve los suyos;
-  - los 8 ejercicios con sus pruebas, con una solución y un error típico de ejemplo que un test ejecuta contra las pruebas, y sus asignaciones por sesión;
+  - los 8 ejercicios con sus pruebas, con una solución y un error típico de ejemplo que un test ejecuta contra las pruebas, y sus asignaciones por bloque;
   - la actividad de las sesiones pasadas, generada con guiones fijos: cuatro alumnos de 1.º DAW A con historias distintas (autónoma, con dificultades, que mejora y que pega código) y el resto con pocas pistas cada vez, para que el histórico salga descendente.
 
   `npm run seed` genera `supabase/seed.sql` a partir de estas mismas fixtures, así los dos mundos comparten datos, y `npm run check` comprueba que está al día. Node ejecuta las fixtures `.ts` directamente, así que solo usan sintaxis que se puede borrar (sin `enum`) e importan los tipos con `import type`.
@@ -1302,7 +1306,7 @@ Hasta aquí, D-023 solo traduce la interfaz: título, enunciado y contenidos de 
 🧪 Elección del texto por idioma y aviso con TDD (función pura y catálogo o espacio de trabajo en inglés); tutor simulado en los tres idiomas; `prompt.ts` con la traducción y su caída al español (Deno); la restricción de `translations` (pgTAP).
 ✅ Con datos simulados y con Supabase local, catálogo, espacio de trabajo y tutor en inglés y catalán, con el código en inglés.
 
-- **Hecho así (D-045):** funciones `countEvens`, `multiplicationTable`, `sum`, `maximum`, `reverseArray`, `countVowels`, `average` y `firstIndexOf`; `app_locale` y `is_valid_exercise_translations()` en la migración; `exerciseText()` en `data/exercise-text.ts`; `TUTOR_SCRIPTS` para el tutor simulado; seed v5; `BATTERY_EXERCISE` en la sesión 99 del grupo del alumno de la batería, comprobada con `--quick --only 1`.
+- **Hecho así (D-045):** funciones `countEvens`, `multiplicationTable`, `sum`, `maximum`, `reverseArray`, `countVowels`, `average` y `firstIndexOf`; `app_locale` y `is_valid_exercise_translations()` en la migración; `exerciseText()` en `data/localized-text.ts`; `TUTOR_SCRIPTS` para el tutor simulado; seed v5; `BATTERY_EXERCISE` en la sesión 99 del grupo del alumno de la batería, comprobada con `--quick --only 1`.
 
 **2.5c · Asignaturas, bloques y práctica (≈6 h)** · a petición del autor, antes de la beta (3.1), después del 2.5b
 
@@ -1313,11 +1317,13 @@ Hasta aquí, cada grupo organiza sus ejercicios en sesiones numeradas («Sesión
 - **Un intento por asignación:** `attempt` pasa de ser única por alumno y ejercicio a serlo por alumno, asignación y número. El mismo ejercicio en el tema y en su recuperación son dos intentos distintos.
 - **Practicar de nuevo:** en un ejercicio entregado, el alumno puede empezar un intento nuevo (número siguiente), con el editor vacío y la conversación desde cero. El anterior se sigue pudiendo «Repasar». Las estadísticas y el histórico usan el primer intento entregado de cada asignación; las repeticiones se ven como práctica («Repetido 2 veces») y no alteran los datos de la clase.
 - **Analítica:** el histórico (4.4) y la vista en vivo (4.1) eligen grupo y bloque en lugar de sesión.
-- **Seed más grande** (a petición del autor): tres asignaturas de FP que se pueden resolver en JavaScript («Programación básica», «Programación avanzada» y «Desarrollo web en entorno cliente»), con 20–30 ejercicios cada una repartidos en bloques, traducidos al inglés y al catalán (2.5b) y con sus pruebas visibles y ocultas. La actividad de las fixtures deja la mayoría sin empezar o a medias, con solo algunos entregados, para que la demo tenga trabajo por hacer.
-- **Memoria del TFM:** se contrasta con lo que dice de las sesiones y del histórico por sesión, y la desviación (12 entidades, bloques e intentos repetidos) se apunta en `DECISIONES.md` para la memoria.
+- **Seed más grande** (a petición del autor): tres asignaturas de FP que se pueden resolver en JavaScript («Programación básica», «Programación avanzada» y «Desarrollo web en entorno cliente»), con al menos 15 ejercicios cada una repartidos en bloques, traducidos al inglés y al catalán (2.5b), con sus pruebas visibles y ocultas y su código de ejemplo (un error típico y la solución). La actividad deja la mayoría sin empezar.
+- **Memoria del TFM:** se contrasta con lo que dice de las sesiones y del histórico por sesión, y la desviación (13 tablas, bloques e intentos repetidos) se apunta en `DECISIONES.md` para la memoria.
 
 🧪 `open_attempt` con varios intentos por asignación y la práctica (pgTAP, también la RLS de `subject`); agrupación del catálogo por grupo y bloque y elección del intento que cuenta, con TDD.
 ✅ Con datos simulados y con Supabase local, un alumno con dos asignaturas ve sus pestañas y sus bloques, repite un ejercicio entregado y hace la recuperación con un intento nuevo.
+
+- **Hecho así (D-046):** tablas `subject`, `exercise_subject` y `class_block` (antes `class_session`); bloques y asignaciones ocultables (`is_hidden`, filtrado por la RLS, a petición del autor); `attempt.number`; `open_attempt(asignación, número)` y `retry_attempt`; `is_visible_assignment()` y `can_open_assignment()`; `countedAttempt()`, `assignmentProgress()` y `assignedExercise()` en `data/attempt-progress.ts`, que usan los dos servicios; `localized-text.ts` (antes `exercise-text.ts`) con `subjectName()` y `blockTitle()`; la ruta del espacio de trabajo lleva la asignación, con `?intento=`; pestañas del catálogo en la URL (`?grupo=`), resumen por pestaña, «Repetido N veces», ruta de miga, selector de intentos, aviso de práctica, «Practicar de nuevo» y «Siguiente ejercicio». Seed v8: 42 ejercicios, 15 por asignatura (los 6 a 8 sirven a las dos de programación), en `basic-exercises.ts`, `web-exercises.ts` y `advanced-exercises.ts`, cada uno con su código de ejemplo, que `fixtures.spec.ts` ejecuta contra sus pruebas; 1.º DAW A en Programación básica y Desarrollo web (Lucía) y 1.º DAM B en Programación básica y avanzada (Elena, también en las cuentas de demostración), cada grupo con todos los ejercicios de su asignatura en bloques; un bloque de recuperación, uno oculto, una asignación oculta y prácticas de Lucía y Aya. La batería de elusión usa un bloque y una asignación propios. Iteración 1: la página de datos, alineada con el resto de la app.
 
 Commit: `feat: real backend core`.
 
@@ -1354,7 +1360,7 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 **4.1 · Sesión en vivo, con datos simulados (≈5 h)** · ficha `06-en-vivo` · Figuras 11–12 del TFM
 
 - `LiveStore`: `Map` por alumno dentro de un signal, con actualizaciones inmutables.
-- Tabla (`mat-table` con ordenación) según 2.2, con la señal «atascado» calculada con `isStuck()`; selector de grupo y sesión.
+- Tabla (`mat-table` con ordenación) según 2.2, con la señal «atascado» calculada con `isStuck()`; selector de grupo (con su asignatura) y bloque (D-046).
 - Simulador de alumnos en la barra de desarrollo.
 - En el móvil, tarjetas en lugar de tabla.
 
@@ -1372,20 +1378,20 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 - Lista de ejercicios.
 - Formulario con Signal Forms: título, enunciado, dificultad, función, umbrales con slider y pruebas con `applyEach` (entrada, esperado, oculta).
 - Idiomas (D-045): el docente elige el idioma en que escribe y tiene una pestaña por cada uno de los otros, con «Traducir con IA», que deja un borrador para revisar (con la misma cadena de modelos del tutor, D-044); el formulario recomienda escribir el contrato del código (función y textos que devuelve) en inglés.
-- Asignación a grupo y sesión. Asignar a una sesión nueva crea su fila de `class_session`, y el título de cada sesión se edita en su cabecera (opcional, D-034).
+- Asignación a un bloque de un grupo (D-046): crear, ordenar, titular y traducir bloques («Tema 1: Bucles», «Recuperación del tema 2»), con un ejercicio en varios bloques si hace falta; ocultar o mostrar un bloque o una asignación (`is_hidden`); filtrar el banco por asignatura (`exercise_subject`).
 
 🧪 Validaciones del esquema del formulario.
 
 **4.4 · Histórico, con datos simulados (≈3 h)** · ficha `09-historico` · Figuras 13–14 del TFM
 
-- Gráfica de barras propia con una tabla alternativa accesible, y los KPI.
+- Gráfica de barras propia por bloque, con una tabla alternativa accesible, y los KPI; selector de grupo (con su asignatura). Cuenta el intento que cuenta de cada asignación (D-046).
 
 🧪 Una serie descendente pinta N barras con sus valores.
 
 **4.5 · Panel docente con datos reales (≈4 h)**
 
 - Realtime: inserciones en `process_event` y cambios en `attempt` (la RLS filtra por grupo).
-- RPC `group_session_stats`, con test en pgTAP.
+- RPC `group_block_stats`, con test en pgTAP: el intento que cuenta de cada asignación, sin las prácticas (D-046).
 - Gestión real de ejercicios, pruebas y asignaciones.
 
 ✅ Con dos navegadores: el alumno trabaja y el docente lo ve en vivo.

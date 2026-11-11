@@ -20,8 +20,9 @@ Como la figura 23:
 - **Nunca se registra**, destacado en verde: el audio. Tampoco lo que haces fuera de TutorIA.
 - **Para qué:** para aprender, no para sancionar.
 - **Quién lo ve:** tu docente, solo en sus grupos, y la administración; el resto del alumnado no.
-- **Servicios externos**, a todo el ancho: el proveedor de IA (recibe enunciado, código, conversación y nivel de pista, sin nombre ni correo) y el reconocimiento de voz del navegador.
-- Abajo, «Ir a los ajustes» e «Ir a los ejercicios».
+- **Servicios externos**, a todo el ancho: el proveedor de IA (recibe enunciado, código, conversación y nivel de pista, sin nombre ni correo) y el reconocimiento de voz del navegador, como la lista de lo que se registra (icono, título y detalle), con los iconos en el color secundario para separar a los terceros (2.5c).
+- Abajo, el panel «Tú decides» (como el de privacidad de los ajustes): qué se elige en los ajustes, con «Ir a los ajustes» (con borde) e «Ir a los ejercicios» (relleno, con flecha) (2.5c).
+- «Nunca se registra», en el color de éxito sin borde, como la enhorabuena del catálogo; los paneles, a 24 px entre sí, igual que en los ajustes (2.5c).
 
 ## Aviso de la primera vez
 
