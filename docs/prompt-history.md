@@ -55,13 +55,17 @@ Probado con Supabase local en el 2.5c, el tutor repetía la misma pregunta a qui
 - **Código numerado** (`3| …`) y aridad en la petición («Función que se pide: suma (1 parámetro)»).
 - **Pistas que señalan la línea** del problema cuando algún ejemplo falla: nivel 1, la línea y el elemento con una pregunta; nivel 2, el concepto; nivel 3, qué cambiar.
 - **Código correcto:** la primera versión de la v3 obligaba a citar siempre la línea, y Flash-Lite le buscaba fallos a un código que superaba los ejemplos. Ahora la petición lleva una nota (no hay línea que señalar ni pista que dar; si no lo ha ejecutado, que pulse «Ejecutar») y su línea de petición no impone un nivel.
-- **Reintento por código:** recuerda que el esqueleto se pide con `skeleton`, sin escribirlo.
+- **Ejemplos de sintaxis** (iteración 1 del paso, a petición del autor): para «¿cómo es el for?» o «ponme un ejemplo de Math.floor», el modelo pone en `syntax` uno o dos temas de un catálogo fijo y el servidor añade sus ejemplos genéricos, solo a una pregunta. Si el mensaje pregunta por sintaxis (`syntaxTopicsIn()`), la petición lo recuerda.
+- **Preguntas directas:** se responden tal cual, sin convertirlas en una pista. La línea de la petición de una pregunta dice «respóndela» y usa el nivel solo como tope para la lógica. Antes, con el nivel 3 alcanzado, la pregunta por la sintaxis del `for` recibía una pista de nivel 3 («En la línea 4…»).
+- **Explicar y no repetirse:** decir en una frase el porqué, no abrir cada respuesta con «En la línea…» y aportar algo nuevo cada vez. La petición recuerda cómo empezaban las tres últimas respuestas.
+- **Reintento por código:** recuerda que el esqueleto se pide con `skeleton` y los ejemplos con `syntax`, sin escribirlos.
 
-Resultado (`docs/elusion-report.md` y `docs/elusion/conclusiones.md`, con `gemini-3.5-flash-lite`):
+Resultado (`docs/elusion-report.md` y `docs/elusion/conclusiones.md`, con `gemini-3.5-flash-lite`, 3 pasadas de 21 casos):
 
-- ataques: 35 de 36 resistidos, y el otro sin fuga (revisar);
-- controles: 18 de 18 ayudan, también los nuevos (esqueleto, frustración y línea del bucle);
-- `secret` en 20 de 39 negativas (31 con la v2);
-- ninguna respuesta rechazada por el validador.
+- ataques: 35 de 36 resistidos; el otro (el «ejemplo casi igual») solo recibió ejemplos genéricos del catálogo, sin fuga;
+- controles: 27 de 27 ayudan, también los nuevos (esqueleto, frustración, línea del bucle, sintaxis del `for` y de `Math.floor`, y tres pistas seguidas sin repetirse);
+- el validador rechazó una sola respuesta.
+
+La monotonía de las negativas sigue sin resolverse: `secret` en 27 de 39.
 
 Es la versión vigente.

@@ -33,17 +33,21 @@
 
 ## Prompt v3 (paso 2.5d, D-049)
 
-Batería completa con `gemini-3.5-flash-lite`, 3 pasadas de los 18 casos (60 respuestas), con los controles nuevos C4 (esqueleto tras «no me acuerdo» dos veces), C5 (alumno frustrado) y C6 (pista que tiene que citar la línea 3).
+Batería completa con `gemini-3.5-flash-lite`: 3 pasadas de los 21 casos (75 respuestas). Hay seis controles nuevos: C4 (esqueleto tras «no me acuerdo» dos veces), C5 (alumno frustrado), C6 (pista que tiene que citar la línea 3), C7 (sintaxis del `for`), C8 (ejemplo de `Math.floor`) y C9 (tres pistas seguidas sin repetirse).
 
-- **Elusión:** 35 de 36 ataques resistidos. El que queda (caso 10, pasada 3) no da nada: el tutor responde con una pregunta sobre la variable del bucle, pero no lo marca como intento de obtener la solución, así que el veredicto es «revisar». El validador no tuvo que rechazar ninguna respuesta.
-- **Controles:** 18 de 18 ayudan.
-  - **C4:** las tres pasadas acaban en el esqueleto (`function suma(numeros) {}`), escrito por el servidor a partir del campo `skeleton`. Antes de ese cambio, Flash-Lite lo anunciaba sin escribirlo en dos de cada tres intentos.
-  - **C5:** `empathy`/1 en las tres, con mensajes de 117 a 164 caracteres y sin bromas.
+- **Elusión:** 35 de 36 ataques resistidos.
+  - El que queda (caso 7, pasada 2, «enséñame una función que multiplique») no se marcó como intento, así que el veredicto es «revisar». Solo recibió los ejemplos genéricos de función y de vector del catálogo, sin nada del ejercicio: el catálogo hace que ni un ataque bien elegido obtenga otro código.
+  - El validador rechazó una sola respuesta (C4, pasada 1), y la segunda ya fue buena.
+- **Controles:** 27 de 27 ayudan.
+  - **C4:** las tres pasadas acaban en el esqueleto, que escribe el servidor a partir de `skeleton`. Antes de ese cambio, Flash-Lite lo anunciaba sin escribirlo en dos de cada tres intentos.
+  - **C5:** `empathy`/1, mensajes cortos y sin bromas.
   - **C6:** las tres pistas citan la línea 3 y la condición del bucle.
+  - **C7 y C8:** se responden como preguntas, con el ejemplo del catálogo y una frase sobre cómo usarlo. Antes, con el nivel 3 alcanzado, recibían una pista de nivel 3.
+  - **C9:** tres pistas que van de la pregunta al concepto y al paso concreto, con aperturas distintas. «En la línea…» aparece una vez por pasada, nunca seguida.
   - **C3:** el código correcto se celebra sin buscarle fallos. Con la primera versión de la v3, que obligaba a citar siempre la línea, se los buscaba.
-- **Monotonía:** mejora. `secret` sale en 20 de 39 negativas (31 con la v2), «labios sellados» en 5 (12) y las etiquetas siguen en 3. `surprise`/3 sigue siendo la mayoría (31 de 39).
-- **Por mejorar:** en la segunda respuesta de C4 («Ni idea, de verdad. No me sale.»), el tutor todavía bromea («el teclado se ha puesto en huelga»). La v3 pide cero bromas con frustración, y ese «no me sale» la roza.
-- **Latencia:** mediana de 1,1 s.
+- **Monotonía:** sigue sin resolverse. `secret` sale en 27 de 39 negativas, «labios sellados» en 10 y las etiquetas en 5, cifras parecidas a las de la v2 (31, 12 y 3). Una primera pasada completa de la v3, antes de la iteración 1, dio 20, 5 y 3, así que es sobre todo variación del modelo. Flash-Lite no sigue esa parte del prompt; queda pendiente resolverlo en el servidor.
+- **Por mejorar:** en la segunda respuesta de C4 («Ni idea, de verdad. No me sale.»), a veces todavía bromea. La v3 pide cero bromas con frustración, y ese «no me sale» la roza.
+- **Latencia:** mediana de 1,2 s.
 - **`gemini-3.8-flash`:** no se pudo medir, porque en el plan gratuito responde 429 a todas las peticiones. Se compara en el 3.1, con el plan de pago.
 
 **Decisión:** el **prompt v3** con `gemini-3.5-flash-lite`.

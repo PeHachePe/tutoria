@@ -1364,6 +1364,12 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
   - con un código que supera los ejemplos: no hay línea que señalar ni pista que dar, y si no ha ejecutado ese código, que le invite a pulsar «Ejecutar». En ese caso, la línea de la petición no le impone un nivel.
 - **Historial como chat:** las 10 últimas interacciones van como mensajes de alumno y de tutor, y las respuestas del tutor como el JSON que escribió, para que siga respondiendo en ese formato.
 - **Código numerado** (`3| …`), y pistas que citan la línea solo cuando algún ejemplo falla.
+- **Ejemplos de sintaxis de un catálogo fijo** (iteración 1, a petición del autor: «en cosas así de ponme un ejemplo de tal debería ayudar más»):
+  - `SYNTAX_EXAMPLES`, en `data/tutor/syntax-examples.ts`, sin imports, tiene un ejemplo corto y genérico de función, `for`, `for…of`, `while`, `if`, variables, vectores, cadenas, `Math` y operadores, sin acumuladores ni nada que se parezca a un ejercicio;
+  - el modelo pide los temas en el campo `syntax`, y el servidor añade sus ejemplos (dos como mucho) solo a una pregunta, nunca a una pista;
+  - `syntaxTopicsIn()` reconoce la pregunta («¿cómo es la sintaxis del for?», «ponme un ejemplo de Math.floor») y añade una nota en la petición; también lo usa el tutor simulado.
+- **Las preguntas directas se responden tal cual:** la línea de la petición ya no impone el nivel a una pregunta, que antes se respondía como una pista de nivel 3 («En la línea 4…»). El nivel es para la lógica del ejercicio.
+- **Explicar más y repetir menos** (iteración 1): el prompt pide decir en una frase el porqué, no abrir cada respuesta con «En la línea…» y aportar algo nuevo en cada respuesta. Una nota en la petición recuerda cómo empezaban las tres últimas respuestas.
 - **Bloques de código en el chat:** `splitCodeBlocks()`, `CodeBlock` (compartido, con «Copiar») y `TutorMessage`. Un bloque que todavía está llegando ya se muestra como bloque, y las líneas largas se parten.
 - **Modelo:** sigue `gemini-3.5-flash-lite`. La comparación con `gemini-3.8-flash` queda para el 3.1, con el plan de pago (ya estaba en pendientes).
 - **Batería:** controles C4 (esqueleto), C5 (frustración) y C6 (línea del bucle), con una comprobación automática (`check`) y el veredicto «no cumple». Con `--quick` ahora se ven las respuestas.
@@ -1373,13 +1379,14 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **Solo el validador, como decía el plan:** el modelo barato no escribe el bloque con fiabilidad, y lo que no se escribe tampoco se puede validar.
 - **Guardar los nombres de los parámetros en el ejercicio:** sería lo ideal (también para `insertSkeleton`, en el 2.5e), pero obliga a una migración, a repasar 42 ejercicios y a cambiar el formulario del docente. Queda en pendientes para el 4.3.
 - **Nombres genéricos siempre** (`a`, `b`): enseñan peor. El modelo los elige a partir del enunciado.
+- **Que el modelo escriba los ejemplos de sintaxis:** un «ejemplo casi igual» es justo el ataque 7 de la batería. Con el catálogo, ni el mejor ataque saca otra cosa que un ejemplo genérico.
 - **Detectar la frustración con expresiones regulares:** la batería no lo necesitó (C5 cumple).
 - **Dejar la subida de nivel en manos del modelo:** no se podría comprobar ni mostrar en el medidor.
 
 **Consecuencias:**
 
-- Prompt v3 (`docs/prompt-history.md`). `ANSWER_FORMAT` gana `skeleton`, que es opcional.
+- Prompt v3 (`docs/prompt-history.md`). `ANSWER_FORMAT` gana `skeleton` y `syntax`, los dos opcionales, y `checkAnswer()` recibe sus reglas en un objeto (`mayKeepQuiet`, `skeleton`, `examples`).
 - El 2.5e puede reutilizar `skeletonBlock()` para `insertSkeleton`.
 - Pendientes: los nombres de los parámetros en el ejercicio (4.3) y el atasco en el chat como señal del panel docente (fase 4).
 
-**Aprobación:** el autor aprobó el plan con las mejoras propuestas («haz lo que creas mejor»). Que el servidor escriba el esqueleto, las notas deterministas y la etiqueta «Más ayuda» las decidió el agente por delegación, a la vista de la batería.
+**Aprobación:** el autor aprobó el plan con las mejoras propuestas («haz lo que creas mejor») y, en la iteración 1, pidió ejemplos de sintaxis y respuestas que expliquen más sin ser repetitivas («yo no vi nada exagerado»). Que el servidor escriba el esqueleto, las notas deterministas y la etiqueta «Más ayuda» las decidió el agente por delegación, a la vista de la batería.
