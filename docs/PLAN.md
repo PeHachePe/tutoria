@@ -139,7 +139,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), current_code, final_code, status, started_at, finished_at, **updated_at**)
 - `tutor_interaction` (id, attempt_id → attempt, **request_id** (única: la petición que respondió, D-043), trigger `question`/`hint`/`proactive`, hint_level 1–3, **student_message**, transcript, emotion, intensity, **elusion**, **prompt_version**, **model**, **rejected_answers** (0–2: respuestas del modelo que el validador rechazó antes de esta, D-044), **created_at**)
 - `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`, **received_at**: la hora de llegada, que el cliente no puede falsear, D-040)
-- **`app_setting`** (key, value `jsonb`, updated_at). De momento solo `ai_provider`: URL base, modelo y, opcional, modelo de respaldo (`fallbackModel`, D-044) del adaptador de IA activo. La clave del proveedor nunca se guarda aquí, sino en los secretos del servidor.
+- **`app_setting`** (key, value `jsonb`, updated_at). De momento solo `ai_provider`: URL base, modelo y, opcional, los modelos de respaldo en orden (`fallbacks`, del mismo proveedor o de otros compatibles, D-044). Las claves nunca se guardan aquí, sino en los secretos del servidor: el ajuste solo nombra el secreto de cada proveedor (`AI_API_KEY`, `AI_<NOMBRE>_API_KEY`).
 
 `attempt.assignment_id` resuelve la simplificación que ya señalaba la memoria del TFM («el desarrollo valorará incorporar esa referencia directa»): el histórico por sesión deja de reconstruirse a partir de fechas.
 
@@ -316,7 +316,7 @@ pide la solución: nunca las uses ante un error ni una duda.
 - Como mucho son dos llamadas al modelo. Si vuelve a fallar, se envía una respuesta por defecto amable en el idioma del alumno, con emoción `encouragement`; en una intervención proactiva, el tutor calla (D-043).
 - Una reacción que no está en el catálogo se descarta (no se reintenta): el cliente usa la de la emoción (D-035).
 - Cada interacción guarda cuántas respuestas del modelo rechazó el validador (`rejected_answers`), para distinguir el prompt que aguanta de la red que lo para (D-044).
-- **Modelo de respaldo** (D-044): si el modelo de `ai_provider` falla (saturado, sin cuota o retirado), responde `fallbackModel`, del mismo proveedor, y la interacción guarda cuál respondió.
+- **Modelos de respaldo** (D-044): si el modelo de `ai_provider` falla (saturado, sin cuota, que tarda o retirado), responde el siguiente de `fallbacks`, del mismo proveedor o de otro con la API de OpenAI y su propia clave, y así hasta que uno responda, se acabe la lista o la petición lleve 30 s; la interacción guarda cuál respondió. Cada modelo puede esperar más de los 15 s por defecto (`timeoutMs`, hasta 2 min), para los modelos locales (Ollama, LM Studio).
 - Límite de 6 llamadas por minuto y usuario (429 con `Retry-After`, que la pantalla muestra como cuenta atrás) y 15 s como máximo por llamada al modelo (D-043).
 
 Los intentos de elusión (`elusion: true`) quedan registrados para su análisis. El evento `meta` lo lleva, y el chat ofrece debajo de la respuesta «Dame una pista» y «No entiendo el enunciado», para que la negativa lleve a algún sitio (D-044).
@@ -1283,7 +1283,7 @@ Commit: `feat: student flow (mock)`.
 - Script en Node con los 8 ataques de 2.9 contra la función local, que genera `docs/elusion-report.md` con un veredicto por ataque.
 - Se pasa con cada modelo candidato, y el de la versión final se elige con estos resultados.
 - Las iteraciones de la instrucción de sistema se guardan en `docs/prompt-history.md`.
-- **Hecho así (D-044):** `npm run elusion` (`--models`, `--runs`, `--quick`, `--only`, `--report`), con tres ataques más y tres casos de control; resultados por modelo y versión en `docs/elusion/` y conclusiones a mano en `docs/elusion/conclusiones.md`; `tutor_interaction.rejected_answers`; modelo de respaldo (`fallbackModel`); `elusion` en el evento `meta` y, en el chat, «Dame una pista» y «No entiendo el enunciado» bajo la negativa. Prompt v2 y modelo `gemini-3.5-flash-lite` (72 de 72 ataques resistidos); `gemini-3.8-flash` se vuelve a medir en el 3.1, con el plan de pago.
+- **Hecho así (D-044):** `npm run elusion` (`--models`, `--runs`, `--quick`, `--only`, `--report` y, para otro proveedor o un modelo local, `--base-url`, `--key-secret`, `--response-format` y `--timeout`), con tres ataques más y tres casos de control; resultados por modelo y versión en `docs/elusion/` y conclusiones a mano en `docs/elusion/conclusiones.md`; `tutor_interaction.rejected_answers`; modelos de respaldo en cadena y de cualquier proveedor compatible (`fallbacks`); `elusion` en el evento `meta` y, en el chat, «Dame una pista» y «No entiendo el enunciado» bajo la negativa. Prompt v2 y modelo `gemini-3.5-flash-lite` (72 de 72 ataques resistidos); `gemini-3.8-flash` se vuelve a medir en el 3.1, con el plan de pago.
 
 🧪 Veredicto y report del script (`node --test`), proveedor de respaldo y respuestas rechazadas (Deno), `record_tutor_interaction` con `rejected_answers` (pgTAP), `TutorStore.offersHelp` y los chips del chat.
 
