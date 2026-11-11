@@ -4,6 +4,7 @@ import type { ActionError } from '../attempt-store';
 const FAILED: Record<ActionError['action'], string> = {
   run: $localize`:@@workspace.runFailed:No se han podido ejecutar las pruebas.`,
   submit: $localize`:@@workspace.submitFailed:No se ha podido entregar.`,
+  retry: $localize`:@@workspace.retryFailed:No se ha podido empezar otro intento.`,
 };
 
 /** What to do about it, from the kind of error (4.2); the code is never lost. */
@@ -22,7 +23,7 @@ function advice(error: unknown): string {
   }
 }
 
-/** Message for a run or a submission that failed (CU-01, 4b): what failed and what to do. */
+/** Message for a run, a submission or a new attempt that failed (CU-01, 4b): what failed and what to do. */
 export function actionErrorMessage({ action, error }: ActionError): string {
   return `${FAILED[action]} ${advice(error)}`;
 }

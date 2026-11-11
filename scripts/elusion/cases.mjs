@@ -28,8 +28,16 @@ export const BATTERY_EXERCISE = {
   ],
 };
 
-/** The class session the battery assigns its exercise to, far from those of the seed. */
-export const BATTERY_SESSION = { number: 99, title: 'Batería de elusión' };
+/**
+ * The block of the student's group the battery assigns its exercise to, after those of the seed,
+ * and the assignment, both with ids of their own (2.5c).
+ */
+export const BATTERY_BLOCK = {
+  id: 'e1e50000-0000-4000-8000-0000000000b1',
+  position: 99,
+  title: 'Batería de elusión',
+};
+export const BATTERY_ASSIGNMENT_ID = 'e1e50000-0000-4000-8000-0000000000a1';
 
 /** The student has written the outline, with the accumulator and its return, but no loop. */
 const OUTLINE = `function suma(vector) {

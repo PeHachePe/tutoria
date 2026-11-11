@@ -1,5 +1,6 @@
 import type { AppUser, ClassGroup, Enrollment, Role, UserStatus } from '../../user';
 import { fixtureId } from './fixture-id';
+import { ADVANCED_PROGRAMMING_ID, BASIC_PROGRAMMING_ID, WEB_CLIENT_ID } from './subjects';
 
 /**
  * Password of every seed user, in the mock data and in local Supabase. A test value: these
@@ -18,6 +19,10 @@ export const DISABLED_STUDENT_ID = fixtureId('user', 50);
 
 export const DAW_GROUP_ID = fixtureId('group', 1);
 export const DAM_GROUP_ID = fixtureId('group', 2);
+/** The same class as 1.º DAW A, in another subject with the same teacher: two tabs in the catalog. */
+export const DAW_WEB_GROUP_ID = fixtureId('group', 3);
+/** 1.º DAM B in advanced programming, with its own teacher: other subjects than 1.º DAW A. */
+export const DAM_ADVANCED_GROUP_ID = fixtureId('group', 4);
 
 /** Students of 1.º DAW A, a full class (24): the first four have the richest history. */
 const DAW_STUDENTS: readonly (readonly [name: string, email: string])[] = [
@@ -95,11 +100,39 @@ export const USERS: readonly AppUser[] = [
 ];
 
 export const GROUPS: readonly ClassGroup[] = [
-  { id: DAW_GROUP_ID, name: '1.º DAW A', schoolYear: '2026/27', teacherId: TEACHER_ID },
-  { id: DAM_GROUP_ID, name: '1.º DAM B', schoolYear: '2026/27', teacherId: OTHER_TEACHER_ID },
+  {
+    id: DAW_GROUP_ID,
+    name: '1.º DAW A',
+    schoolYear: '2026/27',
+    teacherId: TEACHER_ID,
+    subjectId: BASIC_PROGRAMMING_ID,
+  },
+  {
+    id: DAM_GROUP_ID,
+    name: '1.º DAM B',
+    schoolYear: '2026/27',
+    teacherId: OTHER_TEACHER_ID,
+    subjectId: BASIC_PROGRAMMING_ID,
+  },
+  {
+    id: DAW_WEB_GROUP_ID,
+    name: '1.º DAW A',
+    schoolYear: '2026/27',
+    teacherId: TEACHER_ID,
+    subjectId: WEB_CLIENT_ID,
+  },
+  {
+    id: DAM_ADVANCED_GROUP_ID,
+    name: '1.º DAM B',
+    schoolYear: '2026/27',
+    teacherId: OTHER_TEACHER_ID,
+    subjectId: ADVANCED_PROGRAMMING_ID,
+  },
 ];
 
 export const ENROLLMENTS: readonly Enrollment[] = [
   ...DAW_STUDENT_IDS.map((userId) => ({ groupId: DAW_GROUP_ID, userId })),
   ...DAM_STUDENT_IDS.map((userId) => ({ groupId: DAM_GROUP_ID, userId })),
+  ...DAW_STUDENT_IDS.map((userId) => ({ groupId: DAW_WEB_GROUP_ID, userId })),
+  ...DAM_STUDENT_IDS.map((userId) => ({ groupId: DAM_ADVANCED_GROUP_ID, userId })),
 ].map((enrollment, index) => ({ id: fixtureId('enrollment', index + 1), ...enrollment }));

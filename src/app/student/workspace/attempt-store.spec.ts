@@ -17,6 +17,7 @@ function attemptOf(exerciseId: string, status: StoredAttemptStatus = 'in_progres
     exerciseId,
     userId: 'student-1',
     assignmentId: `assignment-${exerciseId}`,
+    number: 1,
     currentCode: '',
     finalCode: null,
     status,
@@ -49,6 +50,8 @@ function savedAs(attempt: Attempt, code: string): Attempt {
 
 describe('AttemptStore', () => {
   let openOrCreate: ReturnType<typeof vi.fn<AttemptService['openOrCreate']>>;
+  let list: ReturnType<typeof vi.fn<AttemptService['list']>>;
+  let retry: ReturnType<typeof vi.fn<AttemptService['retry']>>;
   let saveCode: ReturnType<typeof vi.fn<AttemptService['saveCode']>>;
   let submit: ReturnType<typeof vi.fn<AttemptService['submit']>>;
   let run: ReturnType<typeof vi.fn<CodeRunnerService['run']>>;
@@ -60,6 +63,8 @@ describe('AttemptStore', () => {
     authService = new FakeAuthService();
     channel = new FakeTabChannel();
     openOrCreate = vi.fn<AttemptService['openOrCreate']>();
+    list = vi.fn<AttemptService['list']>(() => Promise.resolve([]));
+    retry = vi.fn<AttemptService['retry']>();
     saveCode = vi.fn<AttemptService['saveCode']>();
     submit = vi.fn<AttemptService['submit']>();
     run = vi.fn<CodeRunnerService['run']>();
@@ -67,7 +72,7 @@ describe('AttemptStore', () => {
       providers: [
         AttemptStore,
         ...provideTestEditingTab(channel),
-        { provide: AttemptService, useValue: { openOrCreate, saveCode, submit } },
+        { provide: AttemptService, useValue: { openOrCreate, list, retry, saveCode, submit } },
         { provide: CodeRunnerService, useValue: { run } },
         { provide: AuthService, useValue: authService },
       ],
@@ -88,7 +93,7 @@ describe('AttemptStore', () => {
 
     await expect(store.open('exercise-3')).resolves.toEqual(attempt);
 
-    expect(openOrCreate).toHaveBeenCalledWith('exercise-3');
+    expect(openOrCreate).toHaveBeenCalledWith('exercise-3', undefined);
     expect(store.attempt()).toEqual(attempt);
     expect(store.status()).toBe('tests_failed');
   });
@@ -128,6 +133,118 @@ describe('AttemptStore', () => {
     await expect(store.open('exercise-9')).rejects.toEqual(new DataError('not_found'));
 
     expect(store.attempt()).toBeUndefined();
+  });
+
+  describe('attempts at the assignment (2.5c)', () => {
+    const first = { ...attemptOf('exercise-3', 'submitted'), id: 'attempt-1', number: 1 };
+    const second = { ...attemptOf('exercise-3', 'submitted'), id: 'attempt-2', number: 2 };
+    const third = { ...attemptOf('exercise-3'), id: 'attempt-3', number: 3 };
+
+    it('opens an earlier attempt by its number and lists them all', async () => {
+      openOrCreate.mockResolvedValue(first);
+      list.mockResolvedValue([first, second]);
+
+      await store.open('assignment-3', 1);
+      await vi.waitFor(() => expect(store.attemptList()).toHaveLength(2));
+
+      expect(openOrCreate).toHaveBeenCalledWith('assignment-3', 1);
+      expect(list).toHaveBeenCalledWith('assignment-3');
+      expect(store.isLatest()).toBe(false);
+      expect(store.canRetry()).toBe(false);
+      expect(store.practising()).toBe(false);
+    });
+
+    it('keeps the list of the assignment open now, not one that arrives late', async () => {
+      const late = deferred<Attempt[]>();
+      openOrCreate.mockResolvedValue(first);
+      list.mockReturnValueOnce(late.promise).mockResolvedValueOnce([]);
+      await store.open('assignment-3');
+      await store.open('assignment-4');
+
+      late.resolve([first, second]);
+      await late.promise;
+
+      expect(store.attemptList()).toEqual([]);
+    });
+
+    it('opens the exercise without the list when it fails', async () => {
+      openOrCreate.mockResolvedValue(second);
+      list.mockRejectedValue(new DataError('network'));
+
+      await store.open('assignment-3');
+      await Promise.resolve();
+
+      expect(store.attempt()).toEqual(second);
+      expect(store.attemptList()).toEqual([]);
+      expect(store.isLatest()).toBe(true);
+    });
+
+    it('practises the latest submitted attempt again, with the next one empty', async () => {
+      openOrCreate.mockResolvedValue(second);
+      list.mockResolvedValue([first, second]);
+      retry.mockResolvedValue(third);
+      await store.open('assignment-3');
+      await vi.waitFor(() => expect(store.attemptList()).toHaveLength(2));
+      expect(store.practising()).toBe(true);
+      expect(store.canRetry()).toBe(true);
+
+      await expect(store.retry()).resolves.toBe(true);
+
+      expect(retry).toHaveBeenCalledWith('assignment-3');
+      expect(store.attempt()).toEqual(third);
+      expect(store.attemptList().map((attempt) => attempt.number)).toEqual([1, 2, 3]);
+      expect(store.canRetry()).toBe(false);
+    });
+
+    it('does nothing when the attempt cannot be practised again', async () => {
+      await expect(store.retry()).resolves.toBe(false);
+      openOrCreate.mockResolvedValue(third);
+      await store.open('assignment-3');
+
+      await expect(store.retry()).resolves.toBe(false);
+
+      expect(retry).not.toHaveBeenCalled();
+    });
+
+    it('keeps a failure to practise again to show it and retry', async () => {
+      openOrCreate.mockResolvedValue(first);
+      retry.mockRejectedValue(new DataError('network'));
+      await store.open('assignment-3');
+
+      await expect(store.retry()).resolves.toBe(false);
+
+      expect(store.actionError()).toEqual({ action: 'retry', error: new DataError('network') });
+      expect(store.attempt()).toEqual(first);
+      expect(store.retrying()).toBe(false);
+    });
+
+    it('ignores the new attempt if the student opened another exercise meanwhile', async () => {
+      const answer = deferred<Attempt>();
+      openOrCreate.mockResolvedValueOnce(first).mockResolvedValueOnce(attemptOf('exercise-4'));
+      retry.mockReturnValue(answer.promise);
+      await store.open('assignment-3');
+
+      const retrying = store.retry();
+      await store.open('assignment-4');
+      answer.resolve(third);
+
+      await expect(retrying).resolves.toBe(false);
+      expect(store.attempt()?.exerciseId).toBe('exercise-4');
+    });
+
+    it('drops a failure to practise again if the student opened another exercise meanwhile', async () => {
+      const answer = deferred<Attempt>();
+      openOrCreate.mockResolvedValueOnce(first).mockResolvedValueOnce(attemptOf('exercise-4'));
+      retry.mockReturnValue(answer.promise);
+      await store.open('assignment-3');
+
+      const retrying = store.retry();
+      await store.open('assignment-4');
+      answer.reject(new DataError('network'));
+
+      await expect(retrying).resolves.toBe(false);
+      expect(store.actionError()).toBeUndefined();
+    });
   });
 
   describe('autosave', () => {

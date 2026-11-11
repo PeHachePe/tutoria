@@ -1,41 +1,30 @@
-import type { ClassSession, Difficulty, Exercise, ExerciseAssignment, Test } from '../../exercise';
-import type { ExerciseText } from '../../exercise-text';
+import type { ClassBlock, Exercise, ExerciseAssignment, Test } from '../../exercise';
+import type { ExerciseSubject } from '../../subject';
+import { ADVANCED_EXERCISE_FIXTURES } from './advanced-exercises';
+import { BASIC_EXERCISE_FIXTURES } from './basic-exercises';
+import type { ExerciseFixture, SampleCode } from './exercise-fixture';
 import { fixtureId } from './fixture-id';
-import { DAM_GROUP_ID, DAW_GROUP_ID, TEACHER_ID } from './users';
+import { WEB_EXERCISE_FIXTURES } from './web-exercises';
+import { ADVANCED_PROGRAMMING_ID, BASIC_PROGRAMMING_ID, WEB_CLIENT_ID } from './subjects';
+import {
+  DAM_ADVANCED_GROUP_ID,
+  DAM_GROUP_ID,
+  DAW_GROUP_ID,
+  DAW_WEB_GROUP_ID,
+  TEACHER_ID,
+} from './users';
 
 const CREATED_AT = '2026-09-28T16:00:00.000Z';
 
 /** The seed is written in Spanish, its source language (D-023, D-045). */
 const SOURCE_LOCALE = 'es';
 
-interface ExerciseFixture {
-  readonly title: string;
-  readonly difficulty: Difficulty;
-  /** The contents column of 2.5. */
-  readonly topics: readonly string[];
-  readonly functionName: string;
-  /** Names the function and what it returns as they are, the same in every language. */
-  readonly statement: string;
-  /**
-   * The texts in the other languages of the interface, required so that `npm run check` fails if
-   * an exercise of the seed is left without one (D-045).
-   */
-  readonly translations: Readonly<Record<'en' | 'ca', ExerciseText>>;
-  /** Visible tests, the edge case among them: `[input, expectedOutput]`. */
-  readonly visible: readonly (readonly [readonly unknown[], unknown])[];
-  /**
-   * Two hidden tests, after the visible ones: the student only sees whether they passed. One more
-   * edge case each, so returning a fixed value cannot pass them by chance.
-   */
-  readonly hidden: readonly (readonly [readonly unknown[], unknown])[];
-}
-
 function timesTable(n: number): string {
   return Array.from({ length: 10 }, (_, i) => `${n} x ${i + 1} = ${n * (i + 1)}`).join('\n');
 }
 
-/** The initial set of 2.5, in the order of the table. */
-const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
+/** The initial set of 2.5, in the order of the table, and two of web development on the client (2.5c). */
+const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
   {
     title: 'Contar números pares',
     difficulty: 'initial',
@@ -290,9 +279,93 @@ const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
       [[[1, 2, 3], 3], 2],
     ],
   },
+  {
+    title: 'Validar un correo electrónico',
+    difficulty: 'initial',
+    topics: ['Cadenas', 'validación de formularios'],
+    functionName: 'isValidEmail',
+    statement:
+      'Escribe una función `isValidEmail` que reciba un texto y devuelva `true` si parece una dirección de correo válida y `false` si no. Para este ejercicio, es válida si no tiene espacios, tiene exactamente una `@` con al menos un carácter antes y, después de la `@`, un dominio con un punto que no esté ni al principio ni al final.',
+    translations: {
+      en: {
+        title: 'Validate an email address',
+        topics: ['Strings', 'form validation'],
+        statement:
+          'Write a function `isValidEmail` that takes a text and returns `true` if it looks like a valid email address and `false` if not. For this exercise, it is valid if it has no spaces, has exactly one `@` with at least one character before it and, after the `@`, a domain with a dot that is neither at its start nor at its end.',
+      },
+      ca: {
+        title: 'Validar un correu electrònic',
+        topics: ['Cadenes', 'validació de formularis'],
+        statement:
+          'Escriu una funció `isValidEmail` que rebi un text i retorni `true` si sembla una adreça de correu vàlida i `false` si no. Per a aquest exercici, és vàlida si no té espais, té exactament una `@` amb almenys un caràcter abans i, després de la `@`, un domini amb un punt que no sigui ni al principi ni al final.',
+      },
+    },
+    visible: [
+      [['ana@example.com'], true],
+      [['ana.example.com'], false],
+      [['ana@@example.com'], false],
+      [['ana@example'], false],
+    ],
+    hidden: [
+      [['@example.com'], false],
+      [['ana lopez@example.com'], false],
+    ],
+  },
+  {
+    title: 'Construir una cadena de consulta',
+    difficulty: 'medium',
+    topics: ['Objetos', 'URL'],
+    functionName: 'toQueryString',
+    statement:
+      'Escribe una función `toQueryString` que reciba un objeto con los parámetros de una búsqueda y devuelva la cadena de consulta de una URL, sin el `?` del principio: cada parámetro como `clave=valor`, en el orden del objeto y separados por `&`. Codifica claves y valores con `encodeURIComponent`, de modo que un espacio sea `%20`. Con un objeto vacío, devuelve una cadena vacía.',
+    translations: {
+      en: {
+        title: 'Build a query string',
+        topics: ['Objects', 'URL'],
+        statement:
+          'Write a function `toQueryString` that takes an object with the parameters of a search and returns the query string of a URL, without the leading `?`: each parameter as `key=value`, in the order of the object and separated by `&`. Encode keys and values with `encodeURIComponent`, so that a space becomes `%20`. With an empty object, return an empty string.',
+      },
+      ca: {
+        title: 'Construir una cadena de consulta',
+        topics: ['Objectes', 'URL'],
+        statement:
+          "Escriu una funció `toQueryString` que rebi un objecte amb els paràmetres d'una cerca i retorni la cadena de consulta d'una URL, sense el `?` del principi: cada paràmetre com a `clau=valor`, en l'ordre de l'objecte i separats per `&`. Codifica claus i valors amb `encodeURIComponent`, de manera que un espai sigui `%20`. Amb un objecte buit, retorna una cadena buida.",
+      },
+    },
+    // The database keeps objects as jsonb, which sorts their keys (shorter first): the keys of
+    // every test are already in that order, so the expected text does not depend on it.
+    visible: [
+      [[{ q: 'gatos', page: 2 }], 'q=gatos&page=2'],
+      [[{ q: 'hola mundo' }], 'q=hola%20mundo'],
+      [[{}], ''],
+    ],
+    hidden: [
+      [[{ a: '1&2' }], 'a=1%262'],
+      [[{ año: 2026 }], 'a%C3%B1o=2026'],
+    ],
+  },
 ];
 
-/** Id of exercise `n` (1 to 8) of the table in 2.5. */
+/**
+ * Every exercise of the seed, numbered from 1 in this order: 1 to 10 above, 11 to 17 of basic
+ * programming, 18 to 30 of web development on the client and 31 to 42 of advanced programming
+ * (2.5c), at least 15 per subject.
+ */
+const EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
+  ...BASE_EXERCISE_FIXTURES,
+  ...BASIC_EXERCISE_FIXTURES,
+  ...WEB_EXERCISE_FIXTURES,
+  ...ADVANCED_EXERCISE_FIXTURES,
+];
+
+/** Sample code of the exercises from 11 on, by number: those up to 10 are in activity.ts. */
+export const MORE_SAMPLE_CODE: Readonly<Record<number, SampleCode>> = Object.fromEntries(
+  [...BASIC_EXERCISE_FIXTURES, ...WEB_EXERCISE_FIXTURES, ...ADVANCED_EXERCISE_FIXTURES].map(
+    (fixture, index) => [BASE_EXERCISE_FIXTURES.length + index + 1, fixture.code],
+  ),
+);
+
+/** Id of exercise `n` (1 to 42), in the order of EXERCISE_FIXTURES. */
 export function exerciseId(n: number): string {
   return fixtureId('exercise', n);
 }
@@ -330,35 +403,252 @@ export const TESTS: readonly Test[] = EXERCISE_FIXTURES.flatMap((fixture, index)
   })),
 );
 
-/** Session of each exercise (1 to 8) in 1.º DAW A, as in 2.5. */
-export const DAW_SESSIONS: readonly number[] = [1, 1, 2, 2, 3, 4, 4, 4];
-/** 1.º DAM B has only reached session 2, with the first four exercises. */
-export const DAM_SESSIONS: readonly number[] = [1, 1, 2, 2];
-
-/** Titles of the sessions of each group: one is left without a title to show the fallback. */
-const SESSION_TITLES: readonly (readonly [groupId: string, titles: readonly (string | null)[]])[] =
-  [
-    [
-      DAW_GROUP_ID,
-      ['Bucles y condicionales', 'Vectores', 'Recorridos de vectores', 'Cadenas y formato'],
-    ],
-    [DAM_GROUP_ID, ['Primeros bucles', null]],
-  ];
-
-export const CLASS_SESSIONS: readonly ClassSession[] = SESSION_TITLES.flatMap(([groupId, titles]) =>
-  titles.map((title, index) => ({ groupId, number: index + 1, title })),
-).map((session, index) => ({ id: fixtureId('session', index + 1), ...session }));
-
-export function assignmentId(groupId: string, exerciseNumber: number): string {
-  return fixtureId('assignment', (groupId === DAW_GROUP_ID ? 0 : 100) + exerciseNumber);
+/** From `first` to `last`, both included. */
+function range(first: number, last: number): number[] {
+  return Array.from({ length: last - first + 1 }, (_, i) => first + i);
 }
 
-export const ASSIGNMENTS: readonly ExerciseAssignment[] = [
-  ...DAW_SESSIONS.map((session, index) => ({ groupId: DAW_GROUP_ID, n: index + 1, session })),
-  ...DAM_SESSIONS.map((session, index) => ({ groupId: DAM_GROUP_ID, n: index + 1, session })),
-].map(({ groupId, n, session }) => ({
-  id: assignmentId(groupId, n),
-  groupId,
-  exerciseId: exerciseId(n),
-  session,
+/** The exercises of each subject, 15 each: 6 to 8 serve both programming subjects. */
+const SUBJECT_EXERCISES: readonly (readonly [subjectId: string, exercises: readonly number[]])[] = [
+  [BASIC_PROGRAMMING_ID, [...range(1, 8), ...range(11, 17)]],
+  [WEB_CLIENT_ID, [9, 10, ...range(18, 30)]],
+  [ADVANCED_PROGRAMMING_ID, [6, 7, 8, ...range(31, 42)]],
+];
+
+export const EXERCISE_SUBJECTS: readonly ExerciseSubject[] = SUBJECT_EXERCISES.flatMap(
+  ([subjectId, numbers]) => numbers.map((n) => ({ exerciseId: exerciseId(n), subjectId })),
+);
+
+/** Block of each exercise (1 to 8) in 1.º DAW A, as the sessions of 2.5. */
+export const DAW_BLOCKS: readonly number[] = [1, 1, 2, 2, 3, 4, 4, 4];
+/** 1.º DAM B has only reached its second block, with the first four exercises. */
+export const DAM_BLOCKS: readonly number[] = [1, 1, 2, 2];
+
+interface BlockFixture {
+  readonly groupId: string;
+  /** Order of the block in its group, from 1. */
+  readonly position: number;
+  readonly title: string;
+  /** Required, as those of the exercises (D-045). */
+  readonly translations: Readonly<Record<'en' | 'ca', { readonly title: string }>>;
+  /** Exercises (1 to 10) of the block, in order. */
+  readonly exercises: readonly number[];
+  /** Exercises of the block the teacher has not shown yet. */
+  readonly hiddenExercises?: readonly number[];
+  readonly isHidden?: boolean;
+}
+
+function titles(en: string, ca: string): BlockFixture['translations'] {
+  return { en: { title: en }, ca: { title: ca } };
+}
+
+/**
+ * The blocks of each group, in order. 1.º DAW A has its four topics, the resit of topic 2 (the same
+ * exercises again, with attempts of their own, and one more it has not shown yet) and a final review
+ * it is still preparing, hidden. The same class has a second subject, with blocks of its own.
+ */
+const BLOCK_FIXTURES: readonly BlockFixture[] = [
+  {
+    groupId: DAW_GROUP_ID,
+    position: 1,
+    title: 'Tema 1: Bucles y condicionales',
+    translations: titles('Topic 1: Loops and conditionals', 'Tema 1: Bucles i condicionals'),
+    exercises: [1, 2],
+  },
+  {
+    groupId: DAW_GROUP_ID,
+    position: 2,
+    title: 'Tema 2: Vectores',
+    translations: titles('Topic 2: Arrays', 'Tema 2: Vectors'),
+    exercises: [3, 4],
+  },
+  {
+    groupId: DAW_GROUP_ID,
+    position: 3,
+    title: 'Tema 3: Recorridos de vectores',
+    translations: titles('Topic 3: Traversing arrays', 'Tema 3: Recorreguts de vectors'),
+    exercises: [5],
+  },
+  {
+    groupId: DAW_GROUP_ID,
+    position: 4,
+    title: 'Tema 4: Cadenas y formato',
+    translations: titles('Topic 4: Strings and formatting', 'Tema 4: Cadenes i format'),
+    exercises: [6, 7, 8],
+  },
+  {
+    groupId: DAW_GROUP_ID,
+    position: 7,
+    title: 'Recuperación del tema 2',
+    translations: titles('Topic 2 resit', 'Recuperació del tema 2'),
+    exercises: [3, 4, 2],
+    hiddenExercises: [2],
+  },
+  {
+    groupId: DAW_GROUP_ID,
+    position: 8,
+    title: 'Repaso final',
+    translations: titles('Final review', 'Repàs final'),
+    exercises: [5, 8],
+    isHidden: true,
+  },
+  {
+    groupId: DAM_GROUP_ID,
+    position: 1,
+    title: 'Tema 1: Primeros bucles',
+    translations: titles('Topic 1: First loops', 'Tema 1: Primers bucles'),
+    exercises: [1, 2],
+  },
+  {
+    groupId: DAM_GROUP_ID,
+    position: 2,
+    title: 'Tema 2: Vectores',
+    translations: titles('Topic 2: Arrays', 'Tema 2: Vectors'),
+    exercises: [3, 4],
+  },
+  {
+    groupId: DAW_WEB_GROUP_ID,
+    position: 1,
+    title: 'Tema 1: Validación de formularios',
+    translations: titles('Topic 1: Form validation', 'Tema 1: Validació de formularis'),
+    exercises: [9, 21, 26],
+  },
+  {
+    groupId: DAW_WEB_GROUP_ID,
+    position: 2,
+    title: 'Tema 2: URL y peticiones',
+    translations: titles('Topic 2: URLs and requests', 'Tema 2: URL i peticions'),
+    exercises: [10, 19, 28],
+  },
+  {
+    groupId: DAM_ADVANCED_GROUP_ID,
+    position: 1,
+    title: 'Tema 1: Cadenas y acumuladores',
+    translations: titles('Topic 1: Strings and accumulators', 'Tema 1: Cadenes i acumuladors'),
+    exercises: [6, 7, 32, 33],
+  },
+  {
+    groupId: DAM_ADVANCED_GROUP_ID,
+    position: 2,
+    title: 'Tema 2: Búsquedas',
+    translations: titles('Topic 2: Searching', 'Tema 2: Cerques'),
+    exercises: [8, 36],
+  },
+  // From here on, the blocks of the larger seed (2.5c): after the others, so their ids stay
+  {
+    groupId: DAW_GROUP_ID,
+    position: 5,
+    title: 'Tema 5: Funciones con números',
+    translations: titles('Topic 5: Functions with numbers', 'Tema 5: Funcions amb nombres'),
+    exercises: [11, 12, 14, 17],
+  },
+  {
+    groupId: DAW_GROUP_ID,
+    position: 6,
+    title: 'Tema 6: Cadenas y listas',
+    translations: titles('Topic 6: Strings and lists', 'Tema 6: Cadenes i llistes'),
+    exercises: [13, 15, 16],
+  },
+  {
+    groupId: DAM_GROUP_ID,
+    position: 3,
+    title: 'Tema 3: Recorridos y cadenas',
+    translations: titles('Topic 3: Traversals and strings', 'Tema 3: Recorreguts i cadenes'),
+    exercises: [5, 6, 7, 8],
+  },
+  {
+    groupId: DAM_GROUP_ID,
+    position: 4,
+    title: 'Tema 4: Funciones con números',
+    translations: titles('Topic 4: Functions with numbers', 'Tema 4: Funcions amb nombres'),
+    exercises: [11, 12, 14, 17],
+  },
+  {
+    groupId: DAM_GROUP_ID,
+    position: 5,
+    title: 'Tema 5: Cadenas y listas',
+    translations: titles('Topic 5: Strings and lists', 'Tema 5: Cadenes i llistes'),
+    exercises: [13, 15, 16],
+  },
+  {
+    groupId: DAW_WEB_GROUP_ID,
+    position: 3,
+    title: 'Tema 3: Textos de la interfaz',
+    translations: titles('Topic 3: Texts of the interface', 'Tema 3: Textos de la interfície'),
+    exercises: [18, 20, 22, 23, 24, 25, 27],
+  },
+  {
+    groupId: DAW_WEB_GROUP_ID,
+    position: 4,
+    title: 'Tema 4: Datos de la tienda',
+    translations: titles('Topic 4: Shop data', 'Tema 4: Dades de la botiga'),
+    exercises: [29, 30],
+  },
+  {
+    groupId: DAM_ADVANCED_GROUP_ID,
+    position: 3,
+    title: 'Tema 3: Listas',
+    translations: titles('Topic 3: Lists', 'Tema 3: Llistes'),
+    exercises: [31, 34, 35, 40, 41],
+  },
+  {
+    groupId: DAM_ADVANCED_GROUP_ID,
+    position: 4,
+    title: 'Tema 4: Algoritmos clásicos',
+    translations: titles('Topic 4: Classic algorithms', 'Tema 4: Algorismes clàssics'),
+    exercises: [37, 38, 39, 42],
+  },
+];
+
+/** Number (1-based) in BLOCK_FIXTURES of the resit block of 1.º DAW A. */
+export const DAW_RESIT_BLOCK = 5;
+/** Number (1-based) in BLOCK_FIXTURES of the final review of 1.º DAW A, still hidden. */
+export const DAW_HIDDEN_BLOCK = 6;
+/** Number (1-based) in BLOCK_FIXTURES of the first block of 1.º DAM B. */
+export const DAM_FIRST_BLOCK = 7;
+/** Number (1-based) in BLOCK_FIXTURES of the first block of advanced programming in 1.º DAM B. */
+export const DAM_ADVANCED_FIRST_BLOCK = 11;
+/** Number (1-based) of the first block of the web client subject of 1.º DAW A. */
+export const DAW_WEB_FIRST_BLOCK = 9;
+
+export const CLASS_BLOCKS: readonly ClassBlock[] = BLOCK_FIXTURES.map((block, index) => ({
+  id: fixtureId('block', index + 1),
+  groupId: block.groupId,
+  position: block.position,
+  title: block.title,
+  sourceLocale: SOURCE_LOCALE,
+  translations: block.translations,
+  isHidden: block.isHidden ?? false,
 }));
+
+/**
+ * Id of the assignment of exercise `n` in block `blockNumber` (1-based) of BLOCK_FIXTURES. The first
+ * assignment of each exercise in 1.º DAW A and 1.º DAM B keeps the id of step 2.1 (`n` and `100 + n`),
+ * so the pgTAP tests still find them; the others go from `100 × blockNumber`.
+ */
+export function blockAssignmentId(blockNumber: number, n: number): string {
+  const { groupId } = BLOCK_FIXTURES[blockNumber - 1];
+  const first = BLOCK_FIXTURES.findIndex(
+    (block) => block.groupId === groupId && block.exercises.includes(n),
+  );
+  const keepsOldId = groupId === DAW_GROUP_ID || groupId === DAM_GROUP_ID;
+  if (first + 1 === blockNumber && keepsOldId) {
+    return assignmentId(groupId, n);
+  }
+  return fixtureId('assignment', blockNumber * 100 + n);
+}
+
+/** Id of the first assignment of exercise `n` (1 to 8) in 1.º DAW A or 1.º DAM B. */
+export function assignmentId(groupId: string, n: number): string {
+  return fixtureId('assignment', (groupId === DAW_GROUP_ID ? 0 : 100) + n);
+}
+
+export const ASSIGNMENTS: readonly ExerciseAssignment[] = BLOCK_FIXTURES.flatMap((block, index) =>
+  block.exercises.map((n) => ({
+    id: blockAssignmentId(index + 1, n),
+    groupId: block.groupId,
+    blockId: fixtureId('block', index + 1),
+    exerciseId: exerciseId(n),
+    isHidden: block.hiddenExercises?.includes(n) ?? false,
+  })),
+);

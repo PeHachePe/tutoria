@@ -93,9 +93,16 @@ insert into app_user (id, name, email, role, status, privacy_notice_seen_at, cre
   ('10000000-0000-4000-8000-000000000050', 'Raúl Medina Cortés', 'raul.medina@tutoria.test', 'student', 'disabled', null, '2026-09-01T08:00:00.000Z', '2026-09-01T08:00:00.000Z')
 on conflict (id) do update set name = excluded.name, email = excluded.email, role = excluded.role, status = excluded.status, privacy_notice_seen_at = excluded.privacy_notice_seen_at, created_at = excluded.created_at, updated_at = excluded.updated_at;
 
-insert into class_group (id, name, school_year, teacher_id) values
-  ('20000000-0000-4000-8000-000000000001', '1.º DAW A', '2026/27', '10000000-0000-4000-8000-000000000002'),
-  ('20000000-0000-4000-8000-000000000002', '1.º DAM B', '2026/27', '10000000-0000-4000-8000-000000000003');
+insert into subject (id, name, source_locale, translations) values
+  ('b0000000-0000-4000-8000-000000000001', 'Programación básica', 'es', '{"en":{"name":"Basic programming"},"ca":{"name":"Programació bàsica"}}'::jsonb),
+  ('b0000000-0000-4000-8000-000000000002', 'Programación avanzada', 'es', '{"en":{"name":"Advanced programming"},"ca":{"name":"Programació avançada"}}'::jsonb),
+  ('b0000000-0000-4000-8000-000000000003', 'Desarrollo web en entorno cliente', 'es', '{"en":{"name":"Client-side web development"},"ca":{"name":"Desenvolupament web en entorn client"}}'::jsonb);
+
+insert into class_group (id, name, school_year, teacher_id, subject_id) values
+  ('20000000-0000-4000-8000-000000000001', '1.º DAW A', '2026/27', '10000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001'),
+  ('20000000-0000-4000-8000-000000000002', '1.º DAM B', '2026/27', '10000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000001'),
+  ('20000000-0000-4000-8000-000000000003', '1.º DAW A', '2026/27', '10000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000003'),
+  ('20000000-0000-4000-8000-000000000004', '1.º DAM B', '2026/27', '10000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002');
 
 insert into enrollment (id, group_id, user_id) values
   ('30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011'),
@@ -127,15 +134,60 @@ insert into enrollment (id, group_id, user_id) values
   ('30000000-0000-4000-8000-000000000027', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000043'),
   ('30000000-0000-4000-8000-000000000028', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000044'),
   ('30000000-0000-4000-8000-000000000029', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000045'),
-  ('30000000-0000-4000-8000-000000000030', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000046');
+  ('30000000-0000-4000-8000-000000000030', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000046'),
+  ('30000000-0000-4000-8000-000000000031', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000011'),
+  ('30000000-0000-4000-8000-000000000032', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000012'),
+  ('30000000-0000-4000-8000-000000000033', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000013'),
+  ('30000000-0000-4000-8000-000000000034', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000014'),
+  ('30000000-0000-4000-8000-000000000035', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000015'),
+  ('30000000-0000-4000-8000-000000000036', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000016'),
+  ('30000000-0000-4000-8000-000000000037', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000017'),
+  ('30000000-0000-4000-8000-000000000038', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000018'),
+  ('30000000-0000-4000-8000-000000000039', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000019'),
+  ('30000000-0000-4000-8000-000000000040', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000020'),
+  ('30000000-0000-4000-8000-000000000041', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000021'),
+  ('30000000-0000-4000-8000-000000000042', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000022'),
+  ('30000000-0000-4000-8000-000000000043', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000023'),
+  ('30000000-0000-4000-8000-000000000044', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000024'),
+  ('30000000-0000-4000-8000-000000000045', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000025'),
+  ('30000000-0000-4000-8000-000000000046', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000026'),
+  ('30000000-0000-4000-8000-000000000047', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000027'),
+  ('30000000-0000-4000-8000-000000000048', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000028'),
+  ('30000000-0000-4000-8000-000000000049', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000029'),
+  ('30000000-0000-4000-8000-000000000050', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000030'),
+  ('30000000-0000-4000-8000-000000000051', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000031'),
+  ('30000000-0000-4000-8000-000000000052', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000032'),
+  ('30000000-0000-4000-8000-000000000053', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000033'),
+  ('30000000-0000-4000-8000-000000000054', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000034'),
+  ('30000000-0000-4000-8000-000000000055', '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000041'),
+  ('30000000-0000-4000-8000-000000000056', '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000042'),
+  ('30000000-0000-4000-8000-000000000057', '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000043'),
+  ('30000000-0000-4000-8000-000000000058', '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000044'),
+  ('30000000-0000-4000-8000-000000000059', '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000045'),
+  ('30000000-0000-4000-8000-000000000060', '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000046');
 
-insert into class_session (id, group_id, number, title) values
-  ('a0000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 1, 'Bucles y condicionales'),
-  ('a0000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 2, 'Vectores'),
-  ('a0000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 3, 'Recorridos de vectores'),
-  ('a0000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', 4, 'Cadenas y formato'),
-  ('a0000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002', 1, 'Primeros bucles'),
-  ('a0000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000002', 2, null);
+insert into class_block (id, group_id, position, title, source_locale, translations, is_hidden) values
+  ('a0000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 1, 'Tema 1: Bucles y condicionales', 'es', '{"en":{"title":"Topic 1: Loops and conditionals"},"ca":{"title":"Tema 1: Bucles i condicionals"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 2, 'Tema 2: Vectores', 'es', '{"en":{"title":"Topic 2: Arrays"},"ca":{"title":"Tema 2: Vectors"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 3, 'Tema 3: Recorridos de vectores', 'es', '{"en":{"title":"Topic 3: Traversing arrays"},"ca":{"title":"Tema 3: Recorreguts de vectors"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', 4, 'Tema 4: Cadenas y formato', 'es', '{"en":{"title":"Topic 4: Strings and formatting"},"ca":{"title":"Tema 4: Cadenes i format"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000001', 7, 'Recuperación del tema 2', 'es', '{"en":{"title":"Topic 2 resit"},"ca":{"title":"Recuperació del tema 2"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000001', 8, 'Repaso final', 'es', '{"en":{"title":"Final review"},"ca":{"title":"Repàs final"}}'::jsonb, true),
+  ('a0000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000002', 1, 'Tema 1: Primeros bucles', 'es', '{"en":{"title":"Topic 1: First loops"},"ca":{"title":"Tema 1: Primers bucles"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000002', 2, 'Tema 2: Vectores', 'es', '{"en":{"title":"Topic 2: Arrays"},"ca":{"title":"Tema 2: Vectors"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000009', '20000000-0000-4000-8000-000000000003', 1, 'Tema 1: Validación de formularios', 'es', '{"en":{"title":"Topic 1: Form validation"},"ca":{"title":"Tema 1: Validació de formularis"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000010', '20000000-0000-4000-8000-000000000003', 2, 'Tema 2: URL y peticiones', 'es', '{"en":{"title":"Topic 2: URLs and requests"},"ca":{"title":"Tema 2: URL i peticions"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000011', '20000000-0000-4000-8000-000000000004', 1, 'Tema 1: Cadenas y acumuladores', 'es', '{"en":{"title":"Topic 1: Strings and accumulators"},"ca":{"title":"Tema 1: Cadenes i acumuladors"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000012', '20000000-0000-4000-8000-000000000004', 2, 'Tema 2: Búsquedas', 'es', '{"en":{"title":"Topic 2: Searching"},"ca":{"title":"Tema 2: Cerques"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000013', '20000000-0000-4000-8000-000000000001', 5, 'Tema 5: Funciones con números', 'es', '{"en":{"title":"Topic 5: Functions with numbers"},"ca":{"title":"Tema 5: Funcions amb nombres"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000014', '20000000-0000-4000-8000-000000000001', 6, 'Tema 6: Cadenas y listas', 'es', '{"en":{"title":"Topic 6: Strings and lists"},"ca":{"title":"Tema 6: Cadenes i llistes"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000015', '20000000-0000-4000-8000-000000000002', 3, 'Tema 3: Recorridos y cadenas', 'es', '{"en":{"title":"Topic 3: Traversals and strings"},"ca":{"title":"Tema 3: Recorreguts i cadenes"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000016', '20000000-0000-4000-8000-000000000002', 4, 'Tema 4: Funciones con números', 'es', '{"en":{"title":"Topic 4: Functions with numbers"},"ca":{"title":"Tema 4: Funcions amb nombres"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000017', '20000000-0000-4000-8000-000000000002', 5, 'Tema 5: Cadenas y listas', 'es', '{"en":{"title":"Topic 5: Strings and lists"},"ca":{"title":"Tema 5: Cadenes i llistes"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000018', '20000000-0000-4000-8000-000000000003', 3, 'Tema 3: Textos de la interfaz', 'es', '{"en":{"title":"Topic 3: Texts of the interface"},"ca":{"title":"Tema 3: Textos de la interfície"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000019', '20000000-0000-4000-8000-000000000003', 4, 'Tema 4: Datos de la tienda', 'es', '{"en":{"title":"Topic 4: Shop data"},"ca":{"title":"Tema 4: Dades de la botiga"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000020', '20000000-0000-4000-8000-000000000004', 3, 'Tema 3: Listas', 'es', '{"en":{"title":"Topic 3: Lists"},"ca":{"title":"Tema 3: Llistes"}}'::jsonb, false),
+  ('a0000000-0000-4000-8000-000000000021', '20000000-0000-4000-8000-000000000004', 4, 'Tema 4: Algoritmos clásicos', 'es', '{"en":{"title":"Topic 4: Classic algorithms"},"ca":{"title":"Tema 4: Algorismes clàssics"}}'::jsonb, false);
 
 insert into exercise (id, title, statement, difficulty, topics, source_locale, translations, language, function_name, max_repeated_failures, max_idle_minutes, created_by, created_at, updated_at) values
   ('40000000-0000-4000-8000-000000000001', 'Contar números pares', 'Escribe una función `countEvens` que reciba un número entero `n` y devuelva cuántos números pares hay entre 1 y `n`, ambos incluidos. Si `n` es menor que 2, la función debe devolver 0.', 'initial', array['Bucles', 'rangos', 'condicionales']::text[], 'es', '{"en":{"title":"Count even numbers","topics":["Loops","ranges","conditionals"],"statement":"Write a function `countEvens` that takes an integer `n` and returns how many even numbers there are between 1 and `n`, both included. If `n` is less than 2, the function must return 0."},"ca":{"title":"Comptar nombres parells","topics":["Bucles","rangs","condicionals"],"statement":"Escriu una funció `countEvens` que rebi un nombre enter `n` i retorni quants nombres parells hi ha entre 1 i `n`, tots dos inclosos. Si `n` és més petit que 2, la funció ha de retornar 0."}}'::jsonb, 'javascript', 'countEvens', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
@@ -145,7 +197,88 @@ insert into exercise (id, title, statement, difficulty, topics, source_locale, t
   ('40000000-0000-4000-8000-000000000005', 'Invertir un vector', 'Escribe una función `reverseArray` que reciba un vector y devuelva un vector nuevo con los mismos elementos en orden inverso. Resuélvelo recorriendo el vector con índices, sin usar `reverse()`. Si el vector está vacío, devuelve un vector vacío.', 'advanced', array['Vectores', 'índices', 'intercambio']::text[], 'es', '{"en":{"title":"Reverse an array","topics":["Arrays","indices","swapping"],"statement":"Write a function `reverseArray` that takes an array and returns a new array with the same elements in reverse order. Solve it by going through the array with indices, without using `reverse()`. If the array is empty, return an empty array."},"ca":{"title":"Invertir un vector","topics":["Vectors","índexs","intercanvi"],"statement":"Escriu una funció `reverseArray` que rebi un vector i retorni un vector nou amb els mateixos elements en ordre invers. Resol-ho recorrent el vector amb índexs, sense fer servir `reverse()`. Si el vector és buit, retorna un vector buit."}}'::jsonb, 'javascript', 'reverseArray', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
   ('40000000-0000-4000-8000-000000000006', 'Contar vocales en una cadena', 'Escribe una función `countVowels` que reciba un texto y devuelva cuántas vocales contiene, sin distinguir mayúsculas de minúsculas. Las vocales con tilde (á, é, í, ó, ú) también cuentan. Si el texto está vacío, la función debe devolver 0.', 'extension', array['Cadenas', 'recorrido y conteo']::text[], 'es', '{"en":{"title":"Count the vowels in a string","topics":["Strings","traversal and counting"],"statement":"Write a function `countVowels` that takes a text and returns how many vowels it contains, ignoring case. Vowels with an accent (á, é, í, ó, ú) count too. If the text is empty, the function must return 0."},"ca":{"title":"Comptar vocals en una cadena","topics":["Cadenes","recorregut i recompte"],"statement":"Escriu una funció `countVowels` que rebi un text i retorni quantes vocals conté, sense distingir majúscules de minúscules. Les vocals amb accent agut (á, é, í, ó, ú) també compten. Si el text és buit, la funció ha de retornar 0."}}'::jsonb, 'javascript', 'countVowels', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
   ('40000000-0000-4000-8000-000000000007', 'Media de un vector con dos decimales', 'Escribe una función `average` que reciba un vector de números y devuelva su media como texto con exactamente dos decimales, por ejemplo `"2.50"`. Si el vector está vacío, la función debe devolver `"0.00"`.', 'extension', array['Acumuladores', 'formato de salida']::text[], 'es', '{"en":{"title":"Average of an array with two decimals","topics":["Accumulators","output format"],"statement":"Write a function `average` that takes an array of numbers and returns its average as a text with exactly two decimals, for example `\"2.50\"`. If the array is empty, the function must return `\"0.00\"`."},"ca":{"title":"Mitjana d''un vector amb dos decimals","topics":["Acumuladors","format de sortida"],"statement":"Escriu una funció `average` que rebi un vector de nombres i retorni la seva mitjana com a text amb exactament dos decimals, per exemple `\"2.50\"`. Si el vector és buit, la funció ha de retornar `\"0.00\"`."}}'::jsonb, 'javascript', 'average', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000008', 'Buscar la primera aparición de un valor', 'Escribe una función `firstIndexOf` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, contando desde 0. Si el valor aparece varias veces, cuenta solo la primera. Si no aparece, la función debe devolver -1.', 'extension', array['Búsqueda secuencial', 'condición compuesta']::text[], 'es', '{"en":{"title":"Find the first occurrence of a value","topics":["Sequential search","compound condition"],"statement":"Write a function `firstIndexOf` that takes an array and a value, and returns the position of the first time that value appears, counting from 0. If the value appears several times, only the first one counts. If it does not appear, the function must return -1."},"ca":{"title":"Buscar la primera aparició d''un valor","topics":["Cerca seqüencial","condició composta"],"statement":"Escriu una funció `firstIndexOf` que rebi un vector i un valor, i retorni la posició de la primera vegada que hi apareix aquest valor, comptant des de 0. Si el valor apareix diverses vegades, només compta la primera. Si no hi apareix, la funció ha de retornar -1."}}'::jsonb, 'javascript', 'firstIndexOf', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z');
+  ('40000000-0000-4000-8000-000000000008', 'Buscar la primera aparición de un valor', 'Escribe una función `firstIndexOf` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, contando desde 0. Si el valor aparece varias veces, cuenta solo la primera. Si no aparece, la función debe devolver -1.', 'extension', array['Búsqueda secuencial', 'condición compuesta']::text[], 'es', '{"en":{"title":"Find the first occurrence of a value","topics":["Sequential search","compound condition"],"statement":"Write a function `firstIndexOf` that takes an array and a value, and returns the position of the first time that value appears, counting from 0. If the value appears several times, only the first one counts. If it does not appear, the function must return -1."},"ca":{"title":"Buscar la primera aparició d''un valor","topics":["Cerca seqüencial","condició composta"],"statement":"Escriu una funció `firstIndexOf` que rebi un vector i un valor, i retorni la posició de la primera vegada que hi apareix aquest valor, comptant des de 0. Si el valor apareix diverses vegades, només compta la primera. Si no hi apareix, la funció ha de retornar -1."}}'::jsonb, 'javascript', 'firstIndexOf', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000009', 'Validar un correo electrónico', 'Escribe una función `isValidEmail` que reciba un texto y devuelva `true` si parece una dirección de correo válida y `false` si no. Para este ejercicio, es válida si no tiene espacios, tiene exactamente una `@` con al menos un carácter antes y, después de la `@`, un dominio con un punto que no esté ni al principio ni al final.', 'initial', array['Cadenas', 'validación de formularios']::text[], 'es', '{"en":{"title":"Validate an email address","topics":["Strings","form validation"],"statement":"Write a function `isValidEmail` that takes a text and returns `true` if it looks like a valid email address and `false` if not. For this exercise, it is valid if it has no spaces, has exactly one `@` with at least one character before it and, after the `@`, a domain with a dot that is neither at its start nor at its end."},"ca":{"title":"Validar un correu electrònic","topics":["Cadenes","validació de formularis"],"statement":"Escriu una funció `isValidEmail` que rebi un text i retorni `true` si sembla una adreça de correu vàlida i `false` si no. Per a aquest exercici, és vàlida si no té espais, té exactament una `@` amb almenys un caràcter abans i, després de la `@`, un domini amb un punt que no sigui ni al principi ni al final."}}'::jsonb, 'javascript', 'isValidEmail', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000010', 'Construir una cadena de consulta', 'Escribe una función `toQueryString` que reciba un objeto con los parámetros de una búsqueda y devuelva la cadena de consulta de una URL, sin el `?` del principio: cada parámetro como `clave=valor`, en el orden del objeto y separados por `&`. Codifica claves y valores con `encodeURIComponent`, de modo que un espacio sea `%20`. Con un objeto vacío, devuelve una cadena vacía.', 'medium', array['Objetos', 'URL']::text[], 'es', '{"en":{"title":"Build a query string","topics":["Objects","URL"],"statement":"Write a function `toQueryString` that takes an object with the parameters of a search and returns the query string of a URL, without the leading `?`: each parameter as `key=value`, in the order of the object and separated by `&`. Encode keys and values with `encodeURIComponent`, so that a space becomes `%20`. With an empty object, return an empty string."},"ca":{"title":"Construir una cadena de consulta","topics":["Objectes","URL"],"statement":"Escriu una funció `toQueryString` que rebi un objecte amb els paràmetres d''una cerca i retorni la cadena de consulta d''una URL, sense el `?` del principi: cada paràmetre com a `clau=valor`, en l''ordre de l''objecte i separats per `&`. Codifica claus i valors amb `encodeURIComponent`, de manera que un espai sigui `%20`. Amb un objecte buit, retorna una cadena buida."}}'::jsonb, 'javascript', 'toQueryString', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000011', 'Año bisiesto', 'Escribe una función `isLeapYear` que reciba un año y devuelva `true` si es bisiesto y `false` si no. Un año es bisiesto si es divisible entre 4, salvo los divisibles entre 100, que solo lo son si además son divisibles entre 400.', 'initial', array['Condicionales', 'operadores lógicos']::text[], 'es', '{"en":{"title":"Leap year","topics":["Conditionals","logical operators"],"statement":"Write a function `isLeapYear` that takes a year and returns `true` if it is a leap year and `false` if not. A year is a leap year if it is divisible by 4, except those divisible by 100, which only are if they are also divisible by 400."},"ca":{"title":"Any de traspàs","topics":["Condicionals","operadors lògics"],"statement":"Escriu una funció `isLeapYear` que rebi un any i retorni `true` si és de traspàs i `false` si no. Un any és de traspàs si és divisible entre 4, excepte els divisibles entre 100, que només ho són si a més són divisibles entre 400."}}'::jsonb, 'javascript', 'isLeapYear', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000012', 'Factorial de un número', 'Escribe una función `factorial` que reciba un número entero `n`, mayor o igual que 0, y devuelva su factorial: el producto de todos los enteros de 1 a `n`. El factorial de 0 es 1.', 'medium', array['Bucles', 'acumulador']::text[], 'es', '{"en":{"title":"Factorial of a number","topics":["Loops","accumulator"],"statement":"Write a function `factorial` that takes an integer `n`, greater than or equal to 0, and returns its factorial: the product of every integer from 1 to `n`. The factorial of 0 is 1."},"ca":{"title":"Factorial d''un nombre","topics":["Bucles","acumulador"],"statement":"Escriu una funció `factorial` que rebi un nombre enter `n`, més gran o igual que 0, i retorni el seu factorial: el producte de tots els enters de 1 a `n`. El factorial de 0 és 1."}}'::jsonb, 'javascript', 'factorial', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000013', 'FizzBuzz', 'Escribe una función `fizzBuzz` que reciba un número `n` y devuelva un vector con los textos de 1 a `n`: cada número como texto, salvo los múltiplos de 3, que son `"Fizz"`, los de 5, `"Buzz"`, y los de 3 y 5 a la vez, `"FizzBuzz"`. Si `n` es 0, el vector está vacío.', 'medium', array['Bucles', 'condicionales', 'vectores']::text[], 'es', '{"en":{"title":"FizzBuzz","topics":["Loops","conditionals","arrays"],"statement":"Write a function `fizzBuzz` that takes a number `n` and returns an array with the texts from 1 to `n`: each number as text, except multiples of 3, which are `\"Fizz\"`, those of 5, `\"Buzz\"`, and those of both 3 and 5, `\"FizzBuzz\"`. If `n` is 0, the array is empty."},"ca":{"title":"FizzBuzz","topics":["Bucles","condicionals","vectors"],"statement":"Escriu una funció `fizzBuzz` que rebi un nombre `n` i retorni un vector amb els textos de 1 a `n`: cada nombre com a text, excepte els múltiples de 3, que són `\"Fizz\"`, els de 5, `\"Buzz\"`, i els de 3 i 5 alhora, `\"FizzBuzz\"`. Si `n` és 0, el vector és buit."}}'::jsonb, 'javascript', 'fizzBuzz', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000014', 'De grados Celsius a Fahrenheit', 'Escribe una función `celsiusToFahrenheit` que reciba una temperatura en grados Celsius y devuelva su valor en grados Fahrenheit, con la fórmula F = C × 9 / 5 + 32.', 'initial', array['Expresiones', 'operadores aritméticos']::text[], 'es', '{"en":{"title":"From Celsius to Fahrenheit","topics":["Expressions","arithmetic operators"],"statement":"Write a function `celsiusToFahrenheit` that takes a temperature in degrees Celsius and returns its value in degrees Fahrenheit, with the formula F = C × 9 / 5 + 32."},"ca":{"title":"De graus Celsius a Fahrenheit","topics":["Expressions","operadors aritmètics"],"statement":"Escriu una funció `celsiusToFahrenheit` que rebi una temperatura en graus Celsius i retorni el seu valor en graus Fahrenheit, amb la fórmula F = C × 9 / 5 + 32."}}'::jsonb, 'javascript', 'celsiusToFahrenheit', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000015', 'Contar las cifras de un número', 'Escribe una función `countDigits` que reciba un número entero y devuelva cuántas cifras tiene, sin contar el signo. El 0 tiene una cifra.', 'medium', array['Números', 'casos límite']::text[], 'es', '{"en":{"title":"Count the digits of a number","topics":["Numbers","edge cases"],"statement":"Write a function `countDigits` that takes an integer and returns how many digits it has, without counting the sign. 0 has one digit."},"ca":{"title":"Comptar les xifres d''un nombre","topics":["Nombres","casos límit"],"statement":"Escriu una funció `countDigits` que rebi un nombre enter i retorni quantes xifres té, sense comptar el signe. El 0 té una xifra."}}'::jsonb, 'javascript', 'countDigits', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000016', 'Primera letra en mayúscula', 'Escribe una función `capitalize` que reciba una palabra y la devuelva con la primera letra en mayúscula y el resto en minúscula. Con un texto vacío, devuelve un texto vacío.', 'initial', array['Cadenas', 'mayúsculas y minúsculas']::text[], 'es', '{"en":{"title":"First letter in upper case","topics":["Strings","upper and lower case"],"statement":"Write a function `capitalize` that takes a word and returns it with the first letter in upper case and the rest in lower case. With an empty text, it returns an empty text."},"ca":{"title":"Primera lletra en majúscula","topics":["Cadenes","majúscules i minúscules"],"statement":"Escriu una funció `capitalize` que rebi una paraula i la retorni amb la primera lletra en majúscula i la resta en minúscula. Amb un text buit, retorna un text buit."}}'::jsonb, 'javascript', 'capitalize', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000017', 'Número primo', 'Escribe una función `isPrime` que reciba un número entero y devuelva `true` si es primo y `false` si no. Un número es primo si es mayor que 1 y solo es divisible entre 1 y entre sí mismo.', 'advanced', array['Bucles', 'divisibilidad', 'casos límite']::text[], 'es', '{"en":{"title":"Prime number","topics":["Loops","divisibility","edge cases"],"statement":"Write a function `isPrime` that takes an integer and returns `true` if it is prime and `false` if not. A number is prime if it is greater than 1 and only divisible by 1 and by itself."},"ca":{"title":"Nombre primer","topics":["Bucles","divisibilitat","casos límit"],"statement":"Escriu una funció `isPrime` que rebi un nombre enter i retorni `true` si és primer i `false` si no. Un nombre és primer si és més gran que 1 i només és divisible entre 1 i entre ell mateix."}}'::jsonb, 'javascript', 'isPrime', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000018', 'Convertir un título en slug', 'Escribe una función `slugify` que convierta un título en la parte de una URL: en minúsculas, sin espacios al principio ni al final y con las palabras separadas por un solo guion (`-`), aunque entre ellas haya varios espacios. Un título vacío da un texto vacío.', 'medium', array['Cadenas', 'URL amigables']::text[], 'es', '{"en":{"title":"Turn a title into a slug","topics":["Strings","friendly URLs"],"statement":"Write a function `slugify` that turns a title into the part of a URL: in lower case, without spaces at the start or the end, and with the words separated by a single hyphen (`-`), even if there are several spaces between them. An empty title gives an empty text."},"ca":{"title":"Convertir un títol en slug","topics":["Cadenes","URL amigables"],"statement":"Escriu una funció `slugify` que converteixi un títol en la part d''una URL: en minúscules, sense espais al principi ni al final i amb les paraules separades per un sol guió (`-`), encara que entre elles hi hagi diversos espais. Un títol buit dona un text buit."}}'::jsonb, 'javascript', 'slugify', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000019', 'Leer un parámetro de la URL', 'Escribe una función `getQueryParam` que reciba una URL y el nombre de un parámetro, y devuelva su valor decodificado con `decodeURIComponent` (`hola%20mundo` es `hola mundo`). Si el parámetro aparece varias veces, cuenta el primero. Si no aparece, devuelve `null`.', 'advanced', array['URL', 'cadenas de consulta', 'decodificación']::text[], 'es', '{"en":{"title":"Read a parameter of the URL","topics":["URL","query strings","decoding"],"statement":"Write a function `getQueryParam` that takes a URL and the name of a parameter, and returns its value decoded with `decodeURIComponent` (`hola%20mundo` is `hola mundo`). If the parameter appears several times, the first one counts. If it does not appear, it returns `null`."},"ca":{"title":"Llegir un paràmetre de l''URL","topics":["URL","cadenes de consulta","descodificació"],"statement":"Escriu una funció `getQueryParam` que rebi una URL i el nom d''un paràmetre, i retorni el seu valor descodificat amb `decodeURIComponent` (`hola%20mundo` és `hola mundo`). Si el paràmetre apareix diverses vegades, compta el primer. Si no hi apareix, retorna `null`."}}'::jsonb, 'javascript', 'getQueryParam', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000020', 'Precio con formato', 'Escribe una función `formatPrice` que reciba un importe y lo devuelva como texto con dos decimales, coma decimal y el símbolo del euro detrás, separado por un espacio: `12.5` es `"12,50 €"`. Sin separador de miles.', 'initial', array['Números', 'formato de salida']::text[], 'es', '{"en":{"title":"Formatted price","topics":["Numbers","output format"],"statement":"Write a function `formatPrice` that takes an amount and returns it as text with two decimals, a decimal comma and the euro sign after it, separated by a space: `12.5` is `\"12,50 €\"`. No thousands separator."},"ca":{"title":"Preu amb format","topics":["Nombres","format de sortida"],"statement":"Escriu una funció `formatPrice` que rebi un import i el retorni com a text amb dos decimals, coma decimal i el símbol de l''euro darrere, separat per un espai: `12.5` és `\"12,50 €\"`. Sense separador de milers."}}'::jsonb, 'javascript', 'formatPrice', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000021', 'Contraseña segura', 'Escribe una función `isStrongPassword` que reciba una contraseña y devuelva `true` si es segura: al menos 8 caracteres, al menos una cifra y al menos una letra mayúscula. Si no, devuelve `false`.', 'medium', array['Validación de formularios', 'expresiones regulares']::text[], 'es', '{"en":{"title":"Strong password","topics":["Form validation","regular expressions"],"statement":"Write a function `isStrongPassword` that takes a password and returns `true` if it is strong: at least 8 characters, at least one digit and at least one upper case letter. If not, it returns `false`."},"ca":{"title":"Contrasenya segura","topics":["Validació de formularis","expressions regulars"],"statement":"Escriu una funció `isStrongPassword` que rebi una contrasenya i retorni `true` si és segura: almenys 8 caràcters, almenys una xifra i almenys una lletra majúscula. Si no, retorna `false`."}}'::jsonb, 'javascript', 'isStrongPassword', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000022', 'Contar las palabras de un texto', 'Escribe una función `countWords` que reciba un texto y devuelva cuántas palabras tiene. Las palabras están separadas por uno o varios espacios, y puede haber espacios al principio y al final. Un texto vacío o solo con espacios tiene 0 palabras.', 'initial', array['Cadenas', 'casos límite']::text[], 'es', '{"en":{"title":"Count the words of a text","topics":["Strings","edge cases"],"statement":"Write a function `countWords` that takes a text and returns how many words it has. The words are separated by one or more spaces, and there can be spaces at the start and the end. An empty text, or one with only spaces, has 0 words."},"ca":{"title":"Comptar les paraules d''un text","topics":["Cadenes","casos límit"],"statement":"Escriu una funció `countWords` que rebi un text i retorni quantes paraules té. Les paraules estan separades per un o diversos espais, i hi pot haver espais al principi i al final. Un text buit o només amb espais té 0 paraules."}}'::jsonb, 'javascript', 'countWords', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000023', 'Iniciales de un nombre', 'Escribe una función `getInitials` que reciba un nombre completo y devuelva sus iniciales en mayúscula, juntas: `"Lucía Martín Gómez"` es `"LMG"`. Puede haber varios espacios entre las palabras o en los extremos. Un nombre vacío da un texto vacío.', 'initial', array['Cadenas', 'vectores']::text[], 'es', '{"en":{"title":"Initials of a name","topics":["Strings","arrays"],"statement":"Write a function `getInitials` that takes a full name and returns its initials in upper case, together: `\"Lucía Martín Gómez\"` is `\"LMG\"`. There can be several spaces between the words or at the ends. An empty name gives an empty text."},"ca":{"title":"Inicials d''un nom","topics":["Cadenes","vectors"],"statement":"Escriu una funció `getInitials` que rebi un nom complet i retorni les seves inicials en majúscula, juntes: `\"Lucía Martín Gómez\"` és `\"LMG\"`. Hi pot haver diversos espais entre les paraules o als extrems. Un nom buit dona un text buit."}}'::jsonb, 'javascript', 'getInitials', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000024', 'Recortar un texto largo', 'Escribe una función `truncate` que reciba un texto y una longitud máxima. Si el texto es más largo, devuelve sus primeros caracteres hasta esa longitud seguidos de `…`; si no, lo devuelve tal cual.', 'medium', array['Cadenas', 'condicionales']::text[], 'es', '{"en":{"title":"Shorten a long text","topics":["Strings","conditionals"],"statement":"Write a function `truncate` that takes a text and a maximum length. If the text is longer, it returns its first characters up to that length followed by `…`; if not, it returns it as it is."},"ca":{"title":"Retallar un text llarg","topics":["Cadenes","condicionals"],"statement":"Escriu una funció `truncate` que rebi un text i una longitud màxima. Si el text és més llarg, retorna els seus primers caràcters fins a aquesta longitud seguits de `…`; si no, el retorna tal qual."}}'::jsonb, 'javascript', 'truncate', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000025', 'Fecha en formato español', 'Escribe una función `formatDate` que reciba una fecha como `"2026-11-11"` (año, mes y día) y la devuelva como `"11/11/2026"` (día, mes y año), con los ceros a la izquierda que ya trae.', 'initial', array['Cadenas', 'fechas']::text[], 'es', '{"en":{"title":"Date in Spanish format","topics":["Strings","dates"],"statement":"Write a function `formatDate` that takes a date such as `\"2026-11-11\"` (year, month and day) and returns it as `\"11/11/2026\"` (day, month and year), with the leading zeros it already has."},"ca":{"title":"Data en format espanyol","topics":["Cadenes","dates"],"statement":"Escriu una funció `formatDate` que rebi una data com `\"2026-11-11\"` (any, mes i dia) i la retorni com `\"11/11/2026\"` (dia, mes i any), amb els zeros a l''esquerra que ja porta."}}'::jsonb, 'javascript', 'formatDate', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000026', 'Validar un código postal', 'Escribe una función `isValidPostalCode` que reciba un texto y devuelva `true` si es un código postal español válido: exactamente cinco cifras, y las dos primeras (la provincia) entre 01 y 52. Si no, devuelve `false`.', 'advanced', array['Validación de formularios', 'expresiones regulares']::text[], 'es', '{"en":{"title":"Validate a postal code","topics":["Form validation","regular expressions"],"statement":"Write a function `isValidPostalCode` that takes a text and returns `true` if it is a valid Spanish postal code: exactly five digits, and the first two (the province) between 01 and 52. If not, it returns `false`."},"ca":{"title":"Validar un codi postal","topics":["Validació de formularis","expressions regulars"],"statement":"Escriu una funció `isValidPostalCode` que rebi un text i retorni `true` si és un codi postal espanyol vàlid: exactament cinc xifres, i les dues primeres (la província) entre 01 i 52. Si no, retorna `false`."}}'::jsonb, 'javascript', 'isValidPostalCode', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000027', 'Color RGB en hexadecimal', 'Escribe una función `rgbToHex` que reciba los tres componentes de un color (rojo, verde y azul, de 0 a 255) y devuelva el color en hexadecimal para CSS: `#` y dos cifras en minúscula por componente, con un cero delante si hace falta. `(255, 0, 0)` es `"#ff0000"`.', 'medium', array['Números', 'bases', 'formato de salida']::text[], 'es', '{"en":{"title":"RGB colour in hexadecimal","topics":["Numbers","bases","output format"],"statement":"Write a function `rgbToHex` that takes the three components of a colour (red, green and blue, from 0 to 255) and returns the colour in hexadecimal for CSS: `#` and two lower case digits per component, with a leading zero if needed. `(255, 0, 0)` is `\"#ff0000\"`."},"ca":{"title":"Color RGB en hexadecimal","topics":["Nombres","bases","format de sortida"],"statement":"Escriu una funció `rgbToHex` que rebi els tres components d''un color (vermell, verd i blau, de 0 a 255) i retorni el color en hexadecimal per a CSS: `#` i dues xifres en minúscula per component, amb un zero davant si cal. `(255, 0, 0)` és `\"#ff0000\"`."}}'::jsonb, 'javascript', 'rgbToHex', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000028', 'Construir una URL', 'Escribe una función `buildUrl` que reciba la dirección base de una web y una ruta, y devuelva la URL completa con una sola barra (`/`) entre las dos, aunque la base acabe en barra o la ruta empiece por ella.', 'medium', array['URL', 'cadenas']::text[], 'es', '{"en":{"title":"Build a URL","topics":["URL","strings"],"statement":"Write a function `buildUrl` that takes the base address of a website and a path, and returns the full URL with a single slash (`/`) between them, even if the base ends in a slash or the path starts with one."},"ca":{"title":"Construir una URL","topics":["URL","cadenes"],"statement":"Escriu una funció `buildUrl` que rebi l''adreça base d''un web i una ruta, i retorni l''URL completa amb una sola barra (`/`) entre totes dues, encara que la base acabi en barra o la ruta hi comenci."}}'::jsonb, 'javascript', 'buildUrl', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000029', 'Productos de una categoría', 'Escribe una función `namesInCategory` que reciba un vector de productos, cada uno con `name` y `category`, y una categoría, y devuelva los nombres de los productos de esa categoría, en su orden. Si no hay ninguno, devuelve un vector vacío.', 'medium', array['Objetos', 'filtrar vectores']::text[], 'es', '{"en":{"title":"Products of a category","topics":["Objects","filtering arrays"],"statement":"Write a function `namesInCategory` that takes an array of products, each with `name` and `category`, and a category, and returns the names of the products of that category, in their order. If there are none, it returns an empty array."},"ca":{"title":"Productes d''una categoria","topics":["Objectes","filtrar vectors"],"statement":"Escriu una funció `namesInCategory` que rebi un vector de productes, cadascun amb `name` i `category`, i una categoria, i retorni els noms dels productes d''aquesta categoria, en el seu ordre. Si no n''hi ha cap, retorna un vector buit."}}'::jsonb, 'javascript', 'namesInCategory', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000030', 'Total del carrito', 'Escribe una función `cartTotal` que reciba el carrito de una tienda, un vector de líneas con `price` y `quantity`, y devuelva el total (precio por cantidad de cada línea) redondeado a dos decimales como número. Un carrito vacío vale 0.', 'advanced', array['Objetos', 'acumulador', 'redondeo']::text[], 'es', '{"en":{"title":"Cart total","topics":["Objects","accumulator","rounding"],"statement":"Write a function `cartTotal` that takes the cart of a shop, an array of lines with `price` and `quantity`, and returns the total (price times quantity of each line) rounded to two decimals as a number. An empty cart is worth 0."},"ca":{"title":"Total del carretó","topics":["Objectes","acumulador","arrodoniment"],"statement":"Escriu una funció `cartTotal` que rebi el carretó d''una botiga, un vector de línies amb `price` i `quantity`, i retorni el total (preu per quantitat de cada línia) arrodonit a dos decimals com a nombre. Un carretó buit val 0."}}'::jsonb, 'javascript', 'cartTotal', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000031', 'Quitar los repetidos', 'Escribe una función `removeDuplicates` que reciba un vector y devuelva otro sin elementos repetidos, en el orden en que aparece cada uno por primera vez.', 'medium', array['Vectores', 'conjuntos']::text[], 'es', '{"en":{"title":"Remove the duplicates","topics":["Arrays","sets"],"statement":"Write a function `removeDuplicates` that takes an array and returns another one without repeated elements, in the order in which each one first appears."},"ca":{"title":"Treure els repetits","topics":["Vectors","conjunts"],"statement":"Escriu una funció `removeDuplicates` que rebi un vector i en retorni un altre sense elements repetits, en l''ordre en què apareix cadascun per primera vegada."}}'::jsonb, 'javascript', 'removeDuplicates', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000032', 'Palíndromo', 'Escribe una función `isPalindrome` que reciba un texto y devuelva `true` si se lee igual al derecho que al revés, sin tener en cuenta los espacios ni las mayúsculas: `"Yo hago yoga hoy"` lo es. Un texto vacío también lo es.', 'medium', array['Cadenas', 'recorrido inverso']::text[], 'es', '{"en":{"title":"Palindrome","topics":["Strings","reverse traversal"],"statement":"Write a function `isPalindrome` that takes a text and returns `true` if it reads the same forwards and backwards, ignoring spaces and upper case: `\"Yo hago yoga hoy\"` is one. An empty text is one too."},"ca":{"title":"Palíndrom","topics":["Cadenes","recorregut invers"],"statement":"Escriu una funció `isPalindrome` que rebi un text i retorni `true` si es llegeix igual del dret que del revés, sense tenir en compte els espais ni les majúscules: `\"Yo hago yoga hoy\"` ho és. Un text buit també ho és."}}'::jsonb, 'javascript', 'isPalindrome', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000033', 'El elemento más frecuente', 'Escribe una función `mostFrequent` que reciba un vector y devuelva el elemento que más se repite. Si empatan varios, el que aparece antes. Con un vector vacío, devuelve `null`.', 'advanced', array['Vectores', 'conteo', 'casos límite']::text[], 'es', '{"en":{"title":"The most frequent element","topics":["Arrays","counting","edge cases"],"statement":"Write a function `mostFrequent` that takes an array and returns the element that repeats the most. If several tie, the one that appears first. With an empty array, it returns `null`."},"ca":{"title":"L''element més freqüent","topics":["Vectors","recompte","casos límit"],"statement":"Escriu una funció `mostFrequent` que rebi un vector i retorni l''element que es repeteix més. Si n''empaten diversos, el que apareix abans. Amb un vector buit, retorna `null`."}}'::jsonb, 'javascript', 'mostFrequent', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000034', 'Aplanar un nivel', 'Escribe una función `flattenOnce` que reciba un vector de vectores y devuelva un solo vector con sus elementos, en orden. Solo se aplana un nivel: un vector que esté más adentro se queda como está.', 'medium', array['Vectores anidados']::text[], 'es', '{"en":{"title":"Flatten one level","topics":["Nested arrays"],"statement":"Write a function `flattenOnce` that takes an array of arrays and returns a single array with their elements, in order. Only one level is flattened: an array deeper inside stays as it is."},"ca":{"title":"Aplanar un nivell","topics":["Vectors niats"],"statement":"Escriu una funció `flattenOnce` que rebi un vector de vectors i retorni un sol vector amb els seus elements, en ordre. Només s''aplana un nivell: un vector que sigui més endins es queda com està."}}'::jsonb, 'javascript', 'flattenOnce', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000035', 'Partir en trozos', 'Escribe una función `chunk` que reciba un vector y un tamaño, y devuelva el vector partido en trozos de ese tamaño, en orden; el último puede ser más corto. `chunk([1, 2, 3, 4, 5], 2)` es `[[1, 2], [3, 4], [5]]`.', 'advanced', array['Vectores', 'índices']::text[], 'es', '{"en":{"title":"Split into chunks","topics":["Arrays","indexes"],"statement":"Write a function `chunk` that takes an array and a size, and returns the array split into chunks of that size, in order; the last one can be shorter. `chunk([1, 2, 3, 4, 5], 2)` is `[[1, 2], [3, 4], [5]]`."},"ca":{"title":"Partir en trossos","topics":["Vectors","índexs"],"statement":"Escriu una funció `chunk` que rebi un vector i una mida, i retorni el vector partit en trossos d''aquesta mida, en ordre; l''últim pot ser més curt. `chunk([1, 2, 3, 4, 5], 2)` és `[[1, 2], [3, 4], [5]]`."}}'::jsonb, 'javascript', 'chunk', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000036', 'Búsqueda binaria', 'Escribe una función `binarySearch` que reciba un vector de números ordenado de menor a mayor y un valor, y devuelva su posición con una búsqueda binaria: mira el elemento del medio y sigue solo por la mitad donde puede estar. Si no está, devuelve -1.', 'advanced', array['Búsqueda binaria', 'vectores ordenados']::text[], 'es', '{"en":{"title":"Binary search","topics":["Binary search","sorted arrays"],"statement":"Write a function `binarySearch` that takes an array of numbers sorted from lowest to highest and a value, and returns its position with a binary search: look at the middle element and go on only with the half where it can be. If it is not there, it returns -1."},"ca":{"title":"Cerca binària","topics":["Cerca binària","vectors ordenats"],"statement":"Escriu una funció `binarySearch` que rebi un vector de nombres ordenat de menor a major i un valor, i retorni la seva posició amb una cerca binària: mira l''element del mig i continua només per la meitat on pot ser. Si no hi és, retorna -1."}}'::jsonb, 'javascript', 'binarySearch', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000037', 'Ordenar números', 'Escribe una función `sortNumbers` que reciba un vector de números y devuelva otro con los mismos números ordenados de menor a mayor, sin cambiar el original. Ojo: sin función de comparación, `sort` ordena como si fueran textos.', 'medium', array['Ordenación', 'funciones de comparación']::text[], 'es', '{"en":{"title":"Sort numbers","topics":["Sorting","compare functions"],"statement":"Write a function `sortNumbers` that takes an array of numbers and returns another one with the same numbers sorted from lowest to highest, without changing the original. Careful: without a compare function, `sort` sorts as if they were texts."},"ca":{"title":"Ordenar nombres","topics":["Ordenació","funcions de comparació"],"statement":"Escriu una funció `sortNumbers` que rebi un vector de nombres i en retorni un altre amb els mateixos nombres ordenats de menor a major, sense canviar l''original. Compte: sense funció de comparació, `sort` ordena com si fossin textos."}}'::jsonb, 'javascript', 'sortNumbers', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000038', 'Máximo común divisor', 'Escribe una función `gcd` que reciba dos números enteros, mayores o iguales que 0 y no los dos 0, y devuelva su máximo común divisor. El algoritmo de Euclides lo calcula rápido: el mcd de `a` y `b` es el de `b` y el resto de dividir `a` entre `b`, hasta que `b` es 0.', 'medium', array['Algoritmo de Euclides', 'bucles']::text[], 'es', '{"en":{"title":"Greatest common divisor","topics":["Euclidean algorithm","loops"],"statement":"Write a function `gcd` that takes two integers, greater than or equal to 0 and not both 0, and returns their greatest common divisor. The Euclidean algorithm computes it fast: the gcd of `a` and `b` is that of `b` and the remainder of dividing `a` by `b`, until `b` is 0."},"ca":{"title":"Màxim comú divisor","topics":["Algorisme d''Euclides","bucles"],"statement":"Escriu una funció `gcd` que rebi dos nombres enters, més grans o iguals que 0 i no tots dos 0, i retorni el seu màxim comú divisor. L''algorisme d''Euclides el calcula ràpidament: el mcd d''`a` i `b` és el de `b` i el residu de dividir `a` entre `b`, fins que `b` és 0."}}'::jsonb, 'javascript', 'gcd', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000039', 'Números romanos', 'Escribe una función `romanToInt` que reciba un número romano (`I` = 1, `V` = 5, `X` = 10, `L` = 50, `C` = 100, `D` = 500, `M` = 1000) y devuelva su valor. Una letra que va delante de otra de más valor resta en lugar de sumar: `IX` es 9 y `XL`, 40.', 'extension', array['Cadenas', 'objetos como tablas', 'casos especiales']::text[], 'es', '{"en":{"title":"Roman numerals","topics":["Strings","objects as tables","special cases"],"statement":"Write a function `romanToInt` that takes a Roman numeral (`I` = 1, `V` = 5, `X` = 10, `L` = 50, `C` = 100, `D` = 500, `M` = 1000) and returns its value. A letter before another of higher value subtracts instead of adding: `IX` is 9 and `XL`, 40."},"ca":{"title":"Nombres romans","topics":["Cadenes","objectes com a taules","casos especials"],"statement":"Escriu una funció `romanToInt` que rebi un nombre romà (`I` = 1, `V` = 5, `X` = 10, `L` = 50, `C` = 100, `D` = 500, `M` = 1000) i retorni el seu valor. Una lletra que va davant d''una altra de més valor resta en lloc de sumar: `IX` és 9 i `XL`, 40."}}'::jsonb, 'javascript', 'romanToInt', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000040', 'Trasponer una matriz', 'Escribe una función `transpose` que reciba una matriz (un vector de filas, todas de la misma longitud) y devuelva su traspuesta: las filas pasan a ser columnas. Una matriz vacía da una matriz vacía.', 'advanced', array['Matrices', 'bucles anidados']::text[], 'es', '{"en":{"title":"Transpose a matrix","topics":["Matrices","nested loops"],"statement":"Write a function `transpose` that takes a matrix (an array of rows, all of the same length) and returns its transpose: the rows become columns. An empty matrix gives an empty matrix."},"ca":{"title":"Transposar una matriu","topics":["Matrius","bucles niats"],"statement":"Escriu una funció `transpose` que rebi una matriu (un vector de files, totes de la mateixa longitud) i retorni la seva transposada: les files passen a ser columnes. Una matriu buida dona una matriu buida."}}'::jsonb, 'javascript', 'transpose', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000041', 'Mezclar dos vectores ordenados', 'Escribe una función `mergeSorted` que reciba dos vectores de números, cada uno ordenado de menor a mayor, y devuelva uno solo con todos sus números, también ordenado. Recórrelos a la vez con un índice para cada uno, sin volver a ordenar.', 'advanced', array['Vectores ordenados', 'dos índices']::text[], 'es', '{"en":{"title":"Merge two sorted arrays","topics":["Sorted arrays","two indexes"],"statement":"Write a function `mergeSorted` that takes two arrays of numbers, each sorted from lowest to highest, and returns a single one with all their numbers, also sorted. Go through both at once with an index for each one, without sorting again."},"ca":{"title":"Barrejar dos vectors ordenats","topics":["Vectors ordenats","dos índexs"],"statement":"Escriu una funció `mergeSorted` que rebi dos vectors de nombres, cadascun ordenat de menor a major, i en retorni un de sol amb tots els seus nombres, també ordenat. Recorre''ls alhora amb un índex per a cadascun, sense tornar a ordenar."}}'::jsonb, 'javascript', 'mergeSorted', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000042', 'Sucesión de Fibonacci', 'Escribe una función `fibonacci` que reciba un número `n` y devuelva un vector con los `n` primeros términos de la sucesión de Fibonacci, que empieza por 0 y 1 y en la que cada término es la suma de los dos anteriores. Si `n` es 0, el vector está vacío.', 'medium', array['Bucles', 'vectores', 'sucesiones']::text[], 'es', '{"en":{"title":"Fibonacci sequence","topics":["Loops","arrays","sequences"],"statement":"Write a function `fibonacci` that takes a number `n` and returns an array with the first `n` terms of the Fibonacci sequence, which starts with 0 and 1 and in which each term is the sum of the two before it. If `n` is 0, the array is empty."},"ca":{"title":"Successió de Fibonacci","topics":["Bucles","vectors","successions"],"statement":"Escriu una funció `fibonacci` que rebi un nombre `n` i retorni un vector amb els `n` primers termes de la successió de Fibonacci, que comença per 0 i 1 i en què cada terme és la suma dels dos anteriors. Si `n` és 0, el vector és buit."}}'::jsonb, 'javascript', 'fibonacci', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z');
+
+insert into exercise_subject (exercise_id, subject_id) values
+  ('40000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000005', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000006', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000007', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000008', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000011', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000012', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000013', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000014', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000015', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000016', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000001'),
+  ('40000000-0000-4000-8000-000000000009', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000010', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000018', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000019', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000020', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000021', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000022', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000023', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000024', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000025', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000026', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000027', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000028', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000029', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000030', 'b0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000006', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000007', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000008', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000031', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000032', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000033', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000034', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000035', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000036', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000037', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000038', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000039', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000040', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000041', 'b0000000-0000-4000-8000-000000000002'),
+  ('40000000-0000-4000-8000-000000000042', 'b0000000-0000-4000-8000-000000000002');
 
 insert into test (id, exercise_id, input, expected_output, is_hidden, position) values
   ('50000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000001', '[10]'::jsonb, '5'::jsonb, false, 0),
@@ -193,24 +326,257 @@ insert into test (id, exercise_id, input, expected_output, is_hidden, position) 
   ('50000000-0000-4000-8000-000000000083', '40000000-0000-4000-8000-000000000008', '[[1,2,3],9]'::jsonb, '-1'::jsonb, false, 2),
   ('50000000-0000-4000-8000-000000000084', '40000000-0000-4000-8000-000000000008', '[[],5]'::jsonb, '-1'::jsonb, false, 3),
   ('50000000-0000-4000-8000-000000000085', '40000000-0000-4000-8000-000000000008', '[[5,3,5],5]'::jsonb, '0'::jsonb, true, 4),
-  ('50000000-0000-4000-8000-000000000086', '40000000-0000-4000-8000-000000000008', '[[1,2,3],3]'::jsonb, '2'::jsonb, true, 5);
+  ('50000000-0000-4000-8000-000000000086', '40000000-0000-4000-8000-000000000008', '[[1,2,3],3]'::jsonb, '2'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000091', '40000000-0000-4000-8000-000000000009', '["ana@example.com"]'::jsonb, 'true'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000092', '40000000-0000-4000-8000-000000000009', '["ana.example.com"]'::jsonb, 'false'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000093', '40000000-0000-4000-8000-000000000009', '["ana@@example.com"]'::jsonb, 'false'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000094', '40000000-0000-4000-8000-000000000009', '["ana@example"]'::jsonb, 'false'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000095', '40000000-0000-4000-8000-000000000009', '["@example.com"]'::jsonb, 'false'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000096', '40000000-0000-4000-8000-000000000009', '["ana lopez@example.com"]'::jsonb, 'false'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000101', '40000000-0000-4000-8000-000000000010', '[{"q":"gatos","page":2}]'::jsonb, '"q=gatos&page=2"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000102', '40000000-0000-4000-8000-000000000010', '[{"q":"hola mundo"}]'::jsonb, '"q=hola%20mundo"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000103', '40000000-0000-4000-8000-000000000010', '[{}]'::jsonb, '""'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000104', '40000000-0000-4000-8000-000000000010', '[{"a":"1&2"}]'::jsonb, '"a=1%262"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000105', '40000000-0000-4000-8000-000000000010', '[{"año":2026}]'::jsonb, '"a%C3%B1o=2026"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000111', '40000000-0000-4000-8000-000000000011', '[2024]'::jsonb, 'true'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000112', '40000000-0000-4000-8000-000000000011', '[2023]'::jsonb, 'false'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000113', '40000000-0000-4000-8000-000000000011', '[1900]'::jsonb, 'false'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000114', '40000000-0000-4000-8000-000000000011', '[2000]'::jsonb, 'true'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000115', '40000000-0000-4000-8000-000000000011', '[2100]'::jsonb, 'false'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000116', '40000000-0000-4000-8000-000000000011', '[1996]'::jsonb, 'true'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000121', '40000000-0000-4000-8000-000000000012', '[5]'::jsonb, '120'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000122', '40000000-0000-4000-8000-000000000012', '[1]'::jsonb, '1'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000123', '40000000-0000-4000-8000-000000000012', '[0]'::jsonb, '1'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000124', '40000000-0000-4000-8000-000000000012', '[3]'::jsonb, '6'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000125', '40000000-0000-4000-8000-000000000012', '[10]'::jsonb, '3628800'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000126', '40000000-0000-4000-8000-000000000012', '[7]'::jsonb, '5040'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000131', '40000000-0000-4000-8000-000000000013', '[5]'::jsonb, '["1","2","Fizz","4","Buzz"]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000132', '40000000-0000-4000-8000-000000000013', '[3]'::jsonb, '["1","2","Fizz"]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000133', '40000000-0000-4000-8000-000000000013', '[0]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000134', '40000000-0000-4000-8000-000000000013', '[15]'::jsonb, '["1","2","Fizz","4","Buzz","Fizz","7","8","Fizz","Buzz","11","Fizz","13","14","FizzBuzz"]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000135', '40000000-0000-4000-8000-000000000013', '[1]'::jsonb, '["1"]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000141', '40000000-0000-4000-8000-000000000014', '[0]'::jsonb, '32'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000142', '40000000-0000-4000-8000-000000000014', '[100]'::jsonb, '212'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000143', '40000000-0000-4000-8000-000000000014', '[25]'::jsonb, '77'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000144', '40000000-0000-4000-8000-000000000014', '[-40]'::jsonb, '-40'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000145', '40000000-0000-4000-8000-000000000014', '[-10]'::jsonb, '14'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000146', '40000000-0000-4000-8000-000000000014', '[30]'::jsonb, '86'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000151', '40000000-0000-4000-8000-000000000015', '[12345]'::jsonb, '5'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000152', '40000000-0000-4000-8000-000000000015', '[7]'::jsonb, '1'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000153', '40000000-0000-4000-8000-000000000015', '[0]'::jsonb, '1'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000154', '40000000-0000-4000-8000-000000000015', '[-908]'::jsonb, '3'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000155', '40000000-0000-4000-8000-000000000015', '[1000000]'::jsonb, '7'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000156', '40000000-0000-4000-8000-000000000015', '[-5]'::jsonb, '1'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000161', '40000000-0000-4000-8000-000000000016', '["hola"]'::jsonb, '"Hola"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000162', '40000000-0000-4000-8000-000000000016', '["MUNDO"]'::jsonb, '"Mundo"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000163', '40000000-0000-4000-8000-000000000016', '[""]'::jsonb, '""'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000164', '40000000-0000-4000-8000-000000000016', '["a"]'::jsonb, '"A"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000165', '40000000-0000-4000-8000-000000000016', '["jAVAsCRIPT"]'::jsonb, '"Javascript"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000171', '40000000-0000-4000-8000-000000000017', '[7]'::jsonb, 'true'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000172', '40000000-0000-4000-8000-000000000017', '[1]'::jsonb, 'false'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000173', '40000000-0000-4000-8000-000000000017', '[2]'::jsonb, 'true'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000174', '40000000-0000-4000-8000-000000000017', '[9]'::jsonb, 'false'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000175', '40000000-0000-4000-8000-000000000017', '[97]'::jsonb, 'true'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000176', '40000000-0000-4000-8000-000000000017', '[0]'::jsonb, 'false'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000181', '40000000-0000-4000-8000-000000000018', '["Hola Mundo"]'::jsonb, '"hola-mundo"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000182', '40000000-0000-4000-8000-000000000018', '["  Mi   Blog  "]'::jsonb, '"mi-blog"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000183', '40000000-0000-4000-8000-000000000018', '["JS"]'::jsonb, '"js"'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000184', '40000000-0000-4000-8000-000000000018', '["Tema 1 de 3"]'::jsonb, '"tema-1-de-3"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000185', '40000000-0000-4000-8000-000000000018', '[""]'::jsonb, '""'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000191', '40000000-0000-4000-8000-000000000019', '["https://tienda.test/buscar?q=gatos&page=2","page"]'::jsonb, '"2"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000192', '40000000-0000-4000-8000-000000000019', '["https://tienda.test/buscar?q=hola%20mundo","q"]'::jsonb, '"hola mundo"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000193', '40000000-0000-4000-8000-000000000019', '["https://tienda.test/","q"]'::jsonb, 'null'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000194', '40000000-0000-4000-8000-000000000019', '["https://tienda.test/?a=1&b=2","c"]'::jsonb, 'null'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000195', '40000000-0000-4000-8000-000000000019', '["https://tienda.test/?q=1&q=2","q"]'::jsonb, '"1"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000201', '40000000-0000-4000-8000-000000000020', '[12.5]'::jsonb, '"12,50 €"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000202', '40000000-0000-4000-8000-000000000020', '[3]'::jsonb, '"3,00 €"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000203', '40000000-0000-4000-8000-000000000020', '[0]'::jsonb, '"0,00 €"'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000204', '40000000-0000-4000-8000-000000000020', '[1234.567]'::jsonb, '"1234,57 €"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000205', '40000000-0000-4000-8000-000000000020', '[0.1]'::jsonb, '"0,10 €"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000211', '40000000-0000-4000-8000-000000000021', '["Secreto123"]'::jsonb, 'true'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000212', '40000000-0000-4000-8000-000000000021', '["secreto123"]'::jsonb, 'false'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000213', '40000000-0000-4000-8000-000000000021', '["Corta1"]'::jsonb, 'false'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000214', '40000000-0000-4000-8000-000000000021', '["SinNumeros"]'::jsonb, 'false'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000215', '40000000-0000-4000-8000-000000000021', '["ABCDEFG1"]'::jsonb, 'true'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000216', '40000000-0000-4000-8000-000000000021', '[""]'::jsonb, 'false'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000221', '40000000-0000-4000-8000-000000000022', '["hola mundo"]'::jsonb, '2'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000222', '40000000-0000-4000-8000-000000000022', '["  uno  dos tres "]'::jsonb, '3'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000223', '40000000-0000-4000-8000-000000000022', '[""]'::jsonb, '0'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000224', '40000000-0000-4000-8000-000000000022', '["palabra"]'::jsonb, '1'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000225', '40000000-0000-4000-8000-000000000022', '["   "]'::jsonb, '0'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000231', '40000000-0000-4000-8000-000000000023', '["Lucía Martín Gómez"]'::jsonb, '"LMG"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000232', '40000000-0000-4000-8000-000000000023', '["ana"]'::jsonb, '"A"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000233', '40000000-0000-4000-8000-000000000023', '[""]'::jsonb, '""'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000234', '40000000-0000-4000-8000-000000000023', '["  hugo   sánchez "]'::jsonb, '"HS"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000235', '40000000-0000-4000-8000-000000000023', '["Aya Benali"]'::jsonb, '"AB"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000241', '40000000-0000-4000-8000-000000000024', '["Hola mundo",4]'::jsonb, '"Hola…"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000242', '40000000-0000-4000-8000-000000000024', '["Hola",4]'::jsonb, '"Hola"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000243', '40000000-0000-4000-8000-000000000024', '["",3]'::jsonb, '""'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000244', '40000000-0000-4000-8000-000000000024', '["abcdef",0]'::jsonb, '"…"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000245', '40000000-0000-4000-8000-000000000024', '["abc",5]'::jsonb, '"abc"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000251', '40000000-0000-4000-8000-000000000025', '["2026-11-11"]'::jsonb, '"11/11/2026"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000252', '40000000-0000-4000-8000-000000000025', '["2026-01-05"]'::jsonb, '"05/01/2026"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000253', '40000000-0000-4000-8000-000000000025', '["1999-12-31"]'::jsonb, '"31/12/1999"'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000254', '40000000-0000-4000-8000-000000000025', '["2000-02-29"]'::jsonb, '"29/02/2000"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000255', '40000000-0000-4000-8000-000000000025', '["2026-10-01"]'::jsonb, '"01/10/2026"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000261', '40000000-0000-4000-8000-000000000026', '["08001"]'::jsonb, 'true'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000262', '40000000-0000-4000-8000-000000000026', '["28013"]'::jsonb, 'true'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000263', '40000000-0000-4000-8000-000000000026', '["1234"]'::jsonb, 'false'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000264', '40000000-0000-4000-8000-000000000026', '["99000"]'::jsonb, 'false'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000265', '40000000-0000-4000-8000-000000000026', '["00123"]'::jsonb, 'false'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000266', '40000000-0000-4000-8000-000000000026', '["5200A"]'::jsonb, 'false'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000271', '40000000-0000-4000-8000-000000000027', '[255,0,0]'::jsonb, '"#ff0000"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000272', '40000000-0000-4000-8000-000000000027', '[0,128,255]'::jsonb, '"#0080ff"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000273', '40000000-0000-4000-8000-000000000027', '[0,0,0]'::jsonb, '"#000000"'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000274', '40000000-0000-4000-8000-000000000027', '[255,255,255]'::jsonb, '"#ffffff"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000275', '40000000-0000-4000-8000-000000000027', '[1,2,3]'::jsonb, '"#010203"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000281', '40000000-0000-4000-8000-000000000028', '["https://tutoria.test","ejercicios"]'::jsonb, '"https://tutoria.test/ejercicios"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000282', '40000000-0000-4000-8000-000000000028', '["https://tutoria.test/","/ejercicios"]'::jsonb, '"https://tutoria.test/ejercicios"'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000283', '40000000-0000-4000-8000-000000000028', '["https://tutoria.test/","a/b"]'::jsonb, '"https://tutoria.test/a/b"'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000284', '40000000-0000-4000-8000-000000000028', '["http://x.test",""]'::jsonb, '"http://x.test/"'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000285', '40000000-0000-4000-8000-000000000028', '["http://x.test//","/y/"]'::jsonb, '"http://x.test/y/"'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000291', '40000000-0000-4000-8000-000000000029', '[[{"name":"Teclado","category":"pc"},{"name":"Ratón","category":"pc"},{"name":"Silla","category":"hogar"}],"pc"]'::jsonb, '["Teclado","Ratón"]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000292', '40000000-0000-4000-8000-000000000029', '[[{"name":"Silla","category":"hogar"}],"hogar"]'::jsonb, '["Silla"]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000293', '40000000-0000-4000-8000-000000000029', '[[],"pc"]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000294', '40000000-0000-4000-8000-000000000029', '[[{"name":"Silla","category":"hogar"}],"jardín"]'::jsonb, '[]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000295', '40000000-0000-4000-8000-000000000029', '[[{"name":"Lámpara","category":"hogar"},{"name":"Monitor","category":"pc"},{"name":"Mesa","category":"hogar"}],"hogar"]'::jsonb, '["Lámpara","Mesa"]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000301', '40000000-0000-4000-8000-000000000030', '[[{"price":2.5,"quantity":2}]]'::jsonb, '5'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000302', '40000000-0000-4000-8000-000000000030', '[[{"price":1.2,"quantity":3},{"price":0.5,"quantity":1}]]'::jsonb, '4.1'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000303', '40000000-0000-4000-8000-000000000030', '[[]]'::jsonb, '0'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000304', '40000000-0000-4000-8000-000000000030', '[[{"price":9.99,"quantity":3}]]'::jsonb, '29.97'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000305', '40000000-0000-4000-8000-000000000030', '[[{"price":0.1,"quantity":3}]]'::jsonb, '0.3'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000311', '40000000-0000-4000-8000-000000000031', '[[1,2,2,3,1]]'::jsonb, '[1,2,3]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000312', '40000000-0000-4000-8000-000000000031', '[["a","a"]]'::jsonb, '["a"]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000313', '40000000-0000-4000-8000-000000000031', '[[]]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000314', '40000000-0000-4000-8000-000000000031', '[[5,5,5,5]]'::jsonb, '[5]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000315', '40000000-0000-4000-8000-000000000031', '[[3,1,3,2,1]]'::jsonb, '[3,1,2]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000321', '40000000-0000-4000-8000-000000000032', '["Anilina"]'::jsonb, 'true'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000322', '40000000-0000-4000-8000-000000000032', '["hola"]'::jsonb, 'false'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000323', '40000000-0000-4000-8000-000000000032', '["Yo hago yoga hoy"]'::jsonb, 'true'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000324', '40000000-0000-4000-8000-000000000032', '[""]'::jsonb, 'true'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000325', '40000000-0000-4000-8000-000000000032', '["ab"]'::jsonb, 'false'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000331', '40000000-0000-4000-8000-000000000033', '[["a","b","a"]]'::jsonb, '"a"'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000332', '40000000-0000-4000-8000-000000000033', '[[3,1,3,1,1]]'::jsonb, '1'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000333', '40000000-0000-4000-8000-000000000033', '[["x"]]'::jsonb, '"x"'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000334', '40000000-0000-4000-8000-000000000033', '[[2,2,3,3]]'::jsonb, '2'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000335', '40000000-0000-4000-8000-000000000033', '[[]]'::jsonb, 'null'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000341', '40000000-0000-4000-8000-000000000034', '[[[1,2],[3],[]]]'::jsonb, '[1,2,3]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000342', '40000000-0000-4000-8000-000000000034', '[[["a"],["b","c"]]]'::jsonb, '["a","b","c"]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000343', '40000000-0000-4000-8000-000000000034', '[[]]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000344', '40000000-0000-4000-8000-000000000034', '[[[[1]],[2]]]'::jsonb, '[[1],2]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000345', '40000000-0000-4000-8000-000000000034', '[[[],[]]]'::jsonb, '[]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000351', '40000000-0000-4000-8000-000000000035', '[[1,2,3,4,5],2]'::jsonb, '[[1,2],[3,4],[5]]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000352', '40000000-0000-4000-8000-000000000035', '[[1,2,3],3]'::jsonb, '[[1,2,3]]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000353', '40000000-0000-4000-8000-000000000035', '[[],2]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000354', '40000000-0000-4000-8000-000000000035', '[[1,2,3],1]'::jsonb, '[[1],[2],[3]]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000355', '40000000-0000-4000-8000-000000000035', '[[1,2],5]'::jsonb, '[[1,2]]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000361', '40000000-0000-4000-8000-000000000036', '[[1,3,5,7,9],7]'::jsonb, '3'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000362', '40000000-0000-4000-8000-000000000036', '[[1,3,5],1]'::jsonb, '0'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000363', '40000000-0000-4000-8000-000000000036', '[[],4]'::jsonb, '-1'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000364', '40000000-0000-4000-8000-000000000036', '[[2,4,6],5]'::jsonb, '-1'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000365', '40000000-0000-4000-8000-000000000036', '[[1,2,3,4,5,6,7,8],8]'::jsonb, '7'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000366', '40000000-0000-4000-8000-000000000036', '[[10],10]'::jsonb, '0'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000371', '40000000-0000-4000-8000-000000000037', '[[3,1,2]]'::jsonb, '[1,2,3]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000372', '40000000-0000-4000-8000-000000000037', '[[5,-1,0]]'::jsonb, '[-1,0,5]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000373', '40000000-0000-4000-8000-000000000037', '[[]]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000374', '40000000-0000-4000-8000-000000000037', '[[10,9,8,7]]'::jsonb, '[7,8,9,10]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000375', '40000000-0000-4000-8000-000000000037', '[[2,2,1]]'::jsonb, '[1,2,2]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000381', '40000000-0000-4000-8000-000000000038', '[12,18]'::jsonb, '6'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000382', '40000000-0000-4000-8000-000000000038', '[7,13]'::jsonb, '1'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000383', '40000000-0000-4000-8000-000000000038', '[10,0]'::jsonb, '10'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000384', '40000000-0000-4000-8000-000000000038', '[0,5]'::jsonb, '5'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000385', '40000000-0000-4000-8000-000000000038', '[48,36]'::jsonb, '12'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000391', '40000000-0000-4000-8000-000000000039', '["III"]'::jsonb, '3'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000392', '40000000-0000-4000-8000-000000000039', '["IX"]'::jsonb, '9'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000393', '40000000-0000-4000-8000-000000000039', '["LVIII"]'::jsonb, '58'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000394', '40000000-0000-4000-8000-000000000039', '["MCMXCIV"]'::jsonb, '1994'::jsonb, false, 3),
+  ('50000000-0000-4000-8000-000000000395', '40000000-0000-4000-8000-000000000039', '["XL"]'::jsonb, '40'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000396', '40000000-0000-4000-8000-000000000039', '["MMXXVI"]'::jsonb, '2026'::jsonb, true, 5),
+  ('50000000-0000-4000-8000-000000000401', '40000000-0000-4000-8000-000000000040', '[[[1,2,3],[4,5,6]]]'::jsonb, '[[1,4],[2,5],[3,6]]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000402', '40000000-0000-4000-8000-000000000040', '[[[1]]]'::jsonb, '[[1]]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000403', '40000000-0000-4000-8000-000000000040', '[[]]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000404', '40000000-0000-4000-8000-000000000040', '[[[1,2]]]'::jsonb, '[[1],[2]]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000405', '40000000-0000-4000-8000-000000000040', '[[[1],[2]]]'::jsonb, '[[1,2]]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000411', '40000000-0000-4000-8000-000000000041', '[[1,4],[2,3]]'::jsonb, '[1,2,3,4]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000412', '40000000-0000-4000-8000-000000000041', '[[],[1]]'::jsonb, '[1]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000413', '40000000-0000-4000-8000-000000000041', '[[1,1],[1]]'::jsonb, '[1,1,1]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000414', '40000000-0000-4000-8000-000000000041', '[[5,6],[1,2]]'::jsonb, '[1,2,5,6]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000415', '40000000-0000-4000-8000-000000000041', '[[],[]]'::jsonb, '[]'::jsonb, true, 4),
+  ('50000000-0000-4000-8000-000000000421', '40000000-0000-4000-8000-000000000042', '[5]'::jsonb, '[0,1,1,2,3]'::jsonb, false, 0),
+  ('50000000-0000-4000-8000-000000000422', '40000000-0000-4000-8000-000000000042', '[1]'::jsonb, '[0]'::jsonb, false, 1),
+  ('50000000-0000-4000-8000-000000000423', '40000000-0000-4000-8000-000000000042', '[0]'::jsonb, '[]'::jsonb, false, 2),
+  ('50000000-0000-4000-8000-000000000424', '40000000-0000-4000-8000-000000000042', '[2]'::jsonb, '[0,1]'::jsonb, true, 3),
+  ('50000000-0000-4000-8000-000000000425', '40000000-0000-4000-8000-000000000042', '[10]'::jsonb, '[0,1,1,2,3,5,8,13,21,34]'::jsonb, true, 4);
 
-insert into exercise_assignment (id, group_id, exercise_id, session) values
-  ('60000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 1),
-  ('60000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000002', 1),
-  ('60000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000003', 2),
-  ('60000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000004', 2),
-  ('60000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000005', 3),
-  ('60000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000006', 4),
-  ('60000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000007', 4),
-  ('60000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000008', 4),
-  ('60000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', 1),
-  ('60000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 1),
-  ('60000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000003', 2),
-  ('60000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000004', 2);
+insert into exercise_assignment (id, group_id, block_id, exercise_id, is_hidden) values
+  ('60000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', false),
+  ('60000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000002', false),
+  ('60000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000003', false),
+  ('60000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000004', false),
+  ('60000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000005', false),
+  ('60000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000006', false),
+  ('60000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000007', false),
+  ('60000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000008', false),
+  ('60000000-0000-4000-8000-000000000503', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000003', false),
+  ('60000000-0000-4000-8000-000000000504', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000004', false),
+  ('60000000-0000-4000-8000-000000000502', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000002', true),
+  ('60000000-0000-4000-8000-000000000605', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000005', false),
+  ('60000000-0000-4000-8000-000000000608', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000008', false),
+  ('60000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000001', false),
+  ('60000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000002', false),
+  ('60000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000003', false),
+  ('60000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000004', false),
+  ('60000000-0000-4000-8000-000000000909', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000009', '40000000-0000-4000-8000-000000000009', false),
+  ('60000000-0000-4000-8000-000000000921', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000009', '40000000-0000-4000-8000-000000000021', false),
+  ('60000000-0000-4000-8000-000000000926', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000009', '40000000-0000-4000-8000-000000000026', false),
+  ('60000000-0000-4000-8000-000000001010', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000010', false),
+  ('60000000-0000-4000-8000-000000001019', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000019', false),
+  ('60000000-0000-4000-8000-000000001028', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000028', false),
+  ('60000000-0000-4000-8000-000000001106', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000006', false),
+  ('60000000-0000-4000-8000-000000001107', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000007', false),
+  ('60000000-0000-4000-8000-000000001132', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000032', false),
+  ('60000000-0000-4000-8000-000000001133', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000033', false),
+  ('60000000-0000-4000-8000-000000001208', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000012', '40000000-0000-4000-8000-000000000008', false),
+  ('60000000-0000-4000-8000-000000001236', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000012', '40000000-0000-4000-8000-000000000036', false),
+  ('60000000-0000-4000-8000-000000000011', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000011', false),
+  ('60000000-0000-4000-8000-000000000012', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000012', false),
+  ('60000000-0000-4000-8000-000000000014', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000014', false),
+  ('60000000-0000-4000-8000-000000000017', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000017', false),
+  ('60000000-0000-4000-8000-000000000013', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000014', '40000000-0000-4000-8000-000000000013', false),
+  ('60000000-0000-4000-8000-000000000015', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000014', '40000000-0000-4000-8000-000000000015', false),
+  ('60000000-0000-4000-8000-000000000016', '20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000014', '40000000-0000-4000-8000-000000000016', false),
+  ('60000000-0000-4000-8000-000000000105', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000005', false),
+  ('60000000-0000-4000-8000-000000000106', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000006', false),
+  ('60000000-0000-4000-8000-000000000107', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000007', false),
+  ('60000000-0000-4000-8000-000000000108', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000008', false),
+  ('60000000-0000-4000-8000-000000000111', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000011', false),
+  ('60000000-0000-4000-8000-000000000112', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000012', false),
+  ('60000000-0000-4000-8000-000000000114', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000014', false),
+  ('60000000-0000-4000-8000-000000000117', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000017', false),
+  ('60000000-0000-4000-8000-000000000113', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000017', '40000000-0000-4000-8000-000000000013', false),
+  ('60000000-0000-4000-8000-000000000115', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000017', '40000000-0000-4000-8000-000000000015', false),
+  ('60000000-0000-4000-8000-000000000116', '20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000017', '40000000-0000-4000-8000-000000000016', false),
+  ('60000000-0000-4000-8000-000000001818', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000018', false),
+  ('60000000-0000-4000-8000-000000001820', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000020', false),
+  ('60000000-0000-4000-8000-000000001822', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000022', false),
+  ('60000000-0000-4000-8000-000000001823', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000023', false),
+  ('60000000-0000-4000-8000-000000001824', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000024', false),
+  ('60000000-0000-4000-8000-000000001825', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000025', false),
+  ('60000000-0000-4000-8000-000000001827', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000027', false),
+  ('60000000-0000-4000-8000-000000001929', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000019', '40000000-0000-4000-8000-000000000029', false),
+  ('60000000-0000-4000-8000-000000001930', '20000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000019', '40000000-0000-4000-8000-000000000030', false),
+  ('60000000-0000-4000-8000-000000002031', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000031', false),
+  ('60000000-0000-4000-8000-000000002034', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000034', false),
+  ('60000000-0000-4000-8000-000000002035', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000035', false),
+  ('60000000-0000-4000-8000-000000002040', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000040', false),
+  ('60000000-0000-4000-8000-000000002041', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000041', false),
+  ('60000000-0000-4000-8000-000000002137', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000037', false),
+  ('60000000-0000-4000-8000-000000002138', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000038', false),
+  ('60000000-0000-4000-8000-000000002139', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000039', false),
+  ('60000000-0000-4000-8000-000000002142', '20000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000042', false);
 
-insert into attempt (id, exercise_id, user_id, assignment_id, current_code, final_code, status, started_at, finished_at, updated_at) values
-  ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+insert into attempt (id, exercise_id, user_id, assignment_id, number, current_code, final_code, status, started_at, finished_at, updated_at) values
+  ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -225,7 +591,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:11:00.000Z', '2026-10-06T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -240,7 +606,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T08:44:00.000Z', '2026-10-06T08:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -255,7 +621,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:11:00.000Z', '2026-10-13T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -272,7 +638,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:44:00.000Z', '2026-10-13T08:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -287,7 +653,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:05:00.000Z', '2026-10-20T08:17:00.000Z', '2026-10-20T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -302,7 +668,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:11:00.000Z', '2026-10-27T09:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -315,14 +681,14 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:35:00.000Z', '2026-10-27T09:44:00.000Z', '2026-10-27T09:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
   return -1;
 }
 ', null, 'passed', '2026-10-27T10:05:00.000Z', null, '2026-10-27T10:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000009', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000009', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -337,7 +703,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:24:00.000Z', '2026-10-06T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -352,7 +718,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T09:00:00.000Z', '2026-10-06T09:00:00.000Z'),
-  ('70000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -367,7 +733,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:33:00.000Z', '2026-10-13T08:33:00.000Z'),
-  ('70000000-0000-4000-8000-000000000012', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000012', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   let largest = 0;
   for (const number of numbers) {
     if (number > largest) largest = number;
@@ -375,7 +741,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', null, 'tests_failed', '2026-10-13T08:36:00.000Z', null, '2026-10-13T08:54:00.000Z'),
-  ('70000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const copy = [...items];
   for (let i = 0; i < copy.length; i++) {
     const j = copy.length - 1 - i;
@@ -384,7 +750,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return copy;
 }
 ', null, 'tests_failed', '2026-10-20T08:06:00.000Z', null, '2026-10-20T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000014', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000014', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text) {
     if (''aeiou''.includes(letter)) vowels++;
@@ -392,7 +758,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:06:00.000Z', null, '2026-10-27T09:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -407,7 +773,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:28:00.000Z', '2026-10-06T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -422,7 +788,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T08:55:00.000Z', '2026-10-06T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000017', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000017', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -437,7 +803,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:19:00.000Z', '2026-10-13T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -454,7 +820,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000019', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000019', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -469,7 +835,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -484,7 +850,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:07:00.000Z', '2026-10-27T09:13:00.000Z', '2026-10-27T09:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -497,7 +863,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:37:00.000Z', '2026-10-27T09:43:00.000Z', '2026-10-27T09:43:00.000Z'),
-  ('70000000-0000-4000-8000-000000000022', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000022', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -510,7 +876,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:07:00.000Z', '2026-10-27T10:16:00.000Z', '2026-10-27T10:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000023', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000023', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -525,7 +891,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:25:00.000Z', '2026-10-06T08:25:00.000Z'),
-  ('70000000-0000-4000-8000-000000000024', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000024', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -540,7 +906,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:59:00.000Z', '2026-10-06T08:59:00.000Z'),
-  ('70000000-0000-4000-8000-000000000025', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000025', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -548,7 +914,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', null, 'passed', '2026-10-13T08:08:00.000Z', null, '2026-10-13T08:20:00.000Z'),
-  ('70000000-0000-4000-8000-000000000026', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000026', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   let largest = 0;
   for (const number of numbers) {
     if (number > largest) largest = number;
@@ -556,7 +922,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', null, 'tests_failed', '2026-10-13T08:38:00.000Z', null, '2026-10-13T08:50:00.000Z'),
-  ('70000000-0000-4000-8000-000000000027', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000027', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text) {
     if (''aeiou''.includes(letter)) vowels++;
@@ -564,7 +930,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:08:00.000Z', null, '2026-10-27T09:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000028', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000028', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -579,7 +945,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:15:00.000Z', '2026-10-06T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000029', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000029', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -594,7 +960,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T09:06:00.000Z', '2026-10-06T09:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000030', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000030', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -609,7 +975,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:27:00.000Z', '2026-10-13T08:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000031', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000031', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -626,7 +992,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:45:00.000Z', '2026-10-13T08:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000032', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000032', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -641,7 +1007,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:09:00.000Z', '2026-10-20T08:15:00.000Z', '2026-10-20T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000033', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000033', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -656,13 +1022,13 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:09:00.000Z', '2026-10-27T09:18:00.000Z', '2026-10-27T09:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   let total = 0;
   for (const number of numbers) total += number;
   return total / numbers.length;
 }
 ', null, 'in_progress', '2026-10-27T09:39:00.000Z', null, '2026-10-27T09:39:00.000Z'),
-  ('70000000-0000-4000-8000-000000000035', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000035', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -675,7 +1041,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:09:00.000Z', '2026-10-27T10:15:00.000Z', '2026-10-27T10:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000036', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000036', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -690,7 +1056,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:37:00.000Z', '2026-10-06T08:37:00.000Z'),
-  ('70000000-0000-4000-8000-000000000037', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000037', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -705,7 +1071,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:49:00.000Z', '2026-10-06T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000038', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000038', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -720,7 +1086,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:16:00.000Z', '2026-10-13T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000039', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000039', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -737,7 +1103,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000040', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000040', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -752,7 +1118,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:19:00.000Z', '2026-10-20T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000041', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000041', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text) {
     if (''aeiou''.includes(letter)) vowels++;
@@ -760,7 +1126,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:10:00.000Z', null, '2026-10-27T09:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000042', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000042', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -773,7 +1139,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:40:00.000Z', '2026-10-27T09:46:00.000Z', '2026-10-27T09:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000043', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000043', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -788,7 +1154,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:14:00.000Z', '2026-10-06T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000044', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000044', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -803,7 +1169,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T08:53:00.000Z', '2026-10-06T08:53:00.000Z'),
-  ('70000000-0000-4000-8000-000000000045', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000045', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -818,7 +1184,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:14:00.000Z', '2026-10-13T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000046', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000046', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -835,7 +1201,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:53:00.000Z', '2026-10-13T08:53:00.000Z'),
-  ('70000000-0000-4000-8000-000000000047', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000047', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -850,7 +1216,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:05:00.000Z', '2026-10-20T08:17:00.000Z', '2026-10-20T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000048', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000048', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -865,7 +1231,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:11:00.000Z', '2026-10-27T09:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000049', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000049', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   let position = -1;
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) position = i;
@@ -873,7 +1239,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return position;
 }
 ', null, 'tests_failed', '2026-10-27T10:05:00.000Z', null, '2026-10-27T10:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000050', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000050', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -888,7 +1254,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:24:00.000Z', '2026-10-06T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000051', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000051', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -903,7 +1269,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T08:54:00.000Z', '2026-10-06T08:54:00.000Z'),
-  ('70000000-0000-4000-8000-000000000052', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000052', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -918,7 +1284,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:24:00.000Z', '2026-10-13T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000053', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000053', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -935,7 +1301,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:36:00.000Z', '2026-10-13T08:42:00.000Z', '2026-10-13T08:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000054', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000054', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -950,13 +1316,13 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:06:00.000Z', '2026-10-20T08:24:00.000Z', '2026-10-20T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000055', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000055', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   let total = 0;
   for (const number of numbers) total += number;
   return total / numbers.length;
 }
 ', null, 'tests_failed', '2026-10-27T09:36:00.000Z', null, '2026-10-27T09:39:00.000Z'),
-  ('70000000-0000-4000-8000-000000000056', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000056', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -969,7 +1335,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:06:00.000Z', '2026-10-27T10:15:00.000Z', '2026-10-27T10:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000057', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000057', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -984,7 +1350,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:25:00.000Z', '2026-10-06T08:25:00.000Z'),
-  ('70000000-0000-4000-8000-000000000058', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000058', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -999,7 +1365,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T08:46:00.000Z', '2026-10-06T08:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000059', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000059', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1014,7 +1380,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:13:00.000Z', '2026-10-13T08:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000060', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000060', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1031,7 +1397,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000061', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000061', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1046,7 +1412,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000062', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000062', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text) {
     if (''aeiou''.includes(letter)) vowels++;
@@ -1054,7 +1420,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', null, 'tests_failed', '2026-10-27T09:07:00.000Z', null, '2026-10-27T09:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000063', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000063', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -1067,7 +1433,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:37:00.000Z', '2026-10-27T09:46:00.000Z', '2026-10-27T09:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000064', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000064', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -1080,7 +1446,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:07:00.000Z', '2026-10-27T10:13:00.000Z', '2026-10-27T10:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000065', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000065', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1095,7 +1461,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:17:00.000Z', '2026-10-06T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000066', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000066', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1110,7 +1476,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:50:00.000Z', '2026-10-06T08:50:00.000Z'),
-  ('70000000-0000-4000-8000-000000000067', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000067', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1125,7 +1491,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:08:00.000Z', '2026-10-13T08:20:00.000Z', '2026-10-13T08:20:00.000Z'),
-  ('70000000-0000-4000-8000-000000000068', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000068', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1142,7 +1508,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:38:00.000Z', '2026-10-13T08:47:00.000Z', '2026-10-13T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000069', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000069', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1157,7 +1523,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:08:00.000Z', '2026-10-20T08:14:00.000Z', '2026-10-20T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000070', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000070', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -1172,7 +1538,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:08:00.000Z', '2026-10-27T09:17:00.000Z', '2026-10-27T09:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000071', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000071', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -1185,7 +1551,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:38:00.000Z', '2026-10-27T09:44:00.000Z', '2026-10-27T09:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000072', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000072', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -1198,7 +1564,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:08:00.000Z', '2026-10-27T10:14:00.000Z', '2026-10-27T10:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000073', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000073', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1213,7 +1579,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:21:00.000Z', '2026-10-06T08:21:00.000Z'),
-  ('70000000-0000-4000-8000-000000000074', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000074', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1228,7 +1594,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T08:51:00.000Z', '2026-10-06T08:51:00.000Z'),
-  ('70000000-0000-4000-8000-000000000075', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000075', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1243,7 +1609,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:18:00.000Z', '2026-10-13T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000076', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000076', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1260,7 +1626,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:55:00.000Z', '2026-10-13T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000077', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000077', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const copy = [...items];
   for (let i = 0; i < copy.length; i++) {
     const j = copy.length - 1 - i;
@@ -1269,7 +1635,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return copy;
 }
 ', null, 'tests_failed', '2026-10-20T08:09:00.000Z', null, '2026-10-20T08:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000078', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000078', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -1284,7 +1650,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:09:00.000Z', '2026-10-27T09:15:00.000Z', '2026-10-27T09:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000079', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000079', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -1297,7 +1663,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:39:00.000Z', '2026-10-27T09:45:00.000Z', '2026-10-27T09:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000080', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000080', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -1310,7 +1676,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:09:00.000Z', '2026-10-27T10:18:00.000Z', '2026-10-27T10:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000081', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000081', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1325,7 +1691,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:22:00.000Z', '2026-10-06T08:22:00.000Z'),
-  ('70000000-0000-4000-8000-000000000082', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000082', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1340,7 +1706,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:46:00.000Z', '2026-10-06T08:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000083', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000083', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1355,7 +1721,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:26:00.000Z', '2026-10-13T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000084', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000084', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1372,7 +1738,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:58:00.000Z', '2026-10-13T08:58:00.000Z'),
-  ('70000000-0000-4000-8000-000000000085', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000085', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1387,7 +1753,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000086', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000086', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -1402,7 +1768,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:10:00.000Z', '2026-10-27T09:16:00.000Z', '2026-10-27T09:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000087', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000087', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -1415,7 +1781,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:40:00.000Z', '2026-10-27T09:49:00.000Z', '2026-10-27T09:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000088', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000088', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   let position = -1;
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) position = i;
@@ -1423,7 +1789,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return position;
 }
 ', null, 'in_progress', '2026-10-27T10:10:00.000Z', null, '2026-10-27T10:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000089', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000089', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1438,7 +1804,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:11:00.000Z', '2026-10-06T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000090', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000090', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1453,7 +1819,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T09:02:00.000Z', '2026-10-06T09:02:00.000Z'),
-  ('70000000-0000-4000-8000-000000000091', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000091', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1468,7 +1834,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:23:00.000Z', '2026-10-13T08:23:00.000Z'),
-  ('70000000-0000-4000-8000-000000000092', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000092', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1485,7 +1851,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:41:00.000Z', '2026-10-13T08:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000093', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000093', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1500,7 +1866,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:05:00.000Z', '2026-10-20T08:11:00.000Z', '2026-10-20T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000094', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000094', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -1515,13 +1881,13 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:14:00.000Z', '2026-10-27T09:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000095', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000095', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   let total = 0;
   for (const number of numbers) total += number;
   return total / numbers.length;
 }
 ', null, 'in_progress', '2026-10-27T09:35:00.000Z', null, '2026-10-27T09:35:00.000Z'),
-  ('70000000-0000-4000-8000-000000000096', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000096', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -1534,7 +1900,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:05:00.000Z', '2026-10-27T10:11:00.000Z', '2026-10-27T10:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000097', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000097', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1549,7 +1915,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:33:00.000Z', '2026-10-06T08:33:00.000Z'),
-  ('70000000-0000-4000-8000-000000000098', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000098', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1564,7 +1930,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T08:45:00.000Z', '2026-10-06T08:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000099', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000099', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1579,7 +1945,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:12:00.000Z', '2026-10-13T08:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000100', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000100', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1596,7 +1962,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:36:00.000Z', '2026-10-13T08:45:00.000Z', '2026-10-13T08:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000101', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000101', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1611,7 +1977,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:06:00.000Z', '2026-10-20T08:15:00.000Z', '2026-10-20T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000102', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000102', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text) {
     if (''aeiou''.includes(letter)) vowels++;
@@ -1619,7 +1985,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:06:00.000Z', null, '2026-10-27T09:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000103', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000103', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -1632,7 +1998,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:36:00.000Z', '2026-10-27T09:42:00.000Z', '2026-10-27T09:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000104', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000104', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1647,7 +2013,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:16:00.000Z', '2026-10-06T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000105', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000105', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1662,7 +2028,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T08:55:00.000Z', '2026-10-06T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000106', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000106', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1677,7 +2043,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:16:00.000Z', '2026-10-13T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000107', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000107', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1694,7 +2060,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:55:00.000Z', '2026-10-13T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000108', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000108', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1709,7 +2075,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:19:00.000Z', '2026-10-20T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000109', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000109', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -1724,7 +2090,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:07:00.000Z', '2026-10-27T09:13:00.000Z', '2026-10-27T09:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000110', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000110', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   let position = -1;
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) position = i;
@@ -1732,7 +2098,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return position;
 }
 ', null, 'tests_failed', '2026-10-27T10:07:00.000Z', null, '2026-10-27T10:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000111', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000111', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1747,7 +2113,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:26:00.000Z', '2026-10-06T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000112', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000112', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1762,7 +2128,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:56:00.000Z', '2026-10-06T08:56:00.000Z'),
-  ('70000000-0000-4000-8000-000000000113', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000113', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1777,7 +2143,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:08:00.000Z', '2026-10-13T08:26:00.000Z', '2026-10-13T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000114', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000114', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1794,7 +2160,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:38:00.000Z', '2026-10-13T08:44:00.000Z', '2026-10-13T08:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000115', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000115', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1809,13 +2175,13 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:08:00.000Z', '2026-10-20T08:26:00.000Z', '2026-10-20T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000116', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000116', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   let total = 0;
   for (const number of numbers) total += number;
   return total / numbers.length;
 }
 ', null, 'tests_failed', '2026-10-27T09:38:00.000Z', null, '2026-10-27T09:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000117', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000117', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -1828,7 +2194,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:08:00.000Z', '2026-10-27T10:17:00.000Z', '2026-10-27T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000118', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000118', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1843,7 +2209,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:27:00.000Z', '2026-10-06T08:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000119', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000119', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1858,7 +2224,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T08:48:00.000Z', '2026-10-06T08:48:00.000Z'),
-  ('70000000-0000-4000-8000-000000000120', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000120', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1873,7 +2239,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:15:00.000Z', '2026-10-13T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000121', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000121', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -1890,7 +2256,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:51:00.000Z', '2026-10-13T08:51:00.000Z'),
-  ('70000000-0000-4000-8000-000000000122', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000122', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -1905,7 +2271,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:09:00.000Z', '2026-10-20T08:18:00.000Z', '2026-10-20T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000123', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000123', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text) {
     if (''aeiou''.includes(letter)) vowels++;
@@ -1913,7 +2279,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', null, 'tests_failed', '2026-10-27T09:09:00.000Z', null, '2026-10-27T09:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000124', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000124', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -1926,7 +2292,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:39:00.000Z', '2026-10-27T09:48:00.000Z', '2026-10-27T09:48:00.000Z'),
-  ('70000000-0000-4000-8000-000000000125', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000125', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -1939,7 +2305,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:09:00.000Z', '2026-10-27T10:15:00.000Z', '2026-10-27T10:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000126', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000126', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -1954,7 +2320,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:19:00.000Z', '2026-10-06T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000127', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000127', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -1969,7 +2335,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:52:00.000Z', '2026-10-06T08:52:00.000Z'),
-  ('70000000-0000-4000-8000-000000000128', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000128', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -1984,7 +2350,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:22:00.000Z', '2026-10-13T08:22:00.000Z'),
-  ('70000000-0000-4000-8000-000000000129', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000129', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2001,7 +2367,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000130', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000130', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -2016,7 +2382,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000131', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000131', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -2031,7 +2397,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:10:00.000Z', '2026-10-27T09:19:00.000Z', '2026-10-27T09:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000132', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000132', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -2044,7 +2410,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:40:00.000Z', '2026-10-27T09:46:00.000Z', '2026-10-27T09:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000133', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000133', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -2057,7 +2423,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:10:00.000Z', '2026-10-27T10:16:00.000Z', '2026-10-27T10:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000134', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000134', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2072,7 +2438,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:17:00.000Z', '2026-10-06T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000135', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000135', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2087,7 +2453,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T08:47:00.000Z', '2026-10-06T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000136', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000136', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2102,7 +2468,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:14:00.000Z', '2026-10-13T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000137', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000137', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2119,7 +2485,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:51:00.000Z', '2026-10-13T08:51:00.000Z'),
-  ('70000000-0000-4000-8000-000000000138', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000138', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const copy = [...items];
   for (let i = 0; i < copy.length; i++) {
     const j = copy.length - 1 - i;
@@ -2128,7 +2494,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return copy;
 }
 ', null, 'tests_failed', '2026-10-20T08:05:00.000Z', null, '2026-10-20T08:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000139', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000139', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -2143,7 +2509,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:11:00.000Z', '2026-10-27T09:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000140', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000140', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -2156,7 +2522,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:35:00.000Z', '2026-10-27T09:41:00.000Z', '2026-10-27T09:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000141', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000141', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -2169,7 +2535,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:05:00.000Z', '2026-10-27T10:14:00.000Z', '2026-10-27T10:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000142', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000142', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2184,7 +2550,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:18:00.000Z', '2026-10-06T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000143', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000143', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2199,7 +2565,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T08:42:00.000Z', '2026-10-06T08:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000144', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000144', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2214,7 +2580,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:22:00.000Z', '2026-10-13T08:22:00.000Z'),
-  ('70000000-0000-4000-8000-000000000145', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000145', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2231,7 +2597,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:36:00.000Z', '2026-10-13T08:54:00.000Z', '2026-10-13T08:54:00.000Z'),
-  ('70000000-0000-4000-8000-000000000146', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000146', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -2246,7 +2612,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:06:00.000Z', '2026-10-20T08:12:00.000Z', '2026-10-20T08:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000147', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000147', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -2261,7 +2627,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:06:00.000Z', '2026-10-27T09:12:00.000Z', '2026-10-27T09:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000148', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000148', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -2274,7 +2640,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:36:00.000Z', '2026-10-27T09:45:00.000Z', '2026-10-27T09:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000149', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000149', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   let position = -1;
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) position = i;
@@ -2282,7 +2648,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return position;
 }
 ', null, 'in_progress', '2026-10-27T10:06:00.000Z', null, '2026-10-27T10:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000150', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000150', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2297,7 +2663,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:13:00.000Z', '2026-10-06T08:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000151', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000151', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2312,7 +2678,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T09:04:00.000Z', '2026-10-06T09:04:00.000Z'),
-  ('70000000-0000-4000-8000-000000000152', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000152', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2327,7 +2693,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:25:00.000Z', '2026-10-13T08:25:00.000Z'),
-  ('70000000-0000-4000-8000-000000000153', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000153', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2344,7 +2710,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:43:00.000Z', '2026-10-13T08:43:00.000Z'),
-  ('70000000-0000-4000-8000-000000000154', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000154', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -2359,7 +2725,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:13:00.000Z', '2026-10-20T08:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000155', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000155', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -2374,13 +2740,13 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:07:00.000Z', '2026-10-27T09:16:00.000Z', '2026-10-27T09:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000156', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000156', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   let total = 0;
   for (const number of numbers) total += number;
   return total / numbers.length;
 }
 ', null, 'in_progress', '2026-10-27T09:37:00.000Z', null, '2026-10-27T09:37:00.000Z'),
-  ('70000000-0000-4000-8000-000000000157', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000157', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -2393,7 +2759,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:07:00.000Z', '2026-10-27T10:13:00.000Z', '2026-10-27T10:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000158', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000158', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2408,7 +2774,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:35:00.000Z', '2026-10-06T08:35:00.000Z'),
-  ('70000000-0000-4000-8000-000000000159', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000159', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2423,7 +2789,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:47:00.000Z', '2026-10-06T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000160', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000160', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2438,7 +2804,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:08:00.000Z', '2026-10-13T08:14:00.000Z', '2026-10-13T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000161', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000161', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2455,7 +2821,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:38:00.000Z', '2026-10-13T08:47:00.000Z', '2026-10-13T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000162', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000162', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -2470,7 +2836,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:08:00.000Z', '2026-10-20T08:17:00.000Z', '2026-10-20T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000163', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000163', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text) {
     if (''aeiou''.includes(letter)) vowels++;
@@ -2478,7 +2844,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:08:00.000Z', null, '2026-10-27T09:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000164', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000164', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   if (numbers.length === 0) return ''0.00'';
   let total = 0;
   for (const number of numbers) total += number;
@@ -2491,7 +2857,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:38:00.000Z', '2026-10-27T09:44:00.000Z', '2026-10-27T09:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000165', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000165', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2506,7 +2872,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:18:00.000Z', '2026-10-06T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000166', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000166', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2521,7 +2887,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T08:57:00.000Z', '2026-10-06T08:57:00.000Z'),
-  ('70000000-0000-4000-8000-000000000167', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000167', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2536,7 +2902,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:18:00.000Z', '2026-10-13T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000168', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000168', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2553,7 +2919,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:57:00.000Z', '2026-10-13T08:57:00.000Z'),
-  ('70000000-0000-4000-8000-000000000169', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000169', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -2568,7 +2934,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:09:00.000Z', '2026-10-20T08:21:00.000Z', '2026-10-20T08:21:00.000Z'),
-  ('70000000-0000-4000-8000-000000000170', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  ('70000000-0000-4000-8000-000000000170', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000006', 1, 'function countVowels(text) {
   let vowels = 0;
   for (const letter of text.toLowerCase()) {
     if (''aeiouáéíóú''.includes(letter)) vowels++;
@@ -2583,7 +2949,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return vowels;
 }
 ', 'submitted', '2026-10-27T09:09:00.000Z', '2026-10-27T09:15:00.000Z', '2026-10-27T09:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000171', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000171', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   let position = -1;
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) position = i;
@@ -2591,7 +2957,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return position;
 }
 ', null, 'tests_failed', '2026-10-27T10:09:00.000Z', null, '2026-10-27T10:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000172', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000172', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000001', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2606,7 +2972,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:28:00.000Z', '2026-10-06T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000173', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000173', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000002', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2621,7 +2987,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:58:00.000Z', '2026-10-06T08:58:00.000Z'),
-  ('70000000-0000-4000-8000-000000000174', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000174', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000003', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2636,7 +3002,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:28:00.000Z', '2026-10-13T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000175', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000175', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000004', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2653,7 +3019,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:46:00.000Z', '2026-10-13T08:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000176', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  ('70000000-0000-4000-8000-000000000176', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000005', 1, 'function reverseArray(items) {
   const result = [];
   for (let i = items.length - 1; i >= 0; i--) {
     result.push(items[i]);
@@ -2668,13 +3034,13 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:28:00.000Z', '2026-10-20T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000177', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  ('70000000-0000-4000-8000-000000000177', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000007', 1, 'function average(numbers) {
   let total = 0;
   for (const number of numbers) total += number;
   return total / numbers.length;
 }
 ', null, 'tests_failed', '2026-10-27T09:40:00.000Z', null, '2026-10-27T09:43:00.000Z'),
-  ('70000000-0000-4000-8000-000000000178', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  ('70000000-0000-4000-8000-000000000178', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000008', 1, 'function firstIndexOf(items, value) {
   for (let i = 0; i < items.length; i++) {
     if (items[i] === value) return i;
   }
@@ -2687,7 +3053,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return -1;
 }
 ', 'submitted', '2026-10-27T10:10:00.000Z', '2026-10-27T10:19:00.000Z', '2026-10-27T10:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000179', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000179', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000101', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2702,7 +3068,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-08T10:05:00.000Z', '2026-10-08T10:17:00.000Z', '2026-10-08T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000180', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000180', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000102', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2717,7 +3083,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:35:00.000Z', '2026-10-08T10:41:00.000Z', '2026-10-08T10:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000181', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000181', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000103', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2732,7 +3098,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-15T10:05:00.000Z', '2026-10-15T10:21:00.000Z', '2026-10-15T10:21:00.000Z'),
-  ('70000000-0000-4000-8000-000000000182', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000182', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000104', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2749,7 +3115,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-15T10:35:00.000Z', '2026-10-15T10:53:00.000Z', '2026-10-15T10:53:00.000Z'),
-  ('70000000-0000-4000-8000-000000000183', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000183', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000101', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2764,7 +3130,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-08T10:06:00.000Z', '2026-10-08T10:12:00.000Z', '2026-10-08T10:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000184', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000184', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000102', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2779,7 +3145,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:36:00.000Z', '2026-10-08T11:03:00.000Z', '2026-10-08T11:03:00.000Z'),
-  ('70000000-0000-4000-8000-000000000185', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000185', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000103', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2794,7 +3160,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-15T10:06:00.000Z', '2026-10-15T10:24:00.000Z', '2026-10-15T10:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000186', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000186', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000104', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2811,7 +3177,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-15T10:36:00.000Z', '2026-10-15T10:42:00.000Z', '2026-10-15T10:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000187', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000187', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000101', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2826,7 +3192,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-08T10:07:00.000Z', '2026-10-08T10:34:00.000Z', '2026-10-08T10:34:00.000Z'),
-  ('70000000-0000-4000-8000-000000000188', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000188', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000102', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2841,7 +3207,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:37:00.000Z', '2026-10-08T10:46:00.000Z', '2026-10-08T10:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000189', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000189', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000103', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2856,7 +3222,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-15T10:07:00.000Z', '2026-10-15T10:13:00.000Z', '2026-10-15T10:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000190', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000190', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000104', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2873,7 +3239,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-15T10:37:00.000Z', '2026-10-15T10:46:00.000Z', '2026-10-15T10:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000191', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000191', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000101', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2888,7 +3254,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-08T10:08:00.000Z', '2026-10-08T10:17:00.000Z', '2026-10-08T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000192', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000192', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000102', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2903,7 +3269,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:38:00.000Z', '2026-10-08T10:56:00.000Z', '2026-10-08T10:56:00.000Z'),
-  ('70000000-0000-4000-8000-000000000193', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000193', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000103', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2918,7 +3284,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-15T10:08:00.000Z', '2026-10-15T10:17:00.000Z', '2026-10-15T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000194', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000194', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000104', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2935,7 +3301,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-15T10:38:00.000Z', '2026-10-15T10:56:00.000Z', '2026-10-15T10:56:00.000Z'),
-  ('70000000-0000-4000-8000-000000000195', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000195', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000101', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -2950,7 +3316,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-08T10:09:00.000Z', '2026-10-08T10:27:00.000Z', '2026-10-08T10:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000196', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000196', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000102', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -2965,7 +3331,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:39:00.000Z', '2026-10-08T10:57:00.000Z', '2026-10-08T10:57:00.000Z'),
-  ('70000000-0000-4000-8000-000000000197', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000197', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000103', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -2980,7 +3346,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-15T10:09:00.000Z', '2026-10-15T10:27:00.000Z', '2026-10-15T10:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000198', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000198', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000104', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -2997,7 +3363,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return largest;
 }
 ', 'submitted', '2026-10-15T10:39:00.000Z', '2026-10-15T10:45:00.000Z', '2026-10-15T10:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000199', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  ('70000000-0000-4000-8000-000000000199', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000101', 1, 'function countEvens(n) {
   let evens = 0;
   for (let i = 1; i <= n; i++) {
     if (i % 2 === 0) evens++;
@@ -3012,7 +3378,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return evens;
 }
 ', 'submitted', '2026-10-08T10:10:00.000Z', '2026-10-08T10:28:00.000Z', '2026-10-08T10:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000200', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  ('70000000-0000-4000-8000-000000000200', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000102', 1, 'function multiplicationTable(n) {
   const rows = [];
   for (let i = 1; i <= 10; i++) {
     rows.push(n + '' x '' + i + '' = '' + n * i);
@@ -3027,7 +3393,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:40:00.000Z', '2026-10-08T10:49:00.000Z', '2026-10-08T10:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000201', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
+  ('70000000-0000-4000-8000-000000000201', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000103', 1, 'function sum(numbers) {
   let total = 0;
   for (const number of numbers) {
     total += number;
@@ -3042,7 +3408,7 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   return total;
 }
 ', 'submitted', '2026-10-15T10:10:00.000Z', '2026-10-15T10:16:00.000Z', '2026-10-15T10:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000202', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  ('70000000-0000-4000-8000-000000000202', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000104', 1, 'function maximum(numbers) {
   if (numbers.length === 0) return null;
   let largest = numbers[0];
   for (const number of numbers) {
@@ -3058,7 +3424,80 @@ insert into attempt (id, exercise_id, user_id, assignment_id, current_code, fina
   }
   return largest;
 }
-', 'submitted', '2026-10-15T10:40:00.000Z', '2026-10-15T10:52:00.000Z', '2026-10-15T10:52:00.000Z');
+', 'submitted', '2026-10-15T10:40:00.000Z', '2026-10-15T10:52:00.000Z', '2026-10-15T10:52:00.000Z'),
+  ('70000000-0000-4000-8000-000000000203', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000001', 2, 'function countEvens(n) {
+  let evens = 0;
+  for (let i = 1; i <= n; i++) {
+    if (i % 2 === 0) evens++;
+  }
+  return evens;
+}
+', 'function countEvens(n) {
+  let evens = 0;
+  for (let i = 1; i <= n; i++) {
+    if (i % 2 === 0) evens++;
+  }
+  return evens;
+}
+', 'submitted', '2026-11-02T17:00:00.000Z', '2026-11-02T17:06:00.000Z', '2026-11-02T17:06:00.000Z'),
+  ('70000000-0000-4000-8000-000000000204', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000003', 2, 'function sum(numbers) {
+  let total;
+  for (const number of numbers) {
+    total += number;
+  }
+  return total;
+}
+', null, 'tests_failed', '2026-11-02T18:30:00.000Z', null, '2026-11-02T18:33:00.000Z'),
+  ('70000000-0000-4000-8000-000000000205', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000504', 1, 'function maximum(numbers) {
+  let largest = 0;
+  for (const number of numbers) {
+    if (number > largest) largest = number;
+  }
+  return largest;
+}
+', null, 'tests_failed', '2026-11-03T08:00:00.000Z', null, '2026-11-03T08:09:00.000Z'),
+  ('70000000-0000-4000-8000-000000000206', '40000000-0000-4000-8000-000000000009', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000909', 1, 'function isValidEmail(text) {
+  if (text.includes('' '')) return false;
+  const parts = text.split(''@'');
+  if (parts.length !== 2) return false;
+  const [user, domain] = parts;
+  const dot = domain.indexOf(''.'');
+  return user.length > 0 && dot > 0 && !domain.endsWith(''.'');
+}
+', 'function isValidEmail(text) {
+  if (text.includes('' '')) return false;
+  const parts = text.split(''@'');
+  if (parts.length !== 2) return false;
+  const [user, domain] = parts;
+  const dot = domain.indexOf(''.'');
+  return user.length > 0 && dot > 0 && !domain.endsWith(''.'');
+}
+', 'submitted', '2026-10-29T11:00:00.000Z', '2026-10-29T11:09:00.000Z', '2026-10-29T11:09:00.000Z'),
+  ('70000000-0000-4000-8000-000000000207', '40000000-0000-4000-8000-000000000009', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000909', 1, 'function isValidEmail(text) {
+  return text.includes(''@'') && text.includes(''.'');
+}
+', null, 'tests_failed', '2026-10-29T11:04:00.000Z', null, '2026-10-29T11:10:00.000Z'),
+  ('70000000-0000-4000-8000-000000000208', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000001106', 1, 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
+  }
+  return vowels;
+}
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
+  }
+  return vowels;
+}
+', 'submitted', '2026-11-05T10:00:00.000Z', '2026-11-05T10:09:00.000Z', '2026-11-05T10:09:00.000Z'),
+  ('70000000-0000-4000-8000-000000000209', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000001107', 1, 'function average(numbers) {
+  let total = 0;
+  for (const number of numbers) total += number;
+  return total / numbers.length;
+}
+', null, 'tests_failed', '2026-11-05T10:25:00.000Z', null, '2026-11-05T10:31:00.000Z');
 
 insert into tutor_interaction (id, attempt_id, created_at, trigger, hint_level, student_message, transcript, emotion, intensity, elusion, prompt_version) values
   ('80000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000005', '2026-10-20T08:11:00.000Z', 'question', 1, '¿Está bien empezar el bucle en 0?', '¿Qué valor tiene tu variable antes de entrar en el bucle?', 'joy', 1, false, 'v0'),
@@ -3197,7 +3636,10 @@ insert into tutor_interaction (id, attempt_id, created_at, trigger, hint_level, 
   ('80000000-0000-4000-8000-000000000134', '70000000-0000-4000-8000-000000000197', '2026-10-15T10:21:00.000Z', 'hint', 2, null, 'Revisa el valor inicial del acumulador: ahí está la clave de la prueba que falla.', 'encouragement', 1, false, 'v0'),
   ('80000000-0000-4000-8000-000000000135', '70000000-0000-4000-8000-000000000199', '2026-10-08T10:16:00.000Z', 'hint', 1, null, '¿Desde qué número empieza a contar tu bucle? ¿Y dónde termina?', 'encouragement', 1, false, 'v0'),
   ('80000000-0000-4000-8000-000000000136', '70000000-0000-4000-8000-000000000199', '2026-10-08T10:22:00.000Z', 'hint', 2, null, 'Fíjate en la condición del bucle: decide qué valores se recorren y cuáles se quedan fuera.', 'encouragement', 1, false, 'v0'),
-  ('80000000-0000-4000-8000-000000000137', '70000000-0000-4000-8000-000000000202', '2026-10-15T10:46:00.000Z', 'question', 1, '¿Por qué me devuelve undefined?', '¿Qué ocurre con tu código cuando el vector está vacío?', 'joy', 1, false, 'v0');
+  ('80000000-0000-4000-8000-000000000137', '70000000-0000-4000-8000-000000000202', '2026-10-15T10:46:00.000Z', 'question', 1, '¿Por qué me devuelve undefined?', '¿Qué ocurre con tu código cuando el vector está vacío?', 'joy', 1, false, 'v0'),
+  ('80000000-0000-4000-8000-000000000138', '70000000-0000-4000-8000-000000000205', '2026-11-03T08:06:00.000Z', 'hint', 1, null, '¿Desde qué número empieza a contar tu bucle? ¿Y dónde termina?', 'encouragement', 1, false, 'v0'),
+  ('80000000-0000-4000-8000-000000000139', '70000000-0000-4000-8000-000000000207', '2026-10-29T11:10:00.000Z', 'hint', 1, null, '¿Qué valor tiene tu variable antes de entrar en el bucle?', 'encouragement', 1, false, 'v0'),
+  ('80000000-0000-4000-8000-000000000140', '70000000-0000-4000-8000-000000000209', '2026-11-05T10:31:00.000Z', 'hint', 1, null, '¿Qué ocurre con tu código cuando el vector está vacío?', 'encouragement', 1, false, 'v0');
 
 insert into process_event (id, attempt_id, type, timestamp, detail) values
   ('90000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', 'run', '2026-10-06T08:08:00.000Z', '{"passed":5,"failed":0,"failedTestIds":[]}'::jsonb),
@@ -3892,7 +4334,23 @@ insert into process_event (id, attempt_id, type, timestamp, detail) values
   ('90000000-0000-4000-8000-000000000690', '70000000-0000-4000-8000-000000000201', 'submit', '2026-10-15T10:16:00.000Z', 'null'::jsonb),
   ('90000000-0000-4000-8000-000000000691', '70000000-0000-4000-8000-000000000202', 'run', '2026-10-15T10:43:00.000Z', '{"passed":5,"failed":1,"failedTestIds":["50000000-0000-4000-8000-000000000042"]}'::jsonb),
   ('90000000-0000-4000-8000-000000000692', '70000000-0000-4000-8000-000000000202', 'run', '2026-10-15T10:49:00.000Z', '{"passed":6,"failed":0,"failedTestIds":[]}'::jsonb),
-  ('90000000-0000-4000-8000-000000000693', '70000000-0000-4000-8000-000000000202', 'submit', '2026-10-15T10:52:00.000Z', 'null'::jsonb);
+  ('90000000-0000-4000-8000-000000000693', '70000000-0000-4000-8000-000000000202', 'submit', '2026-10-15T10:52:00.000Z', 'null'::jsonb),
+  ('90000000-0000-4000-8000-000000000694', '70000000-0000-4000-8000-000000000203', 'run', '2026-11-02T17:03:00.000Z', '{"passed":5,"failed":0,"failedTestIds":[]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000695', '70000000-0000-4000-8000-000000000203', 'submit', '2026-11-02T17:06:00.000Z', 'null'::jsonb),
+  ('90000000-0000-4000-8000-000000000696', '70000000-0000-4000-8000-000000000204', 'run', '2026-11-02T18:33:00.000Z', '{"passed":5,"failed":1,"failedTestIds":["50000000-0000-4000-8000-000000000033"]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000697', '70000000-0000-4000-8000-000000000205', 'run', '2026-11-03T08:03:00.000Z', '{"passed":4,"failed":2,"failedTestIds":["50000000-0000-4000-8000-000000000042","50000000-0000-4000-8000-000000000044"]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000698', '70000000-0000-4000-8000-000000000205', 'hint_requested', '2026-11-03T08:06:00.000Z', '{"level":1}'::jsonb),
+  ('90000000-0000-4000-8000-000000000699', '70000000-0000-4000-8000-000000000205', 'run', '2026-11-03T08:09:00.000Z', '{"passed":5,"failed":1,"failedTestIds":["50000000-0000-4000-8000-000000000044"]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000700', '70000000-0000-4000-8000-000000000206', 'run', '2026-10-29T11:03:00.000Z', '{"passed":3,"failed":3,"failedTestIds":["50000000-0000-4000-8000-000000000093","50000000-0000-4000-8000-000000000095","50000000-0000-4000-8000-000000000096"]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000701', '70000000-0000-4000-8000-000000000206', 'run', '2026-10-29T11:06:00.000Z', '{"passed":6,"failed":0,"failedTestIds":[]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000702', '70000000-0000-4000-8000-000000000206', 'submit', '2026-10-29T11:09:00.000Z', 'null'::jsonb),
+  ('90000000-0000-4000-8000-000000000703', '70000000-0000-4000-8000-000000000207', 'run', '2026-10-29T11:07:00.000Z', '{"passed":3,"failed":3,"failedTestIds":["50000000-0000-4000-8000-000000000093","50000000-0000-4000-8000-000000000095","50000000-0000-4000-8000-000000000096"]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000704', '70000000-0000-4000-8000-000000000207', 'hint_requested', '2026-10-29T11:10:00.000Z', '{"level":1}'::jsonb),
+  ('90000000-0000-4000-8000-000000000705', '70000000-0000-4000-8000-000000000208', 'run', '2026-11-05T10:03:00.000Z', '{"passed":5,"failed":1,"failedTestIds":["50000000-0000-4000-8000-000000000065"]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000706', '70000000-0000-4000-8000-000000000208', 'run', '2026-11-05T10:06:00.000Z', '{"passed":6,"failed":0,"failedTestIds":[]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000707', '70000000-0000-4000-8000-000000000208', 'submit', '2026-11-05T10:09:00.000Z', 'null'::jsonb),
+  ('90000000-0000-4000-8000-000000000708', '70000000-0000-4000-8000-000000000209', 'run', '2026-11-05T10:28:00.000Z', '{"passed":5,"failed":1,"failedTestIds":["50000000-0000-4000-8000-000000000074"]}'::jsonb),
+  ('90000000-0000-4000-8000-000000000709', '70000000-0000-4000-8000-000000000209', 'hint_requested', '2026-11-05T10:31:00.000Z', '{"level":1}'::jsonb);
 
 insert into app_setting (key, value) values
   ('ai_provider', '{"baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-3.5-flash-lite"}'::jsonb);

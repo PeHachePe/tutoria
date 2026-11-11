@@ -9,8 +9,15 @@ import type {
   Test,
 } from '../exercise';
 import { ExerciseDraft, ExerciseService, ExerciseWithTests } from '../exercise-service';
-import type { HintLevel, TutorInteraction } from '../tutor';
-import { canManageGroup, enrolledGroupIds, findRow, now } from './mock-access';
+import { type AssignmentCard, assignedExercise, summarizeAttempt } from '../attempt-progress';
+import {
+  canManageGroup,
+  canSeeAssignment,
+  enrolledGroupIds,
+  findRow,
+  findVisibleAssignment,
+  now,
+} from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 
@@ -29,47 +36,32 @@ export class MockExerciseService extends ExerciseService {
       const tables = this.db.tables();
       const groupIds = enrolledGroupIds(tables, userId);
       return tables.assignments
-        .filter((assignment) => groupIds.has(assignment.groupId))
-        .sort((a, b) => a.session - b.session)
+        .filter(
+          (assignment) =>
+            groupIds.has(assignment.groupId) && canSeeAssignment(tables, user, assignment),
+        )
+        .sort((a, b) => a.id.localeCompare(b.id))
         .map((assignment) => {
-          const attempt = tables.attempts
-            .filter((a) => a.userId === userId && a.exerciseId === assignment.exerciseId)
-            .at(-1);
-          const interactions = attempt
-            ? tables.interactions.filter((i) => i.attemptId === attempt.id)
-            : [];
-          return {
-            exercise: findRow(tables.exercises, assignment.exerciseId),
-            assignmentId: assignment.id,
-            session: assignment.session,
-            sessionTitle:
-              tables.classSessions.find(
-                (s) => s.groupId === assignment.groupId && s.number === assignment.session,
-              )?.title ?? null,
-            updatedAt: attempt?.updatedAt ?? null,
-            status: attempt?.status ?? 'not_started',
-            hintCount: interactions.filter((i) => i.trigger === 'hint').length,
-            hintLevel: highestLevel(interactions),
-          };
+          const attempts = tables.attempts
+            .filter((a) => a.userId === userId && a.assignmentId === assignment.id)
+            .map((attempt) =>
+              summarizeAttempt(
+                attempt,
+                tables.interactions.filter((i) => i.attemptId === attempt.id),
+              ),
+            );
+          return assignedExercise(this.card(assignment), attempts);
         });
     });
   }
 
-  getDetail(exerciseId: string): Promise<ExerciseDetail> {
+  getDetail(assignmentId: string): Promise<ExerciseDetail> {
     return this.network.request(() => {
       const user = this.db.requireUser();
-      const tables = this.db.tables();
-      const exercise = findRow(tables.exercises, exerciseId);
-      const groupIds = enrolledGroupIds(tables, user.id);
-      const assigned = tables.assignments.some(
-        (assignment) => assignment.exerciseId === exerciseId && groupIds.has(assignment.groupId),
-      );
-      if (user.role === 'student' && !assigned) {
-        throw new DataError('not_found');
-      }
-      const tests = this.testsOf(exerciseId);
+      const assignment = findVisibleAssignment(this.db.tables(), user, assignmentId);
+      const tests = this.testsOf(assignment.exerciseId);
       return {
-        exercise,
+        ...this.card(assignment),
         visibleTests: tests.filter((test) => !test.isHidden),
         hiddenTestCount: tests.filter((test) => test.isHidden).length,
       };
@@ -149,7 +141,7 @@ export class MockExerciseService extends ExerciseService {
       return this.db
         .tables()
         .assignments.filter((assignment) => assignment.groupId === groupId)
-        .sort((a, b) => a.session - b.session);
+        .sort((a, b) => a.id.localeCompare(b.id));
     });
   }
 
@@ -158,14 +150,14 @@ export class MockExerciseService extends ExerciseService {
       this.requireGroupManager(assignment.groupId);
       const tables = this.db.tables();
       findRow(tables.exercises, assignment.exerciseId);
+      if (findRow(tables.classBlocks, assignment.blockId).groupId !== assignment.groupId) {
+        throw new DataError('invalid', 'The block is of another group');
+      }
       const repeated = tables.assignments.some(
-        (row) =>
-          row.groupId === assignment.groupId &&
-          row.exerciseId === assignment.exerciseId &&
-          row.session === assignment.session,
+        (row) => row.blockId === assignment.blockId && row.exerciseId === assignment.exerciseId,
       );
       if (repeated) {
-        throw new DataError('invalid', 'The exercise is already assigned to that session');
+        throw new DataError('invalid', 'The exercise is already in that block');
       }
       const created: ExerciseAssignment = { id: crypto.randomUUID(), ...assignment };
       this.db.update('assignments', (rows) => [...rows, created]);
@@ -185,6 +177,18 @@ export class MockExerciseService extends ExerciseService {
         ),
       );
     });
+  }
+
+  /** The exercise of the assignment, with its group, subject and block. */
+  private card(assignment: ExerciseAssignment): AssignmentCard {
+    const tables = this.db.tables();
+    const group = findRow(tables.groups, assignment.groupId);
+    return {
+      exercise: findRow(tables.exercises, assignment.exerciseId),
+      assignmentId: assignment.id,
+      group: { id: group.id, name: group.name, subject: findRow(tables.subjects, group.subjectId) },
+      block: findRow(tables.classBlocks, assignment.blockId),
+    };
   }
 
   private testsOf(exerciseId: string): Test[] {
@@ -215,15 +219,6 @@ export class MockExerciseService extends ExerciseService {
 }
 
 /** The columns of `exercise` that the teacher edits; the tests go to their own table. */
-/** Highest hint level among the tutor's answers to an attempt, or null without any. */
-function highestLevel(interactions: readonly TutorInteraction[]): HintLevel | null {
-  return interactions.reduce<HintLevel | null>(
-    (level, interaction) =>
-      level === null || interaction.hintLevel > level ? interaction.hintLevel : level,
-    null,
-  );
-}
-
 function exerciseFields(draft: ExerciseDraft) {
   const {
     title,

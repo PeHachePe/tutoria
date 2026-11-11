@@ -24,6 +24,7 @@ function attemptOf(status: StoredAttemptStatus = 'in_progress'): Attempt {
     exerciseId: 'e3',
     userId: 'student-1',
     assignmentId: null,
+    number: 1,
     currentCode: 'function suma(v) {}',
     finalCode: null,
     status,

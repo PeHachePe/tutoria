@@ -6,7 +6,7 @@
     </p>
   </header>
 
-  <div class="grid gap-4 lg:grid-cols-2">
+  <div class="grid gap-6 lg:grid-cols-2">
     <section
       aria-labelledby="my-data-recorded"
       class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6 lg:row-span-3"
@@ -33,7 +33,7 @@
     <!-- What is never recorded stands apart, as in the prototype (figure 23) -->
     <section
       aria-labelledby="my-data-never"
-      class="flex flex-col gap-2 rounded-2xl border-2 border-success bg-success-container p-4 text-on-success-container sm:p-6"
+      class="flex flex-col gap-2 rounded-2xl bg-success-container p-4 text-on-success-container sm:p-6"
     >
       <h2 id="my-data-never" class="flex items-center gap-2 text-title-large">
         <mat-icon aria-hidden="true">mic_off</mat-icon>
@@ -80,26 +80,45 @@
     <h2 id="my-data-services" class="text-title-large" i18n="@@myData.services">
       Servicios externos
     </h2>
-    <ul class="flex list-disc flex-col gap-2 ps-5 text-body-large">
-      <li i18n="@@myData.services.ai">
-        Las respuestas del tutor las redacta un modelo de inteligencia artificial de un proveedor
-        externo. Recibe el enunciado, tu código, la conversación y el nivel de pista, pero no tu
-        nombre ni tu correo.
-      </li>
-      <li i18n="@@myData.services.voice">
-        Cuando uses la voz, el reconocimiento lo hace tu navegador, que puede enviar el audio a un
-        servicio externo para transcribirlo (Chrome, a Google). Si prefieres evitarlo, puedes
-        escribir siempre.
-      </li>
+    <!-- The same list as what is recorded; the secondary colour sets third parties apart -->
+    <ul class="flex flex-col gap-4">
+      @for (service of services; track service.icon) {
+        <li class="flex gap-3">
+          <span
+            class="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container"
+            aria-hidden="true"
+          >
+            <mat-icon>{{ service.icon }}</mat-icon>
+          </span>
+          <div class="flex flex-col">
+            <span class="text-title-small">{{ service.title }}</span>
+            <span class="text-body-medium text-on-surface-variant">{{ service.detail }}</span>
+          </div>
+        </li>
+      }
     </ul>
   </section>
 
-  <div class="flex flex-wrap justify-end gap-3">
-    <a matButton="outlined" [routerLink]="settingsPath" i18n="@@myData.toSettings">
-      Ir a los ajustes
-    </a>
-    <a matButton="filled" [routerLink]="catalogPath" i18n="@@myData.toCatalog">
-      Ir a los ejercicios
-    </a>
-  </div>
+  <!-- What the student decides, in a panel like the privacy one of the settings -->
+  <section
+    aria-labelledby="my-data-choices"
+    class="flex flex-col items-start gap-3 rounded-2xl bg-panel p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+  >
+    <div class="flex flex-col gap-1">
+      <h2 id="my-data-choices" class="text-title-large" i18n="@@myData.choices">Tú decides</h2>
+      <p class="text-body-medium text-on-surface-variant" i18n="@@myData.choices.text">
+        En los ajustes eliges si el tutor te escribe por iniciativa propia y si le hablas por voz.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a matButton="outlined" [routerLink]="settingsPath">
+        <mat-icon>settings</mat-icon>
+        <ng-container i18n="@@myData.toSettings">Ir a los ajustes</ng-container>
+      </a>
+      <a matButton="filled" [routerLink]="catalogPath">
+        <ng-container i18n="@@myData.toCatalog">Ir a los ejercicios</ng-container>
+        <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+      </a>
+    </div>
+  </section>
 </div>

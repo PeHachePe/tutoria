@@ -6,7 +6,7 @@ import type {
   ExerciseDetail,
   Test,
 } from './exercise';
-import type { ExerciseLocale, ExerciseTranslations } from './exercise-text';
+import type { ContentLocale, ExerciseTranslations } from './localized-text';
 
 /** Test as the teacher edits it: the database assigns its id and its exercise. */
 export type TestDraft = Omit<Test, 'id' | 'exerciseId'>;
@@ -18,7 +18,7 @@ export interface ExerciseDraft {
   readonly difficulty: Difficulty;
   readonly topics: readonly string[];
   /** The language of `title`, `statement` and `topics`. */
-  readonly sourceLocale: ExerciseLocale;
+  readonly sourceLocale: ContentLocale;
   readonly translations: ExerciseTranslations;
   readonly functionName: string;
   readonly maxRepeatedFailures: number;
@@ -37,11 +37,18 @@ export interface ExerciseWithTests {
  * token (4.2, D-005). The teacher's operations are refined in step 4.3.
  */
 export abstract class ExerciseService {
-  /** Exercises assigned to the student's groups, with the status of their latest attempt. */
+  /**
+   * Exercises assigned to the student's groups that they can see (neither the assignment nor its
+   * block hidden), sorted by group, block and assignment, with the attempt that counts and the
+   * practice after it (2.5c).
+   */
   abstract listAssigned(userId: string): Promise<AssignedExercise[]>;
 
-  /** The exercise and its visible tests. Throws `DataError('not_found')` if the student cannot see it. */
-  abstract getDetail(exerciseId: string): Promise<ExerciseDetail>;
+  /**
+   * The exercise of an assignment, with its group, its block and its visible tests. Throws
+   * `DataError('not_found')` if the student cannot see it.
+   */
+  abstract getDetail(assignmentId: string): Promise<ExerciseDetail>;
 
   /** The exercise bank, shared by all teachers. */
   abstract list(): Promise<Exercise[]>;

@@ -99,8 +99,6 @@
     "catalog.loading": "Loading the exercises…",
     "catalog.empty.heading": "You have no exercises assigned yet",
     "catalog.empty.text": "When your teacher assigns you some, they will appear here.",
-    "catalog.session": "Session {$INTERPOLATION}",
-    "catalog.sessionProgress": "{$INTERPOLATION}/{$INTERPOLATION_1} passed",
     "catalog.greeting": "Hi, {$INTERPOLATION}.",
     "catalog.progressLabel": "passed",
     "catalog.progressBar": "Exercises passed",
@@ -325,6 +323,20 @@
     "locale.name.es": "Spanish",
     "locale.name.en": "English",
     "locale.name.ca": "Catalan",
-    "workspace.untranslated": "This statement is only in {$language}."
+    "workspace.untranslated": "This statement is only in {$language}.",
+    "catalog.subjects": "Subjects",
+    "catalog.blockProgress": "{$INTERPOLATION}/{$INTERPOLATION_1} passed",
+    "catalog.repetitions": "{VAR_PLURAL, plural, =1 {Repeated once} other {Repeated {INTERPOLATION} times}}",
+    "workspace.retryFailed": "Another attempt could not be started.",
+    "workspace.practiceNote": "You are practising: this attempt does not count for the class, which keeps your first submission.",
+    "workspace.practiseAgain": "Practise again",
+    "workspace.nextExercise": "Next exercise",
+    "workspace.place": "Location",
+    "workspace.attemptOf": "Attempt {$INTERPOLATION} of {$INTERPOLATION_1}",
+    "workspace.attemptChoice": "Attempt {$INTERPOLATION}",
+    "myData.choices": "You decide",
+    "myData.choices.text": "In the settings you choose whether the tutor writes to you on its own and whether you talk to it by voice.",
+    "myData.services.ai.title": "The tutor's AI model",
+    "myData.services.voice.title": "Speech recognition"
   }
 }

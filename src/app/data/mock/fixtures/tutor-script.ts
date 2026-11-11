@@ -1,4 +1,4 @@
-import type { ExerciseLocale } from '../../exercise-text';
+import type { ContentLocale } from '../../localized-text';
 import type { HintLevel } from '../../tutor';
 
 /**
@@ -21,7 +21,7 @@ export interface TutorScript {
   readonly passed: string;
 }
 
-export const TUTOR_SCRIPTS: Readonly<Record<ExerciseLocale, TutorScript>> = {
+export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
   es: {
     hints: {
       1: [

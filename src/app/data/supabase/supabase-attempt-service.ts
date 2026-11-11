@@ -9,16 +9,43 @@ import { toAttempt, toProcessEvent, toTutorInteraction } from './supabase-rows';
 /**
  * The student's attempts in Supabase. The status only changes on the server (2.4): the trigger
  * that sends it back to `in_progress` when the code changes, and the functions `open_attempt` and
- * `submit_attempt` (2.1). The client may only write `current_code`.
+ * `submit_attempt` (2.1), and `retry_attempt` (2.5c). The client may only write `current_code`.
  */
 @Service({ autoProvided: false })
 export class SupabaseAttemptService extends AttemptService {
   private readonly supabase = inject(SUPABASE_CLIENT);
 
-  /** Two tabs opening it at once get the same attempt (unique per student and exercise). */
-  async openOrCreate(exerciseId: string): Promise<Attempt> {
+  /** Two tabs opening it at once get the same attempt (unique per student, assignment and number). */
+  async openOrCreate(assignmentId: string, number?: number): Promise<Attempt> {
     const row = unwrap(
-      await this.supabase.rpc('open_attempt', { target_exercise_id: exerciseId }).single(),
+      await this.supabase
+        .rpc('open_attempt', { target_assignment_id: assignmentId, attempt_number: number })
+        .single(),
+    );
+    return toAttempt(row);
+  }
+
+  /**
+   * Those of the signed-in user: the RLS would also give a teacher those of their students. The
+   * session is read from the client, without a request.
+   */
+  async list(assignmentId: string): Promise<Attempt[]> {
+    const { data } = await this.supabase.auth.getSession();
+    const rows = unwrap(
+      await this.supabase
+        .from('attempt')
+        .select()
+        .eq('assignment_id', assignmentId)
+        .eq('user_id', data.session?.user.id ?? '')
+        .order('number'),
+    );
+    return rows.map(toAttempt);
+  }
+
+  /** Two tabs practising again at once get the same new attempt. */
+  async retry(assignmentId: string): Promise<Attempt> {
+    const row = unwrap(
+      await this.supabase.rpc('retry_attempt', { target_assignment_id: assignmentId }).single(),
     );
     return toAttempt(row);
   }

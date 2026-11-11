@@ -21,6 +21,7 @@ function attemptOf(userId: string, status: Attempt['status'] = 'in_progress'): A
     exerciseId: exerciseId(3),
     userId,
     assignmentId: null,
+    number: 1,
     currentCode: '',
     finalCode: null,
     status,

@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { LOCALE_ID } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { screen, within } from '@testing-library/angular';
@@ -15,7 +15,7 @@ import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
 import { DataError } from '../../data/data-error';
 import { EventService } from '../../data/event-service';
-import type { ExerciseDetail } from '../../data/exercise';
+import type { AssignedExercise, ExerciseDetail } from '../../data/exercise';
 import type { TutorEvent } from '../../data/tutor';
 import { TutorService } from '../../data/tutor-service';
 import { ExerciseService } from '../../data/exercise-service';
@@ -35,8 +35,17 @@ function detailOf(index: number): ExerciseDetail {
   const tests = SEED.tests
     .filter((test) => test.exerciseId === exercise.id)
     .sort((a, b) => a.position - b.position);
+  const assignment = SEED.assignments.find((a) => a.exerciseId === exercise.id)!;
+  const group = SEED.groups.find((g) => g.id === assignment.groupId)!;
   return {
     exercise,
+    assignmentId: assignment.id,
+    group: {
+      id: group.id,
+      name: group.name,
+      subject: SEED.subjects.find((subject) => subject.id === group.subjectId)!,
+    },
+    block: SEED.classBlocks.find((block) => block.id === assignment.blockId)!,
     visibleTests: tests.filter((test) => !test.isHidden),
     hiddenTestCount: tests.filter((test) => test.isHidden).length,
   };
@@ -63,6 +72,7 @@ function attemptOf(exerciseId: string, status: StoredAttemptStatus = 'in_progres
     exerciseId,
     userId: 'student-1',
     assignmentId: null,
+    number: 1,
     currentCode: '',
     finalCode: null,
     status,
@@ -85,7 +95,12 @@ function text(element: Element | null | undefined): string {
 
 interface Setup {
   getDetail?: ExerciseService['getDetail'];
+  listAssigned?: ExerciseService['listAssigned'];
   openOrCreate?: AttemptService['openOrCreate'];
+  list?: AttemptService['list'];
+  retry?: AttemptService['retry'];
+  /** The URL the page opens with, for its query parameters. */
+  url?: string;
   saveCode?: AttemptService['saveCode'];
   submit?: AttemptService['submit'];
   run?: CodeRunnerService['run'];
@@ -105,7 +120,11 @@ describe('WorkspacePage', () => {
    */
   async function renderPage({
     getDetail = () => Promise.resolve(SUM),
-    openOrCreate = (exerciseId) => Promise.resolve(attemptOf(exerciseId)),
+    listAssigned = () => Promise.resolve([]),
+    openOrCreate = () => Promise.resolve(attemptOf(SUM.exercise.id)),
+    list = () => Promise.resolve([]),
+    retry = () => Promise.resolve({ ...attemptOf(SUM.exercise.id), id: 'attempt-2', number: 2 }),
+    url = '/',
     saveCode = (attemptId, code) =>
       Promise.resolve({ ...attemptOf(SUM.exercise.id), id: attemptId, currentCode: code }),
     submit = (attemptId) =>
@@ -139,11 +158,16 @@ describe('WorkspacePage', () => {
         BrowserSignals,
         { provide: TutorService, useValue: { ask: () => tutorAnswer() } },
         { provide: EventService, useValue: { send: sendEvents } },
-        { provide: ExerciseService, useValue: { getDetail: vi.fn(getDetail) } },
+        {
+          provide: ExerciseService,
+          useValue: { getDetail: vi.fn(getDetail), listAssigned: vi.fn(listAssigned) },
+        },
         {
           provide: AttemptService,
           useValue: {
             openOrCreate: vi.fn(openOrCreate),
+            list: vi.fn(list),
+            retry: vi.fn(retry),
             saveCode: save,
             submit: submitAttempt,
             history: () =>
@@ -169,8 +193,9 @@ describe('WorkspacePage', () => {
       ],
     });
     await restoreSession();
+    await TestBed.inject(Router).navigateByUrl(url);
     const fixture = TestBed.createComponent(WorkspacePage);
-    fixture.componentRef.setInput('id', SUM.exercise.id);
+    fixture.componentRef.setInput('id', SUM.assignmentId);
     fixture.autoDetectChanges();
     if (settle) {
       await fixture.whenStable();
@@ -250,12 +275,10 @@ describe('WorkspacePage', () => {
   });
 
   it('opens or creates the attempt and shows its status', async () => {
-    const openOrCreate = vi.fn((exerciseId: string) =>
-      Promise.resolve(attemptOf(exerciseId, 'tests_failed')),
-    );
+    const openOrCreate = vi.fn(() => Promise.resolve(attemptOf(SUM.exercise.id, 'tests_failed')));
     await renderPage({ openOrCreate });
 
-    expect(openOrCreate).toHaveBeenCalledWith(SUM.exercise.id);
+    expect(openOrCreate).toHaveBeenCalledWith(SUM.assignmentId, undefined);
     expect(screen.getByText('Con fallos')).toBeTruthy();
   });
 
@@ -334,7 +357,7 @@ describe('WorkspacePage', () => {
       .fn<ExerciseService['getDetail']>()
       .mockRejectedValueOnce(new DataError('network'))
       .mockResolvedValue(SUM);
-    const openOrCreate = vi.fn((exerciseId: string) => Promise.resolve(attemptOf(exerciseId)));
+    const openOrCreate = vi.fn(() => Promise.resolve(attemptOf(SUM.exercise.id)));
     const { fixture } = await renderPage({ getDetail, openOrCreate });
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Reintentar' }));
@@ -379,8 +402,8 @@ describe('WorkspacePage', () => {
 
     it('keeps the room of the editor until its zone shows, and then its code and help', async () => {
       const { fixture } = await renderPage({
-        openOrCreate: (exerciseId) =>
-          Promise.resolve({ ...attemptOf(exerciseId), currentCode: 'function sum' }),
+        openOrCreate: () =>
+          Promise.resolve({ ...attemptOf(SUM.exercise.id), currentCode: 'function sum' }),
       });
       expect(screen.queryByRole('textbox', { name: 'Código' })).toBeNull();
 
@@ -489,7 +512,7 @@ describe('WorkspacePage', () => {
 
     it('only shows the code of a submitted attempt', async () => {
       const { fixture } = await renderPage({
-        openOrCreate: (exerciseId) => Promise.resolve(attemptOf(exerciseId, 'submitted')),
+        openOrCreate: () => Promise.resolve(attemptOf(SUM.exercise.id, 'submitted')),
       });
       await showEditor(fixture);
 
@@ -792,9 +815,9 @@ describe('WorkspacePage', () => {
 
     it('shows when a submitted attempt was submitted, without the buttons', async () => {
       await renderPage({
-        openOrCreate: (exerciseId) =>
+        openOrCreate: () =>
           Promise.resolve({
-            ...attemptOf(exerciseId, 'submitted'),
+            ...attemptOf(SUM.exercise.id, 'submitted'),
             finishedAt: '2026-11-08T10:30:00.000Z',
           }),
       });
@@ -1160,5 +1183,176 @@ describe('WorkspacePage', () => {
 
     expect(screen.queryByText(/abierto en otra pestaña/)).toBeNull();
     expect(editorView().state.readOnly).toBe(false);
+  });
+  describe('blocks and practice (2.5c)', () => {
+    const SUBMITTED = {
+      ...attemptOf(SUM.exercise.id, 'submitted'),
+      id: 'attempt-1',
+      finishedAt: '2026-11-08T10:30:00.000Z',
+    };
+    const PRACTICE = { ...attemptOf(SUM.exercise.id), id: 'attempt-2', number: 2 };
+
+    it('says where the exercise is, with a link to the tab of its subject', async () => {
+      await renderPage();
+
+      const place = screen.getByRole('navigation', { name: 'Ubicación' });
+      expect(within(place).getAllByRole('listitem').map(text)).toEqual([
+        'Programación básica',
+        'chevron_rightTema 2: Vectores',
+      ]);
+      expect(
+        within(place).getByRole('link', { name: 'Programación básica' }).getAttribute('href'),
+      ).toBe(`/alumno?grupo=${SUM.group.id}`);
+    });
+
+    it('says where the exercise is in the language of the interface, or in their own one', async () => {
+      const block = { ...SUM.block, translations: {} };
+      await renderPage({ locale: 'en', getDetail: () => Promise.resolve({ ...SUM, block }) });
+
+      const place = screen.getByRole('navigation', { name: 'Ubicación' });
+      expect(
+        within(place).getByRole('link', { name: 'Basic programming' }).getAttribute('lang'),
+      ).toBeNull();
+      expect(within(place).getByText('Tema 2: Vectores').getAttribute('lang')).toBe('es');
+    });
+
+    it('marks the subject with its own language when it has no translation', async () => {
+      const group = { ...SUM.group, subject: { ...SUM.group.subject, translations: {} } };
+      await renderPage({ locale: 'en', getDetail: () => Promise.resolve({ ...SUM, group }) });
+
+      const place = screen.getByRole('navigation', { name: 'Ubicación' });
+      const subject = within(place).getByRole('link', { name: 'Programación básica' });
+      expect(subject.getAttribute('lang')).toBe('es');
+      expect(within(place).getByText('Topic 2: Arrays').getAttribute('lang')).toBeNull();
+    });
+
+    it('opens the attempt asked for in the URL and lets the student choose among them', async () => {
+      const openOrCreate = vi.fn(() => Promise.resolve(SUBMITTED));
+      const { fixture } = await renderPage({
+        url: '/?intento=1',
+        openOrCreate,
+        list: () => Promise.resolve([SUBMITTED, { ...PRACTICE, status: 'tests_failed' }]),
+      });
+      await fixture.whenStable();
+
+      expect(openOrCreate).toHaveBeenCalledWith(SUM.assignmentId, 1);
+      await userEvent.setup().click(screen.getByRole('button', { name: /Intento 1 de 2/ }));
+      const items = screen.getAllByRole('menuitem');
+      expect(items.map(text)).toEqual([
+        'checkIntento 1 task_alt Entregado',
+        'Intento 2 error Con fallos',
+      ]);
+      expect(items[0].getAttribute('aria-current')).toBe('page');
+      expect(items[0].getAttribute('href')).toBe('/?intento=1');
+      // The latest has no number: it is the one the exercise opens with
+      expect(items[1].getAttribute('href')).toBe('/');
+      // An earlier attempt cannot be practised again: only the latest
+      expect(screen.queryByRole('button', { name: 'Practicar de nuevo' })).toBeNull();
+    });
+
+    it('ignores a number in the URL that is not one', async () => {
+      const openOrCreate = vi.fn(() => Promise.resolve(SUBMITTED));
+      await renderPage({ url: '/?intento=uno', openOrCreate });
+
+      expect(openOrCreate).toHaveBeenCalledWith(SUM.assignmentId, undefined);
+      expect(screen.queryByRole('button', { name: /^Intento/ })).toBeNull();
+    });
+
+    it('practises again a submitted attempt, empty, and takes the number out of the URL', async () => {
+      const retry = vi.fn(() => Promise.resolve(PRACTICE));
+      const { fixture } = await renderPage({
+        url: '/?intento=1',
+        openOrCreate: (_, number) => Promise.resolve(number === 1 ? SUBMITTED : PRACTICE),
+        list: () => Promise.resolve([SUBMITTED]),
+        retry,
+      });
+      await fixture.whenStable();
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Practicar de nuevo' }));
+      await fixture.whenStable();
+
+      expect(retry).toHaveBeenCalledWith(SUM.assignmentId);
+      expect(TestBed.inject(Router).url).toBe('/');
+      expect(screen.getByText('En curso')).toBeTruthy();
+      expect(
+        screen.getByText(/Estás practicando: este intento no cuenta para la clase/),
+      ).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Código' }));
+    });
+
+    it('keeps the URL when practising again from the latest attempt', async () => {
+      const { fixture } = await renderPage({ openOrCreate: () => Promise.resolve(SUBMITTED) });
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Practicar de nuevo' }));
+      await fixture.whenStable();
+
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('says practising again failed and tries again on retry', async () => {
+      const retry = vi
+        .fn<AttemptService['retry']>()
+        .mockRejectedValueOnce(new DataError('network'))
+        .mockResolvedValueOnce(PRACTICE);
+      const { fixture } = await renderPage({
+        openOrCreate: () => Promise.resolve(SUBMITTED),
+        retry,
+      });
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Practicar de nuevo' }));
+      const alert = await screen.findByRole('alert');
+      expect(text(alert)).toContain('No se ha podido empezar otro intento.');
+      await userEvent.setup().click(within(alert).getByRole('button', { name: 'Reintentar' }));
+      await fixture.whenStable();
+
+      expect(retry).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('En curso')).toBeTruthy();
+    });
+
+    it('goes on to the next exercise of the block once submitted, or back to the catalog', async () => {
+      const next: AssignedExercise = {
+        exercise: SEED.exercises[3],
+        assignmentId: 'next-assignment',
+        group: SUM.group,
+        block: SUM.block,
+        updatedAt: null,
+        status: 'not_started',
+        hintCount: 0,
+        hintLevel: null,
+        practice: null,
+        repetitions: 0,
+      };
+      const current = {
+        ...next,
+        exercise: SUM.exercise,
+        assignmentId: SUM.assignmentId,
+        status: 'submitted' as const,
+      };
+      const { fixture } = await renderPage({
+        openOrCreate: () => Promise.resolve(SUBMITTED),
+        listAssigned: () => Promise.resolve([current, next]),
+      });
+      await fixture.whenStable();
+
+      expect(screen.getByRole('link', { name: /Siguiente ejercicio/ }).getAttribute('href')).toBe(
+        '/alumno/ejercicio/next-assignment',
+      );
+    });
+
+    it('goes back to the catalog when the rest of the block is submitted', async () => {
+      const { fixture } = await renderPage({ openOrCreate: () => Promise.resolve(SUBMITTED) });
+      await fixture.whenStable();
+
+      expect(screen.queryByRole('link', { name: /Siguiente ejercicio/ })).toBeNull();
+      expect(
+        within(screen.getByText(/El código ya no se puede cambiar/).parentElement!).getByRole(
+          'link',
+          {
+            name: 'Volver a los ejercicios',
+          },
+        ),
+      ).toBeTruthy();
+    });
   });
 });

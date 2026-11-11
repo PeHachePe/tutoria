@@ -1,5 +1,6 @@
 -- Step 2.2 · The count of hidden tests a student may know (docs/PLAN.md §2.5).
--- Lucía (1.º DAW A, ...011) has the eight exercises; Elena (1.º DAM B, ...041), exercises 1 to 4.
+-- Lucía (1.º DAW A, ...011) has the exercises of basic programming and web development; Elena
+-- (1.º DAM B, ...041), those of basic and advanced programming, never exercise 9 (web only).
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(4);
@@ -25,7 +26,7 @@ select is(
 
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000041');
 select throws_ok(
-  $$ select hidden_test_count('40000000-0000-4000-8000-000000000008') $$,
+  $$ select hidden_test_count('40000000-0000-4000-8000-000000000009') $$,
   'P0002', null,
   'a student cannot count the hidden tests of an exercise not assigned to them'
 );

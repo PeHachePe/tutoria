@@ -9,6 +9,7 @@ import {
   Injector,
   input,
   model,
+  output,
   viewChild,
 } from '@angular/core';
 import { MatAnchor, MatButton, MatIconButton } from '@angular/material/button';
@@ -80,6 +81,10 @@ export class CodeZone {
    * back with the same button. The tutor stays in sight, to ask and to see it step in (6.2).
    */
   readonly expanded = model(false);
+  /** Where «Siguiente ejercicio» goes once submitted, or null to go back to the catalog (2.5c). */
+  readonly nextPath = input<string | null>(null);
+  /** «Practicar de nuevo» opened a new attempt here: the page drops the number from the URL. */
+  readonly practised = output<void>();
 
   protected readonly store = inject(AttemptStore);
   /** Pastes from outside the code, recorded for the attempt open for changes (2.8). */
@@ -112,6 +117,7 @@ export class CodeZone {
 
   /** The note that replaces the buttons once submitted, which takes the focus then. */
   private readonly submittedNote = viewChild<ElementRef<HTMLElement>>('submittedNote');
+  private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
 
   protected readonly actionSessionExpired = computed(() =>
     isSessionExpired(this.store.actionError()?.error),
@@ -153,12 +159,28 @@ export class CodeZone {
     if (confirmed) await this.submit();
   }
 
-  /** Tries again the run or the submission that failed. */
+  /** Tries again the run, the submission or the new attempt that failed. */
   protected retryAction(): void {
-    if (this.store.actionError()?.action === 'submit') {
-      void this.submit();
-    } else {
-      void this.store.run();
+    switch (this.store.actionError()?.action) {
+      case 'submit':
+        void this.submit();
+        break;
+      case 'retry':
+        void this.practiseAgain();
+        break;
+      default:
+        void this.store.run();
+    }
+  }
+
+  /**
+   * «Practicar de nuevo» (2.5c): a new attempt, empty. The note with the button goes away, so the
+   * focus goes to the heading of the zone, over the editor (WCAG 2.4.3).
+   */
+  protected async practiseAgain(): Promise<void> {
+    if (await this.store.retry()) {
+      this.practised.emit();
+      afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
     }
   }
 

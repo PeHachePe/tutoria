@@ -1,7 +1,9 @@
 <div class="flex flex-wrap items-center justify-between gap-x-3">
   <h2
+    #heading
     id="code-heading"
-    class="text-title-medium"
+    tabindex="-1"
+    class="text-title-medium outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
     [class.sr-only]="compact()"
     i18n="@@workspace.code"
   >
@@ -50,6 +52,18 @@
     <mat-icon class="shrink-0">history</mat-icon>
     <span i18n="@@workspace.draftRestored"
       >Hemos recuperado el código que no llegó a guardarse. Ya se está guardando.</span
+    >
+  </p>
+}
+@if (store.practising()) {
+  <!-- Practice does not change the data of the class: the student knows it before writing (2.5c) -->
+  <p
+    class="flex items-center gap-2 rounded-lg bg-surface-container-high px-3 py-2 text-body-small text-on-surface-variant"
+  >
+    <mat-icon class="shrink-0">replay</mat-icon>
+    <span i18n="@@workspace.practiceNote"
+      >Estás practicando: este intento no cuenta para la clase, que sigue teniendo tu primera
+      entrega.</span
     >
   </p>
 }
@@ -111,9 +125,30 @@
       <p class="min-w-48 flex-1 text-body-medium" i18n="@@workspace.submittedNote">
         Entregado el {{ attempt.finishedAt | date: 'longDate' }}. El código ya no se puede cambiar.
       </p>
-      <a matButton="filled" [routerLink]="catalogPath" i18n="@@workspace.submittedBack">
-        Volver a los ejercicios
-      </a>
+      <!-- Practising again or going on to the next exercise of the block (2.5c) -->
+      <div class="flex flex-wrap gap-2">
+        @if (store.canRetry() || store.retrying()) {
+          <button
+            matButton="tonal"
+            type="button"
+            [disabled]="store.retrying()"
+            (click)="practiseAgain()"
+          >
+            <mat-icon>replay</mat-icon>
+            <span i18n="@@workspace.practiseAgain">Practicar de nuevo</span>
+          </button>
+        }
+        @if (nextPath(); as path) {
+          <a matButton="filled" [routerLink]="path">
+            <span i18n="@@workspace.nextExercise">Siguiente ejercicio</span>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+          </a>
+        } @else {
+          <a matButton="filled" [routerLink]="catalogPath" i18n="@@workspace.submittedBack">
+            Volver a los ejercicios
+          </a>
+        }
+      </div>
     </div>
   } @else {
     <!-- disabledInteractive: a button that gets disabled keeps the focus and says why -->

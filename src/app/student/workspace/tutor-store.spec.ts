@@ -15,6 +15,7 @@ function attemptOf(id: string, status: StoredAttemptStatus = 'in_progress'): Att
     exerciseId: `exercise-${id}`,
     userId: 'student-1',
     assignmentId: null,
+    number: 1,
     currentCode: 'function suma(v) {}',
     finalCode: null,
     status,

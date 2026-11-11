@@ -1,5 +1,7 @@
 import type { AttemptStatus } from './attempt';
-import type { TranslatableExercise } from './exercise-text';
+import type { AttemptSummary } from './attempt-progress';
+import type { Translatable, TranslatableExercise } from './localized-text';
+import type { Subject } from './subject';
 import type { HintLevel } from './tutor';
 
 export type Difficulty = 'initial' | 'medium' | 'advanced' | 'extension';
@@ -41,43 +43,68 @@ export interface Test {
   readonly position: number;
 }
 
-/** Table `exercise_assignment`: an exercise assigned to a group in a session. */
+/**
+ * Table `class_block`: a block of exercises of a group, with a free title the teacher writes and
+ * translates («Tema 1: Bucles», «Repaso del tema 1», «Recuperación del examen», 2.5c).
+ */
+export interface ClassBlock extends Translatable<{ readonly title: string }> {
+  readonly id: string;
+  readonly groupId: string;
+  /** Only sorts the blocks of the group; never shown. */
+  readonly position: number;
+  /** In `sourceLocale`; `blockTitle()` picks the one of the interface. */
+  readonly title: string;
+  /** Hidden from the students, with all its exercises, while the teacher prepares it. */
+  readonly isHidden: boolean;
+}
+
+/** Table `exercise_assignment`: an exercise in a block of a group. */
 export interface ExerciseAssignment {
   readonly id: string;
   readonly groupId: string;
+  readonly blockId: string;
   readonly exerciseId: string;
-  readonly session: number;
+  /** Hidden from the students, as the whole block can be. */
+  readonly isHidden: boolean;
 }
 
-/** Table `class_session`: a class session of a group, with an optional title («Bucles»). */
-export interface ClassSession {
+/** The group of an assigned exercise, with its subject: the tabs of the catalog. */
+export interface AssignedGroup {
   readonly id: string;
-  readonly groupId: string;
-  /** Order of the session in the group; assignments refer to it with `(groupId, session)`. */
-  readonly number: number;
-  readonly title: string | null;
+  readonly name: string;
+  readonly subject: Subject;
 }
 
-/** A card of the student's catalog. */
+/**
+ * A card of the student's catalog. Status, hints and dates are those of the attempt that counts for
+ * the class (`countedAttempt()`); the practice after it goes apart (2.5c).
+ */
 export interface AssignedExercise {
   readonly exercise: Exercise;
   readonly assignmentId: string;
-  readonly session: number;
-  /** Title the teacher gave the session, or null to show just its number. */
-  readonly sessionTitle: string | null;
-  /** Last change of the student's latest attempt, or null without one. */
+  readonly group: AssignedGroup;
+  readonly block: ClassBlock;
+  /** Last change of the attempt that counts, or null without one. */
   readonly updatedAt: string | null;
-  /** Status of the student's latest attempt, or `not_started`. */
+  /** Status of the attempt that counts, or `not_started`. */
   readonly status: AttemptStatus;
-  /** Hints the student asked for («Pedir pista») in the latest attempt. */
+  /** Hints the student asked for («Pedir pista») in the attempt that counts. */
   readonly hintCount: number;
-  /** Highest hint level the tutor reached in the latest attempt, or null without interactions. */
+  /** Highest hint level the tutor reached in the attempt that counts, or null without interactions. */
   readonly hintLevel: HintLevel | null;
+  /** The latest attempt after the one that counts («Practicar de nuevo»), or null. */
+  readonly practice: AttemptSummary | null;
+  /** Attempts started after the one that counts: «Repetido 2 veces». */
+  readonly repetitions: number;
 }
 
-/** What the workspace needs: the exercise and its visible tests, sorted by position. */
+/** What the workspace needs: the exercise of an assignment, where it is and its visible tests. */
 export interface ExerciseDetail {
   readonly exercise: Exercise;
+  readonly assignmentId: string;
+  readonly group: AssignedGroup;
+  readonly block: ClassBlock;
+  /** Sorted by position. */
   readonly visibleTests: readonly Test[];
   /** Hidden tests are counted but never sent to the student. */
   readonly hiddenTestCount: number;

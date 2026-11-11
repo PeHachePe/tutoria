@@ -9,6 +9,9 @@ const EXERCISE = SEED.exercises[2];
 
 const DETAIL: ExerciseDetail = {
   exercise: EXERCISE,
+  assignmentId: SEED.assignments[2].id,
+  group: { id: SEED.groups[0].id, name: SEED.groups[0].name, subject: SEED.subjects[0] },
+  block: SEED.classBlocks[1],
   visibleTests: SEED.tests.filter((test) => test.exerciseId === EXERCISE.id && !test.isHidden),
   hiddenTestCount: 2,
 };

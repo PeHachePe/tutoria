@@ -92,11 +92,15 @@ export class DevToolbar {
   protected readonly currentUser = this.db.currentUser;
   protected readonly failNext = computed(() => this.network.failNext() ?? NONE);
 
-  /** Active seed users, grouped as the selector shows them. */
+  /**
+   * Active seed users, grouped as the selector shows them. Students go by class: the groups of a
+   * class in several subjects share its name (2.5c), and each student shows once.
+   */
   protected readonly userGroups = computed(() => {
     const { users, groups, enrollments } = this.db.tables();
     const active = users.filter((user) => user.status === 'active');
     const groupOf = (label: string, members: AppUser[]) => ({ label, users: members });
+    const classes = [...new Set(groups.map((group) => group.name))];
     return [
       groupOf(
         'Administración',
@@ -106,13 +110,17 @@ export class DevToolbar {
         'Profesorado',
         active.filter((user) => user.role === 'teacher'),
       ),
-      ...groups.map((group) =>
+      ...classes.map((name) =>
         groupOf(
-          `Alumnado de ${group.name}`,
+          `Alumnado de ${name}`,
           active.filter(
             (user) =>
               user.role === 'student' &&
-              enrollments.some((e) => e.groupId === group.id && e.userId === user.id),
+              enrollments.some(
+                (e) =>
+                  e.userId === user.id &&
+                  groups.some((group) => group.id === e.groupId && group.name === name),
+              ),
           ),
         ),
       ),

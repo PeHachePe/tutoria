@@ -7,10 +7,12 @@
  */
 export const SEED_TABLES = [
   { table: 'app_user', source: 'users', jsonb: [], conflictKey: 'id' },
+  { table: 'subject', source: 'subjects', jsonb: ['translations'] },
   { table: 'class_group', source: 'groups', jsonb: [] },
   { table: 'enrollment', source: 'enrollments', jsonb: [] },
-  { table: 'class_session', source: 'classSessions', jsonb: [] },
+  { table: 'class_block', source: 'classBlocks', jsonb: ['translations'] },
   { table: 'exercise', source: 'exercises', jsonb: ['translations'] },
+  { table: 'exercise_subject', source: 'exerciseSubjects', jsonb: [] },
   { table: 'test', source: 'tests', jsonb: ['input', 'expected_output'] },
   { table: 'exercise_assignment', source: 'assignments', jsonb: [] },
   { table: 'attempt', source: 'attempts', jsonb: [] },

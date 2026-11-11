@@ -1,5 +1,6 @@
 import type { Attempt } from '../attempt';
 import { DataError } from '../data-error';
+import type { ExerciseAssignment } from '../exercise';
 import type { AppUser, ClassGroup } from '../user';
 import type { MockTables } from './mock-tables';
 
@@ -30,6 +31,43 @@ export function enrolledGroupIds(tables: MockTables, userId: string): ReadonlySe
 /** Teachers manage their own groups; administrators, all of them. */
 export function canManageGroup(user: AppUser, group: ClassGroup): boolean {
   return user.role === 'admin' || (user.role === 'teacher' && group.teacherId === user.id);
+}
+
+/** The assignment is shown to its students: neither it nor its block is hidden (2.5c). */
+export function isVisibleAssignment(tables: MockTables, assignment: ExerciseAssignment): boolean {
+  const block = tables.classBlocks.find((candidate) => candidate.id === assignment.blockId);
+  return !assignment.isHidden && block !== undefined && !block.isHidden;
+}
+
+/**
+ * Who sees an assignment and opens attempts at it, as `can_open_assignment`: a student of its group
+ * while it is visible, its teacher or an administrator.
+ */
+export function canSeeAssignment(
+  tables: MockTables,
+  user: AppUser,
+  assignment: ExerciseAssignment,
+): boolean {
+  if (canManageGroup(user, findRow(tables.groups, assignment.groupId))) {
+    return true;
+  }
+  return (
+    enrolledGroupIds(tables, user.id).has(assignment.groupId) &&
+    isVisibleAssignment(tables, assignment)
+  );
+}
+
+/** The assignment the user sees; any other is `not_found`, as row level security hides it. */
+export function findVisibleAssignment(
+  tables: MockTables,
+  user: AppUser,
+  assignmentId: string,
+): ExerciseAssignment {
+  const assignment = findRow(tables.assignments, assignmentId);
+  if (!canSeeAssignment(tables, user, assignment)) {
+    throw new DataError('not_found');
+  }
+  return assignment;
 }
 
 /** Students see their own data; teachers, that of the students in their groups; administrators, all. */

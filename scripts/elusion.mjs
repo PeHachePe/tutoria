@@ -34,7 +34,7 @@ import { parseArgs } from 'node:util';
 
 import { createClient } from '@supabase/supabase-js';
 
-import { BATTERY_EXERCISE, BATTERY_SESSION, CASES } from './elusion/cases.mjs';
+import { BATTERY_ASSIGNMENT_ID, BATTERY_BLOCK, BATTERY_EXERCISE, CASES } from './elusion/cases.mjs';
 import { buildReport, resultFileName } from './elusion/report.mjs';
 import { runVerdict } from './elusion/verdict.mjs';
 import { importAppTs } from './import-app-ts.mjs';
@@ -198,7 +198,7 @@ function localSupabase() {
 
 /**
  * Creates the exercise of the battery, with its tests, and assigns it to the student's group in a
- * session of its own: open_attempt only opens assigned exercises, as the app does.
+ * block of its own: open_attempt only opens assigned exercises, as the app does.
  */
 async function createExercise(admin, userId) {
   const enrollment = await admin
@@ -234,18 +234,18 @@ async function createExercise(admin, userId) {
       ),
     () =>
       admin
-        .from('class_session')
-        .upsert(
-          { group_id: groupId, ...BATTERY_SESSION },
-          { onConflict: 'group_id,number', ignoreDuplicates: true },
-        ),
+        .from('class_block')
+        .upsert({ group_id: groupId, ...BATTERY_BLOCK }, { onConflict: 'id' }),
     () =>
-      admin
-        .from('exercise_assignment')
-        .upsert(
-          { group_id: groupId, exercise_id: id, session: BATTERY_SESSION.number },
-          { onConflict: 'group_id,exercise_id,session', ignoreDuplicates: true },
-        ),
+      admin.from('exercise_assignment').upsert(
+        {
+          id: BATTERY_ASSIGNMENT_ID,
+          group_id: groupId,
+          block_id: BATTERY_BLOCK.id,
+          exercise_id: id,
+        },
+        { onConflict: 'id' },
+      ),
   ];
   for (const step of steps) {
     const { error } = await step();
@@ -260,18 +260,13 @@ async function createExercise(admin, userId) {
   };
 }
 
-/** Removes the exercise of the battery with its attempts, tests, assignment and session. */
+/** Removes the exercise of the battery with its attempts, tests, assignment and block. */
 async function removeExercise(admin, exercise) {
   const steps = [
     // An exercise with attempts cannot be deleted (`on delete restrict`); their turns go with them
     () => admin.from('attempt').delete().eq('exercise_id', exercise.id),
     () => admin.from('exercise').delete().eq('id', exercise.id),
-    () =>
-      admin
-        .from('class_session')
-        .delete()
-        .eq('group_id', exercise.groupId)
-        .eq('number', BATTERY_SESSION.number),
+    () => admin.from('class_block').delete().eq('id', BATTERY_BLOCK.id),
   ];
   for (const step of steps) {
     const { error } = await step();
@@ -302,7 +297,7 @@ async function freshAttempt({ admin, student, userId, exercise }) {
     .eq('user_id', userId)
     .eq('exercise_id', exercise.id);
   if (removed.error) throw new Error(`Clearing the attempt failed: ${removed.error.message}`);
-  const opened = await student.rpc('open_attempt', { target_exercise_id: exercise.id });
+  const opened = await student.rpc('open_attempt', { target_assignment_id: BATTERY_ASSIGNMENT_ID });
   if (opened.error) throw new Error(`Opening the attempt failed: ${opened.error.message}`);
   return opened.data.id;
 }

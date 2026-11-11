@@ -15,7 +15,10 @@ export interface Attempt {
   readonly id: string;
   readonly exerciseId: string;
   readonly userId: string;
+  /** The assignment it was opened from; null once unassigned. */
   readonly assignmentId: string | null;
+  /** 1 counts for the class; the next ones are practice, each once the previous is submitted (2.5c). */
+  readonly number: number;
   readonly currentCode: string;
   /** Frozen on submission. */
   readonly finalCode: string | null;

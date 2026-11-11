@@ -1,7 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 
 import type { ExerciseDraft } from '../exercise-service';
-import { assignmentId, exerciseId, testId } from './fixtures/exercises';
+import {
+  assignmentId,
+  blockAssignmentId,
+  DAM_FIRST_BLOCK,
+  DAW_HIDDEN_BLOCK,
+  DAW_RESIT_BLOCK,
+  DAW_WEB_FIRST_BLOCK,
+  exerciseId,
+  testId,
+} from './fixtures/exercises';
+import { fixtureId } from './fixtures/fixture-id';
 import { SEED } from './fixtures/seed';
 import {
   ADMIN_ID,
@@ -9,6 +19,7 @@ import {
   DAM_STUDENT_IDS,
   DAW_GROUP_ID,
   DAW_STUDENT_IDS,
+  DAW_WEB_GROUP_ID,
   OTHER_TEACHER_ID,
   TEACHER_ID,
 } from './fixtures/users';
@@ -60,13 +71,30 @@ describe('MockExerciseService', () => {
   });
 
   describe('listAssigned', () => {
-    it("lists the student's exercises by session with the status of their attempt", async () => {
+    it("lists the student's visible exercises of every group, with the attempt that counts", async () => {
       db.setSession(DAW_STUDENT_IDS[1]); // Hugo
 
       const entries = await service.listAssigned(DAW_STUDENT_IDS[1]);
 
-      expect(entries.map((entry) => entry.session)).toEqual([1, 1, 2, 2, 3, 4, 4, 4]);
-      expect(entries.map((entry) => entry.status)).toEqual([
+      const visible = SEED.assignments
+        .filter((a) => [DAW_GROUP_ID, DAW_WEB_GROUP_ID].includes(a.groupId) && !a.isHidden)
+        .filter((a) => a.blockId !== fixtureId('block', DAW_HIDDEN_BLOCK))
+        .map((a) => a.id)
+        .sort();
+      expect(entries.map((entry) => entry.assignmentId)).toEqual(visible);
+      expect(entries.slice(0, 8).map((entry) => entry.assignmentId)).toEqual(
+        [1, 2, 3, 4, 5, 6, 7, 8].map((n) => assignmentId(DAW_GROUP_ID, n)),
+      );
+      const statusOf = (id: string) => entries.find((entry) => entry.assignmentId === id)?.status;
+      expect(
+        [
+          ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => assignmentId(DAW_GROUP_ID, n)),
+          blockAssignmentId(DAW_RESIT_BLOCK, 3),
+          blockAssignmentId(DAW_RESIT_BLOCK, 4),
+          blockAssignmentId(DAW_WEB_FIRST_BLOCK, 9),
+          blockAssignmentId(DAW_WEB_FIRST_BLOCK + 1, 10),
+        ].map(statusOf),
+      ).toEqual([
         'submitted',
         'submitted',
         'submitted',
@@ -75,52 +103,60 @@ describe('MockExerciseService', () => {
         'in_progress',
         'not_started',
         'not_started',
+        'not_started',
+        'tests_failed',
+        'not_started',
+        'not_started',
       ]);
       expect(entries[0]).toMatchObject({
         exercise: SEED.exercises[0],
-        assignmentId: assignmentId(DAW_GROUP_ID, 1),
-        session: 1,
-        status: 'submitted',
+        group: { id: DAW_GROUP_ID, name: '1.º DAW A', subject: SEED.subjects[0] },
+        block: { id: fixtureId('block', 1), title: 'Tema 1: Bucles y condicionales' },
+        practice: null,
+        repetitions: 0,
+      });
+      expect(entries.find((entry) => entry.group.id === DAW_WEB_GROUP_ID)?.group).toEqual({
+        id: DAW_WEB_GROUP_ID,
+        name: '1.º DAW A',
+        subject: SEED.subjects[2],
       });
     });
 
-    it('adds the title of each session and when the latest attempt changed', async () => {
-      db.setSession(DAW_STUDENT_IDS[1]); // Hugo
-      const attemptOf = (n: number) =>
-        SEED.attempts.find(
-          (a) => a.userId === DAW_STUDENT_IDS[1] && a.exerciseId === exerciseId(n),
-        );
+    it('keeps the first submitted attempt as the one that counts and the practice apart', async () => {
+      db.setSession(DAW_STUDENT_IDS[0]); // Lucía, who repeated the first exercise
+      const first = SEED.attempts.find(
+        (a) => a.userId === DAW_STUDENT_IDS[0] && a.exerciseId === exerciseId(1) && a.number === 1,
+      );
 
-      const entries = await service.listAssigned(DAW_STUDENT_IDS[1]);
+      const [entry] = await service.listAssigned(DAW_STUDENT_IDS[0]);
 
-      expect(entries.map((entry) => entry.sessionTitle)).toEqual([
-        'Bucles y condicionales',
-        'Bucles y condicionales',
-        'Vectores',
-        'Vectores',
-        'Recorridos de vectores',
-        'Cadenas y formato',
-        'Cadenas y formato',
-        'Cadenas y formato',
-      ]);
-      expect(entries[0].updatedAt).toBe(attemptOf(1)?.updatedAt);
-      expect(entries[7].updatedAt).toBeNull();
+      expect(entry).toMatchObject({
+        status: 'submitted',
+        updatedAt: first?.updatedAt,
+        practice: { number: 2, status: 'submitted' },
+        repetitions: 1,
+      });
     });
 
-    it('leaves the title out of a session that has none', async () => {
-      db.setSession(DAM_STUDENT_IDS[0]);
+    it('leaves out what the teacher hides, but not for the teacher', async () => {
+      const hidden = [
+        blockAssignmentId(DAW_RESIT_BLOCK, 2),
+        ...SEED.assignments
+          .filter((a) => a.blockId === fixtureId('block', DAW_HIDDEN_BLOCK))
+          .map((a) => a.id),
+      ];
+      db.setSession(DAW_STUDENT_IDS[0]);
+      const seen = (await service.listAssigned(DAW_STUDENT_IDS[0])).map((e) => e.assignmentId);
 
-      const entries = await service.listAssigned(DAM_STUDENT_IDS[0]);
+      db.setSession(TEACHER_ID);
+      const all = (await service.listAssigned(DAW_STUDENT_IDS[0])).map((e) => e.assignmentId);
 
-      expect(entries.map((entry) => entry.sessionTitle)).toEqual([
-        'Primeros bucles',
-        'Primeros bucles',
-        null,
-        null,
-      ]);
+      expect(hidden).toHaveLength(3);
+      expect(seen.some((id) => hidden.includes(id))).toBe(false);
+      expect(all.filter((id) => hidden.includes(id))).toHaveLength(3);
     });
 
-    it('counts the hints asked in the latest attempt and the highest level reached', async () => {
+    it('counts the hints asked in the attempt that counts and the highest level reached', async () => {
       db.setSession(DAW_STUDENT_IDS[1]); // Hugo
       const attempt = SEED.attempts.find(
         (a) => a.userId === DAW_STUDENT_IDS[1] && a.exerciseId === exerciseId(6),
@@ -151,7 +187,8 @@ describe('MockExerciseService', () => {
     it("lets a teacher list a student's exercises", async () => {
       db.setSession(OTHER_TEACHER_ID);
 
-      await expect(service.listAssigned(DAM_STUDENT_IDS[0])).resolves.toHaveLength(4);
+      // Elena: the 15 exercises of basic programming and the 15 of advanced programming
+      await expect(service.listAssigned(DAM_STUDENT_IDS[0])).resolves.toHaveLength(30);
     });
 
     it('requires a session', async () => {
@@ -162,34 +199,47 @@ describe('MockExerciseService', () => {
   });
 
   describe('getDetail', () => {
-    it('returns the exercise with its visible tests in order and the number of hidden ones', async () => {
+    it('returns the exercise of the assignment, where it is, its visible tests and the hidden count', async () => {
       db.setSession(DAW_STUDENT_IDS[0]);
       db.update('tests', (tests) => [...tests].reverse());
 
-      const detail = await service.getDetail(exerciseId(3));
+      const detail = await service.getDetail(blockAssignmentId(DAW_RESIT_BLOCK, 3));
 
-      expect(detail.exercise.functionName).toBe('sum');
+      expect(detail).toMatchObject({
+        exercise: { functionName: 'sum' },
+        assignmentId: blockAssignmentId(DAW_RESIT_BLOCK, 3),
+        group: { id: DAW_GROUP_ID, subject: SEED.subjects[0] },
+        block: { title: 'Recuperación del tema 2' },
+        hiddenTestCount: 2,
+      });
       expect(detail.visibleTests.map((test) => test.id)).toEqual(
         [0, 1, 2, 3].map((p) => testId(3, p)),
       );
-      expect(detail.hiddenTestCount).toBe(2);
     });
 
-    it('hides from a student the exercises not assigned to their groups', async () => {
+    it('hides from a student the assignments of other groups and the hidden ones', async () => {
       db.setSession(DAM_STUDENT_IDS[0]);
+      await expect(service.getDetail(assignmentId(DAW_GROUP_ID, 8))).rejects.toMatchObject({
+        kind: 'not_found',
+      });
 
-      await expect(service.getDetail(exerciseId(8))).rejects.toMatchObject({ kind: 'not_found' });
-    });
-
-    it('shows teachers any exercise of the bank', async () => {
-      db.setSession(OTHER_TEACHER_ID);
-
-      await expect(service.getDetail(exerciseId(8))).resolves.toMatchObject({
-        exercise: { id: exerciseId(8) },
+      db.setSession(DAW_STUDENT_IDS[0]);
+      await expect(service.getDetail(blockAssignmentId(DAW_RESIT_BLOCK, 2))).rejects.toMatchObject({
+        kind: 'not_found',
       });
     });
 
-    it('fails for an unknown exercise', async () => {
+    it('shows the teacher of the group the hidden ones too, not another teacher', async () => {
+      db.setSession(TEACHER_ID);
+      await expect(service.getDetail(blockAssignmentId(DAW_RESIT_BLOCK, 2))).resolves.toBeTruthy();
+
+      db.setSession(OTHER_TEACHER_ID);
+      await expect(service.getDetail(assignmentId(DAW_GROUP_ID, 8))).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+    });
+
+    it('fails for an unknown assignment', async () => {
       db.setSession(TEACHER_ID);
 
       await expect(service.getDetail('missing')).rejects.toMatchObject({ kind: 'not_found' });
@@ -257,7 +307,7 @@ describe('MockExerciseService', () => {
       expect(tests).toEqual([
         { ...DRAFT.tests[0], id: expect.any(String), exerciseId: exerciseId(1) },
       ]);
-      expect(db.tables().exercises).toHaveLength(8);
+      expect(db.tables().exercises).toHaveLength(SEED.exercises.length);
     });
 
     it('removes an exercise nobody has attempted, with its tests and assignments', async () => {
@@ -273,7 +323,7 @@ describe('MockExerciseService', () => {
 
     it('does not remove an exercise with attempts, to keep their history', async () => {
       await expect(service.remove(exerciseId(1))).rejects.toMatchObject({ kind: 'invalid' });
-      expect(db.tables().exercises).toHaveLength(8);
+      expect(db.tables().exercises).toHaveLength(SEED.exercises.length);
     });
 
     it('fails to update or remove an unknown exercise', async () => {
@@ -283,13 +333,16 @@ describe('MockExerciseService', () => {
   });
 
   describe('assignments', () => {
-    it('lists the assignments of a group by session to its teacher and to the administrator', async () => {
+    it('lists the assignments of a group to its teacher and to the administrator', async () => {
       db.setSession(TEACHER_ID);
-      const sessions = (await service.listAssignments(DAW_GROUP_ID)).map((a) => a.session);
-      expect(sessions).toEqual([1, 1, 2, 2, 3, 4, 4, 4]);
+      const assignments = await service.listAssignments(DAW_GROUP_ID);
+      expect(assignments).toHaveLength(
+        SEED.assignments.filter((a) => a.groupId === DAW_GROUP_ID).length,
+      );
+      expect(assignments[0]).toEqual(SEED.assignments[0]);
 
       db.setSession(ADMIN_ID);
-      await expect(service.listAssignments(DAM_GROUP_ID)).resolves.toHaveLength(4);
+      await expect(service.listAssignments(DAM_GROUP_ID)).resolves.toHaveLength(15);
     });
 
     it("does not let a teacher manage another teacher's group", async () => {
@@ -299,7 +352,12 @@ describe('MockExerciseService', () => {
         kind: 'forbidden',
       });
       await expect(
-        service.assign({ groupId: DAW_GROUP_ID, exerciseId: exerciseId(1), session: 5 }),
+        service.assign({
+          groupId: DAW_GROUP_ID,
+          blockId: fixtureId('block', 1),
+          exerciseId: exerciseId(5),
+          isHidden: false,
+        }),
       ).rejects.toMatchObject({ kind: 'forbidden' });
       await expect(service.unassign(assignmentId(DAW_GROUP_ID, 1))).rejects.toMatchObject({
         kind: 'forbidden',
@@ -312,9 +370,14 @@ describe('MockExerciseService', () => {
       await expect(service.listAssignments('missing')).rejects.toMatchObject({ kind: 'not_found' });
     });
 
-    it('assigns an exercise to a group in a session', async () => {
+    it('assigns an exercise to a block of a group', async () => {
       db.setSession(OTHER_TEACHER_ID);
-      const assignment = { groupId: DAM_GROUP_ID, exerciseId: exerciseId(5), session: 3 };
+      const assignment = {
+        groupId: DAM_GROUP_ID,
+        blockId: fixtureId('block', DAM_FIRST_BLOCK),
+        exerciseId: exerciseId(5),
+        isHidden: true,
+      };
 
       const created = await service.assign(assignment);
 
@@ -322,15 +385,22 @@ describe('MockExerciseService', () => {
       expect(await service.listAssignments(DAM_GROUP_ID)).toContainEqual(created);
     });
 
-    it('rejects a repeated assignment or an unknown exercise', async () => {
+    it('rejects a repeated assignment, a block of another group or an unknown exercise', async () => {
       db.setSession(TEACHER_ID);
+      const assignment = {
+        groupId: DAW_GROUP_ID,
+        blockId: fixtureId('block', 1),
+        exerciseId: exerciseId(1),
+        isHidden: false,
+      };
 
+      await expect(service.assign(assignment)).rejects.toMatchObject({ kind: 'invalid' });
       await expect(
-        service.assign({ groupId: DAW_GROUP_ID, exerciseId: exerciseId(1), session: 1 }),
+        service.assign({ ...assignment, blockId: fixtureId('block', DAM_FIRST_BLOCK) }),
       ).rejects.toMatchObject({ kind: 'invalid' });
-      await expect(
-        service.assign({ groupId: DAW_GROUP_ID, exerciseId: 'missing', session: 1 }),
-      ).rejects.toMatchObject({ kind: 'not_found' });
+      await expect(service.assign({ ...assignment, exerciseId: 'missing' })).rejects.toMatchObject({
+        kind: 'not_found',
+      });
     });
 
     it('unassigns, keeping the attempts without their assignment', async () => {

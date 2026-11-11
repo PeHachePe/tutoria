@@ -1,7 +1,8 @@
 import type { Attempt } from '../attempt';
-import type { Exercise, Test } from '../exercise';
-import type { ExerciseTranslations } from '../exercise-text';
+import type { ClassBlock, Exercise, ExerciseAssignment, Test } from '../exercise';
+import type { ExerciseTranslations } from '../localized-text';
 import type { ProcessEvent } from '../process-event';
+import type { Subject } from '../subject';
 import type { HintLevel, Intensity, TutorInteraction } from '../tutor';
 import type { AppUser } from '../user';
 import type { Database } from './database.types';
@@ -57,6 +58,39 @@ export function toExercise(row: Row<'exercise'>): Exercise {
   };
 }
 
+export function toSubject(row: Row<'subject'>): Subject {
+  return {
+    id: row.id,
+    name: row.name,
+    sourceLocale: row.source_locale,
+    // A check of the table gives it this shape (is_valid_text_translations)
+    translations: row.translations as Subject['translations'],
+  };
+}
+
+export function toClassBlock(row: Row<'class_block'>): ClassBlock {
+  return {
+    id: row.id,
+    groupId: row.group_id,
+    position: row.position,
+    title: row.title,
+    sourceLocale: row.source_locale,
+    // A check of the table gives it this shape (is_valid_text_translations)
+    translations: row.translations as ClassBlock['translations'],
+    isHidden: row.is_hidden,
+  };
+}
+
+export function toAssignment(row: Row<'exercise_assignment'>): ExerciseAssignment {
+  return {
+    id: row.id,
+    groupId: row.group_id,
+    blockId: row.block_id,
+    exerciseId: row.exercise_id,
+    isHidden: row.is_hidden,
+  };
+}
+
 export function toTest(row: Row<'test'>): Test {
   return {
     id: row.id,
@@ -75,6 +109,7 @@ export function toAttempt(row: Row<'attempt'>): Attempt {
     exerciseId: row.exercise_id,
     userId: row.user_id,
     assignmentId: row.assignment_id,
+    number: row.number,
     currentCode: row.current_code,
     finalCode: row.final_code,
     status: row.status,

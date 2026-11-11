@@ -3,6 +3,7 @@ import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 import { DEMO_ACCOUNTS, DemoAccount } from '../auth/demo-accounts';
 import {
   ADMIN_ID,
+  DAM_STUDENT_IDS,
   DAW_STUDENT_IDS,
   DISABLED_STUDENT_ID,
   GROUPS,
@@ -11,10 +12,12 @@ import {
   USERS,
 } from '../data/mock/fixtures/users';
 
-const [DAW_GROUP] = GROUPS;
+const [DAW_GROUP, DAM_GROUP] = GROUPS;
 
 /**
- * One seed account per role, plus the disabled one to see how the login rejects it. Their labels
+ * One seed account per role, plus the disabled one to see how the login rejects it. Two students,
+ * as their classes study different subjects (2.5c): Lucía, basic programming and web development;
+ * Elena, basic and advanced programming. Their labels
  * are translated: they show on the login, unlike the rest of the dev tools (D-023).
  */
 const ACCOUNTS: readonly (readonly [
@@ -24,6 +27,7 @@ const ACCOUNTS: readonly (readonly [
   group?: string,
 ])[] = [
   [$localize`:@@demo.student:Alumna`, 'school', DAW_STUDENT_IDS[0], DAW_GROUP.name],
+  [$localize`:@@demo.student:Alumna`, 'school', DAM_STUDENT_IDS[0], DAM_GROUP.name],
   [$localize`:@@demo.teacher:Docente`, 'co_present', TEACHER_ID, DAW_GROUP.name],
   [$localize`:@@demo.admin:Administración`, 'admin_panel_settings', ADMIN_ID],
   [$localize`:@@demo.disabled:Cuenta desactivada`, 'person_off', DISABLED_STUDENT_ID],

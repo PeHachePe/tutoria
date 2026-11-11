@@ -1,6 +1,7 @@
 -- Step 2.1 · What a student reads and writes (docs/PLAN.md §2.3).
 -- Seed users: Lucía (1.º DAW A, ...011), Hugo (1.º DAW A, ...012), Elena (1.º DAM B, ...041) and
--- Raúl, disabled (...050). 1.º DAM B has exercises 1 to 4 assigned; 1.º DAW A, all eight.
+-- Raúl, disabled (...050). 1.º DAW A has the 15 exercises of basic programming and, in its web
+-- client group, the 15 of web development; 1.º DAM B, those of basic and advanced programming.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(17);
@@ -20,7 +21,7 @@ select is(
   0::bigint,
   'a student does not see the attempts of another'
 );
-select is((select count(*) from attempt), 8::bigint, 'a student sees all their attempts');
+select is((select count(*) from attempt), 10::bigint, 'a student sees all their attempts');
 select is(
   (select count(*) from process_event e join attempt a on a.id = e.attempt_id
    where a.user_id <> '10000000-0000-4000-8000-000000000011'),
@@ -67,11 +68,11 @@ select isnt(
   'the data notice is recorded on the server'
 );
 
--- Elena, in a group without exercise 5
+-- Elena, in groups without exercise 9 (web development only)
 reset role;
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000041');
 select is(
-  (select count(*) from exercise where id = '40000000-0000-4000-8000-000000000005'),
+  (select count(*) from exercise where id = '40000000-0000-4000-8000-000000000009'),
   0::bigint,
   'a student does not see the exercises not assigned to their groups'
 );

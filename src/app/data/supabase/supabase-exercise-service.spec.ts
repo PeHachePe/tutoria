@@ -1,7 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 
 import { SupabaseExerciseService } from './supabase-exercise-service';
-import { exerciseRow, FakeSupabaseServer, provideFakeSupabase, testRow } from './supabase-testing';
+import {
+  blockRow,
+  exerciseRow,
+  FakeSupabaseServer,
+  provideFakeSupabase,
+  subjectRow,
+  testRow,
+} from './supabase-testing';
 
 const SUM = exerciseRow({ id: 'sum' });
 const VOWELS = exerciseRow({
@@ -23,25 +30,47 @@ describe('SupabaseExerciseService', () => {
   });
 
   describe('listAssigned', () => {
+    const GROUP = { id: 'daw', name: '1.º DAW A', subject: subjectRow() };
+
     beforeEach(() => {
       server
         .on('GET', '/rest/v1/exercise_assignment', {
           body: [
-            { id: 'a-1', session: 1, exercise: SUM, class_session: { title: 'Bucles' } },
-            { id: 'a-2', session: 2, exercise: VOWELS, class_session: { title: null } },
+            { id: 'a-1', exercise: SUM, class_block: blockRow(), class_group: GROUP },
+            {
+              id: 'a-2',
+              exercise: VOWELS,
+              class_block: blockRow({ id: 'block-2', position: 2, title: 'Repaso' }),
+              class_group: GROUP,
+            },
           ],
         })
         .on('GET', '/rest/v1/attempt', {
           body: [
             {
-              exercise_id: 'sum',
-              status: 'passed',
+              assignment_id: 'a-1',
+              number: 2,
+              status: 'in_progress',
+              updated_at: '2026-10-02 10:00:00+00',
+              tutor_interaction: [],
+            },
+            {
+              assignment_id: 'a-1',
+              number: 1,
+              status: 'submitted',
               updated_at: '2026-10-01 09:30:00+00',
               tutor_interaction: [
                 { trigger: 'hint', hint_level: 1 },
                 { trigger: 'question', hint_level: 3 },
                 { trigger: 'hint', hint_level: 2 },
               ],
+            },
+            {
+              assignment_id: null,
+              number: 1,
+              status: 'passed',
+              updated_at: '2026-10-01 09:30:00+00',
+              tutor_interaction: [],
             },
           ],
         });
@@ -52,31 +81,56 @@ describe('SupabaseExerciseService', () => {
 
       const [assignments] = server.sentTo('GET', '/rest/v1/exercise_assignment');
       expect(assignments.params.get('class_group.enrollment.user_id')).toBe('eq.lucia');
-      expect(assignments.params.get('order')).toBe('session.asc,id.asc');
+      expect(assignments.params.get('order')).toBe('id.asc');
       const [attempts] = server.sentTo('GET', '/rest/v1/attempt');
       expect(attempts.params.get('user_id')).toBe('eq.lucia');
       expect(server.requests).toHaveLength(2);
     });
 
-    it('builds each card with its session, its latest attempt and its hints', async () => {
+    it('builds each card with its group, block, the attempt that counts and the practice', async () => {
       const [sum, vowels] = await service.listAssigned('lucia');
 
       expect(sum).toEqual({
         exercise: expect.objectContaining({ id: 'sum', functionName: 'sumar' }),
         assignmentId: 'a-1',
-        session: 1,
-        sessionTitle: 'Bucles',
+        group: {
+          id: 'daw',
+          name: '1.º DAW A',
+          subject: {
+            id: 'subject-1',
+            name: 'Programación básica',
+            sourceLocale: 'es',
+            translations: { en: { name: 'Basic programming' } },
+          },
+        },
+        block: {
+          id: 'block-1',
+          groupId: 'daw',
+          position: 1,
+          title: 'Tema 1: Bucles',
+          sourceLocale: 'es',
+          translations: {},
+          isHidden: false,
+        },
         updatedAt: '2026-10-01T09:30:00.000Z',
-        status: 'passed',
+        status: 'submitted',
         hintCount: 2,
         hintLevel: 3,
+        practice: {
+          number: 2,
+          status: 'in_progress',
+          updatedAt: '2026-10-02T10:00:00.000Z',
+          hintCount: 0,
+          hintLevel: null,
+        },
+        repetitions: 1,
       });
       expect(vowels).toMatchObject({
-        sessionTitle: null,
+        block: { title: 'Repaso' },
         updatedAt: null,
         status: 'not_started',
-        hintCount: 0,
-        hintLevel: null,
+        practice: null,
+        repetitions: 0,
       });
     });
 
@@ -88,45 +142,55 @@ describe('SupabaseExerciseService', () => {
   });
 
   describe('getDetail', () => {
-    it('returns the exercise, its visible tests in order and how many are hidden', async () => {
+    it('returns the exercise of the assignment, where it is, its visible tests and how many are hidden', async () => {
       server
-        .on('GET', '/rest/v1/exercise', { body: SUM })
-        .on('GET', '/rest/v1/test', { body: [testRow({ id: 't-1' }), testRow({ id: 't-2' })] })
+        .on('GET', '/rest/v1/exercise_assignment', {
+          body: {
+            id: 'a-1',
+            exercise: { ...SUM, test: [testRow({ id: 't-1' }), testRow({ id: 't-2' })] },
+            class_block: blockRow(),
+            class_group: { id: 'daw', name: '1.º DAW A', subject: subjectRow() },
+          },
+        })
         .on('POST', '/rest/v1/rpc/hidden_test_count', { body: 3 });
 
-      const detail = await service.getDetail('sum');
+      const detail = await service.getDetail('a-1');
 
-      expect(detail.exercise.id).toBe('sum');
-      expect(detail.visibleTests.map((test) => test.id)).toEqual(['t-1', 't-2']);
-      expect(detail.visibleTests[0]).toEqual({
-        id: 't-1',
-        exerciseId: 'exercise-1',
-        input: [[1, 2, 3]],
-        expectedOutput: 6,
-        isHidden: false,
-        position: 1,
+      expect(detail).toMatchObject({
+        exercise: { id: 'sum' },
+        assignmentId: 'a-1',
+        group: { id: 'daw', subject: { name: 'Programación básica' } },
+        block: { title: 'Tema 1: Bucles' },
+        hiddenTestCount: 3,
       });
-      expect(detail.hiddenTestCount).toBe(3);
-      const [tests] = server.sentTo('GET', '/rest/v1/test');
-      expect(tests.params.get('is_hidden')).toBe('eq.false');
-      expect(tests.params.get('order')).toBe('position.asc');
+      expect(detail.exercise).not.toHaveProperty('test');
+      expect(detail.visibleTests).toEqual([
+        {
+          id: 't-1',
+          exerciseId: 'exercise-1',
+          input: [[1, 2, 3]],
+          expectedOutput: 6,
+          isHidden: false,
+          position: 1,
+        },
+        expect.objectContaining({ id: 't-2' }),
+      ]);
+      const [assignment] = server.sentTo('GET', '/rest/v1/exercise_assignment');
+      expect(assignment.params.get('id')).toBe('eq.a-1');
+      expect(assignment.params.get('exercise.test.is_hidden')).toBe('eq.false');
+      expect(assignment.params.get('exercise.test.order')).toBe('position.asc');
       const [count] = server.sentTo('POST', '/rest/v1/rpc/hidden_test_count');
       expect(count.body).toEqual({ target_exercise_id: 'sum' });
     });
 
-    it('is not found when the RLS hides the exercise', async () => {
-      server
-        .on('GET', '/rest/v1/exercise', {
-          status: 406,
-          body: { code: 'PGRST116', message: 'Cannot coerce the result to a single JSON object' },
-        })
-        .on('GET', '/rest/v1/test', { body: [] })
-        .on('POST', '/rest/v1/rpc/hidden_test_count', {
-          status: 400,
-          body: { code: 'P0002', message: 'Exercise not found' },
-        });
+    it('is not found when the RLS hides the assignment', async () => {
+      server.on('GET', '/rest/v1/exercise_assignment', {
+        status: 406,
+        body: { code: 'PGRST116', message: 'Cannot coerce the result to a single JSON object' },
+      });
 
-      await expect(service.getDetail('sum')).rejects.toMatchObject({ kind: 'not_found' });
+      await expect(service.getDetail('a-1')).rejects.toMatchObject({ kind: 'not_found' });
+      expect(server.sentTo('POST', '/rest/v1/rpc/hidden_test_count')).toHaveLength(0);
     });
   });
 
@@ -185,34 +249,53 @@ describe('SupabaseExerciseService', () => {
   });
 
   describe('assignments', () => {
-    const ROW = { id: 'a-1', group_id: 'daw', exercise_id: 'sum', session: 2 };
-    const ASSIGNMENT = { id: 'a-1', groupId: 'daw', exerciseId: 'sum', session: 2 };
+    const ROW = {
+      id: 'a-1',
+      group_id: 'daw',
+      block_id: 'block-1',
+      exercise_id: 'sum',
+      is_hidden: false,
+    };
+    const ASSIGNMENT = {
+      id: 'a-1',
+      groupId: 'daw',
+      blockId: 'block-1',
+      exerciseId: 'sum',
+      isHidden: false,
+    };
+    const NEW_ASSIGNMENT = {
+      groupId: 'daw',
+      blockId: 'block-1',
+      exerciseId: 'sum',
+      isHidden: false,
+    };
 
-    it('lists those of a group by session', async () => {
+    it('lists those of a group', async () => {
       server.on('GET', '/rest/v1/exercise_assignment', { body: [ROW] });
 
       await expect(service.listAssignments('daw')).resolves.toEqual([ASSIGNMENT]);
       expect(server.requests[0].params.get('group_id')).toBe('eq.daw');
     });
 
-    it('assigns an exercise to a session', async () => {
+    it('assigns an exercise to a block', async () => {
       server.on('POST', '/rest/v1/exercise_assignment', { status: 201, body: ROW });
 
-      await expect(
-        service.assign({ groupId: 'daw', exerciseId: 'sum', session: 2 }),
-      ).resolves.toEqual(ASSIGNMENT);
-      expect(server.requests[0].body).toEqual({ group_id: 'daw', exercise_id: 'sum', session: 2 });
+      await expect(service.assign(NEW_ASSIGNMENT)).resolves.toEqual(ASSIGNMENT);
+      expect(server.requests[0].body).toEqual({
+        group_id: 'daw',
+        block_id: 'block-1',
+        exercise_id: 'sum',
+        is_hidden: false,
+      });
     });
 
-    it('rejects assigning the same exercise twice to a session', async () => {
+    it('rejects assigning the same exercise twice to a block', async () => {
       server.on('POST', '/rest/v1/exercise_assignment', {
         status: 409,
         body: { code: '23505', message: 'duplicate key value' },
       });
 
-      await expect(
-        service.assign({ groupId: 'daw', exerciseId: 'sum', session: 2 }),
-      ).rejects.toMatchObject({ kind: 'invalid' });
+      await expect(service.assign(NEW_ASSIGNMENT)).rejects.toMatchObject({ kind: 'invalid' });
     });
 
     it('unassigns an exercise', async () => {

@@ -31,18 +31,19 @@ describe('RegisteredDataPage', () => {
     ).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Para qué' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Quién lo ve' })).toBeTruthy();
-    expect(
-      within(screen.getByRole('region', { name: 'Servicios externos' })).getAllByRole('listitem'),
-    ).toHaveLength(2);
+    const services = screen.getByRole('region', { name: 'Servicios externos' });
+    expect(within(services).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(services).getByText('El modelo de IA del tutor')).toBeTruthy();
   });
 
-  it('leads to the settings and to the exercises', async () => {
+  it('leads to the settings, where the student decides, and to the exercises', async () => {
     await renderPage();
 
-    expect(screen.getByRole('link', { name: 'Ir a los ajustes' }).getAttribute('href')).toBe(
+    const choices = within(screen.getByRole('region', { name: 'Tú decides' }));
+    expect(choices.getByRole('link', { name: 'Ir a los ajustes' }).getAttribute('href')).toBe(
       '/alumno/ajustes',
     );
-    expect(screen.getByRole('link', { name: 'Ir a los ejercicios' }).getAttribute('href')).toBe(
+    expect(choices.getByRole('link', { name: 'Ir a los ejercicios' }).getAttribute('href')).toBe(
       '/alumno',
     );
   });

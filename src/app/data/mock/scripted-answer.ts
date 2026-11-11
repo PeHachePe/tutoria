@@ -8,7 +8,7 @@ import {
   type TutorInteraction,
   type TutorTrigger,
 } from '../tutor';
-import type { ExerciseLocale } from '../exercise-text';
+import type { ContentLocale } from '../localized-text';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 
 /** What the scripted tutor looks at: the request, the attempt and the conversation so far. */
@@ -20,7 +20,7 @@ export interface ScriptInput {
   /** The earlier interactions of the attempt, oldest first. */
   readonly previous: readonly TutorInteraction[];
   /** The language of the interface, which the tutor answers in (D-033). */
-  readonly language: ExerciseLocale;
+  readonly language: ContentLocale;
 }
 
 /** What the model would return (2.6), plus the level the server decided. */

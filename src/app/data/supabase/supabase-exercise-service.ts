@@ -1,13 +1,27 @@
 import { inject, Service } from '@angular/core';
 
-import type { AttemptStatus } from '../attempt';
+import { assignedExercise, type AttemptSummary, summarizeAttempt } from '../attempt-progress';
 import { DataError } from '../data-error';
-import type { AssignedExercise, Exercise, ExerciseAssignment, ExerciseDetail } from '../exercise';
+import type {
+  AssignedExercise,
+  AssignedGroup,
+  Exercise,
+  ExerciseAssignment,
+  ExerciseDetail,
+} from '../exercise';
 import { ExerciseService, ExerciseWithTests } from '../exercise-service';
 import type { HintLevel } from '../tutor';
 import { SUPABASE_CLIENT } from './supabase-client';
 import { unwrap } from './supabase-error';
-import { toExercise, toIso, toTest } from './supabase-rows';
+import {
+  type Row,
+  toAssignment,
+  toClassBlock,
+  toExercise,
+  toIso,
+  toSubject,
+  toTest,
+} from './supabase-rows';
 
 /**
  * Exercises, tests and assignments in Supabase. The RLS decides what each user reads (2.1): a
@@ -18,58 +32,78 @@ export class SupabaseExerciseService extends ExerciseService {
   private readonly supabase = inject(SUPABASE_CLIENT);
 
   /**
-   * Two requests at once, whatever the number of cards: the assignments of the student's groups,
-   * with their exercise and the title of their session, and the student's attempts, with what the
-   * tutor answered in them (one attempt per exercise, 2.1).
+   * Two requests at once, whatever the number of cards: the assignments the student sees (the RLS
+   * leaves out the hidden ones), with their exercise, block, group and subject, and the student's
+   * attempts, with what the tutor answered in them.
    */
   async listAssigned(userId: string): Promise<AssignedExercise[]> {
     const [assignments, attempts] = await Promise.all([
       this.supabase
         .from('exercise_assignment')
         .select(
-          'id, session, exercise(*), class_session(title), class_group!inner(enrollment!inner(user_id))',
+          'id, exercise(*), class_block(*), class_group!inner(id, name, subject(*), enrollment!inner(user_id))',
         )
         .eq('class_group.enrollment.user_id', userId)
-        .order('session')
         .order('id'),
       this.supabase
         .from('attempt')
-        .select('exercise_id, status, updated_at, tutor_interaction(trigger, hint_level)')
+        .select('assignment_id, number, status, updated_at, tutor_interaction(trigger, hint_level)')
         .eq('user_id', userId),
     ]);
-    const attemptOf = new Map(unwrap(attempts).map((attempt) => [attempt.exercise_id, attempt]));
-    return unwrap(assignments).map((assignment) => {
-      const attempt = attemptOf.get(assignment.exercise.id);
-      const interactions = attempt?.tutor_interaction ?? [];
-      const levels = interactions.map((interaction) => interaction.hint_level as HintLevel);
-      return {
-        exercise: toExercise(assignment.exercise),
-        assignmentId: assignment.id,
-        session: assignment.session,
-        sessionTitle: assignment.class_session.title,
-        updatedAt: attempt ? toIso(attempt.updated_at) : null,
-        status: (attempt?.status ?? 'not_started') satisfies AttemptStatus,
-        hintCount: interactions.filter((interaction) => interaction.trigger === 'hint').length,
-        hintLevel: levels.length ? (Math.max(...levels) as HintLevel) : null,
-      };
-    });
+    const attemptsOf = new Map<string, AttemptSummary[]>();
+    for (const attempt of unwrap(attempts)) {
+      if (attempt.assignment_id === null) continue;
+      const summary = summarizeAttempt(
+        { number: attempt.number, status: attempt.status, updatedAt: toIso(attempt.updated_at) },
+        attempt.tutor_interaction.map(({ trigger, hint_level }) => ({
+          trigger,
+          // Checks of the table keep it between 1 and 3
+          hintLevel: hint_level as HintLevel,
+        })),
+      );
+      attemptsOf.set(attempt.assignment_id, [
+        ...(attemptsOf.get(attempt.assignment_id) ?? []),
+        summary,
+      ]);
+    }
+    return unwrap(assignments).map((assignment) =>
+      assignedExercise(
+        {
+          exercise: toExercise(assignment.exercise),
+          assignmentId: assignment.id,
+          group: toAssignedGroup(assignment.class_group),
+          block: toClassBlock(assignment.class_block),
+        },
+        attemptsOf.get(assignment.id) ?? [],
+      ),
+    );
   }
 
-  async getDetail(exerciseId: string): Promise<ExerciseDetail> {
-    const [exercise, tests, hidden] = await Promise.all([
-      this.supabase.from('exercise').select().eq('id', exerciseId).single(),
-      this.supabase
-        .from('test')
-        .select()
-        .eq('exercise_id', exerciseId)
-        .eq('is_hidden', false)
-        .order('position'),
-      this.supabase.rpc('hidden_test_count', { target_exercise_id: exerciseId }),
-    ]);
+  /**
+   * The assignment with its exercise, its visible tests, its block and its group; then how many
+   * hidden tests it has, which needs the exercise.
+   */
+  async getDetail(assignmentId: string): Promise<ExerciseDetail> {
+    const assignment = unwrap(
+      await this.supabase
+        .from('exercise_assignment')
+        .select('id, exercise(*, test(*)), class_block(*), class_group(id, name, subject(*))')
+        .eq('id', assignmentId)
+        .eq('exercise.test.is_hidden', false)
+        .order('position', { referencedTable: 'exercise.test' })
+        .single(),
+    );
+    const { test, ...exercise } = assignment.exercise;
+    const hidden = unwrap(
+      await this.supabase.rpc('hidden_test_count', { target_exercise_id: exercise.id }),
+    );
     return {
-      exercise: toExercise(unwrap(exercise)),
-      visibleTests: unwrap(tests).map(toTest),
-      hiddenTestCount: unwrap(hidden),
+      exercise: toExercise(exercise),
+      assignmentId: assignment.id,
+      group: toAssignedGroup(assignment.class_group),
+      block: toClassBlock(assignment.class_block),
+      visibleTests: test.map(toTest),
+      hiddenTestCount: hidden,
     };
   }
 
@@ -114,12 +148,7 @@ export class SupabaseExerciseService extends ExerciseService {
 
   async listAssignments(groupId: string): Promise<ExerciseAssignment[]> {
     const rows = unwrap(
-      await this.supabase
-        .from('exercise_assignment')
-        .select('id, group_id, exercise_id, session')
-        .eq('group_id', groupId)
-        .order('session')
-        .order('id'),
+      await this.supabase.from('exercise_assignment').select().eq('group_id', groupId).order('id'),
     );
     return rows.map(toAssignment);
   }
@@ -130,10 +159,11 @@ export class SupabaseExerciseService extends ExerciseService {
         .from('exercise_assignment')
         .insert({
           group_id: assignment.groupId,
+          block_id: assignment.blockId,
           exercise_id: assignment.exerciseId,
-          session: assignment.session,
+          is_hidden: assignment.isHidden,
         })
-        .select('id, group_id, exercise_id, session')
+        .select()
         .single(),
     );
     return toAssignment(row);
@@ -148,18 +178,13 @@ export class SupabaseExerciseService extends ExerciseService {
   }
 }
 
-function toAssignment(row: {
+/** The group of an assignment, with its subject. */
+function toAssignedGroup(row: {
   id: string;
-  group_id: string;
-  exercise_id: string;
-  session: number;
-}): ExerciseAssignment {
-  return {
-    id: row.id,
-    groupId: row.group_id,
-    exerciseId: row.exercise_id,
-    session: row.session,
-  };
+  name: string;
+  subject: Row<'subject'>;
+}): AssignedGroup {
+  return { id: row.id, name: row.name, subject: toSubject(row.subject) };
 }
 
 function savingNotYet(): Promise<Exercise> {

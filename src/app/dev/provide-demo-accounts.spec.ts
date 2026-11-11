@@ -9,13 +9,14 @@ describe('provideDemoAccounts', () => {
     expect(TestBed.inject(DEMO_ACCOUNTS)).toEqual([]);
   });
 
-  it('offers one seed account per role and the disabled one, with the test password', () => {
+  it('offers a seed account per role, two students and the disabled one, with the test password', () => {
     TestBed.configureTestingModule({ providers: [provideDemoAccounts()] });
 
     const accounts = TestBed.inject(DEMO_ACCOUNTS);
 
     expect(accounts.map(({ label, detail }) => `${label}: ${detail}`)).toEqual([
       'Alumna: Lucía Martín Gómez · 1.º DAW A',
+      'Alumna: Elena Vázquez Lorenzo · 1.º DAM B',
       'Docente: Marta Ibáñez Soler · 1.º DAW A',
       'Administración: Administración TutorIA',
       'Cuenta desactivada: Raúl Medina Cortés',

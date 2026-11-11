@@ -177,6 +177,29 @@ export function exerciseRow(overrides: Partial<Row<'exercise'>> = {}): Row<'exer
   };
 }
 
+export function subjectRow(overrides: Partial<Row<'subject'>> = {}): Row<'subject'> {
+  return {
+    id: 'subject-1',
+    name: 'Programación básica',
+    source_locale: 'es',
+    translations: { en: { name: 'Basic programming' } },
+    ...overrides,
+  };
+}
+
+export function blockRow(overrides: Partial<Row<'class_block'>> = {}): Row<'class_block'> {
+  return {
+    id: 'block-1',
+    group_id: 'daw',
+    position: 1,
+    title: 'Tema 1: Bucles',
+    source_locale: 'es',
+    translations: {},
+    is_hidden: false,
+    ...overrides,
+  };
+}
+
 export function testRow(overrides: Partial<Row<'test'>> = {}): Row<'test'> {
   return {
     id: 'test-1',
@@ -195,6 +218,7 @@ export function attemptRow(overrides: Partial<Row<'attempt'>> = {}): Row<'attemp
     exercise_id: 'exercise-1',
     user_id: 'user-1',
     assignment_id: 'assignment-1',
+    number: 1,
     current_code: '',
     final_code: null,
     status: 'in_progress',

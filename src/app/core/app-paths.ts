@@ -25,7 +25,8 @@ export const APP_PATHS = {
   login: `/${SEGMENTS.login}`,
   student: {
     catalog: `/${student.area}`,
-    exercise: (exerciseId: string) => `/${student.area}/${student.exercise}/${exerciseId}`,
+    /** The workspace of an exercise as assigned in a block (2.5c): its attempts are those of the assignment. */
+    exercise: (assignmentId: string) => `/${student.area}/${student.exercise}/${assignmentId}`,
     settings: `/${student.area}/${student.settings}`,
     data: `/${student.area}/${student.data}`,
   },
@@ -44,3 +45,11 @@ export const APP_PATHS = {
 
 /** Query parameter of the login with the page to come back to (roleGuard, afterSignInPath). */
 export const REDIRECT_PARAM = 'redirect';
+
+/** Query parameters of the student's screens (2.5c), part of the URLs like the segments. */
+export const STUDENT_PARAMS = {
+  /** The tab of the catalog: the id of the group. */
+  group: 'grupo',
+  /** The attempt of the workspace, by its number; without it, the latest. */
+  attempt: 'intento',
+} as const;

@@ -22,6 +22,8 @@ export interface ClassGroup {
   /** For example, `2026/27`. */
   readonly schoolYear: string;
   readonly teacherId: string;
+  /** What the group studies (2.5c). */
+  readonly subjectId: string;
 }
 
 /** Table `enrollment`: one row per student and group. */

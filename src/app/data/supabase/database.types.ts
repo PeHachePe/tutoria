@@ -84,6 +84,7 @@ export type Database = {
           final_code: string | null;
           finished_at: string | null;
           id: string;
+          number: number;
           started_at: string;
           status: Database['public']['Enums']['attempt_status'];
           updated_at: string;
@@ -97,6 +98,7 @@ export type Database = {
           final_code?: string | null;
           finished_at?: string | null;
           id?: string;
+          number?: number;
           started_at?: string;
           status?: Database['public']['Enums']['attempt_status'];
           updated_at?: string;
@@ -109,6 +111,7 @@ export type Database = {
           final_code?: string | null;
           finished_at?: string | null;
           id?: string;
+          number?: number;
           started_at?: string;
           status?: Database['public']['Enums']['attempt_status'];
           updated_at?: string;
@@ -138,11 +141,51 @@ export type Database = {
           },
         ];
       };
+      class_block: {
+        Row: {
+          group_id: string;
+          id: string;
+          is_hidden: boolean;
+          position: number;
+          source_locale: Database['public']['Enums']['app_locale'];
+          title: string;
+          translations: NonNullable<Json>;
+        };
+        ComputedFields: never;
+        Insert: {
+          group_id: string;
+          id?: string;
+          is_hidden?: boolean;
+          position: number;
+          source_locale?: Database['public']['Enums']['app_locale'];
+          title: string;
+          translations?: NonNullable<Json>;
+        };
+        Update: {
+          group_id?: string;
+          id?: string;
+          is_hidden?: boolean;
+          position?: number;
+          source_locale?: Database['public']['Enums']['app_locale'];
+          title?: string;
+          translations?: NonNullable<Json>;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'class_block_group_id_fkey';
+            columns: ['group_id'];
+            isOneToOne: false;
+            referencedRelation: 'class_group';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       class_group: {
         Row: {
           id: string;
           name: string;
           school_year: string;
+          subject_id: string;
           teacher_id: string;
         };
         ComputedFields: never;
@@ -150,50 +193,29 @@ export type Database = {
           id?: string;
           name: string;
           school_year: string;
+          subject_id: string;
           teacher_id: string;
         };
         Update: {
           id?: string;
           name?: string;
           school_year?: string;
+          subject_id?: string;
           teacher_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'class_group_subject_id_fkey';
+            columns: ['subject_id'];
+            isOneToOne: false;
+            referencedRelation: 'subject';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'class_group_teacher_id_fkey';
             columns: ['teacher_id'];
             isOneToOne: false;
             referencedRelation: 'app_user';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      class_session: {
-        Row: {
-          group_id: string;
-          id: string;
-          number: number;
-          title: string | null;
-        };
-        ComputedFields: never;
-        Insert: {
-          group_id: string;
-          id?: string;
-          number: number;
-          title?: string | null;
-        };
-        Update: {
-          group_id?: string;
-          id?: string;
-          number?: number;
-          title?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'class_session_group_id_fkey';
-            columns: ['group_id'];
-            isOneToOne: false;
-            referencedRelation: 'class_group';
             referencedColumns: ['id'];
           },
         ];
@@ -297,25 +319,35 @@ export type Database = {
       };
       exercise_assignment: {
         Row: {
+          block_id: string;
           exercise_id: string;
           group_id: string;
           id: string;
-          session: number;
+          is_hidden: boolean;
         };
         ComputedFields: never;
         Insert: {
+          block_id: string;
           exercise_id: string;
           group_id: string;
           id?: string;
-          session: number;
+          is_hidden?: boolean;
         };
         Update: {
+          block_id?: string;
           exercise_id?: string;
           group_id?: string;
           id?: string;
-          session?: number;
+          is_hidden?: boolean;
         };
         Relationships: [
+          {
+            foreignKeyName: 'exercise_assignment_block_fkey';
+            columns: ['group_id', 'block_id'];
+            isOneToOne: false;
+            referencedRelation: 'class_block';
+            referencedColumns: ['group_id', 'id'];
+          },
           {
             foreignKeyName: 'exercise_assignment_exercise_id_fkey';
             columns: ['exercise_id'];
@@ -330,12 +362,36 @@ export type Database = {
             referencedRelation: 'class_group';
             referencedColumns: ['id'];
           },
+        ];
+      };
+      exercise_subject: {
+        Row: {
+          exercise_id: string;
+          subject_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          exercise_id: string;
+          subject_id: string;
+        };
+        Update: {
+          exercise_id?: string;
+          subject_id?: string;
+        };
+        Relationships: [
           {
-            foreignKeyName: 'exercise_assignment_group_id_session_fkey';
-            columns: ['group_id', 'session'];
+            foreignKeyName: 'exercise_subject_exercise_id_fkey';
+            columns: ['exercise_id'];
             isOneToOne: false;
-            referencedRelation: 'class_session';
-            referencedColumns: ['group_id', 'number'];
+            referencedRelation: 'exercise';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'exercise_subject_subject_id_fkey';
+            columns: ['subject_id'];
+            isOneToOne: false;
+            referencedRelation: 'subject';
+            referencedColumns: ['id'];
           },
         ];
       };
@@ -374,6 +430,28 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
+      };
+      subject: {
+        Row: {
+          id: string;
+          name: string;
+          source_locale: Database['public']['Enums']['app_locale'];
+          translations: NonNullable<Json>;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: string;
+          name: string;
+          source_locale?: Database['public']['Enums']['app_locale'];
+          translations?: NonNullable<Json>;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          source_locale?: Database['public']['Enums']['app_locale'];
+          translations?: NonNullable<Json>;
+        };
+        Relationships: [];
       };
       test: {
         Row: {
@@ -476,6 +554,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      can_open_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       can_read_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
       can_record_event: { Args: { target_attempt_id: string }; Returns: boolean };
       current_app_role: {
@@ -491,12 +570,21 @@ export type Database = {
         Args: { source_locale: Database['public']['Enums']['app_locale']; translations: Json };
         Returns: boolean;
       };
+      is_valid_text_translations: {
+        Args: {
+          field: string;
+          source_locale: Database['public']['Enums']['app_locale'];
+          translations: Json;
+        };
+        Returns: boolean;
+      };
+      is_visible_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       latest_tutor_calls: {
         Args: { max_count: number; since: string; target_user_id: string };
         Returns: string[];
       };
       open_attempt: {
-        Args: { target_exercise_id: string };
+        Args: { attempt_number?: number; target_assignment_id: string };
         Returns: {
           assignment_id: string | null;
           current_code: string;
@@ -504,6 +592,7 @@ export type Database = {
           final_code: string | null;
           finished_at: string | null;
           id: string;
+          number: number;
           started_at: string;
           status: Database['public']['Enums']['attempt_status'];
           updated_at: string;
@@ -543,6 +632,28 @@ export type Database = {
         };
         Returns: string;
       };
+      retry_attempt: {
+        Args: { target_assignment_id: string };
+        Returns: {
+          assignment_id: string | null;
+          current_code: string;
+          exercise_id: string;
+          final_code: string | null;
+          finished_at: string | null;
+          id: string;
+          number: number;
+          started_at: string;
+          status: Database['public']['Enums']['attempt_status'];
+          updated_at: string;
+          user_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'attempt';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       submit_attempt: {
         Args: { target_attempt_id: string };
         Returns: {
@@ -552,6 +663,7 @@ export type Database = {
           final_code: string | null;
           finished_at: string | null;
           id: string;
+          number: number;
           started_at: string;
           status: Database['public']['Enums']['attempt_status'];
           updated_at: string;

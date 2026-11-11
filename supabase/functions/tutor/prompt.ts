@@ -1,5 +1,5 @@
 import type { RunResult } from '../../../src/app/data/code-runner/run-result.ts';
-import { exerciseText } from '../../../src/app/data/exercise-text.ts';
+import { exerciseText } from '../../../src/app/data/localized-text.ts';
 import {
   type HintLevel,
   REACTION_KINDS,

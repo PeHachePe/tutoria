@@ -3,7 +3,7 @@ import { MatIcon } from '@angular/material/icon';
 
 import { LanguageService } from '../../../core/i18n/language-service';
 import type { ExerciseDetail } from '../../../data/exercise';
-import { exerciseText, type ExerciseLocale } from '../../../data/exercise-text';
+import { exerciseText, type ContentLocale } from '../../../data/localized-text';
 import { formatCall, formatValue, isMultilineText } from '../../../shared/format-value';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
@@ -16,7 +16,7 @@ export const STATEMENT_ZONE_ID = 'statement-zone';
 const SKELETON_EXAMPLES = [1, 2, 3];
 
 /** The name of each language inside a sentence of the interface («solo está en inglés»). */
-const LOCALE_NAMES: Record<ExerciseLocale, string> = {
+const LOCALE_NAMES: Record<ContentLocale, string> = {
   es: $localize`:@@locale.name.es:español`,
   en: $localize`:@@locale.name.en:inglés`,
   ca: $localize`:@@locale.name.ca:catalán`,

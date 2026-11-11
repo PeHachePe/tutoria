@@ -22,7 +22,7 @@ export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 /** An action of the student that failed, kept to show its message and retry it. */
 export interface ActionError {
-  readonly action: 'run' | 'submit';
+  readonly action: 'run' | 'submit' | 'retry';
   readonly error: unknown;
 }
 
@@ -55,12 +55,33 @@ export class AttemptStore {
   private readonly runReactionState = signal<Reaction | null>(null);
   /** The save on its way, which a run waits for before sending the code. */
   private saving: Promise<void> = Promise.resolve();
-  /** Exercise of the latest `open()`, so an answer that arrives late does not overwrite the new one. */
-  private openingId: string | undefined;
+  /**
+   * Assignment and number of the latest `open()`, so an answer that arrives late does not overwrite
+   * the new one.
+   */
+  private openingKey: string | undefined;
+  /** The assignment open, whose attempts the selector lists and «Practicar de nuevo» adds to. */
+  private assignmentId = '';
+  private readonly attemptListState = signal<readonly Attempt[]>([]);
+  private readonly retryingState = signal(false);
   /** Another save was asked for while one was on its way: it goes once that one ends. */
   private saveAgain = false;
 
   readonly attempt = this.attemptState.asReadonly();
+  /** The student's attempts at the assignment, by number: the selector of the workspace (2.5c). */
+  readonly attemptList = this.attemptListState.asReadonly();
+  /** The attempt shown is the latest of the assignment: only it can be practised again. */
+  readonly isLatest = computed(() => {
+    const attempt = this.attemptState();
+    return !!attempt && this.attemptListState().every((other) => other.number <= attempt.number);
+  });
+  /** A practice after the attempt that counts, which does not change the data of the class. */
+  readonly practising = computed(() => (this.attemptState()?.number ?? 1) > 1);
+  readonly retrying = this.retryingState.asReadonly();
+  /** «Practicar de nuevo»: on the latest attempt, once submitted. */
+  readonly canRetry = computed(
+    () => this.status() === 'submitted' && this.isLatest() && !this.retryingState(),
+  );
   readonly status = computed(() => this.attemptState()?.status ?? 'not_started');
   /** A submitted attempt only shows its code (2.4). */
   readonly readonly = computed(() => this.status() === 'submitted');
@@ -125,14 +146,61 @@ export class AttemptStore {
     });
   }
 
-  /** Opens the student's attempt at the exercise, or creates it in `in_progress` (2.4). */
-  async open(exerciseId: string): Promise<Attempt> {
+  /**
+   * Opens the student's latest attempt at the assignment, or creates it in `in_progress` (2.4); with
+   * `number`, that earlier one, to review it (2.5c). Then lists the others for the selector.
+   */
+  async open(assignmentId: string, number?: number): Promise<Attempt> {
     this.autosave.flush(); // the previous exercise keeps its last changes
-    this.openingId = exerciseId;
+    const key = `${assignmentId}#${number ?? 'latest'}`;
+    this.openingKey = key;
+    this.assignmentId = assignmentId;
     this.attemptState.set(undefined);
-    const attempt = await this.attempts.openOrCreate(exerciseId);
-    if (this.openingId === exerciseId) this.take(attempt);
+    this.attemptListState.set([]);
+    const attempt = await this.attempts.openOrCreate(assignmentId, number);
+    if (this.openingKey === key) {
+      this.take(attempt);
+      void this.loadList(assignmentId, key);
+    }
     return attempt;
+  }
+
+  /** The selector is a help, not the exercise: without the list, it just does not show. */
+  private async loadList(assignmentId: string, key: string): Promise<void> {
+    try {
+      const list = await this.attempts.list(assignmentId);
+      if (this.openingKey === key) this.attemptListState.set(list);
+    } catch {
+      // Only the attempt open shows; opening the exercise again lists them
+    }
+  }
+
+  /**
+   * «Practicar de nuevo» (2.5c): the next attempt, with the editor empty and a new conversation. True
+   * once it is open here; a failure stays in `actionError`.
+   */
+  async retry(): Promise<boolean> {
+    const attempt = this.attemptState();
+    const assignmentId = this.assignmentId;
+    if (!attempt || !this.canRetry()) return false;
+    this.actionErrorState.set(undefined);
+    this.retryingState.set(true);
+    try {
+      const next = await this.attempts.retry(assignmentId);
+      if (this.attemptState()?.id !== attempt.id) return false;
+      this.take(next);
+      this.attemptListState.update((list) =>
+        [...list.filter((other) => other.id !== next.id), next].sort((a, b) => a.number - b.number),
+      );
+      return true;
+    } catch (error) {
+      if (this.attemptState()?.id === attempt.id) {
+        this.actionErrorState.set({ action: 'retry', error });
+      }
+      return false;
+    } finally {
+      this.retryingState.set(false);
+    }
   }
 
   /**
@@ -143,7 +211,7 @@ export class AttemptStore {
     const current = this.attemptState();
     if (!current) return;
     try {
-      const attempt = await this.attempts.openOrCreate(current.exerciseId);
+      const attempt = await this.attempts.openOrCreate(this.assignmentId, current.number);
       if (this.attemptState()?.id === attempt.id) this.take(attempt);
     } catch {
       // Still taken elsewhere here: the notice and its button stay

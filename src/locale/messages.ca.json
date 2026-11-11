@@ -99,8 +99,6 @@
     "catalog.loading": "Carregant els exercicis…",
     "catalog.empty.heading": "Encara no tens exercicis assignats",
     "catalog.empty.text": "Quan el teu docent te n'assigni algun, apareixerà aquí.",
-    "catalog.session": "Sessió {$INTERPOLATION}",
-    "catalog.sessionProgress": "{$INTERPOLATION}/{$INTERPOLATION_1} superats",
     "catalog.greeting": "Hola, {$INTERPOLATION}.",
     "catalog.progressLabel": "superats",
     "catalog.progressBar": "Exercicis superats",
@@ -325,6 +323,20 @@
     "locale.name.es": "castellà",
     "locale.name.en": "anglès",
     "locale.name.ca": "català",
-    "workspace.untranslated": "Aquest enunciat només és en {$language}."
+    "workspace.untranslated": "Aquest enunciat només és en {$language}.",
+    "catalog.subjects": "Assignatures",
+    "catalog.blockProgress": "{$INTERPOLATION}/{$INTERPOLATION_1} superats",
+    "catalog.repetitions": "{VAR_PLURAL, plural, =1 {Repetit 1 vegada} other {Repetit {INTERPOLATION} vegades}}",
+    "workspace.retryFailed": "No s'ha pogut començar un altre intent.",
+    "workspace.practiceNote": "Estàs practicant: aquest intent no compta per a la classe, que continua tenint el teu primer lliurament.",
+    "workspace.practiseAgain": "Practicar de nou",
+    "workspace.nextExercise": "Exercici següent",
+    "workspace.place": "Ubicació",
+    "workspace.attemptOf": "Intent {$INTERPOLATION} de {$INTERPOLATION_1}",
+    "workspace.attemptChoice": "Intent {$INTERPOLATION}",
+    "myData.choices": "Tu decideixes",
+    "myData.choices.text": "Als ajustos tries si el tutor t'escriu per iniciativa pròpia i si li parles amb la veu.",
+    "myData.services.ai.title": "El model d'IA del tutor",
+    "myData.services.voice.title": "El reconeixement de veu"
   }
 }

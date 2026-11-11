@@ -59,6 +59,7 @@ describe('MockCodeRunnerService', () => {
       exerciseId: exerciseId(3),
       userId: STUDENT,
       assignmentId: assignmentId(DAW_GROUP_ID, 3),
+      number: 1,
       currentCode: '',
       finalCode: null,
       status: 'in_progress',

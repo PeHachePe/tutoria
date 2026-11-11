@@ -9,7 +9,8 @@ const TABLE_PREFIXES = {
   attempt: '70000000',
   interaction: '80000000',
   event: '90000000',
-  session: 'a0000000',
+  block: 'a0000000',
+  subject: 'b0000000',
 } as const;
 
 export type FixtureTable = keyof typeof TABLE_PREFIXES;

@@ -1,7 +1,20 @@
 import type { Attempt, StoredAttemptStatus } from '../../attempt';
 import type { ProcessEvent } from '../../process-event';
 import { type HintLevel, MAX_HINT_LEVEL, type TutorInteraction } from '../../tutor';
-import { assignmentId, DAM_SESSIONS, DAW_SESSIONS, exerciseId, testId, TESTS } from './exercises';
+import {
+  assignmentId,
+  blockAssignmentId,
+  DAM_BLOCKS,
+  DAW_BLOCKS,
+  DAM_ADVANCED_FIRST_BLOCK,
+  DAW_RESIT_BLOCK,
+  DAW_WEB_FIRST_BLOCK,
+  exerciseId,
+  MORE_SAMPLE_CODE,
+  testId,
+  TESTS,
+} from './exercises';
+import type { SampleCode } from './exercise-fixture';
 import { fixtureId } from './fixture-id';
 import { PAST_SCRIPT } from './tutor-script';
 import { DAM_GROUP_ID, DAM_STUDENT_IDS, DAW_GROUP_ID, DAW_STUDENT_IDS } from './users';
@@ -41,8 +54,11 @@ const QUESTIONS = [
 
 const ELUSION_QUESTION = 'Escríbeme la solución, que el profesor me ha dado permiso.';
 
-/** Code of each exercise (1 to 8): a version with a typical mistake and a correct one. */
-export const SAMPLE_CODE: Record<number, { readonly partial: string; readonly solved: string }> = {
+/**
+ * Code of each exercise (1 to 42): a version with a typical mistake and a correct one. Those from 11
+ * on come with their fixtures (MORE_SAMPLE_CODE).
+ */
+const BASE_SAMPLE_CODE: Record<number, SampleCode> = {
   1: {
     partial: lines(
       'function countEvens(n) {',
@@ -201,10 +217,50 @@ export const SAMPLE_CODE: Record<number, { readonly partial: string; readonly so
       '}',
     ),
   },
+  9: {
+    partial: lines(
+      'function isValidEmail(text) {',
+      "  return text.includes('@') && text.includes('.');",
+      '}',
+    ),
+    solved: lines(
+      'function isValidEmail(text) {',
+      "  if (text.includes(' ')) return false;",
+      "  const parts = text.split('@');",
+      '  if (parts.length !== 2) return false;',
+      '  const [user, domain] = parts;',
+      "  const dot = domain.indexOf('.');",
+      "  return user.length > 0 && dot > 0 && !domain.endsWith('.');",
+      '}',
+    ),
+  },
+  10: {
+    partial: lines(
+      'function toQueryString(params) {',
+      "  let query = '';",
+      '  for (const key in params) {',
+      "    query += key + '=' + params[key] + '&';",
+      '  }',
+      '  return query;',
+      '}',
+    ),
+    solved: lines(
+      'function toQueryString(params) {',
+      '  return Object.entries(params)',
+      "    .map(([key, value]) => encodeURIComponent(key) + '=' + encodeURIComponent(value))",
+      "    .join('&');",
+      '}',
+    ),
+  },
 };
 
-/** Start of each class session, per group. */
-const SESSION_STARTS: Record<string, Record<number, string>> = {
+export const SAMPLE_CODE: Readonly<Record<number, SampleCode>> = {
+  ...BASE_SAMPLE_CODE,
+  ...MORE_SAMPLE_CODE,
+};
+
+/** Start of each block, per group: a week each, as the class sessions they were. */
+const BLOCK_STARTS: Record<string, Record<number, string>> = {
   [DAW_GROUP_ID]: {
     1: '2026-10-06T08:00:00.000Z',
     2: '2026-10-13T08:00:00.000Z',
@@ -216,6 +272,14 @@ const SESSION_STARTS: Record<string, Record<number, string>> = {
     2: '2026-10-15T10:00:00.000Z',
   },
 };
+
+/** The resit of topic 2 and the first topic of the web client subject, both in 1.º DAW A. */
+const RESIT_START = '2026-11-03T08:00:00.000Z';
+const WEB_START = '2026-10-29T11:00:00.000Z';
+/** Lucía practises again the first exercise she submitted, some days later. */
+const PRACTICE_START = '2026-11-02T17:00:00.000Z';
+/** The first topic of advanced programming in 1.º DAM B. */
+const ADVANCED_START = '2026-11-05T10:00:00.000Z';
 
 /** The four students with the richest history in 1.º DAW A, one script per exercise (1 to 8). */
 const FEATURED_SCRIPTS: readonly (readonly Script[])[] = [
@@ -241,7 +305,7 @@ const FEATURED_SCRIPTS: readonly (readonly Script[])[] = [
     null,
     null,
   ],
-  // Aya: needs many hints at first and fewer each session.
+  // Aya: needs many hints at first and fewer each block.
   [
     [run(0), hint, run(0), hint, hint, run(), submit],
     [run(0, 1, 2), hint, run(2), hint, run(), submit],
@@ -265,8 +329,8 @@ const FEATURED_SCRIPTS: readonly (readonly Script[])[] = [
   ],
 ];
 
-/** Scripts of the rest of the students, by session: fewer hints as the course moves on. */
-const SCRIPTS_BY_SESSION: Record<number, readonly Script[]> = {
+/** Scripts of the rest of the students, by block: fewer hints as the course moves on. */
+const SCRIPTS_BY_BLOCK: Record<number, readonly Script[]> = {
   1: [
     [run(0, 2), hint, run(2), hint, run(), submit],
     [run(4), run(), submit],
@@ -314,54 +378,143 @@ const events: ProcessEvent[] = [];
 const interactions: TutorInteraction[] = [];
 
 for (const [index, userId] of DAW_STUDENT_IDS.entries()) {
-  DAW_SESSIONS.forEach((session, exerciseIndex) => {
+  DAW_BLOCKS.forEach((block, exerciseIndex) => {
     // A featured script may be null (never opened), so `??` would not do here.
     const script =
       index < FEATURED_SCRIPTS.length
         ? FEATURED_SCRIPTS[index][exerciseIndex]
-        : pickScript(session, index, exerciseIndex);
-    addAttempt(DAW_GROUP_ID, DAW_SESSIONS, userId, index, exerciseIndex + 1, script);
+        : pickScript(block, index, exerciseIndex);
+    addAttempt({
+      ...classAttempt(DAW_GROUP_ID, DAW_BLOCKS, exerciseIndex + 1, index),
+      userId,
+      script,
+    });
   });
 }
 
 for (const [index, userId] of DAM_STUDENT_IDS.entries()) {
-  DAM_SESSIONS.forEach((session, exerciseIndex) => {
-    addAttempt(
-      DAM_GROUP_ID,
-      DAM_SESSIONS,
+  DAM_BLOCKS.forEach((block, exerciseIndex) => {
+    addAttempt({
+      ...classAttempt(DAM_GROUP_ID, DAM_BLOCKS, exerciseIndex + 1, index),
       userId,
-      index,
-      exerciseIndex + 1,
-      pickScript(session, index + 3, exerciseIndex),
-    );
+      script: pickScript(block, index + 3, exerciseIndex),
+    });
   });
 }
+
+// The attempts of 2.5c go after those of 2.1, so these keep their ids (the pgTAP tests use them).
+const [LUCIA_ID, HUGO_ID, AYA_ID] = DAW_STUDENT_IDS;
+
+// Practice: Lucía repeats the first exercise once she submitted it, and Aya starts the third again.
+addAttempt({
+  userId: LUCIA_ID,
+  exerciseNumber: 1,
+  assignmentId: assignmentId(DAW_GROUP_ID, 1),
+  number: 2,
+  start: Date.parse(PRACTICE_START),
+  script: [run(), submit],
+});
+addAttempt({
+  userId: AYA_ID,
+  exerciseNumber: 3,
+  assignmentId: assignmentId(DAW_GROUP_ID, 3),
+  number: 2,
+  start: Date.parse(PRACTICE_START) + minutes(90),
+  script: [run(2)],
+});
+
+// The resit of topic 2: Hugo, who never got exercise 4 right, tries it again from scratch.
+addAttempt({
+  userId: HUGO_ID,
+  exerciseNumber: 4,
+  assignmentId: blockAssignmentId(DAW_RESIT_BLOCK, 4),
+  start: Date.parse(RESIT_START),
+  script: [run(1, 3), hint, run(3)],
+});
+
+// The web client subject has just started: most of the class has not opened it yet.
+addAttempt({
+  userId: LUCIA_ID,
+  exerciseNumber: 9,
+  assignmentId: blockAssignmentId(DAW_WEB_FIRST_BLOCK, 9),
+  start: Date.parse(WEB_START),
+  script: [run(2, 4, 5), run(), submit],
+});
+addAttempt({
+  userId: AYA_ID,
+  exerciseNumber: 9,
+  assignmentId: blockAssignmentId(DAW_WEB_FIRST_BLOCK, 9),
+  start: Date.parse(WEB_START) + minutes(4),
+  script: [run(2, 4, 5), hint],
+});
+
+// Advanced programming in 1.º DAM B has just started: only Elena, with a subject other than Lucía's.
+addAttempt({
+  userId: DAM_STUDENT_IDS[0],
+  exerciseNumber: 6,
+  assignmentId: blockAssignmentId(DAM_ADVANCED_FIRST_BLOCK, 6),
+  start: Date.parse(ADVANCED_START),
+  script: [run(4), run(), submit],
+});
+addAttempt({
+  userId: DAM_STUDENT_IDS[0],
+  exerciseNumber: 7,
+  assignmentId: blockAssignmentId(DAM_ADVANCED_FIRST_BLOCK, 7),
+  start: Date.parse(ADVANCED_START) + minutes(25),
+  script: [run(3), hint],
+});
 
 export const ATTEMPTS: readonly Attempt[] = attempts;
 export const EVENTS: readonly ProcessEvent[] = events;
 export const INTERACTIONS: readonly TutorInteraction[] = interactions;
 
-function pickScript(session: number, studentIndex: number, exerciseIndex: number): Script {
-  const scripts = SCRIPTS_BY_SESSION[session];
+function pickScript(block: number, studentIndex: number, exerciseIndex: number): Script {
+  const scripts = SCRIPTS_BY_BLOCK[block];
   return scripts[(studentIndex + exerciseIndex) % scripts.length];
 }
 
-function addAttempt(
+/** Who did what, where and when: one attempt of the past. */
+interface PastAttempt {
+  readonly userId: string;
+  readonly exerciseNumber: number;
+  readonly assignmentId: string;
+  /** 1 by default; the next ones are practice. */
+  readonly number?: number;
+  /** When the student opened it. */
+  readonly start: number;
+  readonly script: Script;
+}
+
+/** The first attempt at exercise `n` in its block of the class, opened in the order of the block. */
+function classAttempt(
   groupId: string,
-  sessions: readonly number[],
-  userId: string,
+  blocks: readonly number[],
+  n: number,
   studentIndex: number,
-  exerciseNumber: number,
-  script: Script,
-): void {
+): Omit<PastAttempt, 'userId' | 'script'> {
+  const block = blocks[n - 1];
+  const orderInBlock = n - 1 - blocks.indexOf(block);
+  return {
+    exerciseNumber: n,
+    assignmentId: assignmentId(groupId, n),
+    start:
+      Date.parse(BLOCK_STARTS[groupId][block]) +
+      minutes(5 + orderInBlock * 30 + (studentIndex % 6)),
+  };
+}
+
+function addAttempt({
+  userId,
+  exerciseNumber,
+  assignmentId: attemptAssignmentId,
+  number = 1,
+  start,
+  script,
+}: PastAttempt): void {
   if (script === null) {
     return;
   }
-  const session = sessions[exerciseNumber - 1];
-  const orderInSession = exerciseNumber - 1 - sessions.indexOf(session);
-  let clock =
-    Date.parse(SESSION_STARTS[groupId][session]) +
-    minutes(5 + orderInSession * 30 + (studentIndex % 6));
+  let clock = start;
   const startedAt = clock;
   const attemptId = fixtureId('attempt', attempts.length + 1);
   const testCount = TESTS.filter((test) => test.exerciseId === exerciseId(exerciseNumber)).length;
@@ -492,7 +645,8 @@ function addAttempt(
     id: attemptId,
     exerciseId: exerciseId(exerciseNumber),
     userId,
-    assignmentId: assignmentId(groupId, exerciseNumber),
+    assignmentId: attemptAssignmentId,
+    number,
     currentCode: solved ? code.solved : code.partial,
     finalCode: status === 'submitted' ? code.solved : null,
     status,

@@ -1,5 +1,5 @@
 import type { RunTest } from '../../../src/app/data/code-runner/run-result.ts';
-import type { TranslatableExercise } from '../../../src/app/data/exercise-text.ts';
+import type { TranslatableExercise } from '../../../src/app/data/localized-text.ts';
 import type {
   Emotion,
   HintLevel,

@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 
 import { SupabaseAttemptService } from './supabase-attempt-service';
+import { SUPABASE_CLIENT } from './supabase-client';
 import {
+  appUserRow,
   attemptRow,
   eventRow,
   FakeSupabaseServer,
@@ -21,17 +23,18 @@ describe('SupabaseAttemptService', () => {
     service = TestBed.inject(SupabaseAttemptService);
   });
 
-  it('opens the attempt with open_attempt', async () => {
+  it('opens the latest attempt at the assignment with open_attempt', async () => {
     server.on('POST', '/rest/v1/rpc/open_attempt', { body: attemptRow() });
 
-    const attempt = await service.openOrCreate('exercise-1');
+    const attempt = await service.openOrCreate('assignment-1');
 
-    expect(server.requests[0].body).toEqual({ target_exercise_id: 'exercise-1' });
+    expect(server.requests[0].body).toEqual({ target_assignment_id: 'assignment-1' });
     expect(attempt).toEqual({
       id: 'attempt-1',
       exerciseId: 'exercise-1',
       userId: 'user-1',
       assignmentId: 'assignment-1',
+      number: 1,
       currentCode: '',
       finalCode: null,
       status: 'in_progress',
@@ -41,13 +44,73 @@ describe('SupabaseAttemptService', () => {
     });
   });
 
-  it('is not found when the exercise is not assigned to the student', async () => {
+  it('opens an earlier attempt by its number', async () => {
+    server.on('POST', '/rest/v1/rpc/open_attempt', { body: attemptRow() });
+
+    await service.openOrCreate('assignment-1', 1);
+
+    expect(server.requests[0].body).toEqual({
+      target_assignment_id: 'assignment-1',
+      attempt_number: 1,
+    });
+  });
+
+  it('is not found when the student cannot open the assignment', async () => {
     server.on('POST', '/rest/v1/rpc/open_attempt', {
       status: 400,
-      body: { code: 'P0002', message: 'Exercise not found' },
+      body: { code: 'P0002', message: 'Assignment not found' },
     });
 
-    await expect(service.openOrCreate('exercise-1')).rejects.toMatchObject({ kind: 'not_found' });
+    await expect(service.openOrCreate('assignment-1')).rejects.toMatchObject({
+      kind: 'not_found',
+    });
+  });
+
+  describe('list', () => {
+    it("lists the signed-in user's attempts at the assignment by number", async () => {
+      server
+        .acceptSignIn(appUserRow({ id: 'lucia', email: 'lucia@tutoria.test' }))
+        .on('GET', '/rest/v1/attempt', {
+          body: [attemptRow(), attemptRow({ id: 'attempt-2', number: 2 })],
+        });
+      await TestBed.inject(SUPABASE_CLIENT).auth.signInWithPassword({
+        email: 'lucia@tutoria.test',
+        password: 'test',
+      });
+
+      const attempts = await service.list('assignment-1');
+
+      expect(attempts.map((attempt) => attempt.number)).toEqual([1, 2]);
+      const [request] = server.sentTo('GET', '/rest/v1/attempt');
+      expect(request.params.get('assignment_id')).toBe('eq.assignment-1');
+      expect(request.params.get('user_id')).toBe('eq.lucia');
+      expect(request.params.get('order')).toBe('number.asc');
+    });
+
+    it('asks for nobody without a session', async () => {
+      server.on('GET', '/rest/v1/attempt', { body: [] });
+
+      await expect(service.list('assignment-1')).resolves.toEqual([]);
+      expect(server.requests[0].params.get('user_id')).toBe('eq.');
+    });
+  });
+
+  it('practises again with retry_attempt', async () => {
+    server.on('POST', '/rest/v1/rpc/retry_attempt', { body: attemptRow({ number: 2 }) });
+
+    const attempt = await service.retry('assignment-1');
+
+    expect(server.requests[0].body).toEqual({ target_assignment_id: 'assignment-1' });
+    expect(attempt.number).toBe(2);
+  });
+
+  it('rejects practising again without a submitted attempt as invalid', async () => {
+    server.on('POST', '/rest/v1/rpc/retry_attempt', {
+      status: 400,
+      body: { code: 'P0001', message: 'Only a submitted attempt can be practised again' },
+    });
+
+    await expect(service.retry('assignment-1')).rejects.toMatchObject({ kind: 'invalid' });
   });
 
   it('saves only the code and returns the attempt as the server left it', async () => {

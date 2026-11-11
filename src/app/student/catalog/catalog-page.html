@@ -40,75 +40,8 @@
       <app-mascot class="size-28" />
     </app-empty-state>
   } @else {
-    <!-- Summary: global progress and what is left, by status -->
-    <section
-      class="grid gap-4 rounded-2xl bg-panel p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
-      aria-labelledby="catalog-progress"
-    >
-      <div class="flex flex-col gap-3">
-        <p id="catalog-progress" class="flex items-baseline gap-2">
-          <span class="text-display-small text-primary">{{ passed() }}/{{ total() }}</span>
-          {{ ' ' }}
-          <span class="text-title-medium" i18n="@@catalog.progressLabel">superados</span>
-        </p>
-        <mat-progress-bar
-          class="rounded-full"
-          mode="determinate"
-          [value]="percent()"
-          aria-label="Ejercicios superados"
-          i18n-aria-label="@@catalog.progressBar"
-        />
-      </div>
-      <ul class="flex flex-wrap gap-2 md:max-w-sm md:justify-end">
-        @if (counts().passed > 0) {
-          <li
-            class="inline-flex items-center gap-1 rounded-full bg-success-container py-1 ps-2 pe-3 text-label-large text-on-success-container"
-          >
-            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">outbox</mat-icon>
-            <span i18n="@@catalog.count.ready">{counts().passed, plural,
-              =1 {1 listo para entregar}
-              other {{{ counts().passed }} listos para entregar}
-            }</span>
-          </li>
-        }
-        @if (counts().tests_failed > 0) {
-          <li
-            class="inline-flex items-center gap-1 rounded-full bg-warning-container py-1 ps-2 pe-3 text-label-large text-on-warning-container"
-          >
-            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">error</mat-icon>
-            <span i18n="@@catalog.count.failing">{counts().tests_failed, plural,
-              =1 {1 con fallos}
-              other {{{ counts().tests_failed }} con fallos}
-            }</span>
-          </li>
-        }
-        @if (counts().in_progress > 0) {
-          <li
-            class="inline-flex items-center gap-1 rounded-full bg-info-container py-1 ps-2 pe-3 text-label-large text-on-info-container"
-          >
-            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">edit</mat-icon>
-            <span i18n="@@catalog.count.inProgress">{counts().in_progress, plural,
-              =1 {1 en curso}
-              other {{{ counts().in_progress }} en curso}
-            }</span>
-          </li>
-        }
-        @if (counts().submitted > 0) {
-          <li
-            class="inline-flex items-center gap-1 rounded-full bg-surface-container-high py-1 ps-2 pe-3 text-label-large text-on-surface-variant"
-          >
-            <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">task_alt</mat-icon>
-            <span i18n="@@catalog.count.submitted">{counts().submitted, plural,
-              =1 {1 entregado}
-              other {{{ counts().submitted }} entregados}
-            }</span>
-          </li>
-        }
-      </ul>
-    </section>
-
     @if (next(); as next) {
-      <!-- Where to pick up: the open attempt changed last or, without one, the next exercise -->
+      <!-- Where to pick up, among every group: the open attempt changed last or the next exercise -->
       <section
         class="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-primary-container p-5 text-on-primary-container sm:flex-row sm:items-center sm:gap-5"
         aria-labelledby="catalog-next"
@@ -124,10 +57,10 @@
           </h2>
           <p class="text-title-large" [attr.lang]="next.lang">{{ next.title }}</p>
           <p class="text-body-medium">
-            <span i18n="@@catalog.session">Sesión {{ next.session }}</span>
-            @if (next.sessionTitle) {
-              · {{ next.sessionTitle }}
+            @if (next.subject; as subject) {
+              <span [attr.lang]="subject.lang">{{ subject.text }}</span> ·
             }
+            <span [attr.lang]="next.block.lang">{{ next.block.text }}</span>
             · <span [attr.lang]="next.lang">{{ next.topics }}</span>
           </p>
         </div>
@@ -158,110 +91,210 @@
       </section>
     }
 
-    @for (group of sessions(); track group.session) {
-      <section
-        class="flex flex-col overflow-hidden rounded-2xl bg-panel"
-        [attr.aria-labelledby]="'session-' + group.session"
-      >
-        <!-- Accordion pattern of the ARIA practices: a heading that holds the toggle button -->
-        <h2>
-          <button
-            type="button"
-            class="flex w-full items-center gap-3 p-4 text-start outline-offset-[-2px] hover:bg-on-surface/5 focus-visible:outline-2 focus-visible:outline-primary"
-            [attr.aria-expanded]="!folded().has(group.session)"
-            [attr.aria-controls]="'session-list-' + group.session"
-            (click)="toggle(group.session)"
-          >
-            <mat-icon
-              class="shrink-0 text-on-surface-variant transition-transform duration-200 motion-reduce:transition-none"
-              [class.-rotate-90]="folded().has(group.session)"
-              >expand_more</mat-icon
-            >
-            <span [id]="'session-' + group.session" class="flex min-w-0 flex-1 flex-col">
-              @if (group.title) {
-                <span class="eyebrow" i18n="@@catalog.session">Sesión {{ group.session }}</span>
-                {{ ' ' }}
-                <span class="text-title-medium sm:text-title-large">{{ group.title }}</span>
-              } @else {
-                <span class="text-title-large" i18n="@@catalog.session"
-                  >Sesión {{ group.session }}</span
-                >
-              }
-            </span>
-            <!-- The space between both texts keeps them apart in the accessible name -->
-            {{ ' ' }}
-            <span class="flex shrink-0 flex-col items-end gap-1.5">
-              <span class="flex gap-1" aria-hidden="true">
-                @for (dot of group.dots; track dot.key) {
-                  <span class="size-2.5 rounded-full" [class]="dot.classes"></span>
-                }
-              </span>
-              <span
-                class="text-label-large text-on-surface-variant"
-                i18n="@@catalog.sessionProgress"
-                >{{ group.passed }}/{{ group.total }} superados</span
-              >
-            </span>
-          </button>
-        </h2>
-        <ul
-          [id]="'session-list-' + group.session"
-          class="flex flex-col divide-y divide-outline-variant border-t border-outline-variant"
-          [hidden]="folded().has(group.session)"
+    @if (tabs().length > 1) {
+      <!-- A tab per group, in the URL (?grupo=): links, so reloading or «Atrás» keeps it -->
+      <div class="flex flex-col gap-6">
+        <nav
+          mat-tab-nav-bar
+          [tabPanel]="groupPanel"
+          aria-label="Asignaturas"
+          i18n-aria-label="@@catalog.subjects"
         >
-          @for (card of group.cards; track card.key) {
-            <li class="flex gap-4 p-4">
-              <span
-                class="grid size-10 shrink-0 place-items-center rounded-full text-title-medium"
-                [class]="card.marker"
-                aria-hidden="true"
-              >
-                @if (card.done) {
-                  <mat-icon>check</mat-icon>
-                } @else {
-                  {{ card.number }}
-                }
-              </span>
-              <div class="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
-                <div class="flex min-w-0 flex-1 flex-col gap-1">
-                  <h3 class="text-title-medium" [attr.lang]="card.lang">{{ card.title }}</h3>
-                  <p class="text-body-medium text-on-surface-variant" [attr.lang]="card.lang">
-                    {{ card.topics }}
-                  </p>
-                  @if (card.ready) {
-                    <p class="flex items-center gap-1 text-label-large text-primary">
-                      <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">outbox</mat-icon>
-                      <span i18n="@@catalog.ready">Listo para entregar</span>
-                    </p>
-                  }
-                  @if (card.hintCount > 0) {
-                    <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
-                      <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">lightbulb</mat-icon>
-                      <span i18n="@@catalog.hints">{card.hintCount, plural,
-                        =1 {1 pista pedida}
-                        other {{{ card.hintCount }} pistas pedidas}
-                      }</span>
-                      <span i18n="@@catalog.hintLevel">· nivel {{ card.hintLevel }}</span>
-                    </p>
-                  }
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <app-difficulty-chip [difficulty]="card.difficulty" />
-                  <app-status-chip [status]="card.status" />
-                  <a
-                    class="ms-auto min-w-28"
-                    [matButton]="card.action.appearance"
-                    [routerLink]="card.path"
-                  >
-                    {{ card.action.label
-                    }}<span class="sr-only" [attr.lang]="card.lang">: {{ card.title }}</span>
-                  </a>
-                </div>
-              </div>
-            </li>
+          @for (tab of tabs(); track tab.id) {
+            <a
+              mat-tab-link
+              [active]="tab.active"
+              [routerLink]="[]"
+              [queryParams]="tab.queryParams"
+              [attr.lang]="tab.lang"
+              >{{ tab.label }}</a
+            >
           }
-        </ul>
-      </section>
+        </nav>
+        <mat-tab-nav-panel #groupPanel class="flex flex-col gap-6">
+          <ng-container [ngTemplateOutlet]="group" />
+        </mat-tab-nav-panel>
+      </div>
+    } @else {
+      <ng-container [ngTemplateOutlet]="group" />
     }
   }
 </div>
+
+<!-- The exercises of the group shown: its progress and its blocks -->
+<ng-template #group>
+  <section
+    class="grid gap-4 rounded-2xl bg-panel p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+    aria-labelledby="catalog-progress"
+  >
+    <div class="flex flex-col gap-3">
+      <p id="catalog-progress" class="flex items-baseline gap-2">
+        <span class="text-display-small text-primary">{{ passed() }}/{{ shownTotal() }}</span>
+        {{ ' ' }}
+        <span class="text-title-medium" i18n="@@catalog.progressLabel">superados</span>
+      </p>
+      <mat-progress-bar
+        class="rounded-full"
+        mode="determinate"
+        [value]="percent()"
+        aria-label="Ejercicios superados"
+        i18n-aria-label="@@catalog.progressBar"
+      />
+    </div>
+    <ul class="flex flex-wrap gap-2 md:max-w-sm md:justify-end">
+      @if (counts().passed > 0) {
+        <li
+          class="inline-flex items-center gap-1 rounded-full bg-success-container py-1 ps-2 pe-3 text-label-large text-on-success-container"
+        >
+          <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">outbox</mat-icon>
+          <span i18n="@@catalog.count.ready">{counts().passed, plural,
+            =1 {1 listo para entregar}
+            other {{{ counts().passed }} listos para entregar}
+          }</span>
+        </li>
+      }
+      @if (counts().tests_failed > 0) {
+        <li
+          class="inline-flex items-center gap-1 rounded-full bg-warning-container py-1 ps-2 pe-3 text-label-large text-on-warning-container"
+        >
+          <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">error</mat-icon>
+          <span i18n="@@catalog.count.failing">{counts().tests_failed, plural,
+            =1 {1 con fallos}
+            other {{{ counts().tests_failed }} con fallos}
+          }</span>
+        </li>
+      }
+      @if (counts().in_progress > 0) {
+        <li
+          class="inline-flex items-center gap-1 rounded-full bg-info-container py-1 ps-2 pe-3 text-label-large text-on-info-container"
+        >
+          <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">edit</mat-icon>
+          <span i18n="@@catalog.count.inProgress">{counts().in_progress, plural,
+            =1 {1 en curso}
+            other {{{ counts().in_progress }} en curso}
+          }</span>
+        </li>
+      }
+      @if (counts().submitted > 0) {
+        <li
+          class="inline-flex items-center gap-1 rounded-full bg-surface-container-high py-1 ps-2 pe-3 text-label-large text-on-surface-variant"
+        >
+          <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">task_alt</mat-icon>
+          <span i18n="@@catalog.count.submitted">{counts().submitted, plural,
+            =1 {1 entregado}
+            other {{{ counts().submitted }} entregados}
+          }</span>
+        </li>
+      }
+    </ul>
+  </section>
+
+  @for (block of blocks(); track block.id) {
+    <section
+      class="flex flex-col overflow-hidden rounded-2xl bg-panel"
+      [attr.aria-labelledby]="'block-' + block.id"
+    >
+      <!-- Accordion pattern of the ARIA practices: a heading that holds the toggle button -->
+      <h2>
+        <button
+          type="button"
+          class="flex w-full items-center gap-3 p-4 text-start outline-offset-[-2px] hover:bg-on-surface/5 focus-visible:outline-2 focus-visible:outline-primary"
+          [attr.aria-expanded]="!folded().has(block.id)"
+          [attr.aria-controls]="'block-list-' + block.id"
+          (click)="toggle(block.id)"
+        >
+          <mat-icon
+            class="shrink-0 text-on-surface-variant transition-transform duration-200 motion-reduce:transition-none"
+            [class.-rotate-90]="folded().has(block.id)"
+            >expand_more</mat-icon
+          >
+          <span
+            [id]="'block-' + block.id"
+            class="min-w-0 flex-1 text-title-medium sm:text-title-large"
+            [attr.lang]="block.title.lang"
+            >{{ block.title.text }}</span
+          >
+          <!-- The space between both texts keeps them apart in the accessible name -->
+          {{ ' ' }}
+          <span class="flex shrink-0 flex-col items-end gap-1.5">
+            <span class="flex gap-1" aria-hidden="true">
+              @for (dot of block.dots; track dot.key) {
+                <span class="size-2.5 rounded-full" [class]="dot.classes"></span>
+              }
+            </span>
+            <span class="text-label-large text-on-surface-variant" i18n="@@catalog.blockProgress"
+              >{{ block.passed }}/{{ block.total }} superados</span
+            >
+          </span>
+        </button>
+      </h2>
+      <ul
+        [id]="'block-list-' + block.id"
+        class="flex flex-col divide-y divide-outline-variant border-t border-outline-variant"
+        [hidden]="folded().has(block.id)"
+      >
+        @for (card of block.cards; track card.key) {
+          <li class="flex gap-4 p-4">
+            <span
+              class="grid size-10 shrink-0 place-items-center rounded-full text-title-medium"
+              [class]="card.marker"
+              aria-hidden="true"
+            >
+              @if (card.done) {
+                <mat-icon>check</mat-icon>
+              } @else {
+                {{ card.number }}
+              }
+            </span>
+            <div class="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
+              <div class="flex min-w-0 flex-1 flex-col gap-1">
+                <h3 class="text-title-medium" [attr.lang]="card.lang">{{ card.title }}</h3>
+                <p class="text-body-medium text-on-surface-variant" [attr.lang]="card.lang">
+                  {{ card.topics }}
+                </p>
+                @if (card.ready) {
+                  <p class="flex items-center gap-1 text-label-large text-primary">
+                    <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">outbox</mat-icon>
+                    <span i18n="@@catalog.ready">Listo para entregar</span>
+                  </p>
+                }
+                @if (card.hintCount > 0) {
+                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                    <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">lightbulb</mat-icon>
+                    <span i18n="@@catalog.hints">{card.hintCount, plural,
+                      =1 {1 pista pedida}
+                      other {{{ card.hintCount }} pistas pedidas}
+                    }</span>
+                    <span i18n="@@catalog.hintLevel">· nivel {{ card.hintLevel }}</span>
+                  </p>
+                }
+                @if (card.repetitions > 0) {
+                  <!-- Practice after the attempt that counts: it does not change the data of the class -->
+                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                    <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">replay</mat-icon>
+                    <span i18n="@@catalog.repetitions">{card.repetitions, plural,
+                      =1 {Repetido 1 vez}
+                      other {Repetido {{ card.repetitions }} veces}
+                    }</span>
+                  </p>
+                }
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <app-difficulty-chip [difficulty]="card.difficulty" />
+                <app-status-chip [status]="card.status" />
+                <a
+                  class="ms-auto min-w-28"
+                  [matButton]="card.action.appearance"
+                  [routerLink]="card.path"
+                >
+                  {{ card.action.label
+                  }}<span class="sr-only" [attr.lang]="card.lang">: {{ card.title }}</span>
+                </a>
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</ng-template>

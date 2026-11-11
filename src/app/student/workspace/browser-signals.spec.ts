@@ -14,6 +14,7 @@ function attemptOf(id: string): Attempt {
     exerciseId: 'exercise-3',
     userId: 'student-1',
     assignmentId: 'assignment-3',
+    number: 1,
     currentCode: '',
     finalCode: null,
     status: 'in_progress',

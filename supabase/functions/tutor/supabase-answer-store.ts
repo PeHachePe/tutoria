@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../src/app/data/supabase/database.types.ts';
-import type { ExerciseTranslations } from '../../../src/app/data/exercise-text.ts';
+import type { ExerciseTranslations } from '../../../src/app/data/localized-text.ts';
 import type { HintLevel, Intensity } from '../../../src/app/data/tutor/tutor-contract.ts';
 import { providerSettingOf } from './provider-setting.ts';
 import type {

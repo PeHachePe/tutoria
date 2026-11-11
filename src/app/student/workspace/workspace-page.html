@@ -9,29 +9,80 @@
   >
     <mat-icon>arrow_back</mat-icon>
   </a>
-  <!-- The heading is there from the start, so the focus lands on it after the navigation. On
-       phones it takes at most two lines, so the zones keep the height of the screen. -->
-  <h1
-    class="line-clamp-2 min-h-7 min-w-0 flex-1 text-title-medium sm:line-clamp-none sm:min-h-8 sm:text-headline-small"
-  >
-    @if (heading(); as current) {
-      <span [attr.lang]="current.lang">{{ current.title }}</span>
-    } @else {
-      <!-- While it loads, a skeleton of the title shows and screen readers hear «Ejercicio» -->
-      <span [class.sr-only]="!error()" i18n="@@workspace.heading">Ejercicio</span>
-      @if (!error()) {
-        <app-loading-skeleton>
-          <app-skeleton class="h-7 w-72 max-w-full sm:h-8" />
-        </app-loading-skeleton>
-      }
+  <div class="flex min-w-0 flex-1 flex-col">
+    @if (place(); as current) {
+      <!-- Where the exercise is (2.5c): the subject leads to its tab of the catalog -->
+      <nav aria-label="Ubicación" i18n-aria-label="@@workspace.place">
+        <ol class="flex min-w-0 items-center gap-1 text-label-large text-on-surface-variant">
+          <li class="min-w-0 truncate">
+            <a
+              class="rounded-sm underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+              [routerLink]="catalogPath"
+              [queryParams]="current.groupParams"
+              [attr.lang]="current.subjectLang"
+              >{{ current.subject }}</a
+            >
+          </li>
+          <li class="flex min-w-0 items-center gap-1">
+            <mat-icon class="size-4! shrink-0 text-[1rem]!" aria-hidden="true"
+              >chevron_right</mat-icon
+            >
+            <span class="truncate" [attr.lang]="current.blockLang">{{ current.block }}</span>
+          </li>
+        </ol>
+      </nav>
     }
-  </h1>
+    <!-- The heading is there from the start, so the focus lands on it after the navigation. On
+       phones it takes at most two lines, so the zones keep the height of the screen. -->
+    <h1
+      class="line-clamp-2 min-h-7 min-w-0 text-title-medium sm:line-clamp-none sm:min-h-8 sm:text-headline-small"
+    >
+      @if (heading(); as current) {
+        <span [attr.lang]="current.lang">{{ current.title }}</span>
+      } @else {
+        <!-- While it loads, a skeleton of the title shows and screen readers hear «Ejercicio» -->
+        <span [class.sr-only]="!error()" i18n="@@workspace.heading">Ejercicio</span>
+        @if (!error()) {
+          <app-loading-skeleton>
+            <app-skeleton class="h-7 w-72 max-w-full sm:h-8" />
+          </app-loading-skeleton>
+        }
+      }
+    </h1>
+  </div>
   @if (exercise(); as current) {
     <!-- On phones the chips take their own line, so the title keeps the width of the screen -->
     <div class="flex w-full flex-wrap items-center gap-2 ps-12 sm:w-auto sm:ps-0">
       <app-difficulty-chip [difficulty]="current.difficulty" />
       @if (store.attempt()) {
         <app-status-chip [status]="store.status()" [testCount]="store.testCount()" />
+      }
+      @if (attemptChoices().length > 1) {
+        <!-- The attempts at the assignment (2.5c): the earlier ones can still be reviewed -->
+        <button matButton type="button" [matMenuTriggerFor]="attemptMenu">
+          <mat-icon>history</mat-icon>
+          <span i18n="@@workspace.attemptOf"
+            >Intento {{ store.attempt()?.number }} de {{ attemptChoices().length }}</span
+          >
+          <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
+        </button>
+        <mat-menu #attemptMenu="matMenu">
+          @for (choice of attemptChoices(); track choice.number) {
+            <a
+              mat-menu-item
+              [routerLink]="[]"
+              [queryParams]="choice.queryParams"
+              [queryParamsHandling]="'merge'"
+              [attr.aria-current]="choice.current ? 'page' : null"
+            >
+              <!-- aria-current says which one is open; the tick only shows it -->
+              <mat-icon aria-hidden="true">{{ choice.current ? 'check' : '' }}</mat-icon>
+              <span i18n="@@workspace.attemptChoice">Intento {{ choice.number }}</span>
+              {{ ' ' }}
+              <app-status-chip class="ms-2" [status]="choice.status" />
+            </a>
+          }
+        </mat-menu>
       }
     </div>
   }
@@ -58,7 +109,12 @@
       />
     </mat-tab>
     <mat-tab label="Código" i18n-label="@@workspace.tab.code">
-      <app-code-zone [exercise]="exercise()" [compact]="true" />
+      <app-code-zone
+        [exercise]="exercise()"
+        [compact]="true"
+        [nextPath]="nextPath.value()"
+        (practised)="dropAttemptNumber()"
+      />
     </mat-tab>
     <mat-tab>
       <ng-template mat-tab-label>
@@ -115,8 +171,10 @@
       }
       <app-code-zone
         [exercise]="exercise()"
+        [nextPath]="nextPath.value()"
         [(expanded)]="codeExpanded"
         (expandedChange)="markAnswersSeen()"
+        (practised)="dropAttemptNumber()"
       />
     </div>
     @if (!floatingTutor()) {

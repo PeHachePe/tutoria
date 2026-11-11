@@ -14,19 +14,20 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { MatAnchor, MatIconAnchor } from '@angular/material/button';
+import { MatAnchor, MatButton, MatIconAnchor } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatTab, MatTabGroup, MatTabLabel } from '@angular/material/tabs';
 import { MatTooltip } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 
-import { APP_PATHS } from '../../core/app-paths';
+import { APP_PATHS, STUDENT_PARAMS } from '../../core/app-paths';
 import { AuthStore } from '../../auth/auth-store';
 import { AppTitleStrategy } from '../../core/app-title-strategy';
 import { LanguageService } from '../../core/i18n/language-service';
 import { ExerciseService } from '../../data/exercise-service';
-import { exerciseText } from '../../data/exercise-text';
+import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
@@ -36,6 +37,7 @@ import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { Splitter } from '../../shared/splitter/splitter';
 import { StatusChip } from '../../shared/status-chip/status-chip';
+import { nextInBlock } from '../catalog/catalog-blocks';
 import { SettingsStore } from '../settings/settings-store';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
@@ -72,9 +74,10 @@ const TUTOR_TAB = 2;
 
 /**
  * The workspace (/alumno/ejercicio/:id, ficha 03): the statement and its examples, the code and the
- * tutor of one exercise (RF-03 to RF-06), each in a zone of its own. The page loads the exercise,
- * opens its attempt, lays the zones out (columns with splitters on wide screens, tabs on phones) and
- * listens to the window to keep the code and record absences (2.8).
+ * tutor of one exercise of a block (RF-03 to RF-06), each in a zone of its own. The page loads the
+ * exercise of the assignment, opens its latest attempt or the one of `?intento=` (2.5c), lays the
+ * zones out (columns with splitters on wide screens, tabs on phones) and listens to the window to
+ * keep the code and record absences (2.8).
  */
 @Component({
   selector: 'app-workspace-page',
@@ -82,8 +85,12 @@ const TUTOR_TAB = 2;
     ReactionOverlay,
     RouterLink,
     MatAnchor,
+    MatButton,
     MatIconAnchor,
     MatIcon,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
     MatTab,
     MatTabGroup,
     MatTabLabel,
@@ -115,8 +122,20 @@ const TUTOR_TAB = 2;
   },
 })
 export class WorkspacePage {
-  /** Exercise id, from the `:id` of the route (withComponentInputBinding). */
+  /** Assignment id, from the `:id` of the route (withComponentInputBinding). */
   readonly id = input.required<string>();
+
+  private readonly router = inject(Router);
+  /** The attempt asked for in the URL (`?intento=2`), to review an earlier one; none is the latest. */
+  private readonly attemptNumber = toSignal(
+    inject(ActivatedRoute).queryParamMap.pipe(
+      map((params) => {
+        const number = Number(params.get(STUDENT_PARAMS.attempt));
+        return Number.isInteger(number) && number > 0 ? number : undefined;
+      }),
+    ),
+    { initialValue: undefined },
+  );
 
   private readonly exercises = inject(ExerciseService);
   private readonly titles = inject(AppTitleStrategy);
@@ -171,8 +190,8 @@ export class WorkspacePage {
 
   protected readonly detail = resource({
     params: () => this.id(),
-    loader: async ({ params: exerciseId, abortSignal }) => {
-      const detail = await this.exercises.getDetail(exerciseId);
+    loader: async ({ params: assignmentId, abortSignal }) => {
+      const detail = await this.exercises.getDetail(assignmentId);
       // The tab says which exercise it is, not just «Ejercicio» (WCAG 2.4.2), unless the student left.
       if (!abortSignal.aborted) {
         this.titles.setScreenTitle(exerciseText(detail.exercise, this.locale).title);
@@ -183,9 +202,65 @@ export class WorkspacePage {
 
   /** Opening the exercise opens or creates its attempt (2.4); the store keeps it for every zone. */
   protected readonly opening = resource({
-    params: () => this.id(),
-    loader: ({ params: exerciseId }) => this.store.open(exerciseId),
+    params: () => ({ assignmentId: this.id(), number: this.attemptNumber() }),
+    loader: ({ params: { assignmentId, number } }) => this.store.open(assignmentId, number),
   });
+
+  /**
+   * Once submitted, the next exercise of the block not submitted yet, for «Siguiente ejercicio»; null
+   * without one, and the button goes back to the catalog (2.5c).
+   */
+  protected readonly nextPath = resource({
+    params: () => {
+      const userId = this.userId();
+      return this.store.readonly() && userId ? { userId, assignmentId: this.id() } : undefined;
+    },
+    loader: async ({ params: { userId, assignmentId } }) => {
+      const next = nextInBlock(await this.exercises.listAssigned(userId), assignmentId);
+      return next ? APP_PATHS.student.exercise(next.assignmentId) : null;
+    },
+    defaultValue: null,
+  });
+
+  /** Where the exercise is: its subject, which leads to its tab of the catalog, and its block. */
+  protected readonly place = computed(() => {
+    if (!this.detail.hasValue()) return undefined;
+    const { group, block } = this.detail.value();
+    const subject = subjectName(group.subject, this.locale);
+    const title = blockTitle(block, this.locale);
+    return {
+      subject: subject.name,
+      subjectLang: subject.locale === this.locale ? null : subject.locale,
+      block: title.title,
+      blockLang: title.locale === this.locale ? null : title.locale,
+      groupParams: { [STUDENT_PARAMS.group]: group.id },
+    };
+  });
+
+  /** The attempts at the assignment, for the selector: only when there is more than one. */
+  protected readonly attemptChoices = computed(() => {
+    const current = this.store.attempt();
+    const list = this.store.attemptList();
+    if (!current || list.length < 2) return [];
+    const latest = Math.max(...list.map((attempt) => attempt.number));
+    return list.map((attempt) => ({
+      number: attempt.number,
+      status: attempt.id === current.id ? current.status : attempt.status,
+      current: attempt.id === current.id,
+      // The latest has no number in the URL: it is the one the exercise opens with
+      queryParams: { [STUDENT_PARAMS.attempt]: attempt.number === latest ? null : attempt.number },
+    }));
+  });
+
+  /** «Practicar de nuevo» opened the latest attempt: the number of an earlier one leaves the URL. */
+  protected dropAttemptNumber(): void {
+    if (this.attemptNumber() === undefined) return;
+    void this.router.navigate([], {
+      queryParams: { [STUDENT_PARAMS.attempt]: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 
   protected readonly error = computed(() => this.detail.error() ?? this.opening.error());
   /** The title in the language of the interface, or in the source one with its `lang` (D-045). */

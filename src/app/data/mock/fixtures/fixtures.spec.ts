@@ -7,6 +7,8 @@ import {
   DAM_STUDENT_IDS,
   DAW_GROUP_ID,
   DAW_STUDENT_IDS,
+  DAM_ADVANCED_GROUP_ID,
+  DAW_WEB_GROUP_ID,
   DISABLED_STUDENT_ID,
 } from './users';
 
@@ -27,9 +29,10 @@ describe('seed fixtures', () => {
   it('gives every row a unique, valid UUID', () => {
     const tables = [
       SEED.users,
+      SEED.subjects,
       SEED.groups,
       SEED.enrollments,
-      SEED.classSessions,
+      SEED.classBlocks,
       SEED.exercises,
       SEED.tests,
       SEED.assignments,
@@ -44,22 +47,60 @@ describe('seed fixtures', () => {
     }
   });
 
-  it('has one admin, two teachers, two groups and a disabled student outside them', () => {
+  it('has one admin, two teachers, four groups and a disabled student outside them', () => {
     const roles = SEED.users.map((user) => user.role);
     const emails = SEED.users.map((user) => user.email);
 
     expect(roles.filter((role) => role === 'admin')).toHaveLength(1);
     expect(roles.filter((role) => role === 'teacher')).toHaveLength(2);
     expect(new Set(emails).size).toBe(emails.length);
-    expect(SEED.groups.map((group) => group.name)).toEqual(['1.º DAW A', '1.º DAM B']);
+    expect(SEED.groups.map((group) => group.name)).toEqual([
+      '1.º DAW A',
+      '1.º DAM B',
+      '1.º DAW A',
+      '1.º DAM B',
+    ]);
     expect(SEED.enrollments.filter((e) => e.groupId === DAW_GROUP_ID)).toHaveLength(24);
+    expect(SEED.enrollments.filter((e) => e.groupId === DAW_WEB_GROUP_ID)).toHaveLength(24);
+    expect(SEED.enrollments.filter((e) => e.groupId === DAM_ADVANCED_GROUP_ID)).toHaveLength(6);
     expect(SEED.enrollments.filter((e) => e.groupId === DAM_GROUP_ID)).toHaveLength(6);
     expect(SEED.users.find((user) => user.id === DISABLED_STUDENT_ID)?.status).toBe('disabled');
     expect(SEED.enrollments.some((e) => e.userId === DISABLED_STUDENT_ID)).toBe(false);
   });
 
-  it('has the 8 exercises with 3 or 4 visible tests and two hidden ones at the end', () => {
-    expect(SEED.exercises).toHaveLength(8);
+  it('has three subjects, each group in one, and the exercises of the bank in theirs (2.5c)', () => {
+    const subjectIds = new Set(SEED.subjects.map((subject) => subject.id));
+
+    expect(SEED.subjects).toHaveLength(3);
+    expect(SEED.groups.every((group) => subjectIds.has(group.subjectId))).toBe(true);
+    expect(new Set(SEED.groups.map((group) => group.subjectId)).size).toBe(3);
+    // Every exercise serves some subject, and some serve two
+    expect(new Set(SEED.exerciseSubjects.map((row) => row.exerciseId))).toEqual(
+      new Set(SEED.exercises.map((exercise) => exercise.id)),
+    );
+    expect(SEED.exerciseSubjects.length).toBeGreaterThan(SEED.exercises.length);
+    // At least 15 per subject (2.5c)
+    for (const subject of SEED.subjects) {
+      const count = SEED.exerciseSubjects.filter((row) => row.subjectId === subject.id).length;
+      expect(count, subject.name).toBeGreaterThanOrEqual(15);
+    }
+    // Each group has every exercise of its subject in some block
+    for (const group of SEED.groups) {
+      const assigned = new Set(
+        SEED.assignments.filter((a) => a.groupId === group.id).map((a) => a.exerciseId),
+      );
+      const ofSubject = SEED.exerciseSubjects
+        .filter((row) => row.subjectId === group.subjectId)
+        .map((row) => row.exerciseId);
+      expect(
+        ofSubject.every((id) => assigned.has(id)),
+        group.id,
+      ).toBe(true);
+    }
+  });
+
+  it('has 42 exercises with 3 or 4 visible tests and two hidden ones at the end', () => {
+    expect(SEED.exercises).toHaveLength(42);
     for (const exercise of SEED.exercises) {
       const tests = SEED.tests.filter((test) => test.exerciseId === exercise.id);
       const hidden = tests.filter((test) => test.isHidden);
@@ -73,7 +114,7 @@ describe('seed fixtures', () => {
   });
 
   it('gives every exercise the contents of the table in 2.5', () => {
-    expect(SEED.exercises.map((exercise) => exercise.topics)).toEqual([
+    expect(SEED.exercises.slice(0, 10).map((exercise) => exercise.topics)).toEqual([
       ['Bucles', 'rangos', 'condicionales'],
       ['Bucles', 'salida formateada'],
       ['Vectores', 'acumulador', 'vector vacío'],
@@ -82,6 +123,8 @@ describe('seed fixtures', () => {
       ['Cadenas', 'recorrido y conteo'],
       ['Acumuladores', 'formato de salida'],
       ['Búsqueda secuencial', 'condición compuesta'],
+      ['Cadenas', 'validación de formularios'],
+      ['Objetos', 'URL'],
     ]);
   });
 
@@ -104,26 +147,65 @@ describe('seed fixtures', () => {
     });
   });
 
-  it('gives every session of each group a row, numbered from 1, some of them untitled', () => {
-    const keys = SEED.classSessions.map((session) => `${session.groupId}/${session.number}`);
-    const used = new Set(SEED.assignments.map((a) => `${a.groupId}/${a.session}`));
-
-    expect(new Set(keys).size).toBe(keys.length);
-    expect(new Set(keys)).toEqual(used);
-    expect(SEED.classSessions.some((session) => session.title === null)).toBe(true);
+  it('numbers the blocks of each group from 1, every one with exercises of its own group', () => {
+    for (const group of SEED.groups) {
+      const positions = SEED.classBlocks
+        .filter((block) => block.groupId === group.id)
+        .map((block) => block.position)
+        .sort((a, b) => a - b);
+      expect(positions).toEqual(positions.map((_, index) => index + 1));
+    }
+    for (const block of SEED.classBlocks) {
+      const assignments = SEED.assignments.filter((a) => a.blockId === block.id);
+      expect(assignments.length, block.title).toBeGreaterThan(0);
+      expect(assignments.every((a) => a.groupId === block.groupId)).toBe(true);
+    }
   });
 
-  it('gives each student at most one attempt per exercise, through an assignment of their group', () => {
-    const pairs = SEED.attempts.map((attempt) => `${attempt.userId}/${attempt.exerciseId}`);
-    expect(new Set(pairs).size).toBe(pairs.length);
+  it('repeats an exercise in a resit and hides a block and an assignment', () => {
+    const blockOf = (assignmentId: string | null) =>
+      SEED.classBlocks.find(
+        (block) => block.id === SEED.assignments.find((a) => a.id === assignmentId)?.blockId,
+      );
+    const repeated = SEED.assignments.filter(
+      (a) => a.groupId === DAW_GROUP_ID && a.exerciseId === SEED.exercises[3].id,
+    );
 
+    expect(repeated.map((a) => blockOf(a.id)?.title)).toEqual([
+      'Tema 2: Vectores',
+      'Recuperación del tema 2',
+    ]);
+    expect(SEED.classBlocks.filter((block) => block.isHidden)).toHaveLength(1);
+    expect(SEED.assignments.filter((a) => a.isHidden)).toHaveLength(1);
+  });
+
+  it('numbers the attempts of each student at an assignment from 1, the next ones after a submitted one', () => {
+    const keys = SEED.attempts.map((a) => `${a.userId}/${a.assignmentId}/${a.number}`);
+    expect(new Set(keys).size).toBe(keys.length);
+
+    for (const attempt of SEED.attempts.filter((a) => a.number > 1)) {
+      const previous = SEED.attempts.find(
+        (a) =>
+          a.userId === attempt.userId &&
+          a.assignmentId === attempt.assignmentId &&
+          a.number === attempt.number - 1,
+      );
+      expect(previous?.status).toBe('submitted');
+      expect(previous!.finishedAt! < attempt.startedAt).toBe(true);
+    }
+    expect(SEED.attempts.filter((a) => a.number > 1)).toHaveLength(2);
+  });
+
+  it('opens every attempt through a visible assignment of a group of the student', () => {
     for (const attempt of SEED.attempts) {
       const assignment = SEED.assignments.find((a) => a.id === attempt.assignmentId);
       const enrolled = SEED.enrollments.some(
         (e) => e.userId === attempt.userId && e.groupId === assignment?.groupId,
       );
+      const block = SEED.classBlocks.find((b) => b.id === assignment?.blockId);
       expect(assignment?.exerciseId).toBe(attempt.exerciseId);
       expect(enrolled).toBe(true);
+      expect(assignment?.isHidden || block?.isHidden).toBe(false);
     }
   });
 
@@ -163,6 +245,16 @@ describe('seed fixtures', () => {
     expect(SEED.interactions.filter((i) => i.elusion)).toHaveLength(1);
   });
 
+  it('leaves the web client subject of 1.º DAW A mostly not started', () => {
+    const webAssignments = new Set(
+      SEED.assignments.filter((a) => a.groupId === DAW_WEB_GROUP_ID).map((a) => a.id),
+    );
+    const started = SEED.attempts.filter((a) => webAssignments.has(a.assignmentId ?? ''));
+
+    expect(started.length).toBeGreaterThan(0);
+    expect(started.length).toBeLessThan(DAW_STUDENT_IDS.length / 4);
+  });
+
   it('gives every student of 1.º DAW A some history, the first four the richest', () => {
     const attemptsOf = (userId: string) => SEED.attempts.filter((a) => a.userId === userId);
 
@@ -180,12 +272,13 @@ describe('seed fixtures', () => {
     expect(eventsOf(DAW_STUDENT_IDS[3]).some((e) => e.type === 'paste')).toBe(true);
   });
 
-  it('shows fewer hints per attempt as the sessions of 1.º DAW A go by', () => {
-    const hintsPerAttempt = [1, 2, 3, 4].map((session) => {
-      const assignmentIds = SEED.assignments
-        .filter((a) => a.groupId === DAW_GROUP_ID && a.session === session)
-        .map((a) => a.id);
-      const attempts = SEED.attempts.filter((a) => assignmentIds.includes(a.assignmentId ?? ''));
+  it('shows fewer hints per attempt as the topics of 1.º DAW A go by', () => {
+    const topics = SEED.classBlocks.filter((b) => b.groupId === DAW_GROUP_ID).slice(0, 4);
+    const hintsPerAttempt = topics.map((block) => {
+      const assignmentIds = SEED.assignments.filter((a) => a.blockId === block.id).map((a) => a.id);
+      const attempts = SEED.attempts.filter(
+        (a) => a.number === 1 && assignmentIds.includes(a.assignmentId ?? ''),
+      );
       const hints = SEED.events.filter(
         (e) => e.type === 'hint_requested' && attempts.some((a) => a.id === e.attemptId),
       );
@@ -197,7 +290,7 @@ describe('seed fixtures', () => {
     }
   });
 
-  it('marks as stuck, at the end of a session, an attempt that keeps failing the same test', () => {
+  it('marks as stuck, at the end of a block, an attempt that keeps failing the same test', () => {
     const hugoAttempt = SEED.attempts.find(
       (a) => a.userId === DAW_STUDENT_IDS[1] && a.status === 'tests_failed',
     );
