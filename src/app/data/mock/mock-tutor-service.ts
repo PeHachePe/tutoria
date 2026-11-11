@@ -44,7 +44,7 @@ export class MockTutorService extends TutorService {
     answer: ScriptedAnswer;
     interactionId: string | null;
   } {
-    const { attemptId, kind, message, code } = request;
+    const { attemptId, kind, message, code, language } = request;
     if (kind === 'question' && !message?.trim()) {
       throw new DataError('invalid', 'A question needs its message');
     }
@@ -57,7 +57,14 @@ export class MockTutorService extends TutorService {
     const previous = tables.interactions.filter(
       (interaction) => interaction.attemptId === attemptId,
     );
-    const answer = scriptedAnswer({ kind, message, code, status: attempt.status, previous });
+    const answer = scriptedAnswer({
+      kind,
+      message,
+      code,
+      status: attempt.status,
+      previous,
+      language,
+    });
     const timestamp = now();
 
     const event = this.eventOf(request, answer, timestamp);

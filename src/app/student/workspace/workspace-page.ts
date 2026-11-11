@@ -24,7 +24,9 @@ import { map } from 'rxjs';
 import { APP_PATHS } from '../../core/app-paths';
 import { AuthStore } from '../../auth/auth-store';
 import { AppTitleStrategy } from '../../core/app-title-strategy';
+import { LanguageService } from '../../core/i18n/language-service';
 import { ExerciseService } from '../../data/exercise-service';
+import { exerciseText } from '../../data/exercise-text';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
@@ -118,6 +120,7 @@ export class WorkspacePage {
 
   private readonly exercises = inject(ExerciseService);
   private readonly titles = inject(AppTitleStrategy);
+  private readonly locale = inject(LanguageService).locale;
   private readonly document = inject(DOCUMENT);
   private readonly userId = inject(AuthStore).userId;
   protected readonly store = inject(AttemptStore);
@@ -172,7 +175,7 @@ export class WorkspacePage {
       const detail = await this.exercises.getDetail(exerciseId);
       // The tab says which exercise it is, not just «Ejercicio» (WCAG 2.4.2), unless the student left.
       if (!abortSignal.aborted) {
-        this.titles.setScreenTitle(detail.exercise.title);
+        this.titles.setScreenTitle(exerciseText(detail.exercise, this.locale).title);
       }
       return detail;
     },
@@ -185,6 +188,14 @@ export class WorkspacePage {
   });
 
   protected readonly error = computed(() => this.detail.error() ?? this.opening.error());
+  /** The title in the language of the interface, or in the source one with its `lang` (D-045). */
+  protected readonly heading = computed(() => {
+    const exercise = this.exercise();
+    if (!exercise) return undefined;
+    const { title, locale } = exerciseText(exercise, this.locale);
+    return { title, lang: locale === this.locale ? null : locale };
+  });
+
   protected readonly exercise = computed(() =>
     this.detail.hasValue() ? this.detail.value().exercise : undefined,
   );

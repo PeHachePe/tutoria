@@ -85,7 +85,7 @@ export class CodeEditor {
   /** Accessible name of the text area, such as «Código». */
   readonly label = input.required<string>();
   readonly language = input<Language>('javascript');
-  /** Help shown while the code is empty, such as «Escribe aquí la función `suma`». */
+  /** Help shown while the code is empty, such as «Escribe aquí la función `sum`». */
   readonly placeholder = input('');
   readonly readonly = input(false);
 

@@ -39,6 +39,9 @@ const ATTEMPT: TutorAttempt = {
   exercise: {
     title: 'Suma',
     statement: 'Escribe una función `suma`.',
+    topics: [],
+    sourceLocale: 'es',
+    translations: {},
     functionName: 'suma',
     tests: [{ id: 't1', input: [[1, 2, 3]], expectedOutput: 6, isHidden: false }],
   },

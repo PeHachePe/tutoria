@@ -1,4 +1,5 @@
 import type { RunResult } from '../../../src/app/data/code-runner/run-result.ts';
+import { exerciseText } from '../../../src/app/data/exercise-text.ts';
 import {
   type HintLevel,
   REACTION_KINDS,
@@ -152,10 +153,12 @@ export function userPrompt({
   tried,
 }: PromptInput): string {
   const { exercise } = attempt;
+  // The statement in the language of the answer, or in its own one without a translation (D-045)
+  const { title, statement } = exerciseText(exercise, language);
   const sections = [
     `Petición: ${requestLine(kind, hintLevel)}`,
-    `Ejercicio: ${exercise.title}`,
-    `Enunciado: ${exercise.statement}`,
+    `Ejercicio: ${title}`,
+    `Enunciado: ${statement}`,
     `Función que se pide: ${exercise.functionName}`,
     `Ejemplos:\n${examples(attempt)}`,
     `Código actual del alumno:\n${tagged('codigo_alumno', code.trim() || '(vacío: todavía no ha escrito nada)')}`,

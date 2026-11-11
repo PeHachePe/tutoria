@@ -6,6 +6,7 @@ import type {
   ExerciseDetail,
   Test,
 } from './exercise';
+import type { ExerciseLocale, ExerciseTranslations } from './exercise-text';
 
 /** Test as the teacher edits it: the database assigns its id and its exercise. */
 export type TestDraft = Omit<Test, 'id' | 'exerciseId'>;
@@ -16,6 +17,9 @@ export interface ExerciseDraft {
   readonly statement: string;
   readonly difficulty: Difficulty;
   readonly topics: readonly string[];
+  /** The language of `title`, `statement` and `topics`. */
+  readonly sourceLocale: ExerciseLocale;
+  readonly translations: ExerciseTranslations;
   readonly functionName: string;
   readonly maxRepeatedFailures: number;
   readonly maxIdleMinutes: number;

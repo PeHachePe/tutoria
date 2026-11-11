@@ -139,15 +139,15 @@ export class ShowcasePage {
   protected readonly scrollLines = [1, 2, 3, 4, 5, 6, 7, 8];
   protected readonly sampleCode = [
     '// Suma de los elementos de un vector',
-    'function suma(vector) {',
+    'function sum(numbers) {',
     '  let total = 0;',
-    '  for (const n of vector) {',
+    '  for (const n of numbers) {',
     '    total += n; // acumulador',
     '  }',
     '  return total;',
     '}',
     '',
-    "const vacio = suma([]) === 0 ? 'sí' : 'no';",
+    "const empty = sum([]) === 0 ? 'sí' : 'no';",
   ].join('\n');
   protected readonly saveStatuses: readonly SaveStatus[] = ['saving', 'saved', 'error'];
 

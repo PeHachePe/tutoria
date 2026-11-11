@@ -22,6 +22,15 @@ const ATTEMPT: TutorAttempt = {
   exercise: {
     title: 'Suma de los elementos de un vector',
     statement: 'Escribe una función `suma` que reciba un vector y devuelva la suma.',
+    topics: ['Vectores'],
+    sourceLocale: 'es',
+    translations: {
+      en: {
+        title: 'Sum of the elements of an array',
+        statement: 'Write a function `suma` that takes an array and returns its sum.',
+        topics: ['Arrays'],
+      },
+    },
     functionName: 'suma',
     tests: [
       { id: 't1', input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
@@ -53,6 +62,16 @@ function input(overrides: Partial<PromptInput> = {}): PromptInput {
     ...overrides,
   };
 }
+
+Deno.test('the request carries the statement in the language of the answer', () => {
+  const english = userPrompt(input({ language: 'en' }));
+  assertStringIncludes(english, 'Ejercicio: Sum of the elements of an array');
+  assertStringIncludes(english, 'Enunciado: Write a function `suma` that takes an array');
+  // Without a translation, the source statement: never a gap
+  const catalan = userPrompt(input({ language: 'ca' }));
+  assertStringIncludes(catalan, 'Ejercicio: Suma de los elementos de un vector');
+  assertStringIncludes(catalan, 'Enunciado: Escribe una función `suma`');
+});
 
 Deno.test('the system prompt answers in the language of the request', () => {
   assertStringIncludes(systemPrompt('es'), 'Respondes SIEMPRE en español');

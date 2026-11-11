@@ -16,7 +16,7 @@ export function formatValue(value: unknown): string {
   return String(value);
 }
 
-/** A test input as the call the student would write: `suma([1, 2, 3])`. */
+/** A test input as the call the student would write: `sum([1, 2, 3])`. */
 export function formatCall(functionName: string, input: readonly unknown[]): string {
   return `${functionName}(${input.map(formatValue).join(', ')})`;
 }

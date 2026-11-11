@@ -6,7 +6,10 @@ import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
+import { LanguageService } from '../../core/i18n/language-service';
 import { ExerciseService } from '../../data/exercise-service';
+import { exerciseText } from '../../data/exercise-text';
+import type { Exercise } from '../../data/exercise';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
@@ -60,6 +63,7 @@ const SKELETON_CARDS = [1, 2, 3];
 export class CatalogPage {
   private readonly exercises = inject(ExerciseService);
   private readonly auth = inject(AuthStore);
+  private readonly locale = inject(LanguageService).locale;
 
   protected readonly skeletonCards = SKELETON_CARDS;
 
@@ -87,8 +91,7 @@ export class CatalogPage {
         marker: STATUS_TONES[status].marker,
         done: isPassed(status),
         ready: status === 'passed',
-        title: exercise.title,
-        topics: exercise.topics.join(' · '),
+        ...this.texts(exercise),
         difficulty: exercise.difficulty,
         status,
         hintCount,
@@ -126,8 +129,7 @@ export class CatalogPage {
     const { entry, kind } = next;
     return {
       kind,
-      title: entry.exercise.title,
-      topics: entry.exercise.topics.join(' · '),
+      ...this.texts(entry.exercise),
       session: entry.session,
       sessionTitle: entry.sessionTitle,
       status: entry.status,
@@ -135,6 +137,19 @@ export class CatalogPage {
       path: APP_PATHS.student.exercise(entry.exercise.id),
     };
   });
+
+  /**
+   * Title and topics in the language of the interface, or in the source one without a translation:
+   * `lang` then tells it to the screen reader (WCAG 3.1.2, D-045).
+   */
+  private texts(exercise: Exercise): { title: string; topics: string; lang: string | null } {
+    const text = exerciseText(exercise, this.locale);
+    return {
+      title: text.title,
+      topics: text.topics.join(' · '),
+      lang: text.locale === this.locale ? null : text.locale,
+    };
+  }
 
   protected toggle(session: number): void {
     this.folded.update((folded) => {

@@ -163,6 +163,8 @@ export function exerciseRow(overrides: Partial<Row<'exercise'>> = {}): Row<'exer
     statement: 'Escribe `sumar(numeros)`.',
     difficulty: 'initial',
     topics: ['Vectores'],
+    source_locale: 'es',
+    translations: {},
     kind: 'code',
     language: 'javascript',
     function_name: 'sumar',

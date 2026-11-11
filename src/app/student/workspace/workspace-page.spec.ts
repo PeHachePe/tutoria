@@ -1,4 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { LOCALE_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
@@ -93,6 +94,8 @@ interface Setup {
   narrow?: boolean;
   /** False when a request never answers: then the page cannot become stable. */
   settle?: boolean;
+  /** The language of the interface. */
+  locale?: string;
 }
 
 describe('WorkspacePage', () => {
@@ -115,6 +118,7 @@ describe('WorkspacePage', () => {
     compact = false,
     narrow = compact,
     settle = true,
+    locale = 'es',
   }: Setup = {}) {
     const reload = vi.fn();
     const save = vi.fn(saveCode);
@@ -127,6 +131,7 @@ describe('WorkspacePage', () => {
       deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
         { provide: PageReloader, useValue: { reload } },
+        { provide: LOCALE_ID, useValue: locale },
         provideRouter([]),
         AttemptStore,
         ...provideTestEditingTab(channel),
@@ -204,6 +209,25 @@ describe('WorkspacePage', () => {
     document.dispatchEvent(new Event('visibilitychange'));
   }
 
+  it('shows the exercise in the language of the interface, with the same code', async () => {
+    await renderPage({ locale: 'en' });
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Sum of the elements of an array' }),
+    ).toBeTruthy();
+    expect(document.title).toBe('Sum of the elements of an array · TutorIA');
+    const statement = screen.getByRole('region', { name: 'Enunciado' });
+    expect(text(statement)).toContain('Write a function sum');
+  });
+
+  it('shows the title in its own language when it has no translation', async () => {
+    const exercise = { ...SUM.exercise, translations: {} };
+    await renderPage({ locale: 'en', getDetail: () => Promise.resolve({ ...SUM, exercise }) });
+
+    const heading = screen.getByRole('heading', { level: 1, name: SUM.exercise.title });
+    expect(heading.querySelector('[lang]')?.getAttribute('lang')).toBe('es');
+  });
+
   it('shows the exercise with its statement, its examples and its hidden checks', async () => {
     await renderPage();
 
@@ -213,14 +237,9 @@ describe('WorkspacePage', () => {
     expect(document.title).toBe('Suma de los elementos de un vector · TutorIA');
     expect(screen.getByText('Media')).toBeTruthy();
     const statement = screen.getByRole('region', { name: 'Enunciado' });
-    expect(text(statement)).toContain('Escribe una función suma');
+    expect(text(statement)).toContain('Escribe una función sum');
     const rows = within(statement).getAllByRole('row').slice(1).map(text);
-    expect(rows).toEqual([
-      'suma([1, 2, 3]) 6',
-      'suma([5]) 5',
-      'suma([]) 0',
-      'suma([-2, 2, 10]) 10',
-    ]);
+    expect(rows).toEqual(['sum([1, 2, 3]) 6', 'sum([5]) 5', 'sum([]) 0', 'sum([-2, 2, 10]) 10']);
     expect(
       within(statement).getByText(
         'Y 2 comprobaciones ocultas: verás si las superas, pero no sus datos.',
@@ -361,13 +380,13 @@ describe('WorkspacePage', () => {
     it('keeps the room of the editor until its zone shows, and then its code and help', async () => {
       const { fixture } = await renderPage({
         openOrCreate: (exerciseId) =>
-          Promise.resolve({ ...attemptOf(exerciseId), currentCode: 'function suma' }),
+          Promise.resolve({ ...attemptOf(exerciseId), currentCode: 'function sum' }),
       });
       expect(screen.queryByRole('textbox', { name: 'Código' })).toBeNull();
 
       await showEditor(fixture);
 
-      expect(editorView().state.doc.toString()).toBe('function suma');
+      expect(editorView().state.doc.toString()).toBe('function sum');
       expect(screen.getByText(/Esc y después Tab/)).toBeTruthy();
     });
 
@@ -375,7 +394,7 @@ describe('WorkspacePage', () => {
       const { fixture } = await renderPage();
       await showEditor(fixture);
 
-      expect(screen.getByText('Escribe aquí la función suma')).toBeTruthy();
+      expect(screen.getByText('Escribe aquí la función sum')).toBeTruthy();
     });
 
     it('shows a skeleton while the editor downloads', async () => {
@@ -410,7 +429,7 @@ describe('WorkspacePage', () => {
       const { fixture, save } = await renderPage();
       await showEditor(fixture);
 
-      type('function suma() {}');
+      type('function sum() {}');
       await fixture.whenStable();
       expect(screen.getByText('Guardando…')).toBeTruthy();
       hideTab();
@@ -418,7 +437,7 @@ describe('WorkspacePage', () => {
 
       expect(save).toHaveBeenCalledExactlyOnceWith(
         `attempt-${SUM.exercise.id}`,
-        'function suma() {}',
+        'function sum() {}',
       );
       expect(screen.getByText('Guardado')).toBeTruthy();
     });
@@ -566,18 +585,18 @@ describe('WorkspacePage', () => {
     it('runs the tests and shows each example with what the code returned', async () => {
       const { fixture, runTests } = await renderPage();
       await showEditor(fixture);
-      type('function suma(v) {}');
+      type('function sum(v) {}');
 
       await userEvent.setup().click(runButton());
       await fixture.whenStable();
 
       expect(runTests).toHaveBeenCalledExactlyOnceWith(
         `attempt-${SUM.exercise.id}`,
-        'function suma(v) {}',
+        'function sum(v) {}',
       );
       const results = screen.getByRole('group', { name: 'Resultados de las pruebas' });
       expect(text(results)).toContain('3 de 6 superadas');
-      expect(text(results)).toContain('No superada: suma([])');
+      expect(text(results)).toContain('No superada: sum([])');
       expect(text(results)).toMatch(/Obtenido:\s?NaN/);
       expect(text(document.querySelector('p[aria-live="polite"]'))).toBe(
         '3 de 6 pruebas superadas.',

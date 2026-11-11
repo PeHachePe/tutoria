@@ -1,3 +1,4 @@
+import { LOCALE_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -67,18 +68,19 @@ function regionOf(name: string | RegExp): HTMLElement {
 }
 
 describe('CatalogPage', () => {
-  function renderWith(listAssigned: ExerciseService['listAssigned']) {
+  function renderWith(listAssigned: ExerciseService['listAssigned'], locale = 'es') {
     return render(CatalogPage, {
       providers: [
         provideSessionOf('student'),
         provideRouter([]),
         { provide: ExerciseService, useValue: { listAssigned } },
+        { provide: LOCALE_ID, useValue: locale },
       ],
     });
   }
 
-  async function renderLoaded(listAssigned: ExerciseService['listAssigned']) {
-    const result = await renderWith(listAssigned);
+  async function renderLoaded(listAssigned: ExerciseService['listAssigned'], locale = 'es') {
+    const result = await renderWith(listAssigned, locale);
     await restoreSession();
     await result.fixture.whenStable();
     return result;
@@ -248,5 +250,26 @@ describe('CatalogPage', () => {
 
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Sesión / })).toHaveLength(3);
+  });
+
+  it('shows each exercise in the language of the interface, or in its own one without a translation', async () => {
+    const untranslated = { ...entry(4, 3, 'not_started'), assignmentId: 'untranslated' };
+    const entries = [
+      ...ENTRIES.slice(2, 4),
+      { ...untranslated, exercise: { ...untranslated.exercise, translations: {} } },
+    ];
+    await renderLoaded(() => Promise.resolve(entries), 'en');
+
+    const translated = screen.getByRole('heading', {
+      level: 3,
+      name: 'Sum of the elements of an array',
+    });
+    expect(translated.getAttribute('lang')).toBeNull();
+    expect(text(translated.closest('li'))).toContain('Arrays · accumulator · empty array');
+    // The next exercise: the open attempt that changed last
+    expect(text(regionOf(/Continúa donde lo dejaste/))).toContain('Maximum of an array');
+    const source = screen.getByRole('heading', { level: 3, name: 'Invertir un vector' });
+    expect(source.getAttribute('lang')).toBe('es');
+    expect(text(source.closest('li'))).toContain('Vectores · índices · intercambio');
   });
 });

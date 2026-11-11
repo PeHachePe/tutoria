@@ -1,4 +1,5 @@
 import type { RunTest } from '../../../src/app/data/code-runner/run-result.ts';
+import type { TranslatableExercise } from '../../../src/app/data/exercise-text.ts';
 import type {
   Emotion,
   HintLevel,
@@ -30,9 +31,8 @@ export interface TutorAttempt {
   readonly status: 'in_progress' | 'tests_failed' | 'passed' | 'submitted';
   /** The code the server has: the last run's while the attempt is not back in progress. */
   readonly currentCode: string;
-  readonly exercise: {
-    readonly title: string;
-    readonly statement: string;
+  /** Its texts in every language it has: the prompt takes those of the request (D-045). */
+  readonly exercise: TranslatableExercise & {
     readonly functionName: string;
     /** All of them, in their order: the prompt only shows the values of the visible ones. */
     readonly tests: readonly RunTest[];

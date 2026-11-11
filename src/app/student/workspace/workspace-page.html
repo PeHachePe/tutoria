@@ -14,8 +14,8 @@
   <h1
     class="line-clamp-2 min-h-7 min-w-0 flex-1 text-title-medium sm:line-clamp-none sm:min-h-8 sm:text-headline-small"
   >
-    @if (exercise(); as current) {
-      {{ current.title }}
+    @if (heading(); as current) {
+      <span [attr.lang]="current.lang">{{ current.title }}</span>
     } @else {
       <!-- While it loads, a skeleton of the title shows and screen readers hear «Ejercicio» -->
       <span [class.sr-only]="!error()" i18n="@@workspace.heading">Ejercicio</span>

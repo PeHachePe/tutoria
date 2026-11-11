@@ -20,10 +20,18 @@ const NOW = '2026-11-10T09:30:00.000Z';
 
 const DRAFT: ExerciseDraft = {
   title: 'Producto de un vector',
-  statement: 'Escribe una función `producto`…',
+  statement: 'Escribe una función `product`…',
   difficulty: 'medium',
   topics: ['Vectores', 'acumulador'],
-  functionName: 'producto',
+  sourceLocale: 'es',
+  translations: {
+    en: {
+      title: 'Product of an array',
+      statement: 'Write a function `product`…',
+      topics: ['Arrays', 'accumulator'],
+    },
+  },
+  functionName: 'product',
   maxRepeatedFailures: 2,
   maxIdleMinutes: 5,
   tests: [
@@ -160,7 +168,7 @@ describe('MockExerciseService', () => {
 
       const detail = await service.getDetail(exerciseId(3));
 
-      expect(detail.exercise.functionName).toBe('suma');
+      expect(detail.exercise.functionName).toBe('sum');
       expect(detail.visibleTests.map((test) => test.id)).toEqual(
         [0, 1, 2, 3].map((p) => testId(3, p)),
       );
@@ -218,8 +226,10 @@ describe('MockExerciseService', () => {
         statement: DRAFT.statement,
         difficulty: 'medium',
         topics: ['Vectores', 'acumulador'],
+        sourceLocale: 'es',
+        translations: DRAFT.translations,
         language: 'javascript',
-        functionName: 'producto',
+        functionName: 'product',
         maxRepeatedFailures: 2,
         maxIdleMinutes: 5,
         createdBy: TEACHER_ID,

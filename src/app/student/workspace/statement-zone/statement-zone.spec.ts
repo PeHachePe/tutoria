@@ -1,15 +1,57 @@
+import { LOCALE_ID } from '@angular/core';
 import { render, screen } from '@testing-library/angular';
 
+import type { ExerciseDetail } from '../../../data/exercise';
+import { SEED } from '../../../data/mock/fixtures/seed';
 import { StatementZone } from './statement-zone';
+
+const EXERCISE = SEED.exercises[2];
+
+const DETAIL: ExerciseDetail = {
+  exercise: EXERCISE,
+  visibleTests: SEED.tests.filter((test) => test.exerciseId === EXERCISE.id && !test.isHidden),
+  hiddenTestCount: 2,
+};
+
+function text(element: Element | null): string {
+  return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+}
 
 // The workspace page tests the zone with its exercise (workspace-page.spec.ts); this covers it alone.
 describe('StatementZone', () => {
+  // Inside a template: as the root of the test, the id the zone gives its host would replace the
+  // one TestBed uses to remove it afterwards, and it would stay in the page for the next tests
+  function renderZone(detail: ExerciseDetail | undefined, locale = 'es') {
+    return render('<app-statement-zone [detail]="detail" />', {
+      imports: [StatementZone],
+      componentProperties: { detail },
+      providers: [{ provide: LOCALE_ID, useValue: locale }],
+    });
+  }
+
   it('shows only its heading while there is no exercise', async () => {
-    // Inside a template: as the root of the test, the id the zone gives its host would replace the
-    // one TestBed uses to remove it afterwards, and it would stay in the page for the next tests
-    await render('<app-statement-zone />', { imports: [StatementZone] });
+    await renderZone(undefined);
 
     expect(screen.getByRole('region', { name: 'Enunciado' })).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('shows the statement in the language of the interface, with the same code', async () => {
+    await renderZone(DETAIL, 'en');
+
+    const zone = screen.getByRole('region', { name: 'Enunciado' });
+    expect(text(zone)).toContain('Write a function sum that takes an array of integers');
+    expect(text(zone)).toContain('sum([1, 2, 3])');
+    expect(text(zone)).not.toContain('solo está en');
+  });
+
+  it('shows the source statement with a note when there is no translation', async () => {
+    const exercise = { ...EXERCISE, translations: {} };
+    await renderZone({ ...DETAIL, exercise }, 'en');
+
+    const zone = screen.getByRole('region', { name: 'Enunciado' });
+    expect(text(zone)).toContain('Este enunciado solo está en español.');
+    const statement = screen.getByText(/que reciba un vector de números enteros/);
+    expect(statement.closest('[lang]')?.getAttribute('lang')).toBe('es');
   });
 });

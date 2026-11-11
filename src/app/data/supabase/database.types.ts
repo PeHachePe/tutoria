@@ -243,9 +243,11 @@ export type Database = {
           language: Database['public']['Enums']['exercise_language'];
           max_idle_minutes: number;
           max_repeated_failures: number;
+          source_locale: Database['public']['Enums']['app_locale'];
           statement: string;
           title: string;
           topics: string[];
+          translations: NonNullable<Json>;
           updated_at: string;
         };
         ComputedFields: never;
@@ -259,9 +261,11 @@ export type Database = {
           language?: Database['public']['Enums']['exercise_language'];
           max_idle_minutes?: number;
           max_repeated_failures?: number;
+          source_locale?: Database['public']['Enums']['app_locale'];
           statement: string;
           title: string;
           topics?: string[];
+          translations?: NonNullable<Json>;
           updated_at?: string;
         };
         Update: {
@@ -274,9 +278,11 @@ export type Database = {
           language?: Database['public']['Enums']['exercise_language'];
           max_idle_minutes?: number;
           max_repeated_failures?: number;
+          source_locale?: Database['public']['Enums']['app_locale'];
           statement?: string;
           title?: string;
           topics?: string[];
+          translations?: NonNullable<Json>;
           updated_at?: string;
         };
         Relationships: [
@@ -481,6 +487,10 @@ export type Database = {
       is_assigned_to_me: { Args: { target_exercise_id: string }; Returns: boolean };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
+      is_valid_exercise_translations: {
+        Args: { source_locale: Database['public']['Enums']['app_locale']; translations: Json };
+        Returns: boolean;
+      };
       latest_tutor_calls: {
         Args: { max_count: number; since: string; target_user_id: string };
         Returns: string[];
@@ -558,6 +568,7 @@ export type Database = {
       teaches_student: { Args: { target_user_id: string }; Returns: boolean };
     };
     Enums: {
+      app_locale: 'es' | 'en' | 'ca';
       attempt_status: 'in_progress' | 'tests_failed' | 'passed' | 'submitted';
       difficulty: 'initial' | 'medium' | 'advanced' | 'extension';
       emotion: 'joy' | 'surprise' | 'encouragement' | 'celebration';
@@ -688,6 +699,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      app_locale: ['es', 'en', 'ca'],
       attempt_status: ['in_progress', 'tests_failed', 'passed', 'submitted'],
       difficulty: ['initial', 'medium', 'advanced', 'extension'],
       emotion: ['joy', 'surprise', 'encouragement', 'celebration'],

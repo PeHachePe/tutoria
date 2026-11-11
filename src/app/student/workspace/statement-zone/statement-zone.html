@@ -45,17 +45,25 @@
     <div
       class="flex flex-col gap-4 @4xl:grid @4xl:grid-cols-[minmax(0,65ch)_minmax(0,36rem)] @4xl:items-start @4xl:gap-10"
     >
-      <p class="max-w-prose text-body-large">
-        @for (part of splitInlineCode(current.exercise.statement); track $index) {
-          @if (part.code) {
-            <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{
-              part.text
-            }}</code>
-          } @else {
-            {{ part.text }}
-          }
+      <div class="flex max-w-prose flex-col gap-2">
+        @if (current.untranslated; as untranslated) {
+          <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+            <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">translate</mat-icon>
+            {{ untranslated.note }}
+          </p>
         }
-      </p>
+        <p class="text-body-large" [attr.lang]="current.untranslated?.lang">
+          @for (part of splitInlineCode(current.statement); track $index) {
+            @if (part.code) {
+              <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{
+                part.text
+              }}</code>
+            } @else {
+              {{ part.text }}
+            }
+          }
+        </p>
+      </div>
       <div class="flex flex-col gap-2">
         <h3 class="text-title-small" i18n="@@workspace.examples">Ejemplos</h3>
         <table class="w-full max-w-xl border-collapse text-start">

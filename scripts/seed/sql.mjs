@@ -10,7 +10,7 @@ export const SEED_TABLES = [
   { table: 'class_group', source: 'groups', jsonb: [] },
   { table: 'enrollment', source: 'enrollments', jsonb: [] },
   { table: 'class_session', source: 'classSessions', jsonb: [] },
-  { table: 'exercise', source: 'exercises', jsonb: [] },
+  { table: 'exercise', source: 'exercises', jsonb: ['translations'] },
   { table: 'test', source: 'tests', jsonb: ['input', 'expected_output'] },
   { table: 'exercise_assignment', source: 'assignments', jsonb: [] },
   { table: 'attempt', source: 'attempts', jsonb: [] },

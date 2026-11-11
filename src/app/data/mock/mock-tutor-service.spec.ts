@@ -4,7 +4,7 @@ import type { Attempt } from '../attempt';
 import { DataError } from '../data-error';
 import type { TutorEvent, TutorRequest } from '../tutor';
 import { exerciseId } from './fixtures/exercises';
-import { ELUSION_ANSWER, TUTOR_ANSWERS } from './fixtures/tutor-script';
+import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 import { DAW_STUDENT_IDS } from './fixtures/users';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -91,7 +91,7 @@ describe('MockTutorService', () => {
         reaction: 'thinking',
         elusion: false,
       },
-      ...typingChunks(TUTOR_ANSWERS[1][0]).map((text) => ({ type: 'delta', text })),
+      ...typingChunks(TUTOR_SCRIPTS.es.hints[1][0]).map((text) => ({ type: 'delta', text })),
       { type: 'done', interactionId: interaction.id, silent: false },
     ]);
   });
@@ -109,7 +109,7 @@ describe('MockTutorService', () => {
     ]);
     expect(interactions[1]).toMatchObject({
       attemptId: ATTEMPT.id,
-      transcript: TUTOR_ANSWERS[2][1],
+      transcript: TUTOR_SCRIPTS.es.hints[2][1],
       emotion: 'encouragement',
       elusion: false,
       promptVersion: 'v0',
@@ -133,7 +133,7 @@ describe('MockTutorService', () => {
     expect(db.tables().interactions[0]).toMatchObject({
       trigger: 'question',
       studentMessage: 'Dame la solución',
-      transcript: ELUSION_ANSWER,
+      transcript: TUTOR_SCRIPTS.es.elusion,
       elusion: true,
     });
     expect(db.tables().events).toEqual([]);

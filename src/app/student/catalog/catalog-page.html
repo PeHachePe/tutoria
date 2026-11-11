@@ -122,19 +122,20 @@
               <ng-container i18n="@@catalog.next.start">Tu siguiente ejercicio</ng-container>
             }
           </h2>
-          <p class="text-title-large">{{ next.title }}</p>
+          <p class="text-title-large" [attr.lang]="next.lang">{{ next.title }}</p>
           <p class="text-body-medium">
             <span i18n="@@catalog.session">Sesión {{ next.session }}</span>
             @if (next.sessionTitle) {
               · {{ next.sessionTitle }}
             }
-            · {{ next.topics }}
+            · <span [attr.lang]="next.lang">{{ next.topics }}</span>
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <app-status-chip [status]="next.status" />
           <a matButton="filled" class="ms-auto" [routerLink]="next.path">
-            {{ next.action.label }}<span class="sr-only">: {{ next.title }}</span>
+            {{ next.action.label
+            }}<span class="sr-only" [attr.lang]="next.lang">: {{ next.title }}</span>
             <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
           </a>
         </div>
@@ -223,8 +224,10 @@
               </span>
               <div class="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
                 <div class="flex min-w-0 flex-1 flex-col gap-1">
-                  <h3 class="text-title-medium">{{ card.title }}</h3>
-                  <p class="text-body-medium text-on-surface-variant">{{ card.topics }}</p>
+                  <h3 class="text-title-medium" [attr.lang]="card.lang">{{ card.title }}</h3>
+                  <p class="text-body-medium text-on-surface-variant" [attr.lang]="card.lang">
+                    {{ card.topics }}
+                  </p>
                   @if (card.ready) {
                     <p class="flex items-center gap-1 text-label-large text-primary">
                       <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">outbox</mat-icon>
@@ -250,7 +253,8 @@
                     [matButton]="card.action.appearance"
                     [routerLink]="card.path"
                   >
-                    {{ card.action.label }}<span class="sr-only">: {{ card.title }}</span>
+                    {{ card.action.label
+                    }}<span class="sr-only" [attr.lang]="card.lang">: {{ card.title }}</span>
                   </a>
                 </div>
               </div>

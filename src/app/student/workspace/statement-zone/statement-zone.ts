@@ -1,7 +1,9 @@
-import { Component, computed, input, model } from '@angular/core';
+import { Component, computed, inject, input, model } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 
+import { LanguageService } from '../../../core/i18n/language-service';
 import type { ExerciseDetail } from '../../../data/exercise';
+import { exerciseText, type ExerciseLocale } from '../../../data/exercise-text';
 import { formatCall, formatValue, isMultilineText } from '../../../shared/format-value';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
@@ -12,6 +14,13 @@ export const STATEMENT_ZONE_ID = 'statement-zone';
 
 /** Example rows drawn while the exercise loads. */
 const SKELETON_EXAMPLES = [1, 2, 3];
+
+/** The name of each language inside a sentence of the interface («solo está en inglés»). */
+const LOCALE_NAMES: Record<ExerciseLocale, string> = {
+  es: $localize`:@@locale.name.es:español`,
+  en: $localize`:@@locale.name.en:inglés`,
+  ca: $localize`:@@locale.name.ca:catalán`,
+};
 
 /**
  * The statement zone of the workspace (ficha 03): the text of the exercise, its visible tests as the
@@ -44,6 +53,8 @@ export class StatementZone {
   /** Share of the column it takes while open on a wide screen, in percent. */
   readonly share = input<number>();
 
+  private readonly locale = inject(LanguageService).locale;
+
   protected readonly zoneId = STATEMENT_ZONE_ID;
   /** One text for both headings: a plain one on phones, the fold button on wide screens. */
   protected readonly heading = $localize`:@@workspace.statement:Enunciado`;
@@ -63,7 +74,16 @@ export class StatementZone {
         multiline,
       };
     });
-    return { exercise, examples, hiddenTestCount };
+    const { statement, locale } = exerciseText(exercise, this.locale);
+    // Without a translation, the source statement, never a gap, with a note that says why (D-045)
+    const untranslated =
+      locale === this.locale
+        ? null
+        : {
+            lang: locale,
+            note: $localize`:@@workspace.untranslated:Este enunciado solo está en ${LOCALE_NAMES[locale]}:language:.`,
+          };
+    return { statement, untranslated, examples, hiddenTestCount };
   });
 
   protected toggle(): void {

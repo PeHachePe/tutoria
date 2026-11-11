@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../src/app/data/supabase/database.types.ts';
+import type { ExerciseTranslations } from '../../../src/app/data/exercise-text.ts';
 import type { HintLevel, Intensity } from '../../../src/app/data/tutor/tutor-contract.ts';
 import { providerSettingOf } from './provider-setting.ts';
 import type {
@@ -30,7 +31,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       this.admin
         .from('attempt')
         .select(
-          'user_id, status, current_code, app_user(status), exercise(title, statement, function_name, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, created_at)',
+          'user_id, status, current_code, app_user(status), exercise(title, statement, topics, source_locale, translations, function_name, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, created_at)',
         )
         .eq('id', attemptId)
         .maybeSingle(),
@@ -55,6 +56,10 @@ export class SupabaseAnswerStore implements AnswerStore {
       exercise: {
         title: data.exercise.title,
         statement: data.exercise.statement,
+        topics: data.exercise.topics,
+        sourceLocale: data.exercise.source_locale,
+        // A check of the table gives it this shape (is_valid_exercise_translations)
+        translations: data.exercise.translations as ExerciseTranslations,
         functionName: data.exercise.function_name,
         tests: data.exercise.test
           .toSorted((a, b) => a.position - b.position)

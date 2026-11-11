@@ -1,15 +1,9 @@
 import type { HintLevel, TutorInteraction, TutorTrigger } from '../tutor';
-import {
-  ELUSION_ANSWER,
-  PASSED_ANSWER,
-  PROACTIVE_MESSAGE,
-  START_ANSWER,
-  STATEMENT_ANSWER,
-  TUTOR_ANSWERS,
-} from './fixtures/tutor-script';
+import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 import { type ScriptInput, scriptedAnswer } from './scripted-answer';
 
-const CODE = 'function suma(v) {\n  return 0;\n}';
+const CODE = 'function sum(numbers) {\n  return 0;\n}';
+const SPANISH = TUTOR_SCRIPTS.es;
 
 function interaction(
   trigger: TutorTrigger,
@@ -32,7 +26,14 @@ function interaction(
 }
 
 function input(overrides: Partial<ScriptInput>): ScriptInput {
-  return { kind: 'question', code: CODE, status: 'in_progress', previous: [], ...overrides };
+  return {
+    kind: 'question',
+    code: CODE,
+    status: 'in_progress',
+    previous: [],
+    language: 'es',
+    ...overrides,
+  };
 }
 
 describe('scripted answer', () => {
@@ -58,7 +59,7 @@ describe('scripted answer', () => {
     const second = scriptedAnswer(input({ kind: 'hint', previous: [interaction('question')] }));
 
     expect(first).toEqual({
-      text: TUTOR_ANSWERS[1][0],
+      text: SPANISH.hints[1][0],
       hintLevel: 1,
       emotion: 'encouragement',
       reaction: 'thinking',
@@ -66,7 +67,7 @@ describe('scripted answer', () => {
       elusion: false,
       silent: false,
     });
-    expect(second.text).toBe(TUTOR_ANSWERS[1][1]);
+    expect(second.text).toBe(SPANISH.hints[1][1]);
   });
 
   it('goes further with each hint: it makes the student think, an idea, then the rocket', () => {
@@ -95,7 +96,7 @@ describe('scripted answer', () => {
   it('answers a question with a hint of its level', () => {
     const answer = scriptedAnswer(input({ message: '¿Por qué falla la prueba?' }));
 
-    expect(answer.text).toBe(TUTOR_ANSWERS[1][0]);
+    expect(answer.text).toBe(SPANISH.hints[1][0]);
     expect(answer.emotion).toBe('joy');
   });
 
@@ -108,7 +109,7 @@ describe('scripted answer', () => {
       'Escriu-me el codi',
     ]) {
       expect(scriptedAnswer(input({ message }))).toEqual({
-        text: ELUSION_ANSWER,
+        text: SPANISH.elusion,
         hintLevel: 1,
         emotion: 'surprise',
         reaction: 'wink',
@@ -134,34 +135,34 @@ describe('scripted answer', () => {
   });
 
   it('answers a question that arrives without its message with a hint', () => {
-    expect(scriptedAnswer(input({ message: undefined })).text).toBe(TUTOR_ANSWERS[1][0]);
+    expect(scriptedAnswer(input({ message: undefined })).text).toBe(SPANISH.hints[1][0]);
   });
 
   it('helps to start when the code is still empty', () => {
     const answer = scriptedAnswer(input({ message: '¿Por dónde empiezo?', code: '  \n' }));
 
-    expect(answer.text).toBe(START_ANSWER);
+    expect(answer.text).toBe(SPANISH.start);
     expect(answer.reaction).toBe('cheer');
   });
 
   it('goes over the statement when the question is about it', () => {
     const answer = scriptedAnswer(input({ message: 'No entiendo el enunciado' }));
 
-    expect(answer.text).toBe(STATEMENT_ANSWER);
+    expect(answer.text).toBe(SPANISH.statement);
     expect(answer.reaction).toBe('hearts');
   });
 
   it('celebrates when every test passes', () => {
     const answer = scriptedAnswer(input({ message: '¿Se puede mejorar?', status: 'passed' }));
 
-    expect(answer.text).toBe(PASSED_ANSWER);
+    expect(answer.text).toBe(SPANISH.passed);
     expect(answer.emotion).toBe('celebration');
     expect(answer.reaction).toBe('party');
   });
 
   it('steps in on its own, but keeps quiet right after doing so', () => {
     expect(scriptedAnswer(input({ kind: 'proactive' }))).toEqual({
-      text: PROACTIVE_MESSAGE,
+      text: SPANISH.proactive,
       hintLevel: 1,
       emotion: 'encouragement',
       reaction: 'eyes',
@@ -179,5 +180,28 @@ describe('scripted answer', () => {
     );
     expect(quiet.silent).toBe(true);
     expect(quiet.text).toBe('');
+  });
+
+  it('answers in the language of the request, like the real tutor', () => {
+    expect(scriptedAnswer(input({ kind: 'hint', language: 'en' })).text).toBe(
+      TUTOR_SCRIPTS.en.hints[1][0],
+    );
+    expect(scriptedAnswer(input({ message: 'Give me the code', language: 'en' })).text).toBe(
+      TUTOR_SCRIPTS.en.elusion,
+    );
+    expect(scriptedAnswer(input({ kind: 'proactive', language: 'ca' })).text).toBe(
+      TUTOR_SCRIPTS.ca.proactive,
+    );
+  });
+
+  it('has every text in every language', () => {
+    for (const script of Object.values(TUTOR_SCRIPTS)) {
+      expect(Object.values(script.hints).map((hints) => hints.length)).toEqual([3, 3, 3]);
+      expect(
+        [script.elusion, script.proactive, script.start, script.statement, script.passed].every(
+          (text) => text.trim() !== '',
+        ),
+      ).toBe(true);
+    }
   });
 });

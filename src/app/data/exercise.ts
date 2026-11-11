@@ -1,4 +1,5 @@
 import type { AttemptStatus } from './attempt';
+import type { TranslatableExercise } from './exercise-text';
 import type { HintLevel } from './tutor';
 
 export type Difficulty = 'initial' | 'medium' | 'advanced' | 'extension';
@@ -13,16 +14,15 @@ export interface StuckThresholds {
   readonly maxIdleMinutes: number;
 }
 
-/** Table `exercise`. */
-export interface Exercise extends StuckThresholds {
+/**
+ * Table `exercise`. Its texts are in `sourceLocale`, with their translations; `exerciseText()` picks
+ * the ones of the interface (D-045). Its code is in English in every language.
+ */
+export interface Exercise extends StuckThresholds, TranslatableExercise {
   readonly id: string;
-  readonly title: string;
-  readonly statement: string;
   readonly difficulty: Difficulty;
-  /** What the exercise practises, shown under its title in the catalog («Vectores», «acumulador»). */
-  readonly topics: readonly string[];
   readonly language: Language;
-  /** Name of the function the student must write; each test calls it. */
+  /** Name of the function the student must write, the same in every language; each test calls it. */
   readonly functionName: string;
   readonly createdBy: string;
   readonly createdAt: string;

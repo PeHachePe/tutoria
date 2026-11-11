@@ -321,6 +321,10 @@
     "login.sessionEnded": "Your session was closed, perhaps in another tab. Sign in again to continue where you left off.",
     "login.sessionExpired": "Your session has expired. Sign in again to continue where you left off.",
     "tutor.helpOffer": "How to go on",
-    "tutor.helpOffer.hint": "Give me a hint"
+    "tutor.helpOffer.hint": "Give me a hint",
+    "locale.name.es": "Spanish",
+    "locale.name.en": "English",
+    "locale.name.ca": "Catalan",
+    "workspace.untranslated": "This statement is only in {$language}."
   }
 }

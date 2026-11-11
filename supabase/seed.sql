@@ -137,15 +137,15 @@ insert into class_session (id, group_id, number, title) values
   ('a0000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002', 1, 'Primeros bucles'),
   ('a0000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000002', 2, null);
 
-insert into exercise (id, title, statement, difficulty, topics, language, function_name, max_repeated_failures, max_idle_minutes, created_by, created_at, updated_at) values
-  ('40000000-0000-4000-8000-000000000001', 'Contar números pares', 'Escribe una función `contarPares` que reciba un número entero `n` y devuelva cuántos números pares hay entre 1 y `n`, ambos incluidos. Si `n` es menor que 2, la función debe devolver 0.', 'initial', array['Bucles', 'rangos', 'condicionales']::text[], 'javascript', 'contarPares', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000002', 'Tabla de multiplicar', 'Escribe una función `tablaMultiplicar` que reciba un número entero `n` y devuelva su tabla de multiplicar del 1 al 10 como un único texto. Cada línea sigue el formato `n x i = resultado` y las líneas se separan con un salto de línea (`\n`), sin salto al final. Si `n` es 0, todas las líneas dan 0.', 'initial', array['Bucles', 'salida formateada']::text[], 'javascript', 'tablaMultiplicar', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000003', 'Suma de los elementos de un vector', 'Escribe una función `suma` que reciba un vector de números enteros y devuelva la suma de todos sus elementos. Si el vector está vacío, la función debe devolver 0.', 'medium', array['Vectores', 'acumulador', 'vector vacío']::text[], 'javascript', 'suma', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000004', 'Máximo de un vector', 'Escribe una función `maximo` que reciba un vector de números y devuelva el mayor de sus elementos. Ten en cuenta que todos pueden ser negativos. Si el vector está vacío, la función debe devolver `null`.', 'medium', array['Vectores', 'comparación', 'casos límite']::text[], 'javascript', 'maximo', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000005', 'Invertir un vector', 'Escribe una función `invertir` que reciba un vector y devuelva un vector nuevo con los mismos elementos en orden inverso. Resuélvelo recorriendo el vector con índices, sin usar `reverse()`. Si el vector está vacío, devuelve un vector vacío.', 'advanced', array['Vectores', 'índices', 'intercambio']::text[], 'javascript', 'invertir', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000006', 'Contar vocales en una cadena', 'Escribe una función `contarVocales` que reciba un texto y devuelva cuántas vocales contiene, sin distinguir mayúsculas de minúsculas. Las vocales con tilde (á, é, í, ó, ú) también cuentan. Si el texto está vacío, la función debe devolver 0.', 'extension', array['Cadenas', 'recorrido y conteo']::text[], 'javascript', 'contarVocales', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000007', 'Media de un vector con dos decimales', 'Escribe una función `media` que reciba un vector de números y devuelva su media como texto con exactamente dos decimales, por ejemplo `"2.50"`. Si el vector está vacío, la función debe devolver `"0.00"`.', 'extension', array['Acumuladores', 'formato de salida']::text[], 'javascript', 'media', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
-  ('40000000-0000-4000-8000-000000000008', 'Buscar la primera aparición de un valor', 'Escribe una función `buscar` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, contando desde 0. Si el valor aparece varias veces, cuenta solo la primera. Si no aparece, la función debe devolver -1.', 'extension', array['Búsqueda secuencial', 'condición compuesta']::text[], 'javascript', 'buscar', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z');
+insert into exercise (id, title, statement, difficulty, topics, source_locale, translations, language, function_name, max_repeated_failures, max_idle_minutes, created_by, created_at, updated_at) values
+  ('40000000-0000-4000-8000-000000000001', 'Contar números pares', 'Escribe una función `countEvens` que reciba un número entero `n` y devuelva cuántos números pares hay entre 1 y `n`, ambos incluidos. Si `n` es menor que 2, la función debe devolver 0.', 'initial', array['Bucles', 'rangos', 'condicionales']::text[], 'es', '{"en":{"title":"Count even numbers","topics":["Loops","ranges","conditionals"],"statement":"Write a function `countEvens` that takes an integer `n` and returns how many even numbers there are between 1 and `n`, both included. If `n` is less than 2, the function must return 0."},"ca":{"title":"Comptar nombres parells","topics":["Bucles","rangs","condicionals"],"statement":"Escriu una funció `countEvens` que rebi un nombre enter `n` i retorni quants nombres parells hi ha entre 1 i `n`, tots dos inclosos. Si `n` és més petit que 2, la funció ha de retornar 0."}}'::jsonb, 'javascript', 'countEvens', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000002', 'Tabla de multiplicar', 'Escribe una función `multiplicationTable` que reciba un número entero `n` y devuelva su tabla de multiplicar del 1 al 10 como un único texto. Cada línea sigue el formato `n x i = resultado` y las líneas se separan con un salto de línea (`\n`), sin salto al final. Si `n` es 0, todas las líneas dan 0.', 'initial', array['Bucles', 'salida formateada']::text[], 'es', '{"en":{"title":"Multiplication table","topics":["Loops","formatted output"],"statement":"Write a function `multiplicationTable` that takes an integer `n` and returns its multiplication table from 1 to 10 as a single text. Each line follows the format `n x i = result` and the lines are separated by a line break (`\\n`), with no break at the end. If `n` is 0, every line gives 0."},"ca":{"title":"Taula de multiplicar","topics":["Bucles","sortida amb format"],"statement":"Escriu una funció `multiplicationTable` que rebi un nombre enter `n` i retorni la seva taula de multiplicar de l''1 al 10 com un únic text. Cada línia segueix el format `n x i = resultat` i les línies se separen amb un salt de línia (`\\n`), sense salt al final. Si `n` és 0, totes les línies donen 0."}}'::jsonb, 'javascript', 'multiplicationTable', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000003', 'Suma de los elementos de un vector', 'Escribe una función `sum` que reciba un vector de números enteros y devuelva la suma de todos sus elementos. Si el vector está vacío, la función debe devolver 0.', 'medium', array['Vectores', 'acumulador', 'vector vacío']::text[], 'es', '{"en":{"title":"Sum of the elements of an array","topics":["Arrays","accumulator","empty array"],"statement":"Write a function `sum` that takes an array of integers and returns the sum of all its elements. If the array is empty, the function must return 0."},"ca":{"title":"Suma dels elements d''un vector","topics":["Vectors","acumulador","vector buit"],"statement":"Escriu una funció `sum` que rebi un vector de nombres enters i retorni la suma de tots els seus elements. Si el vector és buit, la funció ha de retornar 0."}}'::jsonb, 'javascript', 'sum', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000004', 'Máximo de un vector', 'Escribe una función `maximum` que reciba un vector de números y devuelva el mayor de sus elementos. Ten en cuenta que todos pueden ser negativos. Si el vector está vacío, la función debe devolver `null`.', 'medium', array['Vectores', 'comparación', 'casos límite']::text[], 'es', '{"en":{"title":"Maximum of an array","topics":["Arrays","comparison","edge cases"],"statement":"Write a function `maximum` that takes an array of numbers and returns its largest element. Bear in mind that they can all be negative. If the array is empty, the function must return `null`."},"ca":{"title":"Màxim d''un vector","topics":["Vectors","comparació","casos límit"],"statement":"Escriu una funció `maximum` que rebi un vector de nombres i retorni el més gran dels seus elements. Tingues en compte que tots poden ser negatius. Si el vector és buit, la funció ha de retornar `null`."}}'::jsonb, 'javascript', 'maximum', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000005', 'Invertir un vector', 'Escribe una función `reverseArray` que reciba un vector y devuelva un vector nuevo con los mismos elementos en orden inverso. Resuélvelo recorriendo el vector con índices, sin usar `reverse()`. Si el vector está vacío, devuelve un vector vacío.', 'advanced', array['Vectores', 'índices', 'intercambio']::text[], 'es', '{"en":{"title":"Reverse an array","topics":["Arrays","indices","swapping"],"statement":"Write a function `reverseArray` that takes an array and returns a new array with the same elements in reverse order. Solve it by going through the array with indices, without using `reverse()`. If the array is empty, return an empty array."},"ca":{"title":"Invertir un vector","topics":["Vectors","índexs","intercanvi"],"statement":"Escriu una funció `reverseArray` que rebi un vector i retorni un vector nou amb els mateixos elements en ordre invers. Resol-ho recorrent el vector amb índexs, sense fer servir `reverse()`. Si el vector és buit, retorna un vector buit."}}'::jsonb, 'javascript', 'reverseArray', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000006', 'Contar vocales en una cadena', 'Escribe una función `countVowels` que reciba un texto y devuelva cuántas vocales contiene, sin distinguir mayúsculas de minúsculas. Las vocales con tilde (á, é, í, ó, ú) también cuentan. Si el texto está vacío, la función debe devolver 0.', 'extension', array['Cadenas', 'recorrido y conteo']::text[], 'es', '{"en":{"title":"Count the vowels in a string","topics":["Strings","traversal and counting"],"statement":"Write a function `countVowels` that takes a text and returns how many vowels it contains, ignoring case. Vowels with an accent (á, é, í, ó, ú) count too. If the text is empty, the function must return 0."},"ca":{"title":"Comptar vocals en una cadena","topics":["Cadenes","recorregut i recompte"],"statement":"Escriu una funció `countVowels` que rebi un text i retorni quantes vocals conté, sense distingir majúscules de minúscules. Les vocals amb accent agut (á, é, í, ó, ú) també compten. Si el text és buit, la funció ha de retornar 0."}}'::jsonb, 'javascript', 'countVowels', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000007', 'Media de un vector con dos decimales', 'Escribe una función `average` que reciba un vector de números y devuelva su media como texto con exactamente dos decimales, por ejemplo `"2.50"`. Si el vector está vacío, la función debe devolver `"0.00"`.', 'extension', array['Acumuladores', 'formato de salida']::text[], 'es', '{"en":{"title":"Average of an array with two decimals","topics":["Accumulators","output format"],"statement":"Write a function `average` that takes an array of numbers and returns its average as a text with exactly two decimals, for example `\"2.50\"`. If the array is empty, the function must return `\"0.00\"`."},"ca":{"title":"Mitjana d''un vector amb dos decimals","topics":["Acumuladors","format de sortida"],"statement":"Escriu una funció `average` que rebi un vector de nombres i retorni la seva mitjana com a text amb exactament dos decimals, per exemple `\"2.50\"`. Si el vector és buit, la funció ha de retornar `\"0.00\"`."}}'::jsonb, 'javascript', 'average', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z'),
+  ('40000000-0000-4000-8000-000000000008', 'Buscar la primera aparición de un valor', 'Escribe una función `firstIndexOf` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, contando desde 0. Si el valor aparece varias veces, cuenta solo la primera. Si no aparece, la función debe devolver -1.', 'extension', array['Búsqueda secuencial', 'condición compuesta']::text[], 'es', '{"en":{"title":"Find the first occurrence of a value","topics":["Sequential search","compound condition"],"statement":"Write a function `firstIndexOf` that takes an array and a value, and returns the position of the first time that value appears, counting from 0. If the value appears several times, only the first one counts. If it does not appear, the function must return -1."},"ca":{"title":"Buscar la primera aparició d''un valor","topics":["Cerca seqüencial","condició composta"],"statement":"Escriu una funció `firstIndexOf` que rebi un vector i un valor, i retorni la posició de la primera vegada que hi apareix aquest valor, comptant des de 0. Si el valor apareix diverses vegades, només compta la primera. Si no hi apareix, la funció ha de retornar -1."}}'::jsonb, 'javascript', 'firstIndexOf', 3, 4, '10000000-0000-4000-8000-000000000002', '2026-09-28T16:00:00.000Z', '2026-09-28T16:00:00.000Z');
 
 insert into test (id, exercise_id, input, expected_output, is_hidden, position) values
   ('50000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000001', '[10]'::jsonb, '5'::jsonb, false, 0),
@@ -210,2853 +210,2853 @@ insert into exercise_assignment (id, group_id, exercise_id, session) values
   ('60000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000004', 2);
 
 insert into attempt (id, exercise_id, user_id, assignment_id, current_code, final_code, status, started_at, finished_at, updated_at) values
-  ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:11:00.000Z', '2026-10-06T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T08:44:00.000Z', '2026-10-06T08:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:11:00.000Z', '2026-10-13T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:44:00.000Z', '2026-10-13T08:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:05:00.000Z', '2026-10-20T08:17:00.000Z', '2026-10-20T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:11:00.000Z', '2026-10-27T09:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:35:00.000Z', '2026-10-27T09:44:00.000Z', '2026-10-27T09:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000011', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', null, 'passed', '2026-10-27T10:05:00.000Z', null, '2026-10-27T10:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000009', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000009', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:24:00.000Z', '2026-10-06T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T09:00:00.000Z', '2026-10-06T09:00:00.000Z'),
-  ('70000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:33:00.000Z', '2026-10-13T08:33:00.000Z'),
-  ('70000000-0000-4000-8000-000000000012', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  let mayor = 0;
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000012', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  let largest = 0;
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', null, 'tests_failed', '2026-10-13T08:36:00.000Z', null, '2026-10-13T08:54:00.000Z'),
-  ('70000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const copia = [...vector];
-  for (let i = 0; i < copia.length; i++) {
-    const j = copia.length - 1 - i;
-    [copia[i], copia[j]] = [copia[j], copia[i]];
+  ('70000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const copy = [...items];
+  for (let i = 0; i < copy.length; i++) {
+    const j = copy.length - 1 - i;
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
-  return copia;
+  return copy;
 }
 ', null, 'tests_failed', '2026-10-20T08:06:00.000Z', null, '2026-10-20T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000014', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto) {
-    if (''aeiou''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000014', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000012', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text) {
+    if (''aeiou''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:06:00.000Z', null, '2026-10-27T09:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000015', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:28:00.000Z', '2026-10-06T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000016', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T08:55:00.000Z', '2026-10-06T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000017', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000017', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:19:00.000Z', '2026-10-13T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000018', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000019', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000019', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000020', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:07:00.000Z', '2026-10-27T09:13:00.000Z', '2026-10-27T09:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000021', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:37:00.000Z', '2026-10-27T09:43:00.000Z', '2026-10-27T09:43:00.000Z'),
-  ('70000000-0000-4000-8000-000000000022', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000022', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000013', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:07:00.000Z', '2026-10-27T10:16:00.000Z', '2026-10-27T10:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000023', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000023', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:25:00.000Z', '2026-10-06T08:25:00.000Z'),
-  ('70000000-0000-4000-8000-000000000024', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000024', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:59:00.000Z', '2026-10-06T08:59:00.000Z'),
-  ('70000000-0000-4000-8000-000000000025', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000025', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', null, 'passed', '2026-10-13T08:08:00.000Z', null, '2026-10-13T08:20:00.000Z'),
-  ('70000000-0000-4000-8000-000000000026', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  let mayor = 0;
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000026', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  let largest = 0;
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', null, 'tests_failed', '2026-10-13T08:38:00.000Z', null, '2026-10-13T08:50:00.000Z'),
-  ('70000000-0000-4000-8000-000000000027', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto) {
-    if (''aeiou''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000027', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000014', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text) {
+    if (''aeiou''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:08:00.000Z', null, '2026-10-27T09:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000028', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000028', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:15:00.000Z', '2026-10-06T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000029', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000029', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T09:06:00.000Z', '2026-10-06T09:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000030', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000030', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:27:00.000Z', '2026-10-13T08:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000031', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000031', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:45:00.000Z', '2026-10-13T08:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000032', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000032', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:09:00.000Z', '2026-10-20T08:15:00.000Z', '2026-10-20T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000033', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000033', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:09:00.000Z', '2026-10-27T09:18:00.000Z', '2026-10-27T09:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
+  ('70000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
   let total = 0;
-  for (const numero of vector) total += numero;
-  return total / vector.length;
+  for (const number of numbers) total += number;
+  return total / numbers.length;
 }
 ', null, 'in_progress', '2026-10-27T09:39:00.000Z', null, '2026-10-27T09:39:00.000Z'),
-  ('70000000-0000-4000-8000-000000000035', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000035', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000015', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:09:00.000Z', '2026-10-27T10:15:00.000Z', '2026-10-27T10:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000036', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000036', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:37:00.000Z', '2026-10-06T08:37:00.000Z'),
-  ('70000000-0000-4000-8000-000000000037', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000037', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:49:00.000Z', '2026-10-06T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000038', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000038', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:16:00.000Z', '2026-10-13T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000039', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000039', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000040', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000040', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:19:00.000Z', '2026-10-20T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000041', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto) {
-    if (''aeiou''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000041', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text) {
+    if (''aeiou''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:10:00.000Z', null, '2026-10-27T09:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000042', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000042', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000016', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:40:00.000Z', '2026-10-27T09:46:00.000Z', '2026-10-27T09:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000043', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000043', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:14:00.000Z', '2026-10-06T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000044', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000044', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T08:53:00.000Z', '2026-10-06T08:53:00.000Z'),
-  ('70000000-0000-4000-8000-000000000045', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000045', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:14:00.000Z', '2026-10-13T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000046', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000046', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:53:00.000Z', '2026-10-13T08:53:00.000Z'),
-  ('70000000-0000-4000-8000-000000000047', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000047', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:05:00.000Z', '2026-10-20T08:17:00.000Z', '2026-10-20T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000048', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000048', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:11:00.000Z', '2026-10-27T09:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000049', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  let posicion = -1;
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) posicion = i;
+  ('70000000-0000-4000-8000-000000000049', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000017', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  let position = -1;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) position = i;
   }
-  return posicion;
+  return position;
 }
 ', null, 'tests_failed', '2026-10-27T10:05:00.000Z', null, '2026-10-27T10:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000050', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000050', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:24:00.000Z', '2026-10-06T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000051', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000051', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T08:54:00.000Z', '2026-10-06T08:54:00.000Z'),
-  ('70000000-0000-4000-8000-000000000052', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000052', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:24:00.000Z', '2026-10-13T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000053', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000053', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:36:00.000Z', '2026-10-13T08:42:00.000Z', '2026-10-13T08:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000054', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000054', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:06:00.000Z', '2026-10-20T08:24:00.000Z', '2026-10-20T08:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000055', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
+  ('70000000-0000-4000-8000-000000000055', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
   let total = 0;
-  for (const numero of vector) total += numero;
-  return total / vector.length;
+  for (const number of numbers) total += number;
+  return total / numbers.length;
 }
 ', null, 'tests_failed', '2026-10-27T09:36:00.000Z', null, '2026-10-27T09:39:00.000Z'),
-  ('70000000-0000-4000-8000-000000000056', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000056', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000018', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:06:00.000Z', '2026-10-27T10:15:00.000Z', '2026-10-27T10:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000057', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000057', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:25:00.000Z', '2026-10-06T08:25:00.000Z'),
-  ('70000000-0000-4000-8000-000000000058', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000058', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T08:46:00.000Z', '2026-10-06T08:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000059', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000059', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:13:00.000Z', '2026-10-13T08:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000060', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000060', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000061', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000061', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000062', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto) {
-    if (''aeiou''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000062', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text) {
+    if (''aeiou''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', null, 'tests_failed', '2026-10-27T09:07:00.000Z', null, '2026-10-27T09:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000063', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000063', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:37:00.000Z', '2026-10-27T09:46:00.000Z', '2026-10-27T09:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000064', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000064', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000019', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:07:00.000Z', '2026-10-27T10:13:00.000Z', '2026-10-27T10:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000065', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000065', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:17:00.000Z', '2026-10-06T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000066', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000066', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:50:00.000Z', '2026-10-06T08:50:00.000Z'),
-  ('70000000-0000-4000-8000-000000000067', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000067', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:08:00.000Z', '2026-10-13T08:20:00.000Z', '2026-10-13T08:20:00.000Z'),
-  ('70000000-0000-4000-8000-000000000068', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000068', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:38:00.000Z', '2026-10-13T08:47:00.000Z', '2026-10-13T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000069', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000069', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:08:00.000Z', '2026-10-20T08:14:00.000Z', '2026-10-20T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000070', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000070', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:08:00.000Z', '2026-10-27T09:17:00.000Z', '2026-10-27T09:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000071', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000071', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:38:00.000Z', '2026-10-27T09:44:00.000Z', '2026-10-27T09:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000072', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000072', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000020', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:08:00.000Z', '2026-10-27T10:14:00.000Z', '2026-10-27T10:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000073', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000073', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:21:00.000Z', '2026-10-06T08:21:00.000Z'),
-  ('70000000-0000-4000-8000-000000000074', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000074', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T08:51:00.000Z', '2026-10-06T08:51:00.000Z'),
-  ('70000000-0000-4000-8000-000000000075', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000075', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:18:00.000Z', '2026-10-13T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000076', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000076', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:55:00.000Z', '2026-10-13T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000077', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const copia = [...vector];
-  for (let i = 0; i < copia.length; i++) {
-    const j = copia.length - 1 - i;
-    [copia[i], copia[j]] = [copia[j], copia[i]];
+  ('70000000-0000-4000-8000-000000000077', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const copy = [...items];
+  for (let i = 0; i < copy.length; i++) {
+    const j = copy.length - 1 - i;
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
-  return copia;
+  return copy;
 }
 ', null, 'tests_failed', '2026-10-20T08:09:00.000Z', null, '2026-10-20T08:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000078', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000078', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:09:00.000Z', '2026-10-27T09:15:00.000Z', '2026-10-27T09:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000079', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000079', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:39:00.000Z', '2026-10-27T09:45:00.000Z', '2026-10-27T09:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000080', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000080', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000021', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:09:00.000Z', '2026-10-27T10:18:00.000Z', '2026-10-27T10:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000081', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000081', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:22:00.000Z', '2026-10-06T08:22:00.000Z'),
-  ('70000000-0000-4000-8000-000000000082', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000082', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:46:00.000Z', '2026-10-06T08:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000083', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000083', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:26:00.000Z', '2026-10-13T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000084', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000084', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:58:00.000Z', '2026-10-13T08:58:00.000Z'),
-  ('70000000-0000-4000-8000-000000000085', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000085', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000086', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000086', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:10:00.000Z', '2026-10-27T09:16:00.000Z', '2026-10-27T09:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000087', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000087', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:40:00.000Z', '2026-10-27T09:49:00.000Z', '2026-10-27T09:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000088', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  let posicion = -1;
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) posicion = i;
+  ('70000000-0000-4000-8000-000000000088', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000022', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  let position = -1;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) position = i;
   }
-  return posicion;
+  return position;
 }
 ', null, 'in_progress', '2026-10-27T10:10:00.000Z', null, '2026-10-27T10:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000089', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000089', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:11:00.000Z', '2026-10-06T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000090', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000090', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T09:02:00.000Z', '2026-10-06T09:02:00.000Z'),
-  ('70000000-0000-4000-8000-000000000091', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000091', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:23:00.000Z', '2026-10-13T08:23:00.000Z'),
-  ('70000000-0000-4000-8000-000000000092', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000092', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:41:00.000Z', '2026-10-13T08:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000093', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000093', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:05:00.000Z', '2026-10-20T08:11:00.000Z', '2026-10-20T08:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000094', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000094', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:14:00.000Z', '2026-10-27T09:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000095', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
+  ('70000000-0000-4000-8000-000000000095', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
   let total = 0;
-  for (const numero of vector) total += numero;
-  return total / vector.length;
+  for (const number of numbers) total += number;
+  return total / numbers.length;
 }
 ', null, 'in_progress', '2026-10-27T09:35:00.000Z', null, '2026-10-27T09:35:00.000Z'),
-  ('70000000-0000-4000-8000-000000000096', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000096', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000023', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:05:00.000Z', '2026-10-27T10:11:00.000Z', '2026-10-27T10:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000097', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000097', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:33:00.000Z', '2026-10-06T08:33:00.000Z'),
-  ('70000000-0000-4000-8000-000000000098', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000098', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T08:45:00.000Z', '2026-10-06T08:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000099', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000099', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:12:00.000Z', '2026-10-13T08:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000100', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000100', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:36:00.000Z', '2026-10-13T08:45:00.000Z', '2026-10-13T08:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000101', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000101', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:06:00.000Z', '2026-10-20T08:15:00.000Z', '2026-10-20T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000102', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto) {
-    if (''aeiou''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000102', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text) {
+    if (''aeiou''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:06:00.000Z', null, '2026-10-27T09:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000103', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000103', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000024', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:36:00.000Z', '2026-10-27T09:42:00.000Z', '2026-10-27T09:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000104', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000104', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:16:00.000Z', '2026-10-06T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000105', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000105', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T08:55:00.000Z', '2026-10-06T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000106', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000106', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:16:00.000Z', '2026-10-13T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000107', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000107', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:55:00.000Z', '2026-10-13T08:55:00.000Z'),
-  ('70000000-0000-4000-8000-000000000108', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000108', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:19:00.000Z', '2026-10-20T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000109', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000109', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:07:00.000Z', '2026-10-27T09:13:00.000Z', '2026-10-27T09:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000110', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  let posicion = -1;
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) posicion = i;
+  ('70000000-0000-4000-8000-000000000110', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000025', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  let position = -1;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) position = i;
   }
-  return posicion;
+  return position;
 }
 ', null, 'tests_failed', '2026-10-27T10:07:00.000Z', null, '2026-10-27T10:10:00.000Z'),
-  ('70000000-0000-4000-8000-000000000111', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000111', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:26:00.000Z', '2026-10-06T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000112', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000112', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:56:00.000Z', '2026-10-06T08:56:00.000Z'),
-  ('70000000-0000-4000-8000-000000000113', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000113', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:08:00.000Z', '2026-10-13T08:26:00.000Z', '2026-10-13T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000114', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000114', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:38:00.000Z', '2026-10-13T08:44:00.000Z', '2026-10-13T08:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000115', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000115', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:08:00.000Z', '2026-10-20T08:26:00.000Z', '2026-10-20T08:26:00.000Z'),
-  ('70000000-0000-4000-8000-000000000116', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
+  ('70000000-0000-4000-8000-000000000116', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
   let total = 0;
-  for (const numero of vector) total += numero;
-  return total / vector.length;
+  for (const number of numbers) total += number;
+  return total / numbers.length;
 }
 ', null, 'tests_failed', '2026-10-27T09:38:00.000Z', null, '2026-10-27T09:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000117', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000117', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000026', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:08:00.000Z', '2026-10-27T10:17:00.000Z', '2026-10-27T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000118', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000118', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:27:00.000Z', '2026-10-06T08:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000119', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000119', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T08:48:00.000Z', '2026-10-06T08:48:00.000Z'),
-  ('70000000-0000-4000-8000-000000000120', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000120', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:15:00.000Z', '2026-10-13T08:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000121', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000121', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:51:00.000Z', '2026-10-13T08:51:00.000Z'),
-  ('70000000-0000-4000-8000-000000000122', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000122', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:09:00.000Z', '2026-10-20T08:18:00.000Z', '2026-10-20T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000123', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto) {
-    if (''aeiou''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000123', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text) {
+    if (''aeiou''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', null, 'tests_failed', '2026-10-27T09:09:00.000Z', null, '2026-10-27T09:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000124', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000124', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:39:00.000Z', '2026-10-27T09:48:00.000Z', '2026-10-27T09:48:00.000Z'),
-  ('70000000-0000-4000-8000-000000000125', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000125', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000027', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:09:00.000Z', '2026-10-27T10:15:00.000Z', '2026-10-27T10:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000126', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000126', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:19:00.000Z', '2026-10-06T08:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000127', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000127', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:52:00.000Z', '2026-10-06T08:52:00.000Z'),
-  ('70000000-0000-4000-8000-000000000128', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000128', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:22:00.000Z', '2026-10-13T08:22:00.000Z'),
-  ('70000000-0000-4000-8000-000000000129', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000129', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:49:00.000Z', '2026-10-13T08:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000130', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000130', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:16:00.000Z', '2026-10-20T08:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000131', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000131', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:10:00.000Z', '2026-10-27T09:19:00.000Z', '2026-10-27T09:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000132', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000132', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:40:00.000Z', '2026-10-27T09:46:00.000Z', '2026-10-27T09:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000133', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000133', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000028', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:10:00.000Z', '2026-10-27T10:16:00.000Z', '2026-10-27T10:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000134', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000134', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:05:00.000Z', '2026-10-06T08:17:00.000Z', '2026-10-06T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000135', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000135', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:35:00.000Z', '2026-10-06T08:47:00.000Z', '2026-10-06T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000136', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000136', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:05:00.000Z', '2026-10-13T08:14:00.000Z', '2026-10-13T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000137', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000137', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:35:00.000Z', '2026-10-13T08:51:00.000Z', '2026-10-13T08:51:00.000Z'),
-  ('70000000-0000-4000-8000-000000000138', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const copia = [...vector];
-  for (let i = 0; i < copia.length; i++) {
-    const j = copia.length - 1 - i;
-    [copia[i], copia[j]] = [copia[j], copia[i]];
+  ('70000000-0000-4000-8000-000000000138', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const copy = [...items];
+  for (let i = 0; i < copy.length; i++) {
+    const j = copy.length - 1 - i;
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
-  return copia;
+  return copy;
 }
 ', null, 'tests_failed', '2026-10-20T08:05:00.000Z', null, '2026-10-20T08:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000139', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000139', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:05:00.000Z', '2026-10-27T09:11:00.000Z', '2026-10-27T09:11:00.000Z'),
-  ('70000000-0000-4000-8000-000000000140', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000140', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:35:00.000Z', '2026-10-27T09:41:00.000Z', '2026-10-27T09:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000141', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000141', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000029', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:05:00.000Z', '2026-10-27T10:14:00.000Z', '2026-10-27T10:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000142', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000142', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:06:00.000Z', '2026-10-06T08:18:00.000Z', '2026-10-06T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000143', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000143', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:36:00.000Z', '2026-10-06T08:42:00.000Z', '2026-10-06T08:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000144', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000144', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:06:00.000Z', '2026-10-13T08:22:00.000Z', '2026-10-13T08:22:00.000Z'),
-  ('70000000-0000-4000-8000-000000000145', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000145', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:36:00.000Z', '2026-10-13T08:54:00.000Z', '2026-10-13T08:54:00.000Z'),
-  ('70000000-0000-4000-8000-000000000146', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000146', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:06:00.000Z', '2026-10-20T08:12:00.000Z', '2026-10-20T08:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000147', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000147', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:06:00.000Z', '2026-10-27T09:12:00.000Z', '2026-10-27T09:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000148', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000148', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:36:00.000Z', '2026-10-27T09:45:00.000Z', '2026-10-27T09:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000149', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  let posicion = -1;
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) posicion = i;
+  ('70000000-0000-4000-8000-000000000149', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000030', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  let position = -1;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) position = i;
   }
-  return posicion;
+  return position;
 }
 ', null, 'in_progress', '2026-10-27T10:06:00.000Z', null, '2026-10-27T10:06:00.000Z'),
-  ('70000000-0000-4000-8000-000000000150', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000150', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:07:00.000Z', '2026-10-06T08:13:00.000Z', '2026-10-06T08:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000151', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000151', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:37:00.000Z', '2026-10-06T09:04:00.000Z', '2026-10-06T09:04:00.000Z'),
-  ('70000000-0000-4000-8000-000000000152', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000152', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:07:00.000Z', '2026-10-13T08:25:00.000Z', '2026-10-13T08:25:00.000Z'),
-  ('70000000-0000-4000-8000-000000000153', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000153', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:37:00.000Z', '2026-10-13T08:43:00.000Z', '2026-10-13T08:43:00.000Z'),
-  ('70000000-0000-4000-8000-000000000154', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000154', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:07:00.000Z', '2026-10-20T08:13:00.000Z', '2026-10-20T08:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000155', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000155', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:07:00.000Z', '2026-10-27T09:16:00.000Z', '2026-10-27T09:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000156', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
+  ('70000000-0000-4000-8000-000000000156', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
   let total = 0;
-  for (const numero of vector) total += numero;
-  return total / vector.length;
+  for (const number of numbers) total += number;
+  return total / numbers.length;
 }
 ', null, 'in_progress', '2026-10-27T09:37:00.000Z', null, '2026-10-27T09:37:00.000Z'),
-  ('70000000-0000-4000-8000-000000000157', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000157', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000031', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:07:00.000Z', '2026-10-27T10:13:00.000Z', '2026-10-27T10:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000158', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000158', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:08:00.000Z', '2026-10-06T08:35:00.000Z', '2026-10-06T08:35:00.000Z'),
-  ('70000000-0000-4000-8000-000000000159', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000159', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:38:00.000Z', '2026-10-06T08:47:00.000Z', '2026-10-06T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000160', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000160', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:08:00.000Z', '2026-10-13T08:14:00.000Z', '2026-10-13T08:14:00.000Z'),
-  ('70000000-0000-4000-8000-000000000161', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000161', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:38:00.000Z', '2026-10-13T08:47:00.000Z', '2026-10-13T08:47:00.000Z'),
-  ('70000000-0000-4000-8000-000000000162', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000162', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:08:00.000Z', '2026-10-20T08:17:00.000Z', '2026-10-20T08:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000163', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto) {
-    if (''aeiou''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000163', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text) {
+    if (''aeiou''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', null, 'in_progress', '2026-10-27T09:08:00.000Z', null, '2026-10-27T09:08:00.000Z'),
-  ('70000000-0000-4000-8000-000000000164', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+  ('70000000-0000-4000-8000-000000000164', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000032', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
-', 'function media(vector) {
-  if (vector.length === 0) return ''0.00'';
+', 'function average(numbers) {
+  if (numbers.length === 0) return ''0.00'';
   let total = 0;
-  for (const numero of vector) total += numero;
-  return (total / vector.length).toFixed(2);
+  for (const number of numbers) total += number;
+  return (total / numbers.length).toFixed(2);
 }
 ', 'submitted', '2026-10-27T09:38:00.000Z', '2026-10-27T09:44:00.000Z', '2026-10-27T09:44:00.000Z'),
-  ('70000000-0000-4000-8000-000000000165', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000165', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:09:00.000Z', '2026-10-06T08:18:00.000Z', '2026-10-06T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000166', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000166', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:39:00.000Z', '2026-10-06T08:57:00.000Z', '2026-10-06T08:57:00.000Z'),
-  ('70000000-0000-4000-8000-000000000167', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000167', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:09:00.000Z', '2026-10-13T08:18:00.000Z', '2026-10-13T08:18:00.000Z'),
-  ('70000000-0000-4000-8000-000000000168', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000168', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:39:00.000Z', '2026-10-13T08:57:00.000Z', '2026-10-13T08:57:00.000Z'),
-  ('70000000-0000-4000-8000-000000000169', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000169', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:09:00.000Z', '2026-10-20T08:21:00.000Z', '2026-10-20T08:21:00.000Z'),
-  ('70000000-0000-4000-8000-000000000170', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000006', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+  ('70000000-0000-4000-8000-000000000170', '40000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000006', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
-', 'function contarVocales(texto) {
-  let vocales = 0;
-  for (const letra of texto.toLowerCase()) {
-    if (''aeiouáéíóú''.includes(letra)) vocales++;
+', 'function countVowels(text) {
+  let vowels = 0;
+  for (const letter of text.toLowerCase()) {
+    if (''aeiouáéíóú''.includes(letter)) vowels++;
   }
-  return vocales;
+  return vowels;
 }
 ', 'submitted', '2026-10-27T09:09:00.000Z', '2026-10-27T09:15:00.000Z', '2026-10-27T09:15:00.000Z'),
-  ('70000000-0000-4000-8000-000000000171', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  let posicion = -1;
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) posicion = i;
+  ('70000000-0000-4000-8000-000000000171', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000033', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  let position = -1;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) position = i;
   }
-  return posicion;
+  return position;
 }
 ', null, 'tests_failed', '2026-10-27T10:09:00.000Z', null, '2026-10-27T10:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000172', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000001', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000172', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000001', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-06T08:10:00.000Z', '2026-10-06T08:28:00.000Z', '2026-10-06T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000173', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000002', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000173', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000002', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-06T08:40:00.000Z', '2026-10-06T08:58:00.000Z', '2026-10-06T08:58:00.000Z'),
-  ('70000000-0000-4000-8000-000000000174', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000003', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000174', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000003', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-13T08:10:00.000Z', '2026-10-13T08:28:00.000Z', '2026-10-13T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000175', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000004', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000175', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000004', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-13T08:40:00.000Z', '2026-10-13T08:46:00.000Z', '2026-10-13T08:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000176', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000005', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+  ('70000000-0000-4000-8000-000000000176', '40000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000005', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
-', 'function invertir(vector) {
-  const resultado = [];
-  for (let i = vector.length - 1; i >= 0; i--) {
-    resultado.push(vector[i]);
+', 'function reverseArray(items) {
+  const result = [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    result.push(items[i]);
   }
-  return resultado;
+  return result;
 }
 ', 'submitted', '2026-10-20T08:10:00.000Z', '2026-10-20T08:28:00.000Z', '2026-10-20T08:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000177', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000007', 'function media(vector) {
+  ('70000000-0000-4000-8000-000000000177', '40000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000007', 'function average(numbers) {
   let total = 0;
-  for (const numero of vector) total += numero;
-  return total / vector.length;
+  for (const number of numbers) total += number;
+  return total / numbers.length;
 }
 ', null, 'tests_failed', '2026-10-27T09:40:00.000Z', null, '2026-10-27T09:43:00.000Z'),
-  ('70000000-0000-4000-8000-000000000178', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000008', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+  ('70000000-0000-4000-8000-000000000178', '40000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000034', '60000000-0000-4000-8000-000000000008', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
-', 'function buscar(vector, valor) {
-  for (let i = 0; i < vector.length; i++) {
-    if (vector[i] === valor) return i;
+', 'function firstIndexOf(items, value) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === value) return i;
   }
   return -1;
 }
 ', 'submitted', '2026-10-27T10:10:00.000Z', '2026-10-27T10:19:00.000Z', '2026-10-27T10:19:00.000Z'),
-  ('70000000-0000-4000-8000-000000000179', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000101', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000179', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-08T10:05:00.000Z', '2026-10-08T10:17:00.000Z', '2026-10-08T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000180', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000102', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000180', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:35:00.000Z', '2026-10-08T10:41:00.000Z', '2026-10-08T10:41:00.000Z'),
-  ('70000000-0000-4000-8000-000000000181', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000103', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000181', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-15T10:05:00.000Z', '2026-10-15T10:21:00.000Z', '2026-10-15T10:21:00.000Z'),
-  ('70000000-0000-4000-8000-000000000182', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000104', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000182', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000041', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-15T10:35:00.000Z', '2026-10-15T10:53:00.000Z', '2026-10-15T10:53:00.000Z'),
-  ('70000000-0000-4000-8000-000000000183', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000101', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000183', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-08T10:06:00.000Z', '2026-10-08T10:12:00.000Z', '2026-10-08T10:12:00.000Z'),
-  ('70000000-0000-4000-8000-000000000184', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000102', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000184', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:36:00.000Z', '2026-10-08T11:03:00.000Z', '2026-10-08T11:03:00.000Z'),
-  ('70000000-0000-4000-8000-000000000185', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000103', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000185', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-15T10:06:00.000Z', '2026-10-15T10:24:00.000Z', '2026-10-15T10:24:00.000Z'),
-  ('70000000-0000-4000-8000-000000000186', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000104', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000186', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000042', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-15T10:36:00.000Z', '2026-10-15T10:42:00.000Z', '2026-10-15T10:42:00.000Z'),
-  ('70000000-0000-4000-8000-000000000187', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000101', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000187', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-08T10:07:00.000Z', '2026-10-08T10:34:00.000Z', '2026-10-08T10:34:00.000Z'),
-  ('70000000-0000-4000-8000-000000000188', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000102', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000188', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:37:00.000Z', '2026-10-08T10:46:00.000Z', '2026-10-08T10:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000189', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000103', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000189', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-15T10:07:00.000Z', '2026-10-15T10:13:00.000Z', '2026-10-15T10:13:00.000Z'),
-  ('70000000-0000-4000-8000-000000000190', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000104', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000190', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000043', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-15T10:37:00.000Z', '2026-10-15T10:46:00.000Z', '2026-10-15T10:46:00.000Z'),
-  ('70000000-0000-4000-8000-000000000191', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000101', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000191', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-08T10:08:00.000Z', '2026-10-08T10:17:00.000Z', '2026-10-08T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000192', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000102', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000192', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:38:00.000Z', '2026-10-08T10:56:00.000Z', '2026-10-08T10:56:00.000Z'),
-  ('70000000-0000-4000-8000-000000000193', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000103', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000193', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-15T10:08:00.000Z', '2026-10-15T10:17:00.000Z', '2026-10-15T10:17:00.000Z'),
-  ('70000000-0000-4000-8000-000000000194', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000104', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000194', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000044', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-15T10:38:00.000Z', '2026-10-15T10:56:00.000Z', '2026-10-15T10:56:00.000Z'),
-  ('70000000-0000-4000-8000-000000000195', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000101', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000195', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-08T10:09:00.000Z', '2026-10-08T10:27:00.000Z', '2026-10-08T10:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000196', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000102', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000196', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:39:00.000Z', '2026-10-08T10:57:00.000Z', '2026-10-08T10:57:00.000Z'),
-  ('70000000-0000-4000-8000-000000000197', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000103', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000197', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-15T10:09:00.000Z', '2026-10-15T10:27:00.000Z', '2026-10-15T10:27:00.000Z'),
-  ('70000000-0000-4000-8000-000000000198', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000104', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000198', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000045', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-15T10:39:00.000Z', '2026-10-15T10:45:00.000Z', '2026-10-15T10:45:00.000Z'),
-  ('70000000-0000-4000-8000-000000000199', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000101', 'function contarPares(n) {
-  let pares = 0;
+  ('70000000-0000-4000-8000-000000000199', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000101', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
-', 'function contarPares(n) {
-  let pares = 0;
+', 'function countEvens(n) {
+  let evens = 0;
   for (let i = 1; i <= n; i++) {
-    if (i % 2 === 0) pares++;
+    if (i % 2 === 0) evens++;
   }
-  return pares;
+  return evens;
 }
 ', 'submitted', '2026-10-08T10:10:00.000Z', '2026-10-08T10:28:00.000Z', '2026-10-08T10:28:00.000Z'),
-  ('70000000-0000-4000-8000-000000000200', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000102', 'function tablaMultiplicar(n) {
-  const lineas = [];
+  ('70000000-0000-4000-8000-000000000200', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000102', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
-', 'function tablaMultiplicar(n) {
-  const lineas = [];
+', 'function multiplicationTable(n) {
+  const rows = [];
   for (let i = 1; i <= 10; i++) {
-    lineas.push(n + '' x '' + i + '' = '' + n * i);
+    rows.push(n + '' x '' + i + '' = '' + n * i);
   }
-  return lineas.join(''\n'');
+  return rows.join(''\n'');
 }
 ', 'submitted', '2026-10-08T10:40:00.000Z', '2026-10-08T10:49:00.000Z', '2026-10-08T10:49:00.000Z'),
-  ('70000000-0000-4000-8000-000000000201', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000103', 'function suma(vector) {
+  ('70000000-0000-4000-8000-000000000201', '40000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000103', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
-', 'function suma(vector) {
+', 'function sum(numbers) {
   let total = 0;
-  for (const numero of vector) {
-    total += numero;
+  for (const number of numbers) {
+    total += number;
   }
   return total;
 }
 ', 'submitted', '2026-10-15T10:10:00.000Z', '2026-10-15T10:16:00.000Z', '2026-10-15T10:16:00.000Z'),
-  ('70000000-0000-4000-8000-000000000202', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000104', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+  ('70000000-0000-4000-8000-000000000202', '40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000046', '60000000-0000-4000-8000-000000000104', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
-', 'function maximo(vector) {
-  if (vector.length === 0) return null;
-  let mayor = vector[0];
-  for (const numero of vector) {
-    if (numero > mayor) mayor = numero;
+', 'function maximum(numbers) {
+  if (numbers.length === 0) return null;
+  let largest = numbers[0];
+  for (const number of numbers) {
+    if (number > largest) largest = number;
   }
-  return mayor;
+  return largest;
 }
 ', 'submitted', '2026-10-15T10:40:00.000Z', '2026-10-15T10:52:00.000Z', '2026-10-15T10:52:00.000Z');
 

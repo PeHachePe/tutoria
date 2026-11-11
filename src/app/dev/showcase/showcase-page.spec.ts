@@ -77,7 +77,7 @@ describe('ShowcasePage', () => {
     const editable = page.getByRole('textbox', { name: 'Código de ejemplo editable' });
     const readonly = page.getByRole('textbox', { name: 'Código de ejemplo de solo lectura' });
 
-    expect(editable.textContent).toContain('function suma(vector)');
+    expect(editable.textContent).toContain('function sum(numbers)');
     expect(editable.getAttribute('aria-readonly')).toBeNull();
     expect(readonly.getAttribute('aria-readonly')).toBe('true');
     expect(text()).toContain('Guardando…');

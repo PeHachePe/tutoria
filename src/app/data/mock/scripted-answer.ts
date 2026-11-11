@@ -8,14 +8,8 @@ import {
   type TutorInteraction,
   type TutorTrigger,
 } from '../tutor';
-import {
-  ELUSION_ANSWER,
-  PASSED_ANSWER,
-  PROACTIVE_MESSAGE,
-  START_ANSWER,
-  STATEMENT_ANSWER,
-  TUTOR_ANSWERS,
-} from './fixtures/tutor-script';
+import type { ExerciseLocale } from '../exercise-text';
+import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 
 /** What the scripted tutor looks at: the request, the attempt and the conversation so far. */
 export interface ScriptInput {
@@ -25,6 +19,8 @@ export interface ScriptInput {
   readonly status: StoredAttemptStatus;
   /** The earlier interactions of the attempt, oldest first. */
   readonly previous: readonly TutorInteraction[];
+  /** The language of the interface, which the tutor answers in (D-033). */
+  readonly language: ExerciseLocale;
 }
 
 /** What the model would return (2.6), plus the level the server decided. */
@@ -70,8 +66,8 @@ const STATEMENT_PATTERN = /enunciado|enunciat|statement/;
 
 /**
  * The answer of the scripted tutor (4.3). The level follows the rules of the server (2.6), with the
- * same function. It never gives the
- * solution: asking for it gets a question back and is recorded as an elusion.
+ * same function, and it answers in the language of the request. It never gives the solution:
+ * asking for it gets a question back and is recorded as an elusion.
  */
 export function scriptedAnswer({
   kind,
@@ -79,7 +75,9 @@ export function scriptedAnswer({
   code,
   status,
   previous,
+  language,
 }: ScriptInput): ScriptedAnswer {
+  const script = TUTOR_SCRIPTS[language];
   const hintLevel = answerHintLevel(kind, previous);
   const answer = (
     text: string,
@@ -89,7 +87,8 @@ export function scriptedAnswer({
     intensity: Intensity = MAX_INTENSITY,
     elusion = false,
   ) => ({ text, hintLevel, emotion, reaction, intensity, elusion, silent: false });
-  const hint = TUTOR_ANSWERS[hintLevel][previous.length % TUTOR_ANSWERS[hintLevel].length];
+  const hints = script.hints[hintLevel];
+  const hint = hints[previous.length % hints.length];
 
   switch (kind) {
     case 'hint':
@@ -98,7 +97,7 @@ export function scriptedAnswer({
       // Once is enough: right after stepping in, it lets the student work
       return previous.at(-1)?.trigger === 'proactive'
         ? { ...answer('', 'encouragement', 'eyes'), silent: true }
-        : answer(PROACTIVE_MESSAGE, 'encouragement', proactiveReaction(previous));
+        : answer(script.proactive, 'encouragement', proactiveReaction(previous));
     case 'question': {
       const question = withoutAccents(message ?? '');
       // Asking for the solution gets a joke: «hey, not that»
@@ -107,11 +106,11 @@ export function scriptedAnswer({
         // mock anger
         const elusions = previous.filter((interaction) => interaction.elusion).length;
         const joke = ELUSION_REACTIONS[elusions % ELUSION_REACTIONS.length];
-        return answer(ELUSION_ANSWER, 'surprise', joke, MAX_INTENSITY, true);
+        return answer(script.elusion, 'surprise', joke, MAX_INTENSITY, true);
       }
-      if (status === 'passed') return answer(PASSED_ANSWER, 'celebration', 'party');
-      if (STATEMENT_PATTERN.test(question)) return answer(STATEMENT_ANSWER, 'joy', 'hearts');
-      if (!code.trim()) return answer(START_ANSWER, 'encouragement', 'cheer');
+      if (status === 'passed') return answer(script.passed, 'celebration', 'party');
+      if (STATEMENT_PATTERN.test(question)) return answer(script.statement, 'joy', 'hearts');
+      if (!code.trim()) return answer(script.start, 'encouragement', 'cheer');
       // A question with code to look at: it applauds the effort, its mind is blown, or it laughs
       return answer(hint, 'joy', QUESTION_REACTIONS[previous.length % QUESTION_REACTIONS.length]);
     }

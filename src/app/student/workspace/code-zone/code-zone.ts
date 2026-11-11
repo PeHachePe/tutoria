@@ -97,7 +97,7 @@ export class CodeZone {
 
   /**
    * What the editor starts with, once both the attempt and the exercise are there: the help it shows
-   * while the code is empty («Escribe aquí la función `suma`», D-018) is read when it is created.
+   * while the code is empty («Escribe aquí la función `sum`», D-018) is read when it is created.
    */
   protected readonly editor = computed(() => {
     const attempt = this.store.attempt();

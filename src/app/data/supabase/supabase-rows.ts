@@ -1,5 +1,6 @@
 import type { Attempt } from '../attempt';
 import type { Exercise, Test } from '../exercise';
+import type { ExerciseTranslations } from '../exercise-text';
 import type { ProcessEvent } from '../process-event';
 import type { HintLevel, Intensity, TutorInteraction } from '../tutor';
 import type { AppUser } from '../user';
@@ -43,6 +44,9 @@ export function toExercise(row: Row<'exercise'>): Exercise {
     statement: row.statement,
     difficulty: row.difficulty,
     topics: row.topics,
+    sourceLocale: row.source_locale,
+    // A check of the table gives it this shape (is_valid_exercise_translations)
+    translations: row.translations as ExerciseTranslations,
     language: row.language,
     functionName: row.function_name,
     maxRepeatedFailures: row.max_repeated_failures,
