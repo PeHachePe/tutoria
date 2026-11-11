@@ -416,6 +416,7 @@ export type Database = {
           intensity: number;
           model: string | null;
           prompt_version: string;
+          rejected_answers: number;
           request_id: string | null;
           student_message: string | null;
           transcript: string;
@@ -432,6 +433,7 @@ export type Database = {
           intensity: number;
           model?: string | null;
           prompt_version: string;
+          rejected_answers?: number;
           request_id?: string | null;
           student_message?: string | null;
           transcript: string;
@@ -447,6 +449,7 @@ export type Database = {
           intensity?: number;
           model?: string | null;
           prompt_version?: string;
+          rejected_answers?: number;
           request_id?: string | null;
           student_message?: string | null;
           transcript?: string;
@@ -520,6 +523,7 @@ export type Database = {
           answer_intensity: number;
           answer_model: string;
           answer_prompt_version: string;
+          answer_rejected?: number;
           answer_silent: boolean;
           answer_transcript: string;
           asked_message: string;

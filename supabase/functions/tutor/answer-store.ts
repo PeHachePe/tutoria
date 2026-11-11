@@ -49,12 +49,15 @@ export interface RecordedAnswer {
   readonly emotion: Emotion;
   readonly intensity: Intensity;
   readonly transcript: string;
+  readonly elusion: boolean;
 }
 
 /** The provider the administrator chose (`app_setting.ai_provider`); its key is a secret. */
 export interface ProviderSetting {
   readonly baseUrl: string;
   readonly model: string;
+  /** The model that answers when the main one fails, of the same provider (D-044). */
+  readonly fallbackModel?: string;
 }
 
 /** What is kept of an answer: `answer` is null when the tutor chose to keep quiet. */
@@ -67,6 +70,8 @@ export interface NewAnswer {
   readonly answer: ModelAnswer | null;
   readonly promptVersion: string;
   readonly model: string;
+  /** Answers of the model the validator turned down before this one: 0 to 2 (D-044). */
+  readonly rejected: number;
 }
 
 /**

@@ -94,6 +94,11 @@ export type TutorEvent =
       readonly hintLevel: HintLevel;
       /** How the reaction looks; without it, the one of the emotion. */
       readonly reaction?: ReactionKind;
+      /**
+       * The student tried to get the solution: the chat offers the ways that do help, a hint or the
+       * statement (D-044). Without it, false.
+       */
+      readonly elusion?: boolean;
     }
   | { readonly type: 'delta'; readonly text: string }
   | {

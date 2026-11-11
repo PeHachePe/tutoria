@@ -25,7 +25,12 @@ export type AnswerProblem = 'invalid' | 'code';
 
 export type AnswerCheck =
   | { readonly ok: true; readonly answer: ModelAnswer }
-  | { readonly ok: false; readonly problem: AnswerProblem };
+  | {
+      readonly ok: false;
+      readonly problem: AnswerProblem;
+      /** An answer turned down for its code still says whether the student asked for the solution. */
+      readonly elusion?: boolean;
+    };
 
 const answerSchema = z.object({
   message: z.string(),
@@ -92,7 +97,7 @@ export function checkAnswer(raw: string, mayKeepQuiet: boolean): AnswerCheck {
   const { message, emotion, intensity, reaction, elusion } = result.data;
   const text = message.trim();
   if (!text && !mayKeepQuiet) return { ok: false, problem: 'invalid' };
-  if (containsCode(text)) return { ok: false, problem: 'code' };
+  if (containsCode(text)) return { ok: false, problem: 'code', elusion };
   return {
     ok: true,
     answer: {

@@ -123,6 +123,40 @@ export class OpenAICompatibleProvider implements LlmProvider {
   }
 }
 
+/**
+ * The model of the setting and, if it fails, the fallback one (D-044): the free tier of Gemini runs
+ * out or gets overloaded per model, so another model often answers when the first one cannot. Any
+ * failure of the main model moves to the fallback, which then answers the rest of the request.
+ */
+export class FallbackProvider implements LlmProvider {
+  private current: LlmProvider;
+
+  constructor(
+    private readonly main: LlmProvider,
+    private readonly fallback: LlmProvider,
+  ) {
+    this.current = main;
+  }
+
+  /** The model that gave the last answer: the main one until it fails. */
+  get model(): string {
+    return this.current.model;
+  }
+
+  async complete(messages: readonly ChatMessage[], format: AnswerFormat): Promise<string> {
+    if (this.current === this.main) {
+      try {
+        return await this.main.complete(messages, format);
+      } catch (error) {
+        if (!(error instanceof ProviderError)) throw error;
+        console.warn(`${error.message}; the fallback model ${this.fallback.model} answers`);
+        this.current = this.fallback;
+      }
+    }
+    return this.fallback.complete(messages, format);
+  }
+}
+
 /** A failure of the provider that may pass in a moment, unlike a wrong key or a missing model. */
 function isOverload(status: number | undefined): boolean {
   return status !== undefined && status >= 500;

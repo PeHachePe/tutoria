@@ -1,6 +1,12 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { type ChatMessage, OpenAICompatibleProvider, ProviderError } from './llm-provider.ts';
+import {
+  type ChatMessage,
+  FallbackProvider,
+  type LlmProvider,
+  OpenAICompatibleProvider,
+  ProviderError,
+} from './llm-provider.ts';
 import { ANSWER_FORMAT } from './model-answer.ts';
 
 const MESSAGES: ChatMessage[] = [{ role: 'user', content: 'Hola' }];
@@ -121,4 +127,55 @@ Deno.test('the provider does not ask again when the key or the model is wrong', 
     'The model answered 403: API key not valid',
   );
   assertEquals(forbidden.calls.length, 1);
+});
+
+/** A model that answers with its name, or fails as the test says. */
+class NamedModel implements LlmProvider {
+  calls = 0;
+  constructor(
+    readonly model: string,
+    private readonly failure?: Error,
+  ) {}
+  complete() {
+    this.calls++;
+    return this.failure ? Promise.reject(this.failure) : Promise.resolve(this.model);
+  }
+}
+
+Deno.test('the fallback model stays out while the main one answers', async () => {
+  const main = new NamedModel('flash');
+  const fallback = new NamedModel('flash-lite');
+  const llm = new FallbackProvider(main, fallback);
+
+  assertEquals(await llm.complete(MESSAGES, ANSWER_FORMAT), 'flash');
+  assertEquals(llm.model, 'flash');
+  assertEquals(fallback.calls, 0);
+});
+
+Deno.test('when the main model fails, the fallback answers the rest of the request', async () => {
+  const main = new NamedModel('flash', new ProviderError('The model answered 503', 503));
+  const fallback = new NamedModel('flash-lite');
+  const llm = new FallbackProvider(main, fallback);
+
+  assertEquals(await llm.complete(MESSAGES, ANSWER_FORMAT), 'flash-lite');
+  assertEquals(llm.model, 'flash-lite');
+  assertEquals(await llm.complete(MESSAGES, ANSWER_FORMAT), 'flash-lite');
+  assertEquals(main.calls, 1);
+});
+
+Deno.test('the fallback does not hide a failure that is not of the provider', async () => {
+  const llm = new FallbackProvider(
+    new NamedModel('flash', new TypeError('bug')),
+    new NamedModel('flash-lite'),
+  );
+  await assertRejects(() => llm.complete(MESSAGES, ANSWER_FORMAT), TypeError, 'bug');
+});
+
+Deno.test('when both models fail, the failure of the fallback is the answer', async () => {
+  const llm = new FallbackProvider(
+    new NamedModel('flash', new ProviderError('The model answered 503', 503)),
+    new NamedModel('flash-lite', new ProviderError('The model answered 429', 429)),
+  );
+  const error = await assertRejects(() => llm.complete(MESSAGES, ANSWER_FORMAT), ProviderError);
+  assertEquals(error.status, 429);
 });

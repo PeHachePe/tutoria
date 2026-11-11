@@ -2,7 +2,7 @@
 -- with tests failed (attempt ...012); Lucía (...011) has exercise 8 passed (attempt ...008).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 set local role service_role;
 
@@ -20,6 +20,12 @@ select ok(
   'the answer keeps its level, its prompt version and its model'
 );
 select is(
+  (select rejected_answers from tutor_interaction
+   where request_id = 'a0000000-0000-4000-8000-000000000001'),
+  0::smallint,
+  'an answer the validator took at once has no rejected answers'
+);
+select is(
   (select detail from process_event
    where attempt_id = '70000000-0000-4000-8000-000000000012' and type = 'hint_requested'
    order by received_at desc, timestamp desc limit 1),
@@ -35,6 +41,16 @@ select ok(
   (select student_message = '¿Y ahora?' from tutor_interaction
    where request_id = 'a0000000-0000-4000-8000-000000000002'),
   'a question keeps what the student asked'
+);
+
+-- The validator turned down both answers of the model: the student got the default (2.5)
+select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+  'a0000000-0000-4000-8000-000000000008', 'question', 2::smallint, 'Dámela', '¡Vas bien!',
+  'encouragement', 1::smallint, true, 'v2', 'gemini-test', false, 2::smallint);
+select ok(
+  (select rejected_answers = 2 and elusion from tutor_interaction
+   where request_id = 'a0000000-0000-4000-8000-000000000008'),
+  'the answer keeps how many answers of the model were turned down'
 );
 
 -- The same request twice is one answer
@@ -69,11 +85,11 @@ select throws_ok(
   'only an intervention may keep quiet'
 );
 
--- The limit counts every call of the last minute: the two answers and the silent intervention
+-- The limit counts every call of the last minute: the three answers and the silent intervention
 select is(
   (select count(*)::integer from latest_tutor_calls('10000000-0000-4000-8000-000000000012',
      now() - interval '1 minute', 10)),
-  3,
+  4,
   'the latest calls count the answers and the silent interventions'
 );
 

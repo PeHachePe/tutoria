@@ -17,6 +17,7 @@ import {
   TUTOR_CALLS_PER_MINUTE,
   createTutorHandler,
 } from './tutor.ts';
+import { PROMPT_VERSION } from './prompt.ts';
 
 const NOW = Date.parse('2026-11-10T10:00:00Z');
 const ATTEMPT_ID = '70000000-0000-4000-8000-000000000012';
@@ -146,7 +147,14 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
   assertEquals(response.status, 200);
   assertEquals(await response.json(), {
     events: [
-      { type: 'meta', emotion: 'encouragement', intensity: 2, hintLevel: 2, reaction: 'thinking' },
+      {
+        type: 'meta',
+        emotion: 'encouragement',
+        intensity: 2,
+        hintLevel: 2,
+        reaction: 'thinking',
+        elusion: false,
+      },
       { type: 'delta', text: '¿Qué valor tiene el total antes del bucle?' },
       { type: 'done', interactionId: 'i-new', silent: false },
     ],
@@ -167,8 +175,9 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
         reaction: 'thinking',
         elusion: false,
       },
-      promptVersion: 'v1',
+      promptVersion: PROMPT_VERSION,
       model: 'flash',
+      rejected: 0,
     },
   ]);
 });
@@ -189,7 +198,13 @@ Deno.test('a question keeps what the student asked and answers in their language
 Deno.test('an answer without a reaction of the catalog leaves it out of meta', async () => {
   const { handle } = setup([JSON.stringify({ ...JSON.parse(GOOD), reaction: 'stone' })]);
   const { events } = await (await handle(post())).json();
-  assertEquals(events[0], { type: 'meta', emotion: 'encouragement', intensity: 2, hintLevel: 1 });
+  assertEquals(events[0], {
+    type: 'meta',
+    emotion: 'encouragement',
+    intensity: 2,
+    hintLevel: 1,
+    elusion: false,
+  });
 });
 
 Deno.test('broken JSON or code is asked once more, reinforcing the rule', async () => {
@@ -200,12 +215,14 @@ Deno.test('broken JSON or code is asked once more, reinforcing the rule', async 
   assertEquals((await handle(post())).status, 200);
   assertEquals(llm.requests.length, 2);
   assertStringIncludes(llm.requests[1][3].content, 'no era un objeto JSON');
+  assertEquals(store.recorded[0].rejected, 1);
 
   // Code, then good
   await handle(post({ requestId: 'a0000000-0000-4000-8000-000000000002' }));
   assertEquals(llm.requests.length, 4);
   assertStringIncludes(llm.requests[3][3].content, 'incluía código');
   assertEquals(store.recorded[1].answer?.message, '¿Qué valor tiene el total antes del bucle?');
+  assertEquals(store.recorded[1].rejected, 1);
 });
 
 Deno.test(
@@ -215,9 +232,37 @@ Deno.test(
 
     const { events } = await (await handle(post({ language: 'ca' }))).json();
 
-    assertEquals(events[0], { type: 'meta', emotion: 'encouragement', intensity: 1, hintLevel: 1 });
+    assertEquals(events[0], {
+      type: 'meta',
+      emotion: 'encouragement',
+      intensity: 1,
+      hintLevel: 1,
+      elusion: false,
+    });
     assertEquals(events[1], { type: 'delta', text: DEFAULT_ANSWERS.ca });
     assertEquals(store.recorded[0].answer?.message, DEFAULT_ANSWERS.ca);
+    assertEquals(store.recorded[0].rejected, 2);
+  },
+);
+
+Deno.test(
+  'a request for the solution answered twice with code stays an elusion in the default answer',
+  async () => {
+    const leak = JSON.stringify({
+      ...JSON.parse(GOOD),
+      message: 'Toma:\nreturn v.reduce((a, b) => a + b, 0);',
+      elusion: true,
+    });
+    const { handle, store } = setup([leak, leak]);
+
+    const { events } = await (
+      await handle(post({ kind: 'question', message: 'Dame la solución' }))
+    ).json();
+
+    assertEquals(events[0].elusion, true);
+    assertEquals(events[1], { type: 'delta', text: DEFAULT_ANSWERS.es });
+    assertEquals(store.recorded[0].answer?.elusion, true);
+    assertEquals(store.recorded[0].rejected, 2);
   },
 );
 
@@ -250,13 +295,14 @@ Deno.test(
         emotion: 'joy',
         intensity: 1,
         transcript: 'Ya te lo dije: mira el bucle.',
+        elusion: true,
       },
     ];
 
     const { events } = await (await handle(post())).json();
 
     assertEquals(events, [
-      { type: 'meta', emotion: 'joy', intensity: 1, hintLevel: 2 },
+      { type: 'meta', emotion: 'joy', intensity: 1, hintLevel: 2, elusion: true },
       { type: 'delta', text: 'Ya te lo dije: mira el bucle.' },
       { type: 'done', interactionId: `i-${REQUEST_ID}`, silent: false },
     ]);
@@ -280,6 +326,7 @@ Deno.test('the same request twice at once gets the answer kept first', async () 
       emotion: 'joy',
       intensity: 3,
       transcript: 'La primera.',
+      elusion: false,
     });
     return Promise.resolve({ status: 'duplicate' });
   };

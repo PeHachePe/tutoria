@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../src/app/data/supabase/database.types.ts';
 import { QuickJsSandbox } from '../_shared/quickjs-sandbox.ts';
-import { OpenAICompatibleProvider } from './llm-provider.ts';
+import { FallbackProvider, OpenAICompatibleProvider } from './llm-provider.ts';
 import { SupabaseAnswerStore } from './supabase-answer-store.ts';
 import { createTutorHandler } from './tutor.ts';
 
@@ -19,7 +19,15 @@ const apiKey = Deno.env.get('AI_API_KEY') || undefined;
 Deno.serve(
   createTutorHandler({
     store: new SupabaseAnswerStore(admin),
-    providerFor: (setting) => new OpenAICompatibleProvider({ ...setting, apiKey }),
+    providerFor: ({ baseUrl, model, fallbackModel }) => {
+      const main = new OpenAICompatibleProvider({ baseUrl, model, apiKey });
+      return fallbackModel
+        ? new FallbackProvider(
+            main,
+            new OpenAICompatibleProvider({ baseUrl, model: fallbackModel, apiKey }),
+          )
+        : main;
+    },
     // The same sandbox as `execute`: the student's code never runs outside it (D-042)
     sandbox: new QuickJsSandbox(),
   }),

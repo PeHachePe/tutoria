@@ -2,4 +2,6 @@
 export interface AiProviderSetting {
   readonly baseUrl: string;
   readonly model: string;
+  /** The model that answers when the main one fails, of the same provider (D-044). */
+  readonly fallbackModel?: string;
 }

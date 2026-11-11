@@ -219,6 +219,7 @@ export function interactionRow(
     prompt_version: 'v1',
     request_id: null,
     model: null,
+    rejected_answers: 0,
     created_at: '2026-09-01T08:05:00+00:00',
     ...overrides,
   };

@@ -79,7 +79,7 @@ export class SupabaseAnswerStore implements AnswerStore {
   async findAnswer(requestId: string): Promise<RecordedAnswer | null> {
     const { data, error } = await this.admin
       .from('tutor_interaction')
-      .select('id, attempt_id, hint_level, emotion, intensity, transcript')
+      .select('id, attempt_id, hint_level, emotion, intensity, transcript, elusion')
       .eq('request_id', requestId)
       .maybeSingle();
     if (error) throw new Error(`Reading the answer failed: ${error.message}`);
@@ -91,6 +91,7 @@ export class SupabaseAnswerStore implements AnswerStore {
         emotion: data.emotion,
         intensity: data.intensity as Intensity,
         transcript: data.transcript,
+        elusion: data.elusion,
       }
     );
   }
@@ -113,9 +114,11 @@ export class SupabaseAnswerStore implements AnswerStore {
       .maybeSingle();
     if (error) throw new Error(`Reading the AI provider failed: ${error.message}`);
     const value = data?.value as Partial<ProviderSetting> | null | undefined;
-    return typeof value?.baseUrl === 'string' && typeof value.model === 'string'
-      ? { baseUrl: value.baseUrl, model: value.model }
-      : null;
+    if (typeof value?.baseUrl !== 'string' || typeof value.model !== 'string') return null;
+    const { baseUrl, model, fallbackModel } = value;
+    return typeof fallbackModel === 'string' && fallbackModel !== model
+      ? { baseUrl, model, fallbackModel }
+      : { baseUrl, model };
   }
 
   async recordAnswer(answer: NewAnswer): Promise<RecordOutcome> {
@@ -133,6 +136,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       answer_prompt_version: answer.promptVersion,
       answer_model: answer.model,
       answer_silent: answer.answer === null,
+      answer_rejected: answer.rejected,
     });
     // Raised by record_tutor_interaction (20261110100600_tutor.sql) and its unique request id
     if (error?.code === '23505') return { status: 'duplicate' };

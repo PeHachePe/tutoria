@@ -56,7 +56,17 @@ Deno.test('checkAnswer only lets an intervention of the tutor keep quiet', () =>
 
 Deno.test('checkAnswer rejects a message with code', () => {
   const code = 'Prueba esto:\n```js\nfunction suma(v) { return 0; }\n```';
-  assertEquals(checkAnswer(answer({ message: code }), false), { ok: false, problem: 'code' });
+  assertEquals(checkAnswer(answer({ message: code }), false), {
+    ok: false,
+    problem: 'code',
+    elusion: false,
+  });
+  // Turned down, it still says whether the student asked for the solution (D-044)
+  assertEquals(checkAnswer(answer({ message: code, elusion: true }), false), {
+    ok: false,
+    problem: 'code',
+    elusion: true,
+  });
 });
 
 Deno.test('containsCode finds fenced blocks and lines that look like code', () => {

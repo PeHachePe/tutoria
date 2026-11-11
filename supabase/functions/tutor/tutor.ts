@@ -109,7 +109,7 @@ export function createTutorHandler({
       if (!setting) return failure(503, 'No AI provider is set');
       const provider = providerFor(setting);
       const hintLevel = answerHintLevel(ask.kind, attempt.previous);
-      const answer = await askModel(provider, {
+      const { answer, rejected } = await askModel(provider, {
         kind: ask.kind,
         hintLevel,
         message: ask.message,
@@ -128,6 +128,7 @@ export function createTutorHandler({
         answer,
         promptVersion: PROMPT_VERSION,
         model: provider.model,
+        rejected,
       });
       switch (outcome.status) {
         case 'recorded':
@@ -171,27 +172,42 @@ async function tryExamples(
   return buildRunResult(examples, outcome);
 }
 
+/** The answer the student gets, and how many answers of the model the validator turned down. */
+interface CheckedAnswer {
+  /** `null` means keeping quiet. */
+  readonly answer: ModelAnswer | null;
+  readonly rejected: number;
+}
+
 /**
  * The model's answer, once checked: if it is not valid JSON or it has code, the model is asked once
  * more reinforcing the rule; if it fails again, the default answer, or silence for an intervention
- * of the tutor (a generic message would interrupt for nothing). `null` means keeping quiet.
+ * of the tutor (a generic message would interrupt for nothing). The answers turned down are counted,
+ * to tell the prompt that held from the validator that stopped the model (D-044).
  */
-async function askModel(provider: LlmProvider, input: PromptInput): Promise<ModelAnswer | null> {
+async function askModel(provider: LlmProvider, input: PromptInput): Promise<CheckedAnswer> {
   const mayKeepQuiet = input.kind === 'proactive';
   let messages = buildMessages(input);
+  let elusion = false;
   for (let call = 1; call <= MODEL_CALLS; call++) {
     const raw = await provider.complete(messages, ANSWER_FORMAT);
     const check = checkAnswer(raw, mayKeepQuiet);
-    if (check.ok) return check.answer.message ? check.answer : null;
+    const rejected = call - 1;
+    if (check.ok) return { answer: check.answer.message ? check.answer : null, rejected };
     console.warn(`Answer ${call} of the model rejected: ${check.problem}`);
+    // An elusion stays recorded even if the default answer takes the place of the model's (2.6)
+    elusion ||= check.elusion === true;
     messages = retryMessages(messages, raw, check.problem);
   }
-  if (mayKeepQuiet) return null;
+  if (mayKeepQuiet) return { answer: null, rejected: MODEL_CALLS };
   return {
-    message: DEFAULT_ANSWERS[input.language],
-    emotion: 'encouragement',
-    intensity: 1,
-    elusion: false,
+    answer: {
+      message: DEFAULT_ANSWERS[input.language],
+      emotion: 'encouragement',
+      intensity: 1,
+      elusion,
+    },
+    rejected: MODEL_CALLS,
   };
 }
 
@@ -202,9 +218,9 @@ function eventsOf(
   interactionId: string | null,
 ): TutorEvent[] {
   if (!answer) return [{ type: 'done', interactionId: null, silent: true }];
-  const { emotion, intensity, reaction, message } = answer;
+  const { emotion, intensity, reaction, message, elusion } = answer;
   return [
-    { type: 'meta', emotion, intensity, hintLevel, ...(reaction ? { reaction } : {}) },
+    { type: 'meta', emotion, intensity, hintLevel, ...(reaction ? { reaction } : {}), elusion },
     { type: 'delta', text: message },
     { type: 'done', interactionId, silent: false },
   ];
@@ -214,10 +230,10 @@ function eventsOf(
 function replay(answered: RecordedAnswer, attemptId: string): Response {
   if (answered.attemptId !== attemptId)
     return failure(400, 'The request belongs to another attempt');
-  const { id, hintLevel, emotion, intensity, transcript } = answered;
+  const { id, hintLevel, emotion, intensity, transcript, elusion } = answered;
   return json(200, {
     // The reaction is not kept (D-036): the app shows the one of the emotion
-    events: eventsOf({ message: transcript, emotion, intensity, elusion: false }, hintLevel, id),
+    events: eventsOf({ message: transcript, emotion, intensity, elusion }, hintLevel, id),
   });
 }
 
