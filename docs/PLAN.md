@@ -1342,6 +1342,8 @@ Probado con Supabase local en el 2.5c, el tutor repetía la misma pregunta a un 
 🧪 Deno: el historial como turnos, el código numerado, el validador con la firma vacía y la subida de nivel. Batería: `--quick` con los casos nuevos y los de elusión.
 ✅ Con Supabase local, la conversación del «no me acuerdo» termina en el esqueleto, y un fallo de un bucle recibe una pista que señala su línea.
 
+- **Hecho así (D-049):** `isStuckMessage()`, `raisesHintLevel()` y `skeletonBlock()` en `tutor-contract.ts`; dos atascos seguidos suben el nivel (desde 0, al 2) y el chat lo dice con «Más ayuda · nivel N»; el esqueleto lo escribe el servidor a partir del campo `skeleton` del modelo (los nombres de los parámetros), y el validador acepta además un bloque con solo la firma vacía; notas deterministas en la petición (atasco y código que supera los ejemplos); bloques de código en el chat con «Copiar» (`CodeBlock`, `TutorMessage`, `splitCodeBlocks()`), también en `/dev/ui`; tutor simulado con el esqueleto. Batería: C4, C5 y C6 con comprobación automática (`check`, veredicto «no cumple»). Prompt v3 con `gemini-3.5-flash-lite`; `gemini-3.8-flash` no tiene cuota en el plan gratuito y se compara en el 3.1.
+
 **2.5e · Herramientas del tutor y WebMCP (≈6 h)** · D-047 · a petición del autor, después del 2.5d y antes de la beta (3.1), para la demo
 
 Un único registro de herramientas en Angular, con el formato de WebMCP (nombre, descripción, `inputSchema` con JSON Schema y `execute`), con dos usos:

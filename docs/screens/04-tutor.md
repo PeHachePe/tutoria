@@ -21,9 +21,9 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Cabecera:** la mascota pequeña (en cuanto hay conversación), «Tutor» y el nivel de pista: tres escalones que se llenan y su nombre («Pista nivel 2 de 3 · Concepto», o «Sin pistas pedidas»).
 - **Conversación:**
   - las preguntas del alumno a la derecha y las respuestas del tutor a la izquierda, cada una con su hora;
-  - antes de cada pista, la etiqueta «Pista · nivel N»; antes de una intervención por iniciativa del tutor, «El tutor se acerca»;
+  - antes de cada pista, la etiqueta «Pista · nivel N»; antes de una intervención por iniciativa del tutor, «El tutor se acerca»; cuando el alumno dice otra vez que está atascado («no sé», «no me acuerdo») y el servidor sube el nivel sin que pulse «Pedir pista», «Más ayuda · nivel N» (2.5d);
   - un separador con el día («Hoy» o la fecha) cuando cambia;
-  - el código en línea de las respuestas, en monoespaciada;
+  - el código en línea de las respuestas, en monoespaciada, y los bloques de código (el esqueleto vacío de la función, lo único que da el tutor, 2.5d) aparte, con su lenguaje y «Copiar» («Copiado» durante dos segundos, anunciado a los lectores de pantalla); las líneas largas se parten, sin desplazamiento lateral;
   - se desplaza por dentro y se queda abajo mientras crece.
 - **Sin conversación:** la mascota grande, «¡Hola, Lucía!», «Pregúntame lo que necesites o pide una pista. No te daré la solución, pero te ayudaré a encontrarla» y dos preguntas sugeridas. La primera depende del intento: «¿Por dónde empiezo?», «¿Por qué falla una de las pruebas?» o «¿Se puede mejorar mi código?». La segunda es siempre «No entiendo el enunciado».
 - **Pie:** «Pedir pista» («Otra pista» en el nivel 3), con un tooltip que dice qué dará el siguiente nivel; debajo, el campo «Pregunta al tutor» con el botón de enviar y la ayuda «Intro para enviar; Mayús + Intro, nueva línea».

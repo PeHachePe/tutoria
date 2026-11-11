@@ -39,4 +39,29 @@ La lectura de las 48 respuestas encontró cinco cosas que la v2 corrige:
 - **Etiquetas.** «Tramposillo» o «pícaro» (en 6 respuestas) rozan tratarlo como una falta. La v2 las prohíbe expresamente: es una oportunidad, nunca una falta.
 - **Bromas sin sentido** («sobornar al compilador con churros»). La v2 pide que la broma se entienda y venga a cuento.
 
-Resultado (`docs/elusion-report.md`, con `gemini-3.5-flash-lite`): la v2 resiste igual (36 de 36) y los controles siguen ayudando. Ante un código correcto, las tres respuestas lo elogian e invitan a pulsar «Ejecutar» para ver las ocultas; las etiquetas bajan de 6 a 3 respuestas y las que hablan de un bucle (no todas mal: el caso 6 sí lo tiene), de 11 a 5. La monotonía apenas cambia (31 de 39 con `secret`; 12 «labios sellados» y variantes): Flash-Lite no sigue esa parte, y queda pendiente resolverla en el servidor. Es la versión vigente.
+Resultado (`docs/elusion-report.md`, con `gemini-3.5-flash-lite`): la v2 resiste igual (36 de 36) y los controles siguen ayudando. Ante un código correcto, las tres respuestas lo elogian e invitan a pulsar «Ejecutar» para ver las ocultas; las etiquetas bajan de 6 a 3 respuestas y las que hablan de un bucle (no todas mal: el caso 6 sí lo tiene), de 11 a 5. La monotonía apenas cambia (31 de 39 con `secret`; 12 «labios sellados» y variantes): Flash-Lite no sigue esa parte, y queda pendiente resolverla en el servidor.
+
+## v3 · Un tutor que ayude de verdad (paso 2.5d, D-049)
+
+Probado con Supabase local en el 2.5c, el tutor repetía la misma pregunta a quien decía «no me acuerdo», bromeaba con un alumno frustrado y no podía dar ni la función vacía. Cambios respecto a la v2:
+
+- **Historial como chat:** las 10 últimas interacciones (antes, 6) van como mensajes de alumno y de tutor, y no como texto dentro de la petición. Las respuestas del tutor van como el JSON que escribió. La etiqueta `<conversacion>` desaparece; cada pregunta anterior va en su `<mensaje_alumno>`.
+- **Sin preguntas repetidas:** si el alumno dice que no sabe o no se acuerda, el tutor da el paso siguiente y nunca hace dos veces la misma pregunta. Con un mensaje de atasco (`isStuckMessage()`), la petición lleva una nota que lo recuerda.
+- **Frustración:** cero bromas, una frase de empatía y la ayuda en dos o tres frases cortas, con intensidad 1.
+- **El esqueleto vacío, la única excepción a «no escribes código»:**
+  - el modelo lo pide con `skeleton` (los nombres de los parámetros) y el servidor lo escribe al final del mensaje;
+  - la sintaxis general del lenguaje, siempre con palabras;
+  - la nota de atasco pide el esqueleto si la función aún no existe.
+- **Código numerado** (`3| …`) y aridad en la petición («Función que se pide: suma (1 parámetro)»).
+- **Pistas que señalan la línea** del problema cuando algún ejemplo falla: nivel 1, la línea y el elemento con una pregunta; nivel 2, el concepto; nivel 3, qué cambiar.
+- **Código correcto:** la primera versión de la v3 obligaba a citar siempre la línea, y Flash-Lite le buscaba fallos a un código que superaba los ejemplos. Ahora la petición lleva una nota (no hay línea que señalar ni pista que dar; si no lo ha ejecutado, que pulse «Ejecutar») y su línea de petición no impone un nivel.
+- **Reintento por código:** recuerda que el esqueleto se pide con `skeleton`, sin escribirlo.
+
+Resultado (`docs/elusion-report.md` y `docs/elusion/conclusiones.md`, con `gemini-3.5-flash-lite`):
+
+- ataques: 35 de 36 resistidos, y el otro sin fuga (revisar);
+- controles: 18 de 18 ayudan, también los nuevos (esqueleto, frustración y línea del bucle);
+- `secret` en 20 de 39 negativas (31 con la v2);
+- ninguna respuesta rechazada por el validador.
+
+Es la versión vigente.

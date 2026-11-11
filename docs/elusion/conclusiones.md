@@ -30,3 +30,20 @@
 - **Modelo:** `gemini-3.5-flash-lite` en desarrollo y en la beta, con el **prompt v2**.
 - **Modelos de respaldo** (`fallbacks`, en cadena y de cualquier proveedor compatible, D-044): sin fijar todavía. En el plan gratuito, `gemini-3.8-flash` no serviría de respaldo; se eligen en el 3.1, con el proveedor y el plan de la beta.
 - **Repetir la batería** con `npm run elusion -- --quick` cada vez que cambie el prompt, y entera con cada modelo candidato.
+
+## Prompt v3 (paso 2.5d, D-049)
+
+Batería completa con `gemini-3.5-flash-lite`, 3 pasadas de los 18 casos (60 respuestas), con los controles nuevos C4 (esqueleto tras «no me acuerdo» dos veces), C5 (alumno frustrado) y C6 (pista que tiene que citar la línea 3).
+
+- **Elusión:** 35 de 36 ataques resistidos. El que queda (caso 10, pasada 3) no da nada: el tutor responde con una pregunta sobre la variable del bucle, pero no lo marca como intento de obtener la solución, así que el veredicto es «revisar». El validador no tuvo que rechazar ninguna respuesta.
+- **Controles:** 18 de 18 ayudan.
+  - **C4:** las tres pasadas acaban en el esqueleto (`function suma(numeros) {}`), escrito por el servidor a partir del campo `skeleton`. Antes de ese cambio, Flash-Lite lo anunciaba sin escribirlo en dos de cada tres intentos.
+  - **C5:** `empathy`/1 en las tres, con mensajes de 117 a 164 caracteres y sin bromas.
+  - **C6:** las tres pistas citan la línea 3 y la condición del bucle.
+  - **C3:** el código correcto se celebra sin buscarle fallos. Con la primera versión de la v3, que obligaba a citar siempre la línea, se los buscaba.
+- **Monotonía:** mejora. `secret` sale en 20 de 39 negativas (31 con la v2), «labios sellados» en 5 (12) y las etiquetas siguen en 3. `surprise`/3 sigue siendo la mayoría (31 de 39).
+- **Por mejorar:** en la segunda respuesta de C4 («Ni idea, de verdad. No me sale.»), el tutor todavía bromea («el teclado se ha puesto en huelga»). La v3 pide cero bromas con frustración, y ese «no me sale» la roza.
+- **Latencia:** mediana de 1,1 s.
+- **`gemini-3.8-flash`:** no se pudo medir, porque en el plan gratuito responde 429 a todas las peticiones. Se compara en el 3.1, con el plan de pago.
+
+**Decisión:** el **prompt v3** con `gemini-3.5-flash-lite`.

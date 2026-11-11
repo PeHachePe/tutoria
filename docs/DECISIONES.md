@@ -1345,3 +1345,41 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Si GitHub tiene una regla de protección de `master` que exige el check `check`, conviene añadir también `e2e`, que ahora es otro job.
 
 **Aprobación:** el autor pidió «la mejor solución, que sirva a largo plazo y la que menos problemas dé», y que sea más rápida si se puede. Diseño, por delegación del autor.
+
+## D-049 · El tutor del 2.5d: el atasco sube el nivel y el esqueleto lo escribe el servidor (11/11/2026)
+
+**Contexto:** el paso 2.5d (D-047) pide un tutor que no repita la pregunta a quien dice «no me acuerdo», que no bromee con un alumno frustrado, que pueda dar la función vacía y que señale la línea del fallo. Al medirlo con la batería, `gemini-3.5-flash-lite` anunciaba a veces el esqueleto («aquí tienes la estructura») sin escribirlo, y, al pedirle que citara siempre la línea, le buscaba fallos a un código correcto. `gemini-3.8-flash` no se pudo comparar: en el plan gratuito su cuota es cero (429 en todas las peticiones).
+
+**Decisión:**
+
+- **El atasco, en el contrato compartido:** `isStuckMessage()` reconoce «no sé», «no me acuerdo», «ni idea», «I'm stuck», «no ho sé»… en los tres idiomas, sin tildes. Un «no se» suelto solo cuenta con un final que lo convierta en «no sé» («no se cómo seguir»), porque «no se ejecuta» no es atascarse. Lo usan el servidor, el `TutorStore` y el tutor simulado, como el resto del nivel (2.6).
+- **Dos atascos seguidos suben el nivel**, como «Pedir pista». Las intervenciones del tutor que haya entre medias no cortan la racha, y desde el nivel 0 se pasa directamente al 2. `reachedHintLevel()` cuenta también las respuestas que no son pistas cuando su nivel es 2 o más, algo que solo puede pasar por un atasco, así que el medidor y la pista siguiente lo tienen en cuenta. Las de nivel 1 no cuentan, de modo que nada cambia para quien no se atasca. El chat lo dice con «Más ayuda · nivel N» (`raisesHintLevel()`).
+- **El esqueleto lo escribe el servidor, no el modelo:**
+  - el modelo pide el esqueleto con el campo opcional `skeleton` (los nombres de los parámetros), y el servidor añade el bloque al final del mensaje con `skeletonBlock()`, una función del contrato;
+  - el bloque lleva tantos parámetros como argumentos tienen las pruebas, con los nombres del modelo si son identificadores simples y letras para los que falten;
+  - un `skeleton` mal formado se descarta: no es motivo para volver a preguntar al modelo;
+  - el validador sigue aceptando un bloque que el modelo escriba con solo la firma vacía del ejercicio, y rechaza cualquier otro código.
+- **Notas deterministas en la petición,** porque Flash-Lite obedece mejor lo que va en la petición que lo que dice la instrucción general:
+  - con un mensaje de atasco: el paso siguiente y, si aún no existe la función, que dé el esqueleto;
+  - con un código que supera los ejemplos: no hay línea que señalar ni pista que dar, y si no ha ejecutado ese código, que le invite a pulsar «Ejecutar». En ese caso, la línea de la petición no le impone un nivel.
+- **Historial como chat:** las 10 últimas interacciones van como mensajes de alumno y de tutor, y las respuestas del tutor como el JSON que escribió, para que siga respondiendo en ese formato.
+- **Código numerado** (`3| …`), y pistas que citan la línea solo cuando algún ejemplo falla.
+- **Bloques de código en el chat:** `splitCodeBlocks()`, `CodeBlock` (compartido, con «Copiar») y `TutorMessage`. Un bloque que todavía está llegando ya se muestra como bloque, y las líneas largas se parten.
+- **Modelo:** sigue `gemini-3.5-flash-lite`. La comparación con `gemini-3.8-flash` queda para el 3.1, con el plan de pago (ya estaba en pendientes).
+- **Batería:** controles C4 (esqueleto), C5 (frustración) y C6 (línea del bucle), con una comprobación automática (`check`) y el veredicto «no cumple». Con `--quick` ahora se ven las respuestas.
+
+**Alternativas:**
+
+- **Solo el validador, como decía el plan:** el modelo barato no escribe el bloque con fiabilidad, y lo que no se escribe tampoco se puede validar.
+- **Guardar los nombres de los parámetros en el ejercicio:** sería lo ideal (también para `insertSkeleton`, en el 2.5e), pero obliga a una migración, a repasar 42 ejercicios y a cambiar el formulario del docente. Queda en pendientes para el 4.3.
+- **Nombres genéricos siempre** (`a`, `b`): enseñan peor. El modelo los elige a partir del enunciado.
+- **Detectar la frustración con expresiones regulares:** la batería no lo necesitó (C5 cumple).
+- **Dejar la subida de nivel en manos del modelo:** no se podría comprobar ni mostrar en el medidor.
+
+**Consecuencias:**
+
+- Prompt v3 (`docs/prompt-history.md`). `ANSWER_FORMAT` gana `skeleton`, que es opcional.
+- El 2.5e puede reutilizar `skeletonBlock()` para `insertSkeleton`.
+- Pendientes: los nombres de los parámetros en el ejercicio (4.3) y el atasco en el chat como señal del panel docente (fase 4).
+
+**Aprobación:** el autor aprobó el plan con las mejoras propuestas («haz lo que creas mejor»). Que el servidor escriba el esqueleto, las notas deterministas y la etiqueta «Más ayuda» las decidió el agente por delegación, a la vista de la batería.
