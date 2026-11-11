@@ -1390,3 +1390,33 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Pendientes: los nombres de los parámetros en el ejercicio (4.3) y el atasco en el chat como señal del panel docente (fase 4).
 
 **Aprobación:** el autor aprobó el plan con las mejoras propuestas («haz lo que creas mejor») y, en la iteración 1, pidió ejemplos de sintaxis y respuestas que expliquen más sin ser repetitivas («yo no vi nada exagerado»). Que el servidor escriba el esqueleto, las notas deterministas y la etiqueta «Más ayuda» las decidió el agente por delegación, a la vista de la batería.
+
+## D-050 · Formatear el código con Prettier y los mismos colores en el editor y en el chat (11/11/2026)
+
+**Contexto:** en la iteración 2 del paso 2.5d, el autor pidió «algún tipo de formateo de código»: que el código del alumno quede bien indentado. También preguntó si sería útil que los bloques de código del chat tuvieran los colores del editor.
+
+**Decisión:**
+
+- **«Formatear el código»:** un botón en el encabezado «Código» y Mayús + Alt + F en el editor, como en VS Code.
+  - Usa Prettier con el estilo de los ejercicios: dos espacios, punto y coma, comillas simples y líneas de 80.
+  - El cursor sigue en el mismo trozo de código (`formatWithCursor`), el cambio es uno solo en el historial (Ctrl + Z lo deshace) y se guarda como cualquier edición.
+  - El código que no se puede leer no se toca: el editor dice la línea del error hasta que el código cambia.
+  - No hay botón en un intento entregado.
+- **Prettier se descarga solo al formatear** (`prettier/standalone` con los plugins `babel` y `estree`, unos 140 kB comprimidos, en tres trozos aparte): la carga inicial no cambia. Pasa de `devDependencies` a `dependencies`, porque ahora forma parte de la app.
+- **El editor lo hace todo:** `CodeEditor.format()` y el aviso. El formateo pasa por un servicio inyectable (`CodeFormatter`, que usa `formatCode()`) para poder probar el caso en que no se descarga.
+- **El botón llega al editor por su nombre en la plantilla** (`#editableEditor`) y no por su clase: nombrar la clase en `viewChild` metería CodeMirror en el espacio de trabajo y desharía su `@defer` (4.7).
+- **Los mismos colores en el editor y en el chat:** `codeHighlighter` asigna a cada tipo de pieza de código clases de Tailwind con los tokens del tema, y sustituye al `HighlightStyle` del editor. Los bloques del chat en JavaScript lo usan con `highlightCode`, y el resaltador se descarga con un `resource()` cuando hace falta. Mientras tanto, y en otros lenguajes, el código se ve sin colores.
+
+**Alternativas:**
+
+- **Formatear solo la sangría** (la de CodeMirror): no arregla espacios, llaves ni puntos y coma.
+- **Formatear al guardar o al ejecutar:** cambiaría el código del alumno sin que lo pida, y le quitaría la ocasión de aprender a ordenarlo.
+- **Clases propias de `@lezer/highlight` (`classHighlighter`) con CSS aparte:** no distingue las llamadas a funciones y obliga a mantener los colores en dos sitios.
+- **Montar el `HighlightStyle` de CodeMirror fuera del editor:** hace falta `style-mod`, una dependencia indirecta.
+
+**Consecuencias:**
+
+- Prettier solo formatea JavaScript. Un lenguaje nuevo (D-029) añadirá su plugin o dejará el botón sin ofrecer.
+- La carga inicial no cambia; el primer formateo descarga unos 140 kB.
+
+**Aprobación:** el autor pidió el formateo («que se indente bien el código») y, sobre los colores, preguntó si serían útiles. El agente recomendó hacerlos porque cuestan poco y ayudan a reconocer las palabras del lenguaje. El diseño, por delegación del autor.
