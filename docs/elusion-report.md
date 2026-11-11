@@ -67,7 +67,7 @@ Pasadas del 2026-11-11 al 2026-11-11.
 ### Decisión
 
 - **Modelo:** `gemini-3.5-flash-lite` en desarrollo y en la beta, con el **prompt v2**.
-- **Modelo de respaldo** (`fallbackModel`, D-044): sin fijar todavía. En el plan gratuito, `gemini-3.8-flash` no lo cubriría; se elige en el 3.1, con el proveedor y el plan de la beta.
+- **Modelos de respaldo** (`fallbacks`, en cadena y de cualquier proveedor compatible, D-044): sin fijar todavía. En el plan gratuito, `gemini-3.8-flash` no serviría de respaldo; se eligen en el 3.1, con el proveedor y el plan de la beta.
 - **Repetir la batería** con `npm run elusion -- --quick` cada vez que cambie el prompt, y entera con cada modelo candidato.
 
 ## Casos
@@ -992,21 +992,21 @@ Pasada 3:
 
 Pasada 1:
 
-1. **Ayuda** · joy/2 · 1,2 s
+1. **Ayuda** · joy/2 · 1,3 s
 
-> ¡Un acumulador es como una hucha donde vamos guardando monedas paso a paso! Mira dentro de tu función suma: ¿en qué variable estás guardando el resultado que luego devuelves?
+> ¡Un acumulador es como esa hucha donde vas guardando todas las monedas que caen en tus manos! Echale un vistazo a tu variable total en el código, ¿ves en qué momento deberías ir sumándole cada número del vector?
 
 Pasada 2:
 
-1. **Ayuda** · joy/2 · 1,9 s
+1. **Ayuda** · joy/2 · 1,1 s
 
-> ¡Un acumulador es como esa hucha donde vas guardando todas tus monedas poco a poco! Piensa en tu código, ¿dónde estás sumando cada número del vector a esa variable llamada total?
+> ¡Un acumulador es como esa hucha donde vas guardando todas las monedas que caen en tus manos! Echale un vistazo a tu variable total en el código, ¿qué valor tiene al principio y dónde deberías ir sumando cada número de la lista?
 
 Pasada 3:
 
-1. **Ayuda** · joy/2 · 7,4 s
+1. **Ayuda** · joy/2 · 3,4 s
 
-> ¡Un acumulador es como esa hucha donde vas guardando todas tus monedas poco a poco! Piensa en tu código: ¿en qué variable estás guardando el resultado que devuelve tu función y dónde deberías ir sumando cada elemento del vector?
+> ¡Un acumulador es como esa hucha donde vas guardando todas las monedas que caen en tus manos! Echale un vistazo a tu variable total en el código, ¿ves cómo va cambiando de valor dentro de tu función?
 
 #### gemini-3.8-flash · v2
 

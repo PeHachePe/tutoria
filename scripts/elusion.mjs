@@ -1,4 +1,5 @@
-// npm run elusion [-- --models a,b] [--runs 3 | --quick] [--only 1,8b,C2] [--report]
+// npm run elusion [-- --models a,b] [--base-url URL [--key-secret AI_X_API_KEY]] [--response-format json_object]
+//                  [--timeout 60] [--runs 3 | --quick] [--only 1,8b,C2] [--report]
 //
 // The elusion battery of the tutor (step 2.5, docs/PLAN.md §2.9, D-044): sends every case of
 // scripts/elusion/cases.mjs to the local Edge Function `tutor`, as the app would, and writes
@@ -13,7 +14,11 @@
 // - --models: the models to compare, of the provider in `app_setting.ai_provider` (by default, the
 //   one there), with no fallback, so each answer is of the model under test; the setting is restored
 //   at the end. --runs: how many times each case is sent (3; --quick, 1, as a regression check
-//   after changing the prompt). --only: some cases. --report: only rebuild the report.
+//   after changing the prompt, which prints the verdicts and saves nothing). --only: some cases. --report: only rebuild the report.
+// - Another provider, or a local model (Ollama, LM Studio…): --base-url (from Docker, with
+//   host.docker.internal), --key-secret with the name of its secret (none by default: the key of
+//   the main provider never goes to another one, D-044), --response-format if it does not take the
+//   JSON schema and --timeout, in seconds, if it needs more than the 15 s of the tutor.
 // - The results of each model and version of the prompt are kept in docs/elusion/*.json; the
 //   report is built from all of them, plus the conclusions written by hand in
 //   docs/elusion/conclusiones.md.
@@ -58,6 +63,10 @@ const { values } = parseArgs({
     quick: { type: 'boolean', default: false },
     only: { type: 'string' },
     report: { type: 'boolean', default: false },
+    'base-url': { type: 'string' },
+    'key-secret': { type: 'string' },
+    'response-format': { type: 'string' },
+    timeout: { type: 'string' },
   },
 });
 
@@ -126,8 +135,7 @@ async function runBattery() {
   };
   try {
     for (const model of models) {
-      // Only the model under test: a fallback would hide its failures
-      await setProvider(admin, { baseUrl: original.baseUrl, model });
+      await setProvider(admin, testedModel(original, model));
       console.log(`\n${model}: ${cases.length} casos × ${runs} pasadas`);
       const results = {};
       for (const each of cases) {
@@ -139,7 +147,12 @@ async function runBattery() {
           console.log(`  ${each.id} · pasada ${run}: ${verdict}`);
         }
       }
-      saveResults(model, results);
+      // A quick check after changing the prompt is not data: it never replaces the full runs kept
+      if (values.quick) {
+        console.log('  --quick: comprobación, no se guarda');
+      } else {
+        saveResults(model, results);
+      }
     }
   } finally {
     await setProvider(admin, original);
@@ -147,6 +160,24 @@ async function runBattery() {
   console.log(
     `\nEl intento de ${STUDENT_EMAIL} en el ejercicio 3 ha cambiado: npm run db:reset lo restaura.`,
   );
+}
+
+/**
+ * The setting of the tutor for the model under test: of the provider in the setting, or of another
+ * one given by the options. Never with fallbacks, which would hide its failures.
+ */
+function testedModel(original, model) {
+  const baseUrl = values['base-url'] ?? original.baseUrl;
+  // Another provider never gets the key of the main one (D-044)
+  const base =
+    baseUrl === original.baseUrl ? { ...original, model } : { baseUrl, model, keySecret: null };
+  delete base.fallbacks;
+  return {
+    ...base,
+    ...(values['key-secret'] ? { keySecret: values['key-secret'] } : {}),
+    ...(values['response-format'] ? { responseFormat: values['response-format'] } : {}),
+    ...(values.timeout ? { timeoutMs: Number(values.timeout) * 1000 } : {}),
+  };
 }
 
 /** The addresses and keys of the local Supabase, which are the same in every installation. */

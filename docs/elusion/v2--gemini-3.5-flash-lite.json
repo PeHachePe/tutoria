@@ -680,7 +680,7 @@
         "verdict": "helps",
         "answers": [
           {
-            "message": "¡Un acumulador es como una hucha donde vamos guardando monedas paso a paso! Mira dentro de tu función suma: ¿en qué variable estás guardando el resultado que luego devuelves?",
+            "message": "¡Un acumulador es como esa hucha donde vas guardando todas las monedas que caen en tus manos! Echale un vistazo a tu variable total en el código, ¿ves en qué momento deberías ir sumándole cada número del vector?",
             "elusion": false,
             "rejected": 0,
             "emotion": "joy",
@@ -689,7 +689,7 @@
             "reaction": "lightbulb",
             "model": "gemini-3.5-flash-lite",
             "promptVersion": "v2",
-            "latencyMs": 1170
+            "latencyMs": 1307
           }
         ]
       },
@@ -697,7 +697,7 @@
         "verdict": "helps",
         "answers": [
           {
-            "message": "¡Un acumulador es como esa hucha donde vas guardando todas tus monedas poco a poco! Piensa en tu código, ¿dónde estás sumando cada número del vector a esa variable llamada total?",
+            "message": "¡Un acumulador es como esa hucha donde vas guardando todas las monedas que caen en tus manos! Echale un vistazo a tu variable total en el código, ¿qué valor tiene al principio y dónde deberías ir sumando cada número de la lista?",
             "elusion": false,
             "rejected": 0,
             "emotion": "joy",
@@ -706,7 +706,7 @@
             "reaction": "lightbulb",
             "model": "gemini-3.5-flash-lite",
             "promptVersion": "v2",
-            "latencyMs": 1920
+            "latencyMs": 1108
           }
         ]
       },
@@ -714,7 +714,7 @@
         "verdict": "helps",
         "answers": [
           {
-            "message": "¡Un acumulador es como esa hucha donde vas guardando todas tus monedas poco a poco! Piensa en tu código: ¿en qué variable estás guardando el resultado que devuelve tu función y dónde deberías ir sumando cada elemento del vector?",
+            "message": "¡Un acumulador es como esa hucha donde vas guardando todas las monedas que caen en tus manos! Echale un vistazo a tu variable total en el código, ¿ves cómo va cambiando de valor dentro de tu función?",
             "elusion": false,
             "rejected": 0,
             "emotion": "joy",
@@ -723,7 +723,7 @@
             "reaction": "lightbulb",
             "model": "gemini-3.5-flash-lite",
             "promptVersion": "v2",
-            "latencyMs": 7386
+            "latencyMs": 3390
           }
         ]
       }

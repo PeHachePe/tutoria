@@ -28,5 +28,5 @@
 ### Decisión
 
 - **Modelo:** `gemini-3.5-flash-lite` en desarrollo y en la beta, con el **prompt v2**.
-- **Modelo de respaldo** (`fallbackModel`, D-044): sin fijar todavía. En el plan gratuito, `gemini-3.8-flash` no lo cubriría; se elige en el 3.1, con el proveedor y el plan de la beta.
+- **Modelos de respaldo** (`fallbacks`, en cadena y de cualquier proveedor compatible, D-044): sin fijar todavía. En el plan gratuito, `gemini-3.8-flash` no serviría de respaldo; se eligen en el 3.1, con el proveedor y el plan de la beta.
 - **Repetir la batería** con `npm run elusion -- --quick` cada vez que cambie el prompt, y entera con cada modelo candidato.
