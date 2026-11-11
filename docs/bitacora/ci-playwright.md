@@ -57,7 +57,7 @@ Unitarios: 1070 (nuevos: 0) · e2e: 38 (el de login, corregido). En local, la su
 - Preguntó por las alternativas y por Cypress, y pidió la solución más duradera, con menos problemas y más rápida.
 - Relanzó el CI: la instalación pasó y destapó el test de login del 2.5c.
 - Liberó espacio en C: y preguntó si los e2e en local necesitan Docker ahora: no, solo el CI usa el contenedor.
-- **Cierre:** el autor hizo los tres commits; queda ver el primer CI con el contenedor al subirlos.
+- **Cierre:** el autor hizo los commits y los subió; el primer CI con el contenedor pasó con sus tres jobs (`check`, `playwright-version` y `e2e`).
 
 ## Capturas
 
