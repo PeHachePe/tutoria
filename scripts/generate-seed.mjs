@@ -4,45 +4,22 @@
 // so both worlds share their data (4.3). With --check it only compares and fails if the file is
 // out of date: `npm run check` uses it.
 //
-// Node runs the TypeScript fixtures directly (type stripping), so they may only use erasable
-// syntax (no enums) and must import types with `import type`. Angular imports have no extension,
-// so a resolve hook tries `.ts` when a relative import is not found.
+// The TypeScript fixtures are imported directly (scripts/import-app-ts.mjs).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { registerHooks } from 'node:module';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
+import { importAppTs } from './import-app-ts.mjs';
 import { buildSeedSql } from './seed/sql.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const FIXTURES = path.join(ROOT, 'src', 'app', 'data', 'mock', 'fixtures');
 const OUTPUT = path.join(ROOT, 'supabase', 'seed.sql');
 
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    try {
-      return nextResolve(specifier, context);
-    } catch (error) {
-      if (specifier.startsWith('.') && !path.extname(specifier)) {
-        return nextResolve(`${specifier}.ts`, context);
-      }
-      throw error;
-    }
-  },
-  // The fixtures are ES modules; saying so spares Node from guessing (and warning about it).
-  load(url, context, nextLoad) {
-    return nextLoad(
-      url,
-      url.endsWith('.ts') ? { ...context, format: 'module-typescript' } : context,
-    );
-  },
-});
-
 const { values } = parseArgs({ options: { check: { type: 'boolean', default: false } } });
-const { SEED } = await import(pathToFileURL(path.join(FIXTURES, 'seed.ts')).href);
+const { SEED } = await importAppTs(path.join(FIXTURES, 'seed.ts'));
 // The same test password as the mock data: these accounts only exist in local Supabase.
-const { MOCK_PASSWORD } = await import(pathToFileURL(path.join(FIXTURES, 'users.ts')).href);
+const { MOCK_PASSWORD } = await importAppTs(path.join(FIXTURES, 'users.ts'));
 const sql = buildSeedSql(SEED, MOCK_PASSWORD);
 
 if (values.check) {

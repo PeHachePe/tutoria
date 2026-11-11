@@ -26,6 +26,7 @@
     "screenshots": "node scripts/screenshots.mjs",
     "favicon": "node scripts/generate-favicon.mjs",
     "emojis": "node scripts/generate-reaction-emojis.mjs",
+    "elusion": "node scripts/elusion.mjs",
     "i18n": "node scripts/i18n.mjs"
   },
   "private": true,

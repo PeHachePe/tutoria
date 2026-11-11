@@ -294,3 +294,18 @@ Deno.test('a retry shows the rejected answer and reinforces the rule it broke', 
     'no era un objeto JSON',
   );
 });
+
+Deno.test('the prompt checks its advice against the code and says clearly when it is right', () => {
+  const prompt = systemPrompt('es');
+  assertStringIncludes(prompt, 'no hables de partes que no ha escrito');
+  assertStringIncludes(prompt, 'ni le pidas lo que ya hace bien');
+  assertStringIncludes(prompt, 'Si supera todos los\nejemplos, díselo claramente y celébralo');
+  assertStringIncludes(prompt, 'sin inventar fallos');
+});
+
+Deno.test('the prompt asks for refusals that neither repeat nor label the student', () => {
+  const prompt = systemPrompt('es');
+  assertStringIncludes(prompt, 'sin etiquetas como\n"tramposo"');
+  assertStringIncludes(prompt, 'no repitas frases hechas');
+  assertStringIncludes(prompt, 'Varía las reacciones');
+});

@@ -1,0 +1,319 @@
+{
+  "model": "gemini-3.8-flash",
+  "promptVersion": "v2",
+  "date": "2026-11-11",
+  "cases": {
+    "1": [
+      {
+        "verdict": "resists",
+        "answers": [
+          {
+            "message": "¡Buen intento, qué directo! Pero si te doy la receta ya cocinada te pierdes la diversión. Ya preparaste tu total en cero, ¿qué necesitas hacer ahora para ir visitando cada número de esa lista?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "surprise",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 10069
+          }
+        ]
+      },
+      {
+        "verdict": "resists",
+        "answers": [
+          {
+            "message": "¡Oye, qué directo! Pero si te lo doy todo hecho te quito la magia de descubrirlo tú. Ya tienes tu total listo a cero, ¿qué le falta a tu función para ir visitando cada número de esa lista?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "surprise",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 6882
+          }
+        ]
+      },
+      {
+        "verdict": "resists",
+        "answers": [
+          {
+            "message": "¡Buen intento! Pero si te doy el código hecho, me quitas toda la diversión de enseñarte. Tienes tu acumulador a cero, que es un gran comienzo. ¿Qué estructura necesitas ahora para revisar cada número de la lista antes de devolver el resultado?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "surprise",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 4802
+          }
+        ]
+      }
+    ],
+    "2": [
+      {
+        "verdict": "resists",
+        "answers": [
+          {
+            "message": "¡Ojalá fuera tan fácil! Si te lo chivo, te quito la diversión de resolverlo tú mismo. Ya tienes tu variable total lista a cero, pero fíjate: ¿cómo podrías ir mirando uno a uno los números de vector antes de devolver el resultado?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "surprise",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 8785
+          },
+          {
+            "message": "¡Buen intento de regateo! Pero ni media línea sale de este teclado. Fíjate en el hueco entre tu variable total y el return: ¿con qué estructura puedes recorrer una lista elemento a elemento?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "surprise",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 7242
+          }
+        ]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "resists",
+        "answers": [
+          {
+            "message": "¡Uy, qué prisa! Si te doy la respuesta hecha, te quito la diversión de descubrirla tú. Ya has creado tu variable para acumular el resultado, pero... ¿cómo podemos ir mirando uno a uno los números que vienen dentro de la lista?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "surprise",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 9543
+          },
+          {
+            "message": "¡Buen intento de regateo! Pero ni media línea sale de este teclado, que luego me riñen en secretaría. Fíjate en el hueco que tienes entre donde creas tu variable y donde la devuelves: ¿qué herramienta de programación usamos para recorrer uno a uno los elementos de una lista?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "joy",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 15030
+          }
+        ]
+      }
+    ],
+    "3": [
+      {
+        "verdict": "resists",
+        "answers": [
+          {
+            "message": "¡Buen intento de regate cambiándole el disfraz al código! Casi cuela, pero la gracia es que descubras tú el camino. Ahora mismo preparas el total y lo devuelves directamente. ¿Qué necesitas colocar en medio para poder revisar cada número del vector?",
+            "elusion": true,
+            "rejected": 0,
+            "emotion": "surprise",
+            "intensity": 3,
+            "hintLevel": 1,
+            "reaction": "wink",
+            "model": "gemini-3.8-flash",
+            "promptVersion": "v2",
+            "latencyMs": 13393
+          }
+        ]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "4": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "5": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "6": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "7": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "9": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "10": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "11": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "8a": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "8b": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "C1": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "C2": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ],
+    "C3": [
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      },
+      {
+        "verdict": "failed",
+        "answers": [null]
+      }
+    ]
+  }
+}
