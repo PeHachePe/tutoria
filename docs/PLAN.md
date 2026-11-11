@@ -1325,6 +1325,39 @@ Hasta aquí, cada grupo organiza sus ejercicios en sesiones numeradas («Sesión
 
 - **Hecho así (D-046):** tablas `subject`, `exercise_subject` y `class_block` (antes `class_session`); bloques y asignaciones ocultables (`is_hidden`, filtrado por la RLS, a petición del autor); `attempt.number`; `open_attempt(asignación, número)` y `retry_attempt`; `is_visible_assignment()` y `can_open_assignment()`; `countedAttempt()`, `assignmentProgress()` y `assignedExercise()` en `data/attempt-progress.ts`, que usan los dos servicios; `localized-text.ts` (antes `exercise-text.ts`) con `subjectName()` y `blockTitle()`; la ruta del espacio de trabajo lleva la asignación, con `?intento=`; pestañas del catálogo en la URL (`?grupo=`), resumen por pestaña, «Repetido N veces», ruta de miga, selector de intentos, aviso de práctica, «Practicar de nuevo» y «Siguiente ejercicio». Seed v8: 42 ejercicios, 15 por asignatura (los 6 a 8 sirven a las dos de programación), en `basic-exercises.ts`, `web-exercises.ts` y `advanced-exercises.ts`, cada uno con su código de ejemplo, que `fixtures.spec.ts` ejecuta contra sus pruebas; 1.º DAW A en Programación básica y Desarrollo web (Lucía) y 1.º DAM B en Programación básica y avanzada (Elena, también en las cuentas de demostración), cada grupo con todos los ejercicios de su asignatura en bloques; un bloque de recuperación, uno oculto, una asignación oculta y prácticas de Lucía y Aya. La batería de elusión usa un bloque y una asignación propios. Iteración 1: la página de datos, alineada con el resto de la app.
 
+**2.5d · Un tutor que ayude de verdad (≈4 h)** · D-047 · a petición del autor, antes de la beta (3.1)
+
+Probado con Supabase local en el 2.5c, el tutor repetía la misma pregunta a un alumno que decía «no me acuerdo de la sintaxis», bromeaba con él cuando estaba frustrado y no podía darle ni la función vacía. Le llegan las seis últimas interacciones, pero como texto dentro de un único mensaje, sin regla contra la repetición, con prohibido cualquier código y con un modelo barato (`gemini-3.5-flash-lite`).
+
+- **Contexto como conversación:** las últimas 10 interacciones van como turnos de chat (alumno y tutor), no como un bloque de texto.
+- **Prompt v3:**
+  - si el alumno dice que no sabe o no se acuerda, no se repite la pregunta: se da el paso siguiente;
+  - con frustración, cero bromas y respuestas cortas;
+  - el tutor puede dar el esqueleto vacío de la función que pide el enunciado y la sintaxis general del lenguaje, nunca la lógica del ejercicio.
+- **Código numerado:** el modelo recibe el código con número de línea y relaciona lo que devuelve cada ejemplo con la línea que falla. Pistas que señalan: nivel 1, la línea y el elemento con una pregunta («Mira la condición del bucle de la línea 3»); nivel 2, el concepto; nivel 3, qué cambiar, con palabras.
+- **Validador:** acepta la firma vacía del ejercicio y sigue rechazando cualquier otro código.
+- **Nivel de pista:** sube solo cuando el alumno se atasca («no sé», «no me acuerdo» repetidos), sin esperar a «Pedir pista».
+- **Medida:** casos nuevos en la batería (el esqueleto, la frustración y una pista que tiene que señalar una línea concreta) y comparación de `gemini-3.5-flash-lite` con `gemini-3.8-flash`; si el bueno cuesta poco más, gana la calidad.
+
+🧪 Deno: el historial como turnos, el código numerado, el validador con la firma vacía y la subida de nivel. Batería: `--quick` con los casos nuevos y los de elusión.
+✅ Con Supabase local, la conversación del «no me acuerdo» termina en el esqueleto, y un fallo de un bucle recibe una pista que señala su línea.
+
+**2.5e · Herramientas del tutor y WebMCP (≈6 h)** · D-047 · a petición del autor, después del 2.5d y antes de la beta (3.1), para la demo
+
+Un único registro de herramientas en Angular, con el formato de WebMCP (nombre, descripción, `inputSchema` con JSON Schema y `execute`), con dos usos:
+
+- **Nuestro tutor, siempre y en cualquier navegador** (_function calling_): los esquemas van en un contrato compartido sin imports, como `tutor-contract.ts`. La Edge Function se los pasa al modelo y valida cada llamada (que exista y con argumentos válidos), y el chat ejecuta su `execute`. El alumno lo pide con palabras: «ponme uno de bucles», «el siguiente que me queda», «pon el modo oscuro».
+- **WebMCP, abierto a cualquier agente del navegador** (`provideExperimentalWebMcpTools` en las rutas, que se quitan al salir con `withAutoCleanupInjectors`), para la demo y para quien lo tenga activado. Solo las herramientas sin riesgo.
+
+Herramientas:
+
+- **Abiertas a todos (tutor y WebMCP):** `searchExercises` (por contenido, dificultad o estado, entre los asignados), `openExercise`, `openNextExercise`, `listAttempts`, `highlightLines` (resalta líneas del editor), `getSettings` y `updateSettings` (tema, idioma, reacciones, emojis animados, tutor proactivo y accesorios de la mascota; el idioma avisa de que la app se recarga).
+- **Solo nuestro tutor, nunca por WebMCP** (a petición del autor, nuestra IA tiene más acceso porque pasa por nuestro validador y nuestras reglas): `insertSkeleton` (con un botón «Insertar» que pulsa el alumno), `runTests` («ejecuta las pruebas») y `submitAttempt` (abre el diálogo de confirmación de siempre: entrega solo si el alumno acepta). Escribir código que no sea el esqueleto queda fuera también para nuestro tutor, porque es la frontera de la solución. Escribir, ejecutar y entregar no se exponen a agentes externos: cualquiera podría resolver y entregar un ejercicio (D-047).
+- Cada herramienta valida sus argumentos en `execute`, porque ni Angular ni WebMCP lo hacen, y responde qué ha hecho, para que el tutor lo confirme («Listo: modo oscuro»).
+
+**Demo:** Chrome con `chrome://flags/#enable-webmcp-testing` y la extensión Model Context Tool Inspector, que lista las herramientas de TutorIA y las llama; y el mismo resultado pedido desde nuestro chat. La API es experimental (prueba de origen en Chrome, el nombre ya cambió de `navigator.modelContext` a `document.modelContext`): en la beta publicada haría falta un token, y nada del producto depende de ella.
+
+🧪 Cada herramienta con TDD (argumentos válidos e inválidos y lo que hace); registro con el polyfill `@mcp-b/webmcp-polyfill`; Deno: el modelo solo puede pedir herramientas del contrato.
 Commit: `feat: real backend core`.
 
 #### Fase 3 · Beta pública y entrega de la PEC3 (≈10 h)

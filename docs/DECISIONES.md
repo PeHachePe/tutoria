@@ -1287,3 +1287,33 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Los ejercicios abiertos por enlace con el id del ejercicio (rutas anteriores al 2.5c) ya no se encuentran: solo valían en desarrollo.
 
 **Aprobación:** el autor aprobó el plan ampliado («Sí, adelante») y pidió durante el paso ocultar bloques y ejercicios, otro alumno con otras asignaturas y el seed grande en este mismo paso. Las decisiones técnicas las tomó el agente por delegación del autor.
+
+## D-047 · Un tutor que ayude de verdad, y sus herramientas con WebMCP (11/11/2026)
+
+**Contexto:** el autor probó el tutor real con Supabase local en el 2.5c. A «no me acuerdo de cómo se empieza una función» respondía con la misma pregunta socrática una y otra vez, bromeaba con un alumno frustrado y no le daba ni la función vacía. El código mostraba por qué: el modelo recibe las seis últimas interacciones como texto dentro de un único mensaje, el prompt prohíbe cualquier código y no pide no repetirse, el nivel de pista solo sube con «Pedir pista» y el modelo es el barato (`gemini-3.5-flash-lite`). Además, el autor quiere que la IA señale fallos pequeños («mira la línea 3»), que pueda buscar y abrir ejercicios, cambiar los ajustes y, para la demo, usar WebMCP, que Angular 22 incluye de forma experimental (`provideExperimentalWebMcpTools`).
+
+**Decisión:**
+
+- **Paso 2.5d, antes de la beta:** historial como turnos de chat (10 interacciones), prompt v3 (sin repetir lo que el alumno dice no saber, sin bromas con frustración, esqueleto vacío y sintaxis general permitidos, nunca la lógica), código numerado y pistas que señalan la línea, validador que acepta solo la firma vacía, nivel que sube cuando el alumno se atasca y medida con la batería y con `gemini-3.8-flash`.
+- **Paso 2.5e, justo después del 2.5d (adelantado de la fase 6 a petición del autor, para la demo y porque comparte prompt y contrato con el 2.5d): un registro de herramientas con el formato de WebMCP y dos usos.** Lo usa nuestro tutor por _function calling_ (los esquemas en un contrato compartido; la Edge Function valida cada llamada), en cualquier navegador. Y WebMCP lo abre a cualquier agente del navegador, para la demo.
+- **Qué se abre a quién:**
+  - a todos: buscar y abrir ejercicios, el siguiente pendiente, los intentos, resaltar líneas y los ajustes;
+  - solo nuestro tutor: insertar el esqueleto, ejecutar las pruebas y entregar, siempre con un botón o el diálogo de confirmación que pulsa el alumno;
+  - nadie: escribir código que no sea el esqueleto.
+- Las herramientas validan sus argumentos en `execute`, porque ni Angular ni WebMCP lo hacen.
+
+**Alternativas:**
+
+- **Exponerlo todo por WebMCP:** el autor lo descartó («lo que sea más arriesgado, no»). Un agente del navegador actúa con la sesión del alumno, sin nuestro validador ni nuestras reglas, y podría resolver y entregar un ejercicio.
+- **Limitar WebMCP a «nuestro» agente:** no es posible. La página no sabe qué agente llama, y cualquier clave que viva en el navegador la puede leer el alumno. Solo el servidor garantiza que una acción la pide nuestra IA, y eso es el _function calling_ del tutor.
+- **Que nuestro tutor use WebMCP directamente:** vive en el servidor y no tiene acceso a la API del navegador. Por eso se comparte el formato y no la API.
+- **No tener herramientas y quedarse en el texto:** el tutor no podría señalar en el editor ni llevar al alumno a un ejercicio, que es lo que el autor pide.
+
+**Consecuencias:**
+
+- Pasos 2.5d y 2.5e en `docs/PLAN.md`.
+- WebMCP es experimental: en Chrome es una prueba de origen (en local, con el flag `enable-webmcp-testing`) y la API ya ha cambiado de nombre. Nada del producto depende de ella.
+- Un agente del navegador puede manejar la página a clics igualmente; la defensa de TutorIA es formativa (§2.8). Queda en pendientes registrar el ritmo de escritura como señal para el docente.
+- **WebMCP para el docente** (preguntar quién está atascado o asignar ejercicios desde su agente) es una idea para cuando exista su panel (fase 4).
+
+**Aprobación:** el autor pidió el arreglo del tutor, las herramientas (buscar, navegar y los ajustes) y WebMCP abierto a todos para la demo, sin lo arriesgado; y que nuestra IA tenga más acceso que los agentes externos. Arquitectura y reparto de herramientas, por delegación del autor.
