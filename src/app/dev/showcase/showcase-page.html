@@ -368,6 +368,19 @@
         }
       </div>
     </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+        <h3 class="text-title-medium">Bloque de código</h3>
+        <app-code-block [code]="skeletonSample" language="js" />
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+        <h3 class="text-title-medium">Respuesta del tutor con el esqueleto</h3>
+        <app-tutor-message
+          class="rounded-2xl rounded-ss-sm bg-surface-container-high px-3 py-2 text-body-medium"
+          [text]="tutorSample"
+        />
+      </div>
+    </div>
   </section>
 
   <section aria-labelledby="results-title" class="flex flex-col gap-3">

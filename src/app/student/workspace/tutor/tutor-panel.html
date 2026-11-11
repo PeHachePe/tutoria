@@ -145,6 +145,15 @@
               >
             </div>
           }
+          <!-- Stuck again: the server gave more help without «Pedir pista» (2.5d) -->
+          @if (item.raised && turn.hintLevel; as level) {
+            <p
+              class="mt-1 inline-flex items-center gap-1 self-center rounded-full bg-tertiary-container px-2.5 py-0.5 text-label-medium text-on-tertiary-container"
+            >
+              <mat-icon class="size-4! text-[1rem]!">trending_up</mat-icon>
+              <span i18n="@@tutor.moreHelp">Más ayuda · nivel {{ level }}</span>
+            </p>
+          }
           @switch (turn.trigger) {
             @case ('hint') {
               <p
@@ -182,8 +191,8 @@
             </div>
           } @else {
             <div class="flex max-w-[92%] flex-col items-start gap-0.5 self-start">
-              <p
-                class="rounded-2xl rounded-ss-sm bg-surface-container-high px-3 py-2 text-body-medium text-on-surface"
+              <div
+                class="min-w-0 max-w-full rounded-2xl rounded-ss-sm bg-surface-container-high px-3 py-2 text-body-medium text-on-surface"
               >
                 <span class="sr-only" i18n="@@tutor.tutorSays">Tutor:</span>
                 @if (turn.status === 'answering' && !turn.answer) {
@@ -194,27 +203,9 @@
                   ></span>
                   <span class="sr-only" i18n="@@tutor.typing">El tutor está escribiendo…</span>
                 } @else {
-                  <!-- pre-line: keeps the line breaks of the answer, not the spaces of this template -->
-                  <span class="whitespace-pre-line">
-                    @for (part of item.parts; track $index) {
-                      @if (part.code) {
-                        <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{
-                          part.text
-                        }}</code>
-                      } @else {
-                        {{ part.text }}
-                      }
-                    }
-                  </span>
-                  @if (turn.status === 'answering') {
-                    <span
-                      class="ms-0.5 inline-block h-[1em] w-0.5 animate-tutor-caret bg-current align-text-bottom motion-reduce:animate-none"
-                      aria-hidden="true"
-                      data-testid="tutor-caret"
-                    ></span>
-                  }
+                  <app-tutor-message [text]="turn.answer" [typing]="turn.status === 'answering'" />
                 }
-              </p>
+              </div>
               @if (turn.status === 'done') {
                 <time
                   class="text-label-small text-on-surface-variant"

@@ -12,7 +12,7 @@ import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
 import { MAX_CODE_LENGTH, minuteBefore, secondsToWait } from '../_shared/limits.ts';
 import type { AnswerStore, ProviderSetting, RecordedAnswer, TutorAttempt } from './answer-store.ts';
 import { type LlmProvider, ProviderError } from './llm-provider.ts';
-import { ANSWER_FORMAT, checkAnswer, type ModelAnswer } from './model-answer.ts';
+import { ANSWER_FORMAT, checkAnswer, type ModelAnswer, signatureOf } from './model-answer.ts';
 import {
   buildMessages,
   PROMPT_VERSION,
@@ -108,7 +108,7 @@ export function createTutorHandler({
       const setting = await store.providerSetting();
       if (!setting) return failure(503, 'No AI provider is set');
       const provider = providerFor(setting);
-      const hintLevel = answerHintLevel(ask.kind, attempt.previous);
+      const hintLevel = answerHintLevel(ask.kind, attempt.previous, ask.message);
       const { answer, rejected } = await askModel(provider, {
         kind: ask.kind,
         hintLevel,
@@ -187,11 +187,13 @@ interface CheckedAnswer {
  */
 async function askModel(provider: LlmProvider, input: PromptInput): Promise<CheckedAnswer> {
   const mayKeepQuiet = input.kind === 'proactive';
+  // The empty function of the exercise is the only code the tutor may write (2.5d)
+  const skeleton = signatureOf(input.attempt.exercise);
   let messages = buildMessages(input);
   let elusion = false;
   for (let call = 1; call <= MODEL_CALLS; call++) {
     const raw = await provider.complete(messages, ANSWER_FORMAT);
-    const check = checkAnswer(raw, mayKeepQuiet);
+    const check = checkAnswer(raw, mayKeepQuiet, skeleton);
     const rejected = call - 1;
     if (check.ok) return { answer: check.answer.message ? check.answer : null, rejected };
     console.warn(`Answer ${call} of the model rejected: ${check.problem}`);

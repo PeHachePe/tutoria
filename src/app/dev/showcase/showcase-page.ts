@@ -31,6 +31,9 @@ import { Splitter } from '../../shared/splitter/splitter';
 import type { SaveStatus } from '../../student/workspace/attempt-store';
 import { RunResults } from '../../student/workspace/code-zone/run-results';
 import { SaveIndicator } from '../../student/workspace/code-zone/save-indicator';
+import { TutorMessage } from '../../student/workspace/tutor/tutor-message';
+import { skeletonBlock } from '../../data/tutor';
+import { CodeBlock } from '../../shared/code-block/code-block';
 import { Brand } from '../../shared/brand/brand';
 import { CodeEditor } from '../../shared/code-editor/code-editor';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
@@ -87,6 +90,8 @@ import { ShowcaseTable } from './showcase-table';
     Skeleton,
     CodeEditor,
     SaveIndicator,
+    CodeBlock,
+    TutorMessage,
     RunResults,
     Splitter,
   ],
@@ -150,6 +155,13 @@ export class ShowcasePage {
     "const empty = sum([]) === 0 ? 'sí' : 'no';",
   ].join('\n');
   protected readonly saveStatuses: readonly SaveStatus[] = ['saving', 'saved', 'error'];
+  /** The empty skeleton the tutor may give a stuck student (2.5d), alone and in an answer. */
+  protected readonly skeletonSample = 'function sum(numbers) {\n}';
+  protected readonly tutorSample = [
+    'Sin prisa, vamos paso a paso. Así empieza la función que pide el enunciado, todavía vacía:',
+    skeletonBlock('sum', 1, ['numbers']),
+    'Entre las llaves irá tu código: mira la línea 3 y piensa qué tiene que devolver con `[1, 2, 3]`.',
+  ].join('\n');
 
   /** The results panel of the workspace (step 1.5) in its cases, with exercise 3. */
   protected readonly runSamples: readonly { title: string; result: RunResult }[] = [

@@ -337,6 +337,11 @@
     "myData.choices": "Tu decideixes",
     "myData.choices.text": "Als ajustos tries si el tutor t'escriu per iniciativa pròpia i si li parles amb la veu.",
     "myData.services.ai.title": "El model d'IA del tutor",
-    "myData.services.voice.title": "El reconeixement de veu"
+    "myData.services.voice.title": "El reconeixement de veu",
+    "codeBlock.copied": "Copiat",
+    "codeBlock.copy": "Copia",
+    "codeBlock.copiedAnnounce": "Codi copiat",
+    "codeBlock.label": "Codi",
+    "tutor.moreHelp": "Més ajuda · nivell {$INTERPOLATION}"
   }
 }

@@ -1,6 +1,12 @@
 import { assertEquals } from '@std/assert';
 
-import { type AnswerCheck, checkAnswer, containsCode } from './model-answer.ts';
+import {
+  type AnswerCheck,
+  checkAnswer,
+  containsCode,
+  type FunctionSignature,
+  signatureOf,
+} from './model-answer.ts';
 
 const answer = (fields: Record<string, unknown>) =>
   JSON.stringify({
@@ -94,4 +100,87 @@ Deno.test('containsCode lets words about the code through', () => {
   ]) {
     assertEquals(containsCode(message), false, message);
   }
+});
+
+const SUMA: FunctionSignature = { functionName: 'suma', parameters: 1 };
+
+Deno.test('containsCode lets through only the empty skeleton of the function asked for', () => {
+  for (const message of [
+    'Empieza así:\n```js\nfunction suma(vector) {\n}\n```\nDentro irá el recorrido del vector.',
+    '```javascript\nfunction suma( numeros ) {}\n```',
+    '```\nfunction suma(v) {\n\n}\n```',
+  ]) {
+    assertEquals(containsCode(message, SUMA), false, message);
+  }
+  assertEquals(
+    containsCode('```js\nfunction media(a, b) {\n}\n```', { functionName: 'media', parameters: 2 }),
+    false,
+  );
+});
+
+Deno.test('containsCode still finds any other code beside or inside the skeleton', () => {
+  for (const message of [
+    // Something in its body, however little
+    '```js\nfunction suma(vector) {\n  return 0;\n}\n```',
+    '```js\nfunction suma(vector) {\n  // recorre el vector\n}\n```',
+    // Another name, another number of parameters, a default value or an arrow function
+    '```js\nfunction sumar(vector) {\n}\n```',
+    '```js\nfunction suma(vector, n) {\n}\n```',
+    '```js\nfunction suma() {\n}\n```',
+    '```js\nfunction suma(vector = []) {\n}\n```',
+    '```js\nconst suma = (vector) => {\n};\n```',
+    // The skeleton without its block is a line of code, and code beside it is code
+    'function suma(vector) {\n}',
+    '```js\nfunction suma(vector) {\n}\n```\nY luego:\nlet total = 0',
+    '```js\nfunction suma(vector) {\n}\n```\n```js\nreturn total;\n```',
+  ]) {
+    assertEquals(containsCode(message, SUMA), true, message);
+  }
+  // Without the signature of the exercise, no skeleton is allowed
+  assertEquals(containsCode('```js\nfunction suma(vector) {\n}\n```'), true);
+});
+
+Deno.test('checkAnswer accepts the skeleton of the exercise and nothing else', () => {
+  const skeleton = 'Así se empieza:\n```js\nfunction suma(vector) {\n}\n```';
+  const check = checkAnswer(answer({ message: skeleton }), false, SUMA);
+  assertEquals(check.ok && check.answer.message, skeleton);
+  assertEquals(checkAnswer(answer({ message: skeleton }), false).ok, false);
+});
+
+Deno.test('checkAnswer writes the skeleton the model asks for under its message', () => {
+  const asked = (fields: Record<string, unknown>, signature = SUMA) => {
+    const check = checkAnswer(answer({ message: 'Así empieza:', ...fields }), false, signature);
+    return check.ok && check.answer.message;
+  };
+  assertEquals(
+    asked({ skeleton: ['vector'] }),
+    'Así empieza:\n```js\nfunction suma(vector) {\n}\n```',
+  );
+  // Names that are not plain are replaced, and the number of parameters is the exercise's
+  assertEquals(
+    asked({ skeleton: ['v = []', 'otro'] }),
+    'Así empieza:\n```js\nfunction suma(otro) {\n}\n```',
+  );
+  assertEquals(
+    asked({ skeleton: ['a', 'b'] }, { functionName: 'pow', parameters: undefined }),
+    'Así empieza:\n```js\nfunction pow(a, b) {\n}\n```',
+  );
+  // Not asked, asked without a signature, a wrong shape, or already written: nothing is added
+  assertEquals(asked({ skeleton: [] }), 'Así empieza:');
+  const check = checkAnswer(answer({ message: 'Hola', skeleton: ['v'] }), false);
+  assertEquals(check.ok && check.answer.message, 'Hola');
+  assertEquals(asked({ skeleton: 'vector' }), 'Así empieza:');
+  const written = 'Así:\n```js\nfunction suma(vector) {\n}\n```';
+  assertEquals(asked({ message: written, skeleton: ['vector'] }), written);
+  // A tutor that keeps quiet adds nothing
+  const quiet = checkAnswer(answer({ message: '', skeleton: ['v'] }), true, SUMA);
+  assertEquals(quiet.ok && quiet.answer.message, '');
+});
+
+Deno.test('signatureOf takes the number of parameters from the tests', () => {
+  assertEquals(signatureOf({ functionName: 'suma', tests: [{ input: [[1]] }] }), SUMA);
+  assertEquals(signatureOf({ functionName: 'nada', tests: [] }), {
+    functionName: 'nada',
+    parameters: undefined,
+  });
 });

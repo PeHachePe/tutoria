@@ -108,18 +108,25 @@ export type TutorEvent =
       readonly silent: boolean;
     };
 
-/** What the level depends on: the earlier turns of the attempt, by kind and level. */
+/** What the level depends on: the earlier turns of the attempt, by kind, level and what was said. */
 export interface LeveledTurn {
   readonly trigger: TutorTrigger;
   /** Null while the answer has not said it. */
   readonly hintLevel: HintLevel | null;
+  /** What the student wrote; null for a hint or an intervention of the tutor. */
+  readonly studentMessage: string | null;
 }
 
-/** The level «Pedir pista» has reached: the highest of the hints so far, 0 before the first. */
+/**
+ * The level the help has reached: the highest of the hints so far, 0 before the first. An answer that
+ * was not a hint counts once it went past level 1, which only being stuck does (2.5d).
+ */
 export function reachedHintLevel(previous: readonly LeveledTurn[]): HintLevel | 0 {
   return previous.reduce<HintLevel | 0>(
     (level, turn) =>
-      turn.trigger === 'hint' && turn.hintLevel !== null && turn.hintLevel > level
+      turn.hintLevel !== null &&
+      (turn.trigger === 'hint' || turn.hintLevel > 1) &&
+      turn.hintLevel > level
         ? turn.hintLevel
         : level,
     0,
@@ -128,11 +135,96 @@ export function reachedHintLevel(previous: readonly LeveledTurn[]): HintLevel | 
 
 /**
  * The level of the next answer, decided by the server (2.6): a hint raises it, up to 3; a question
- * or an intervention of the tutor is answered at the current one, at least 1.
+ * or an intervention of the tutor is answered at the current one, at least 1. Saying again that they
+ * are stuck («no sé», «no me acuerdo») raises it too, without waiting for «Pedir pista» (2.5d).
  */
-export function answerHintLevel(kind: TutorTrigger, previous: readonly LeveledTurn[]): HintLevel {
+export function answerHintLevel(
+  kind: TutorTrigger,
+  previous: readonly LeveledTurn[],
+  message?: string,
+): HintLevel {
   const reached = reachedHintLevel(previous);
+  const current = Math.max(reached, 1);
+  if (kind === 'hint') return Math.min(reached + 1, MAX_HINT_LEVEL) as HintLevel;
+  if (kind === 'question' && stuckAgain(previous, message)) {
+    return Math.min(current + 1, MAX_HINT_LEVEL) as HintLevel;
+  }
+  return current as HintLevel;
+}
+
+/** Opens and closes a block of code in an answer, as the chat shows it. */
+const CODE_FENCE = '```';
+
+/** A name a parameter can have: a plain identifier, no default value nor destructuring. */
+const PARAMETER_NAME = /^[A-Za-z_$][\w$]*$/;
+
+/** For the parameters the suggested names do not cover. */
+const FALLBACK_PARAMETER_NAMES = 'abcdefgh';
+
+/**
+ * The empty skeleton of a function in a block of code (2.5d): its signature and its closing brace,
+ * nothing inside. It is the only code the tutor gives, and the server writes it, never the model: with
+ * the names the model suggests when they are plain identifiers, and letters for any missing.
+ */
+export function skeletonBlock(
+  functionName: string,
+  parameters: number,
+  names: readonly string[] = [],
+): string {
+  const valid = names.filter((name) => PARAMETER_NAME.test(name));
+  const chosen = Array.from(
+    { length: parameters },
+    (_, index) => valid[index] ?? FALLBACK_PARAMETER_NAMES[index],
+  );
+  return [
+    `${CODE_FENCE}js`,
+    `function ${functionName}(${chosen.join(', ')}) {`,
+    '}',
+    CODE_FENCE,
+  ].join('\n');
+}
+
+/** Whether a turn got more help than the level reached before it without a hint being asked. */
+export function raisesHintLevel(turn: LeveledTurn, before: readonly LeveledTurn[]): boolean {
   return (
-    kind === 'hint' ? Math.min(reached + 1, MAX_HINT_LEVEL) : Math.max(reached, 1)
-  ) as HintLevel;
+    turn.trigger !== 'hint' &&
+    turn.hintLevel !== null &&
+    turn.hintLevel > Math.max(reachedHintLevel(before), 1)
+  );
+}
+
+/**
+ * Ways of saying «I don't know», «I don't remember» or «I'm stuck» in the three languages of the
+ * interface (D-033), compared in lower case and without accents. A bare «no se» needs an ending that
+ * makes it «no sé» («no se como seguir»), as «no se ejecuta» is not being stuck.
+ */
+const STUCK_PATTERNS: readonly RegExp[] = [
+  /\bno (?:lo |ho )?se(?= *(?:$|[.,;:!?)]|hacer|seguir|continuar|empezar|fer|(?:como|por donde|por on|que|nada|ni|com)\b))/,
+  /\b(?:ni|no) idea\b/,
+  /\bno (?:me |me'n |men )?(?:acuerdo|recuerdo|recordo)\b/,
+  /\bno (?:lo |la |ho )?(?:entiendo|pillo|capto|entenc)\b/,
+  /\b(?:atascad|bloquead|encallad|encallat|bloquejat)/,
+  /\bsigo sin (?:saber|entender)/,
+  /\b(?:do ?n'?t|do not|didn'?t) (?:know|remember|understand|get it)\b/,
+  /\b(?:can'?t|cannot) remember\b/,
+  /\bstuck\b/,
+];
+
+/** Whether the student says they do not know how to go on (2.5d). */
+export function isStuckMessage(message: string | null | undefined): boolean {
+  if (!message) return false;
+  const text = message
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u00b4`]/g, "'");
+  return STUCK_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/** Stuck now and the last time they said something, past the interventions of the tutor. */
+function stuckAgain(previous: readonly LeveledTurn[], message: string | undefined): boolean {
+  const said = previous.filter((turn) => turn.trigger !== 'proactive').at(-1);
+  return (
+    isStuckMessage(message) && said?.trigger === 'question' && isStuckMessage(said.studentMessage)
+  );
 }

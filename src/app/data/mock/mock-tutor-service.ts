@@ -4,7 +4,7 @@ import { DataError } from '../data-error';
 import type { ProcessEvent } from '../process-event';
 import type { TutorEvent, TutorInteraction, TutorRequest } from '../tutor';
 import { TutorService } from '../tutor-service';
-import { findOwnAttempt, now } from './mock-access';
+import { findOwnAttempt, findRow, now } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 import { TUTOR_TYPING_MS, typeOut } from '../tutor/typing';
@@ -57,6 +57,9 @@ export class MockTutorService extends TutorService {
     const previous = tables.interactions.filter(
       (interaction) => interaction.attemptId === attemptId,
     );
+    const exercise = findRow(tables.exercises, attempt.exerciseId);
+    // Every exercise has tests: the first says how many arguments its function takes
+    const [firstTest] = tables.tests.filter((test) => test.exerciseId === exercise.id);
     const answer = scriptedAnswer({
       kind,
       message,
@@ -64,6 +67,7 @@ export class MockTutorService extends TutorService {
       status: attempt.status,
       previous,
       language,
+      exerciseFunction: { name: exercise.functionName, parameters: firstTest.input.length },
     });
     const timestamp = now();
 

@@ -4,7 +4,9 @@ import {
   type Emotion,
   type HintLevel,
   type Intensity,
+  isStuckMessage,
   type ReactionKind,
+  skeletonBlock,
   type TutorInteraction,
   type TutorTrigger,
 } from '../tutor';
@@ -21,6 +23,14 @@ export interface ScriptInput {
   readonly previous: readonly TutorInteraction[];
   /** The language of the interface, which the tutor answers in (D-033). */
   readonly language: ContentLocale;
+  /** The function the exercise asks for, whose empty skeleton a stuck student gets (2.5d). */
+  readonly exerciseFunction: ExerciseFunction;
+}
+
+/** The name of the function of an exercise and how many parameters it takes, from its tests. */
+export interface ExerciseFunction {
+  readonly name: string;
+  readonly parameters: number;
 }
 
 /** What the model would return (2.6), plus the level the server decided. */
@@ -76,9 +86,10 @@ export function scriptedAnswer({
   status,
   previous,
   language,
+  exerciseFunction,
 }: ScriptInput): ScriptedAnswer {
   const script = TUTOR_SCRIPTS[language];
-  const hintLevel = answerHintLevel(kind, previous);
+  const hintLevel = answerHintLevel(kind, previous, message);
   const answer = (
     text: string,
     emotion: Emotion,
@@ -107,6 +118,16 @@ export function scriptedAnswer({
         const elusions = previous.filter((interaction) => interaction.elusion).length;
         const joke = ELUSION_REACTIONS[elusions % ELUSION_REACTIONS.length];
         return answer(script.elusion, 'surprise', joke, MAX_INTENSITY, true);
+      }
+      // Stuck before writing the function: its empty skeleton, the one code the tutor gives (2.5d)
+      // Only once: stuck again, the next step is the hint of the level it went up to
+      const gaveSkeleton = previous.some((interaction) => interaction.transcript.includes('```'));
+      const hasFunction = code.includes(`function ${exerciseFunction.name}`);
+      if (isStuckMessage(message) && !hasFunction && !gaveSkeleton) {
+        // It does not know the names of the parameters: a, b…
+        const skeleton = skeletonBlock(exerciseFunction.name, exerciseFunction.parameters);
+        const { before, after } = script.stuck;
+        return answer([before, skeleton, after].join('\n'), 'encouragement', 'empathy');
       }
       if (status === 'passed') return answer(script.passed, 'celebration', 'party');
       if (STATEMENT_PATTERN.test(question)) return answer(script.statement, 'joy', 'hearts');

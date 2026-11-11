@@ -337,6 +337,11 @@
     "myData.choices": "You decide",
     "myData.choices.text": "In the settings you choose whether the tutor writes to you on its own and whether you talk to it by voice.",
     "myData.services.ai.title": "The tutor's AI model",
-    "myData.services.voice.title": "Speech recognition"
+    "myData.services.voice.title": "Speech recognition",
+    "codeBlock.copied": "Copied",
+    "codeBlock.copy": "Copy",
+    "codeBlock.copiedAnnounce": "Code copied",
+    "codeBlock.label": "Code",
+    "tutor.moreHelp": "More help · level {$INTERPOLATION}"
   }
 }

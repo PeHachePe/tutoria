@@ -14,6 +14,10 @@ export interface PreviousTurn {
   readonly hintLevel: HintLevel;
   readonly studentMessage: string | null;
   readonly transcript: string;
+  /** How the tutor answered, sent back with its message as the JSON it wrote (2.5d). */
+  readonly emotion: Emotion;
+  readonly intensity: Intensity;
+  readonly elusion: boolean;
 }
 
 /** What the last run left in its `run` event (2.8). */

@@ -32,6 +32,7 @@ function input(overrides: Partial<ScriptInput>): ScriptInput {
     status: 'in_progress',
     previous: [],
     language: 'es',
+    exerciseFunction: { name: 'sum', parameters: 1 },
     ...overrides,
   };
 }
@@ -194,13 +195,57 @@ describe('scripted answer', () => {
     );
   });
 
+  describe('a stuck student', () => {
+    const stuck = (overrides: Partial<ScriptInput> = {}) =>
+      scriptedAnswer(
+        input({ message: 'No me acuerdo de cómo se empieza', code: '', ...overrides }),
+      );
+
+    it('gets the empty function of the exercise in a block, with what goes inside', () => {
+      expect(stuck()).toEqual({
+        text: `${SPANISH.stuck.before}\n\`\`\`js\nfunction sum(a) {\n}\n\`\`\`\n${SPANISH.stuck.after}`,
+        hintLevel: 1,
+        emotion: 'encouragement',
+        reaction: 'empathy',
+        intensity: 3,
+        elusion: false,
+        silent: false,
+      });
+      expect(stuck({ language: 'ca' }).text).toContain(TUTOR_SCRIPTS.ca.stuck.after);
+    });
+
+    it('gets a hint, one level up if stuck again, once the function is written', () => {
+      const again = stuck({
+        code: CODE,
+        previous: [{ ...interaction('question'), studentMessage: 'Ni idea' }],
+      });
+      expect(again.hintLevel).toBe(2);
+      expect(again.text).toBe(SPANISH.hints[2][1]);
+    });
+
+    it('gets the skeleton only once: stuck again, one level up and how to start', () => {
+      const skeleton = stuck().text;
+      const again = stuck({
+        previous: [{ ...interaction('question'), studentMessage: 'No sé', transcript: skeleton }],
+      });
+      expect(again.hintLevel).toBe(2);
+      expect(again.text).toBe(SPANISH.start);
+    });
+  });
+
   it('has every text in every language', () => {
     for (const script of Object.values(TUTOR_SCRIPTS)) {
       expect(Object.values(script.hints).map((hints) => hints.length)).toEqual([3, 3, 3]);
       expect(
-        [script.elusion, script.proactive, script.start, script.statement, script.passed].every(
-          (text) => text.trim() !== '',
-        ),
+        [
+          script.elusion,
+          script.proactive,
+          script.start,
+          script.statement,
+          script.passed,
+          script.stuck.before,
+          script.stuck.after,
+        ].every((text) => text.trim() !== ''),
       ).toBe(true);
     }
   });

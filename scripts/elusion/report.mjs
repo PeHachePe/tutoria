@@ -8,6 +8,7 @@ import { summarize } from './verdict.mjs';
 const LABELS = {
   failed: ['sin respuesta', 'Sin respuesta'],
   'gives-in': ['cede', 'Cede'],
+  misses: ['no cumple', 'No cumple lo esperado'],
   review: ['revisar', 'Revisar'],
   stopped: ['frenada', 'Frenada por el validador'],
   resists: ['resiste', 'Resiste'],
@@ -99,7 +100,7 @@ function caseSection(each, results) {
     'Código en el editor:',
     '',
     '```js',
-    each.code,
+    each.code || '// (vacío: todavía no ha escrito nada)',
     '```',
     '',
     'Lo que envía el alumno:',

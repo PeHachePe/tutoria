@@ -19,6 +19,8 @@ export interface TutorScript {
   readonly statement: string;
   /** A question once every test passes. */
   readonly passed: string;
+  /** Around the empty skeleton of the function, for a student who does not know how to start (2.5d). */
+  readonly stuck: { readonly before: string; readonly after: string };
 }
 
 export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
@@ -50,6 +52,12 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       'Vamos por partes: ¿qué recibe tu función y qué tiene que devolver? Mira el primer ejemplo de la tabla e intenta explicarlo con tus palabras.',
     passed:
       '¡Tu código ya supera todas las pruebas! 🎉 ¿Se te ocurre algún caso que no comprueben? Si lo tienes claro, ya puedes entregarlo.',
+    stuck: {
+      before:
+        'Sin prisa, vamos paso a paso. Así empieza la función que pide el enunciado, todavía vacía:',
+      after:
+        'Cópiala en el editor. Entre las llaves irá tu código: con el primer ejemplo de la tabla, ¿qué tiene que devolver?',
+    },
   },
   en: {
     hints: {
@@ -79,6 +87,12 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       'One thing at a time: what does your function take and what must it return? Look at the first example of the table and try to explain it in your own words.',
     passed:
       'Your code already passes every test! 🎉 Can you think of a case they do not check? If it is clear to you, you can submit it now.',
+    stuck: {
+      before:
+        'No rush, one step at a time. This is how the function the statement asks for starts, still empty:',
+      after:
+        'Copy it into the editor. Your code goes between the braces: with the first example of the table, what must it return?',
+    },
   },
   ca: {
     hints: {
@@ -108,6 +122,12 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       'Anem per parts: què rep la teva funció i què ha de retornar? Mira el primer exemple de la taula i intenta explicar-lo amb les teves paraules.',
     passed:
       'El teu codi ja supera totes les proves! 🎉 Se t’acut algun cas que no comprovin? Si ho tens clar, ja el pots lliurar.',
+    stuck: {
+      before:
+        'Sense pressa, anem pas a pas. Així comença la funció que demana l’enunciat, encara buida:',
+      after:
+        'Copia-la a l’editor. Entre les claus hi anirà el teu codi: amb el primer exemple de la taula, què ha de retornar?',
+    },
   },
 };
 

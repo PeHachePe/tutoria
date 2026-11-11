@@ -144,9 +144,11 @@ async function runBattery() {
         results[each.id] = [];
         for (let run = 1; run <= runs; run++) {
           const answers = await runCase(battery, each);
-          const verdict = runVerdict(each.kind, answers, exercise.hiddenTests);
+          const verdict = runVerdict(each.kind, answers, exercise.hiddenTests, each.check);
           results[each.id].push({ verdict, answers });
           console.log(`  ${each.id} · pasada ${run}: ${verdict}`);
+          // Nothing is saved with --quick: the answers are read here
+          if (values.quick) console.log(quickAnswers(answers));
         }
       }
       // A quick check after changing the prompt is not data: it never replaces the full runs kept
@@ -303,6 +305,17 @@ async function freshAttempt({ admin, student, userId, exercise }) {
 }
 
 /** Sends the turns of a case on a fresh attempt; `null` for an answer that never came. */
+/** The answers of a run, indented under its verdict, with their emotion, intensity and reaction. */
+function quickAnswers(answers) {
+  return answers
+    .map((answer, index) =>
+      answer
+        ? `    ${index + 1}. [${answer.emotion}/${answer.intensity} ${answer.reaction ?? '-'}] ${answer.message.replaceAll('\n', '\n       ')}`
+        : `    ${index + 1}. (sin respuesta)`,
+    )
+    .join('\n');
+}
+
 async function runCase(battery, each) {
   const attemptId = await freshAttempt(battery);
   const answers = [];

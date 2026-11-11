@@ -31,7 +31,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       this.admin
         .from('attempt')
         .select(
-          'user_id, status, current_code, app_user(status), exercise(title, statement, topics, source_locale, translations, function_name, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, created_at)',
+          'user_id, status, current_code, app_user(status), exercise(title, statement, topics, source_locale, translations, function_name, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, emotion, intensity, elusion, created_at)',
         )
         .eq('id', attemptId)
         .maybeSingle(),
@@ -78,6 +78,9 @@ export class SupabaseAnswerStore implements AnswerStore {
           hintLevel: turn.hint_level as HintLevel,
           studentMessage: turn.student_message,
           transcript: turn.transcript,
+          emotion: turn.emotion,
+          intensity: turn.intensity as Intensity,
+          elusion: turn.elusion,
         })),
     };
   }

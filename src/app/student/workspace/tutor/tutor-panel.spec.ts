@@ -444,6 +444,27 @@ describe('TutorPanel', () => {
     expect(screen.queryByText(/¡Hola/)).toBeNull();
   });
 
+  it('says when being stuck again got more help, and shows the skeleton as a block', async () => {
+    await renderPanel({
+      interactions: [
+        interactionOf('question', '¿Qué palabra declara una función?', {
+          studentMessage: 'No me acuerdo de cómo se empieza',
+        }),
+        interactionOf('question', 'Así empieza:\n```js\nfunction suma(vector) {\n}\n```', {
+          hintLevel: 2,
+          studentMessage: 'Ni idea',
+        }),
+      ],
+    });
+    const chat = within(conversation());
+
+    expect(chat.getAllByText(/Más ayuda/)).toHaveLength(1);
+    expect(chat.getByText('Más ayuda · nivel 2')).toBeTruthy();
+    expect(chat.getByRole('code').textContent).toBe('function suma(vector) {\n}');
+    expect(chat.getByRole('button', { name: 'Copiar' })).toBeTruthy();
+    expect(screen.getByText('Pista nivel 2 de 3 · Concepto')).toBeTruthy();
+  });
+
   it('only lets a submitted attempt read its conversation', async () => {
     await renderPanel({
       status: 'submitted',

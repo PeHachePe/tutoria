@@ -148,7 +148,15 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
   store.attempt = {
     ...ATTEMPT,
     previous: [
-      { trigger: 'hint', hintLevel: 1, studentMessage: null, transcript: 'Mira el bucle.' },
+      {
+        trigger: 'hint',
+        hintLevel: 1,
+        studentMessage: null,
+        transcript: 'Mira el bucle.',
+        emotion: 'encouragement',
+        intensity: 2,
+        elusion: false,
+      },
     ],
   };
 
@@ -170,7 +178,7 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
     ],
   });
   assertEquals(settings, [{ models: [FLASH] }]);
-  assertStringIncludes(llm.requests[0][1].content, 'Usa el nivel 2.');
+  assertStringIncludes(llm.requests[0].at(-1)!.content, 'Usa el nivel 2.');
   assertEquals(store.recorded, [
     {
       attemptId: ATTEMPT_ID,
@@ -190,6 +198,58 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
       rejected: 0,
     },
   ]);
+});
+
+Deno.test(
+  'saying again that they are stuck raises the level without asking for a hint',
+  async () => {
+    const { handle, store, llm } = setup();
+    store.attempt = {
+      ...ATTEMPT,
+      previous: [
+        {
+          trigger: 'question',
+          hintLevel: 1,
+          studentMessage: 'No me acuerdo de cómo se empieza',
+          transcript: '¿Qué palabra crees que declara una función?',
+          emotion: 'encouragement',
+          intensity: 2,
+          elusion: false,
+        },
+      ],
+    };
+
+    const { events } = await (await handle(post({ kind: 'question', message: 'Ni idea' }))).json();
+
+    assertEquals(events[0].hintLevel, 2);
+    assertEquals(store.recorded[0].hintLevel, 2);
+    assertStringIncludes(llm.requests[0].at(-1)!.content, 'Responde en el nivel 2.');
+    assertStringIncludes(
+      llm.requests[0].at(-1)!.content,
+      'Nota: el alumno dice que no sabe seguir',
+    );
+    // The earlier turn goes before the request, as a turn of the chat
+    assertEquals(
+      llm.requests[0].map((message) => message.role),
+      ['system', 'user', 'assistant', 'user'],
+    );
+  },
+);
+
+Deno.test('the empty skeleton of the exercise gets through; anything in it does not', async () => {
+  const skeleton =
+    'Así empieza:\n```js\nfunction suma(vector) {\n}\n```\nDentro, recorre el vector.';
+  const filled = '```js\nfunction suma(vector) {\n  return 0;\n}\n```';
+  const reply = (message: string) => JSON.stringify({ ...JSON.parse(GOOD), message });
+  const { handle, store } = setup([reply(skeleton), reply(filled), reply(filled)]);
+
+  const { events } = await (await handle(post({ kind: 'question', message: 'No sé' }))).json();
+  assertEquals(events[1], { type: 'delta', text: skeleton });
+  assertEquals(store.recorded[0].rejected, 0);
+
+  await handle(post({ requestId: 'a0000000-0000-4000-8000-000000000002' }));
+  assertEquals(store.recorded[1].rejected, 2);
+  assertEquals(store.recorded[1].answer?.message, DEFAULT_ANSWERS.es);
 });
 
 Deno.test('a question keeps what the student asked and answers in their language', async () => {
@@ -442,7 +502,7 @@ Deno.test(
       { code: 'function suma(v) { PIKACHU }', functionName: 'suma', inputs: [[[1, 2, 3]]] },
     ]);
     assertStringIncludes(
-      llm.requests[0][1].content,
+      llm.requests[0].at(-1)!.content,
       'suma([1,2,3]) lanza un error: ReferenceError: PIKACHU is not defined (se esperaba 6)',
     );
   },
@@ -454,5 +514,5 @@ Deno.test('without code there is nothing to try', async () => {
   await handle(post({ code: '   ' }));
 
   assertEquals(sandbox.requests.length, 0);
-  assertStringIncludes(llm.requests[0][1].content, '(no hay código que probar)');
+  assertStringIncludes(llm.requests[0].at(-1)!.content, '(no hay código que probar)');
 });

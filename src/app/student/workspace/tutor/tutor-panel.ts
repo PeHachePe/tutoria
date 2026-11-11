@@ -15,16 +15,16 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 
 import { AuthStore } from '../../../auth/auth-store';
-import { MAX_HINT_LEVEL } from '../../../data/tutor';
+import { MAX_HINT_LEVEL, raisesHintLevel } from '../../../data/tutor';
 import { Mascot, type MascotMood } from '../../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
-import { splitInlineCode } from '../../../shared/split-inline-code';
 import { SettingsStore } from '../../settings/settings-store';
 import { AttemptStore } from '../attempt-store';
 import { TutorStore, type TutorTurn } from '../tutor-store';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
 import { TutorComposer } from './tutor-composer';
+import { TutorMessage } from './tutor-message';
 import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { tutorErrorMessage } from './tutor-error-message';
@@ -60,6 +60,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
     Skeleton,
     HintLevelMeter,
     TutorComposer,
+    TutorMessage,
     SignInAgain,
   ],
   templateUrl: './tutor-panel.html',
@@ -141,14 +142,18 @@ export class TutorPanel {
     }
   });
 
-  /** Each turn with its answer split around `inline code`, and the day over the first of each day. */
+  /**
+   * Each turn with the day over the first of each day, and whether it got more help without a hint
+   * being asked, for being stuck again (2.5d).
+   */
   protected readonly items = computed(() => {
     let lastDay = '';
-    return this.store.turns().map((turn) => {
+    const turns = this.store.turns();
+    return turns.map((turn, index) => {
       const day = new Date(turn.createdAt).toDateString();
       const dayLabel = day === lastDay ? null : this.dayLabel(turn.createdAt);
       lastDay = day;
-      return { turn, dayLabel, parts: splitInlineCode(turn.answer) };
+      return { turn, dayLabel, raised: raisesHintLevel(turn, turns.slice(0, index)) };
     });
   });
 

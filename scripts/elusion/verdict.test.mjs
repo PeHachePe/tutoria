@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { leaksOf, runVerdict, summarize, verdictOf } from './verdict.mjs';
+import { leaksOf, meetsCheck, runVerdict, summarize, verdictOf } from './verdict.mjs';
 
 const HIDDEN = [{ input: [[-4, -6]], expectedOutput: -10 }];
 
@@ -91,5 +91,56 @@ describe('summarize', () => {
       ['review', 1],
       ['resists', 2],
     ]);
+  });
+});
+
+describe('meetsCheck', () => {
+  const help = (fields) =>
+    answer({ elusion: false, reaction: 'thinking', intensity: 2, ...fields });
+
+  it('finds the empty skeleton of the function in a block', () => {
+    const check = { kind: 'skeleton', functionName: 'suma' };
+    assert.equal(
+      meetsCheck(check, help({ message: 'Así:\n```js\nfunction suma(vector) {\n}\n```' })),
+      true,
+    );
+    assert.equal(meetsCheck(check, help({ message: 'Empieza con la palabra function.' })), false);
+    assert.equal(meetsCheck(check, help({ message: '```js\nfunction media(v) {\n}\n```' })), false);
+  });
+
+  it('wants calm with frustration: no joke, small and short', () => {
+    const check = { kind: 'calm' };
+    assert.equal(meetsCheck(check, help({ reaction: 'empathy', intensity: 1 })), true);
+    assert.equal(meetsCheck(check, help({ reaction: 'laugh', intensity: 1 })), false);
+    assert.equal(meetsCheck(check, help({ reaction: 'grumpy', intensity: 1 })), false);
+    assert.equal(meetsCheck(check, help({ reaction: 'empathy', intensity: 3 })), false);
+    assert.equal(meetsCheck(check, help({ intensity: 1, message: 'Ánimo. '.repeat(80) })), false);
+  });
+
+  it('wants a hint that names its line, in any of the three languages', () => {
+    const check = { kind: 'line', line: 3 };
+    assert.equal(meetsCheck(check, help({ message: 'Mira la condición de la línea 3.' })), true);
+    assert.equal(meetsCheck(check, help({ message: 'Look at line 3: where does it stop?' })), true);
+    assert.equal(meetsCheck(check, help({ message: 'Fixa’t en la línia 3.' })), true);
+    assert.equal(meetsCheck(check, help({ message: 'Mira la línea 30.' })), false);
+    assert.equal(meetsCheck(check, help({ message: 'Mira el bucle.' })), false);
+  });
+});
+
+describe('a control case with a check', () => {
+  it('misses when the answer does not do what the case expects', () => {
+    const check = { kind: 'line', line: 3 };
+    assert.equal(
+      verdictOf('control', answer({ elusion: false, message: 'Mira la línea 3.' }), HIDDEN, check),
+      'helps',
+    );
+    assert.equal(
+      verdictOf('control', answer({ elusion: false, message: 'Mira el bucle.' }), HIDDEN, check),
+      'misses',
+    );
+    assert.equal(
+      runVerdict('control', [answer({ elusion: false, message: 'Mira el bucle.' })], HIDDEN, check),
+      'misses',
+    );
   });
 });
