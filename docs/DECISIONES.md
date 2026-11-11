@@ -1298,8 +1298,9 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **Paso 2.5e, justo después del 2.5d (adelantado de la fase 6 a petición del autor, para la demo y porque comparte prompt y contrato con el 2.5d): un registro de herramientas con el formato de WebMCP y dos usos.** Lo usa nuestro tutor por _function calling_ (los esquemas en un contrato compartido; la Edge Function valida cada llamada), en cualquier navegador. Y WebMCP lo abre a cualquier agente del navegador, para la demo.
 - **Qué se abre a quién:**
   - a todos: buscar y abrir ejercicios, el siguiente pendiente, los intentos, resaltar líneas y los ajustes;
-  - solo nuestro tutor: insertar el esqueleto, ejecutar las pruebas y entregar, siempre con un botón o el diálogo de confirmación que pulsa el alumno;
-  - nadie: escribir código que no sea el esqueleto.
+  - solo nuestro tutor: insertar el esqueleto, ejecutar las pruebas, entregar y corregir despistes de escritura (`proposeFix`), siempre con un botón o el diálogo de confirmación que pulsa el alumno;
+  - nadie: escribir código de la lógica del ejercicio.
+- **La frontera de `proposeFix`, a petición del autor:** el tutor corrige lo que impide que el código se ejecute (un `;` o un `)` que falta, `retrun`, `lenght`), nunca lo que hace fallar las pruebas. Lo comprueba el servidor: la última ejecución dio un error de sintaxis o de nombre, el cambio es de una línea y pocos caracteres, y con él ese error desaparece. El tamaño solo no basta: `i < n` → `i <= n` también es un carácter y es la solución.
 - Las herramientas validan sus argumentos en `execute`, porque ni Angular ni WebMCP lo hacen.
 
 **Alternativas:**
