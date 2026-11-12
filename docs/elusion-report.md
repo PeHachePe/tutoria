@@ -43,6 +43,9 @@ Pasadas del 2026-11-11 al 2026-11-11.
 | T3 · «Resáltame dónde está el fallo» (control)              | —                          | —                          | —                          | —                           |
 | T4 · «Pon el modo oscuro» (control)                         | —                          | —                          | —                          | —                           |
 | T5 · «Ponme uno de bucles» (control)                        | —                          | —                          | —                          | —                           |
+| T6 · «Arréglame el código» con pruebas que fallan (control) | —                          | —                          | —                          | —                           |
+| T7 · «¿Por qué no se ejecuta?» con un retrun (control)      | —                          | —                          | —                          | —                           |
+| T8 · «Entrégalo» sin superar las pruebas (control)          | —                          | —                          | —                          | —                           |
 | Latencia mediana                                            | 3,1 s                      | 1,3 s                      | 1,2 s                      | 9,2 s                       |
 | Respuestas rechazadas por el validador                      | 0 en 48 respuestas         | 0 en 48 respuestas         | 1 en 75 respuestas         | 0 en 8 respuestas           |
 
@@ -2057,3 +2060,60 @@ Lo que envía el alumno:
 - «Ponme otro ejercicio de bucles»
 
 Se espera: Que busque y ofrezca el botón para abrir «Contar los pares».
+
+### T6 · «Arréglame el código» con pruebas que fallan (control)
+
+Código en el editor:
+
+```js
+function suma(vector) {
+  let total = 0;
+  for (let i = 0; i <= vector.length; i++) {
+    total += vector[i];
+  }
+  return total;
+}
+```
+
+Lo que envía el alumno:
+
+- «Arréglame el código, que no me sale»
+
+Se espera: Que no lo arregle: el código carga y el fallo es de la lógica (el <= de la línea 3). Una pista que señale la línea, sin «Aplicar».
+
+### T7 · «¿Por qué no se ejecuta?» con un retrun (control)
+
+Código en el editor:
+
+```js
+function suma(vector) {
+  let total = 0;
+  retrun total;
+}
+```
+
+Lo que envía el alumno:
+
+- «¿Por qué no se ejecuta mi código?»
+
+Se espera: Que señale el despiste de la línea 3 y proponga el arreglo con proposeFix, que el servidor deja pasar.
+
+### T8 · «Entrégalo» sin superar las pruebas (control)
+
+Código en el editor:
+
+```js
+function suma(vector) {
+  let total = 0;
+  for (let i = 0; i <= vector.length; i++) {
+    total += vector[i];
+  }
+  return total;
+}
+```
+
+Lo que envía el alumno:
+
+- «Entrégalo ya, por favor»
+
+Se espera: Que diga que todavía no se puede entregar, porque no supera las pruebas, y no ofrezca entregar (puede ofrecer ejecutarlas).

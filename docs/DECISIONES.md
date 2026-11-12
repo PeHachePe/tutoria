@@ -1495,3 +1495,41 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Las inserciones del tutor no son pegados (2.8). Queda en pendientes registrarlas como eventos del proceso para el panel docente.
 
 **Aprobación:** el autor aprobó el plan con sus dos puntos (`lenght` con la regla de los nombres, y `practiseAgain` descartada) y las mejoras propuestas («Sí, empieza»). El diseño de la frontera, por delegación del autor.
+
+## D-053 · El despliegue en la nube: configuración pública en el código, gratis y con un límite diario del tutor (12/11/2026)
+
+**Contexto:** el paso 3.1 publica la app en Supabase en la nube y en Vercel. El `environment.ts` de producción seguía sin servicios de datos desde la fase 1, Vercel publicaba la demo simulada, y el seed local lleva la contraseña de prueba en todas las cuentas. El autor pide planes gratuitos siempre (quizá pago solo el día de la demo) y el muestrario en producción solo para la administración, sin crear un rol nuevo.
+
+**Decisión:**
+
+- **La URL y la clave publicable del proyecto van en `environment.ts`,** como las locales: son públicas por diseño (la RLS protege los datos, no la clave). Así cada build es el mismo en macOS, en Windows y en Vercel, sin variables de entorno ni scripts que las inyecten.
+- **Vercel publica el build `production`,** que sustituye a la demo simulada en la misma URL. El build `demo` sigue para los e2e y las capturas.
+- **Cabeceras de seguridad en `vercel.json`:**
+  - una CSP con `default-src 'self'`, la conexión solo a la propia app y a Supabase (HTTPS y WebSocket del Realtime) y `frame-ancestors 'none'`;
+  - los scripts, con `autoCsp` de Angular, que añade al `index.html` los _hashes_ de sus scripts en línea (el cargador de la CSS crítica) y `strict-dynamic`; la cabecera permite `'unsafe-inline'` en los scripts solo para no bloquear esos _hashes_, y la política de Angular, más estricta, manda;
+  - los estilos, con `'unsafe-inline'`: Angular, Material y CodeMirror insertan `<style>` y un sitio estático no puede dar un _nonce_ por petición;
+  - además, `nosniff`, `Referrer-Policy`, `Cross-Origin-Opener-Policy` y `Permissions-Policy` con el micrófono solo para la propia app (Web Speech).
+- **El muestrario en producción, solo para la administración** (`adminDevRoutes`): las mismas rutas de `dev.routes.ts` con `roleGuard('admin')`. No depende de los datos simulados; para otro rol no existe y su código no se descarga. La barra de desarrollo y las cuentas de demostración siguen fuera de producción (D-014): actúan sobre los datos simulados y llevan la contraseña de prueba. Sin rol «dev»: el enum, las RLS, los guards y la pantalla de usuarios cambiarían para lo mismo que ya hace el administrador.
+- **Las cuentas de la nube, con contraseñas aleatorias:** `npm run seed -- --cloud` escribe en `tmp/cloud/` (ignorado) el mismo seed con 24 caracteres aleatorios por cuenta y un CSV para el gestor de contraseñas. Se aplica con `supabase db query --remote -f` y se borra. El historial del seed se queda: el panel docente de la demo necesita datos.
+- **Auth de la nube declarada en `config.toml`** (`[remotes.production]`): `supabase config push` aplica el registro cerrado y la URL de la app, revisable con `config diff`, sin tocar el panel a mano.
+- **Límite diario del tutor: 60 llamadas por alumno en 24 horas,** además de las 6 por minuto. El plan gratuito del proveedor limita las llamadas del proyecto entero al día, así que ningún alumno puede gastar la cuota del resto. Se lee de una vez (`latest_tutor_calls` con la ventana del día; las del minuto son las más recientes). En la app, una espera de más de un minuto (`isLongWait()`) dice «Has llegado al límite de preguntas de hoy» y el botón «Reintentar a las 14:32», no una cuenta atrás de miles de segundos.
+- **Recarga ante un chunk viejo** (`reloadOnStaleChunk`): cada despliegue cambia los nombres de los chunks perezosos, y una pestaña abierta antes falla al navegar a una pantalla que no había visitado. El router la carga de cero una vez; si vuelve a fallar en 10 s, enseña el error, sin bucles.
+- **Respaldo gratuito del tutor:** Flash-Lite con 10 s, y detrás `gemma-4-31b-it` y `gemma-4-26b-a4b-it` con 30 s, de la misma API y clave y con cuota propia (en el seed y en la nube). El día del despliegue Google tuvo Flash-Lite saturado en el plan gratuito y el tutor no respondía; con la cadena, respondió Gemma. Un proveedor de otra empresa (Groq) queda en pendientes: Mistral ya no da clave gratuita sin más.
+- **Smoke e2e contra la URL pública** (`npm run smoke`, proyecto `smoke` de Playwright, opcional): sin servidor local; la URL y la cuenta de Lucas por defecto, y la contraseña la pide sin mostrarla, igual en macOS y Windows. Recorre el tutor real y falla si la CSP bloquea algo o si faltan las credenciales.
+
+**Alternativas:**
+
+- **Variables de entorno de Vercel con `--define` o un script que escriba el `environment.ts`:** más piezas para dos valores públicos, y un build local distinto del de Vercel.
+- **Solo la política de Angular (`autoCsp`), sin cabecera:** una etiqueta `<meta>` no admite `frame-ancestors` ni restringe las conexiones como la cabecera.
+- **Crear las cuentas con la API de administración y la `service_role`:** la contraseña no pasaría por un SQL, pero obliga a tener la `service_role` en el equipo. El SQL se ejecuta una vez por HTTPS y el fichero se borra.
+- **Un rol «dev»:** ver arriba.
+
+**Consecuencias:**
+
+- `authUsersStatement()` acepta una contraseña o una función por cuenta; `seed.sql` lleva la contraseña en cada fila.
+- `secondsToWait()` gana la ventana (un minuto por defecto) y `limits.ts`, `dayBefore()`.
+- `PageReloader` gana `open(url)`.
+- La guía `docs/DESPLIEGUE.md` es el procedimiento repetible, y sirve para la memoria.
+- El plan gratuito de Supabase pausa el proyecto tras una semana sin uso: se restaura desde el panel.
+
+**Aprobación:** el autor fijó los planes gratuitos y el muestrario solo para la administración; el resto, por delegación del autor («si lo ves bien»).
