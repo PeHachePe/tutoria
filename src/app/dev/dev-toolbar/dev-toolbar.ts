@@ -19,6 +19,7 @@ import { DEFAULT_LATENCY, LatencyRange, MockNetwork } from '../../data/mock/mock
 import type { AppUser } from '../../data/user';
 import { DEV_PATHS } from '../dev-paths';
 import { describeEvent } from './describe-event';
+import { ToolInspector } from './tool-inspector';
 import { PageReloader } from '../../core/page-reloader';
 
 interface LatencyOption {
@@ -53,7 +54,7 @@ const NONE = 'none';
 
 /**
  * Development-only toolbar (4.3): sign in as any seed user, simulated latency, fail the next request,
- * reset the mock data and watch the latest process events. Drawn by App when the environment provides it.
+ * reset the mock data, try the tools of the screen (2.5e) and watch the latest process events. Drawn by App when the environment provides it.
  */
 @Component({
   selector: 'app-dev-toolbar',
@@ -72,6 +73,7 @@ const NONE = 'none';
     MatOption,
     RouterLink,
     RouterLinkActive,
+    ToolInspector,
   ],
   templateUrl: './dev-toolbar.html',
   // Drawn outside the routes, so it brings the defaults of its fields itself (D-021)

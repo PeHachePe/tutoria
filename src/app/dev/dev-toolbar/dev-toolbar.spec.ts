@@ -78,6 +78,7 @@ describe('DevToolbar', () => {
       'Sesión',
       'Red simulada',
       'Datos simulados',
+      'Herramientas del tutor y WebMCP',
       'Últimos eventos',
     ]);
     expect(element().textContent).toContain('Sin sesión');

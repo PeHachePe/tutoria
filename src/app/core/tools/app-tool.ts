@@ -1,4 +1,5 @@
 import {
+  computed,
   declareExperimentalWebMcpTool,
   DestroyRef,
   type EnvironmentProviders,
@@ -7,6 +8,7 @@ import {
   makeEnvironmentProviders,
   provideEnvironmentInitializer,
   Service,
+  signal,
   type WebMcpClient,
   type WebMcpToolDescriptor,
   type WebMcpToolExecute,
@@ -90,21 +92,29 @@ export async function runTool(
  */
 @Service()
 export class ToolRegistry {
-  private readonly tools = new Map<string, AppTool>();
+  private readonly toolsState = signal<ReadonlyMap<string, AppTool>>(new Map());
+
+  /** The tools open now, for the inspector of the development toolbar (2.5e). */
+  readonly tools = computed(() => [...this.toolsState().values()]);
 
   register(tool: AppTool, destroyRef: DestroyRef): void {
-    this.tools.set(tool.name, tool);
+    this.toolsState.update((tools) => new Map(tools).set(tool.name, tool));
     destroyRef.onDestroy(() => {
-      if (this.tools.get(tool.name) === tool) this.tools.delete(tool.name);
+      if (this.toolsState().get(tool.name) !== tool) return;
+      this.toolsState.update((tools) => {
+        const left = new Map(tools);
+        left.delete(tool.name);
+        return left;
+      });
     });
   }
 
   has(name: string): boolean {
-    return this.tools.has(name);
+    return this.toolsState().has(name);
   }
 
   run(name: string, args: unknown): Promise<ToolRun> {
-    const tool = this.tools.get(name);
+    const tool = this.toolsState().get(name);
     return tool
       ? runTool(tool, args)
       : Promise.resolve({ ok: false, error: `The tool ${name} is not available here` });
