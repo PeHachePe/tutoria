@@ -50,7 +50,7 @@ Una aplicación Angular normal, sin capas ni patrones extra (`docs/PLAN.md` §4)
 1. `npm run format` y después `npm run check` en verde.
 2. Si el paso es una pantalla, cumple su definición de terminado (`docs/PLAN.md` §5.4) y guarda su versión con `npm run screenshots -- <paso> <pantalla>`.
 3. `npm run metrics -- <paso>`.
-4. Escribe la bitácora del paso con `docs/bitacora/_plantilla.md` y su fila en `docs/REGISTRO.md`, completas: también las horas humanas (estimadas; por defecto, en torno al doble del tiempo de Claude), la validación del humano con sus iteraciones y los commits (los mensajes propuestos hasta que existan; después, sus hashes).
+4. Escribe la bitácora del paso con `docs/bitacora/_plantilla.md` y su fila en `docs/REGISTRO.md`, completas: también las horas humanas (estimadas; se solapan con el tiempo de Claude, porque el humano lo guía y revisa mientras trabaja, así que por defecto son ese tiempo sin pausas más un 30 % de revisión fuera de él, no el doble), la validación del humano con sus iteraciones y los commits (los mensajes propuestos hasta que existan; después, sus hashes).
 5. Si tomaste una decisión técnica, proponla en `docs/DECISIONES.md`.
 6. Resume y espera. En cada iteración posterior, actualiza la bitácora; guarda capturas de la iteración solo si el humano lo pide.
 
