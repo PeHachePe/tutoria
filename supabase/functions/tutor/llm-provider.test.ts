@@ -249,3 +249,73 @@ Deno.test('once the time budget is spent, no other model is tried', async () => 
   assertEquals(llm.model, 'flash');
   assertEquals(last.calls, 0);
 });
+
+// The answer as calls to tools (2.5e, D-051)
+
+function toolsProvider(message: Record<string, unknown>) {
+  let body: Record<string, unknown> = {};
+  const fetchFn = (_url: string | URL | Request, init?: RequestInit) => {
+    body = JSON.parse(String(init?.body));
+    return Promise.resolve(Response.json({ choices: [{ message }] }));
+  };
+  const llm = new OpenAICompatibleProvider(
+    { baseUrl: GEMINI, model: 'm', responseFormat: 'tools' },
+    fetchFn as typeof fetch,
+  );
+  return { llm, body: () => body };
+}
+
+const toolCall = (name: string, args: unknown) => ({
+  type: 'function',
+  function: { name, arguments: typeof args === 'string' ? args : JSON.stringify(args) },
+});
+
+Deno.test(
+  'with tools, the answer is the tool respond and each tool of the contract one more',
+  async () => {
+    const { llm, body } = toolsProvider({ content: '{"message":"hola"}' });
+    await llm.complete(MESSAGES, ANSWER_FORMAT);
+    const sent = body();
+    assertEquals('response_format' in sent, false);
+    assertEquals(sent.tool_choice, 'required');
+    const tools = sent.tools as {
+      function: { name: string; parameters: { properties: object } };
+    }[];
+    assertEquals(tools[0].function.name, 'respond');
+    assertEquals(Object.keys(tools[0].function.parameters.properties).includes('query'), false);
+    assertEquals(Object.keys(tools[0].function.parameters.properties).includes('actions'), false);
+    assertEquals(tools.length, 1 + ANSWER_FORMAT.tools!.length);
+  },
+);
+
+Deno.test('with tools, the calls become the JSON of the answer', async () => {
+  const { llm } = toolsProvider({
+    content: null,
+    tool_calls: [
+      toolCall('respond', { message: 'Mira la línea 2', emotion: 'joy' }),
+      toolCall('highlightLines', { lines: [{ line: 2 }] }),
+      toolCall('getMyProgress', {}),
+      toolCall('unknown', {}),
+      toolCall('navigate', '{not json'),
+    ],
+  });
+  assertEquals(JSON.parse(await llm.complete(MESSAGES, ANSWER_FORMAT)), {
+    message: 'Mira la línea 2',
+    emotion: 'joy',
+    actions: { highlightLines: { lines: [{ line: 2 }] } },
+    query: { getMyProgress: {} },
+  });
+});
+
+Deno.test(
+  'with tools, only a query is an answer still to write, and plain text still counts',
+  async () => {
+    const query = toolsProvider({ tool_calls: [toolCall('getSettings', {})] });
+    assertEquals(JSON.parse(await query.llm.complete(MESSAGES, ANSWER_FORMAT)), {
+      message: '',
+      query: { getSettings: {} },
+    });
+    const text = toolsProvider({ content: '{"message":"hola"}', tool_calls: [] });
+    assertEquals(await text.llm.complete(MESSAGES, ANSWER_FORMAT), '{"message":"hola"}');
+  },
+);

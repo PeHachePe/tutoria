@@ -1,9 +1,18 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, input, linkedSignal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  linkedSignal,
+} from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 
 import type { RunResult, TestResult } from '../../../data/attempt';
 import { formatCall, formatValue, isMultilineText } from '../../../shared/format-value';
+import type { Pointer } from '../tutor-store';
 
 /**
  * How a test ended: passed, a wrong value, an error thrown, out of time, or never started because
@@ -90,15 +99,38 @@ export class RunResults {
   readonly functionName = input.required<string>();
   /** The student changed the code after this run. */
   readonly outdated = input(false);
+  /** Where the tutor points: the first test that fails, or the hidden checks (2.5e). */
+  readonly pointer = input<Pointer | null>(null);
 
   protected readonly states = STATES;
   protected readonly bodyId = `app-run-results-body-${nextId++}`;
 
   /**
    * Folded, only the summary shows and the editor gets the room. Each new run unfolds it, so the
-   * student sees what changed: derived from the result, it needs no effect.
+   * student sees what changed: derived from the result, it needs no effect. So does the tutor
+   * pointing at it.
    */
-  protected readonly open = linkedSignal({ source: this.result, computation: () => true });
+  protected readonly open = linkedSignal({
+    source: () => [this.result(), this.pointer()],
+    computation: () => true,
+  });
+
+  /** The example the tutor points at: the first one that does not pass. */
+  protected readonly pointedExample = computed(() =>
+    this.pointer()?.target === 'failingTest'
+      ? this.examples().find((example) => example.state !== 'passed')?.key
+      : undefined,
+  );
+  protected readonly pointedHidden = computed(() => this.pointer()?.target === 'hiddenTests');
+
+  constructor() {
+    const host: HTMLElement = inject(ElementRef).nativeElement;
+    // The boundary with the DOM: what the tutor points at scrolls into sight, each time it points
+    afterRenderEffect(() => {
+      if (!this.pointer()) return;
+      host.querySelector('[data-pointed]')?.scrollIntoView({ block: 'nearest' });
+    });
+  }
 
   protected toggle(): void {
     this.open.update((open) => !open);

@@ -3,7 +3,7 @@ import type { ClassBlock, Exercise, ExerciseAssignment, Test } from '../exercise
 import type { ExerciseTranslations } from '../localized-text';
 import type { ProcessEvent } from '../process-event';
 import type { Subject } from '../subject';
-import type { HintLevel, Intensity, TutorInteraction } from '../tutor';
+import type { HintLevel, Intensity, ToolRequest, TutorInteraction } from '../tutor';
 import type { AppUser } from '../user';
 import type { Database } from './database.types';
 
@@ -142,6 +142,8 @@ export function toTutorInteraction(row: Row<'tutor_interaction'>): TutorInteract
     emotion: row.emotion,
     intensity: row.intensity as Intensity,
     elusion: row.elusion,
+    // A check of the table makes it a list, and only the server writes it, with calls it checked
+    actions: row.actions as unknown as ToolRequest[],
     promptVersion: row.prompt_version,
     createdAt: toIso(row.created_at),
   };

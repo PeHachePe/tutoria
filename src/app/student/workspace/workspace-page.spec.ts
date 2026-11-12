@@ -10,6 +10,7 @@ import { of } from 'rxjs';
 import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
 import type { Attempt, RunResult, StoredAttemptStatus } from '../../data/attempt';
 import { EventLogger } from '../../core/event-logger';
+import { ToolRegistry } from '../../core/tools/app-tool';
 import { PageReloader } from '../../core/page-reloader';
 import { AttemptService } from '../../data/attempt-service';
 import { CodeRunnerService } from '../../data/code-runner-service';
@@ -1380,6 +1381,78 @@ describe('WorkspacePage', () => {
           },
         ),
       ).toBeTruthy();
+    });
+  });
+
+  describe('tools of the tutor (2.5e)', () => {
+    // jsdom does not scroll: what the tutor points at only has to be asked to show itself
+    beforeEach(() => (Element.prototype.scrollIntoView = vi.fn()));
+    afterEach(() => {
+      localStorage.clear();
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    });
+
+    const selected = () =>
+      screen.getAllByRole('tab').findIndex((tab) => tab.getAttribute('aria-selected') === 'true');
+
+    it('changes the layout as setLayout asks, only what it names', async () => {
+      const { fixture } = await renderPage();
+      await showEditor(fixture);
+      const tools = TestBed.inject(ToolRegistry);
+
+      expect(await tools.run('setLayout', { codeExpanded: true })).toEqual({
+        ok: true,
+        result: { codeExpanded: true, tutor: 'floating', tab: 'exercise' },
+      });
+      await fixture.whenStable();
+      expect(
+        screen.getByRole('button', { name: 'Ampliar el código' }).getAttribute('aria-pressed'),
+      ).toBe('true');
+
+      // Docked again, the code goes back to its place, as «Fijar» does
+      await tools.run('setLayout', { tutor: 'docked' });
+      await fixture.whenStable();
+      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
+      expect(screen.getByRole('region', { name: 'Enunciado' })).toBeTruthy();
+
+      await tools.run('setLayout', { tutor: 'floating' });
+      await fixture.whenStable();
+      expect(screen.getByRole('button', { name: 'Cerrar el tutor' })).toBeTruthy();
+
+      // Already floating: nothing to change
+      expect(await tools.run('setLayout', { tutor: 'floating', codeExpanded: false })).toEqual({
+        ok: true,
+        result: { codeExpanded: false, tutor: 'floating', tab: 'exercise' },
+      });
+    });
+
+    it('shows on a phone the tab of what the tutor marks or points at', async () => {
+      const { fixture } = await renderPage({ compact: true });
+      const tutor = TestBed.inject(TutorStore);
+      const show = async (change: () => void) => {
+        change();
+        await fixture.whenStable();
+      };
+      expect(selected()).toBe(0);
+
+      await show(() => void TestBed.inject(ToolRegistry).run('setLayout', { tab: 'tutor' }));
+      await vi.waitFor(() => expect(selected()).toBe(2));
+
+      await show(() => tutor.mark([{ line: 1 }]));
+      expect(selected()).toBe(1);
+
+      await show(() => tutor.pointAt('example', 1));
+      expect(selected()).toBe(0);
+
+      await show(() => tutor.pointAt('failingTest'));
+      expect(selected()).toBe(1);
+
+      await show(() => tutor.pointAt('hiddenTests'));
+      expect(selected()).toBe(0);
+
+      // Clearing the marks shows nothing new
+      await show(() => tutor.clearMarks());
+      expect(selected()).toBe(0);
     });
   });
 });

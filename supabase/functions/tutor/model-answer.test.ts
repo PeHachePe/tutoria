@@ -1,9 +1,11 @@
 import { assertEquals } from '@std/assert';
 
 import {
+  ANSWER_FORMAT,
   type AnswerCheck,
   checkAnswer,
   containsCode,
+  queriesIn,
   type FunctionSignature,
   signatureOf,
 } from './model-answer.ts';
@@ -219,4 +221,61 @@ Deno.test('checkAnswer writes the examples of syntax of the catalog the model as
     examples: true,
   });
   assertEquals(quiet.ok && quiet.answer.message, '');
+});
+
+// Tools (2.5e)
+
+Deno.test('the actions of the contract are kept, checked', () => {
+  const check = checkAnswer(
+    answer({
+      actions: {
+        highlightLines: { lines: [{ line: 3, note: 'Revisa la condición' }] },
+        writeCode: { code: 'return 1;' },
+        navigate: { to: 'admin' },
+      },
+    }),
+  );
+  assertEquals(check.ok && check.answer.actions, [
+    { name: 'highlightLines', arguments: { lines: [{ line: 3, note: 'Revisa la condición' }] } },
+  ]);
+});
+
+Deno.test('a mark with code in its note is dropped, never shown', () => {
+  const check = checkAnswer(
+    answer({ actions: { highlightLines: { lines: [{ line: 3, note: 'return total;' }] } } }),
+  );
+  assertEquals(check.ok && check.answer.actions, undefined);
+});
+
+Deno.test('an answer without actions, or an intervention kept quiet, does nothing', () => {
+  const plain = checkAnswer(answer({}));
+  assertEquals(plain.ok && 'actions' in plain.answer, false);
+  const quiet = checkAnswer(
+    answer({ message: '', actions: { pointAt: { target: 'hiddenTests' } } }),
+    {
+      mayKeepQuiet: true,
+    },
+  );
+  assertEquals(quiet.ok && quiet.answer.actions, undefined);
+});
+
+Deno.test('the queries the model asks for, only those of the contract', () => {
+  assertEquals(queriesIn(answer({ query: { getMyProgress: {}, navigate: { to: 'data' } } })), [
+    { name: 'getMyProgress', arguments: {} },
+  ]);
+  assertEquals(queriesIn(answer({})), []);
+  assertEquals(queriesIn('not json'), []);
+  assertEquals(queriesIn('null'), []);
+});
+
+Deno.test('the format asks for the queries and the actions by name, without minProperties', () => {
+  const properties = ANSWER_FORMAT.schema.properties as Record<string, { properties: object }>;
+  assertEquals(Object.keys(properties.query.properties), [
+    'getMyProgress',
+    'searchExercises',
+    'getExerciseStats',
+    'getSettings',
+  ]);
+  assertEquals(Object.keys(properties.actions.properties).includes('highlightLines'), true);
+  assertEquals(JSON.stringify(ANSWER_FORMAT.schema).includes('minProperties'), false);
 });

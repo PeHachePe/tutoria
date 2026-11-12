@@ -26,8 +26,11 @@ import { APP_PATHS, STUDENT_PARAMS } from '../../core/app-paths';
 import { AuthStore } from '../../auth/auth-store';
 import { AppTitleStrategy } from '../../core/app-title-strategy';
 import { LanguageService } from '../../core/i18n/language-service';
+import { appTool, declareAppTool } from '../../core/tools/app-tool';
 import { ExerciseService } from '../../data/exercise-service';
 import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
+import { TUTOR_TOOL } from '../../data/tutor/tutor-tools';
+import type { LineMark } from '../../shared/code-editor/line-mark';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
@@ -52,7 +55,7 @@ import {
 } from './pane-share';
 import { STATEMENT_ZONE_ID, StatementZone } from './statement-zone/statement-zone';
 import { TutorPanel } from './tutor/tutor-panel';
-import { TutorStore } from './tutor-store';
+import { type Pointer, TutorStore } from './tutor-store';
 
 /**
  * Below this width (Tailwind's `md`) the zones become tabs, one at a time: stacked, they did not fit
@@ -69,8 +72,11 @@ const NARROW_WORKSPACE_QUERY = '(max-width: 1023.98px)';
 /** Narrowest the tutor column gets, whatever the share: below it, the hints read badly (D-030). */
 const TUTOR_MIN_WIDTH = '16rem';
 
+/** The tabs of a phone, in order, by the names of `setLayout` (2.5e). */
+const TABS = ['exercise', 'code', 'tutor'] as const;
+
 /** Position of the tutor among the tabs of a phone. */
-const TUTOR_TAB = 2;
+const TUTOR_TAB = TABS.indexOf('tutor');
 
 /**
  * The workspace (/alumno/ejercicio/:id, ficha 03): the statement and its examples, the code and the
@@ -186,6 +192,11 @@ export class WorkspacePage {
       .observe(NARROW_WORKSPACE_QUERY)
       .pipe(map((state) => state.matches)),
     { requireSync: true },
+  );
+
+  /** The layout is the page's own: our tutor and the agents of the browser change it (2.5e). */
+  protected readonly layoutTool = declareAppTool(
+    appTool(TUTOR_TOOL.setLayout, (layout) => this.setLayout(layout)),
   );
 
   protected readonly detail = resource({
@@ -332,7 +343,25 @@ export class WorkspacePage {
    * A dot (and, folded, a bubble) when an answer arrives while the tutor is out of sight: another
    * tab on a phone, or the folded mascot. The student may look at the code while the tutor writes.
    */
-  private readonly selectedTab = signal(0);
+  /**
+   * On a phone, what the tutor marks or points at is shown: the code tab for its marks and the
+   * failing test, the exercise for an example or the hidden checks (2.5e).
+   */
+  protected readonly selectedTab = linkedSignal<
+    { readonly pointer: Pointer | null; readonly marks: readonly LineMark[] },
+    number
+  >({
+    source: () => ({ pointer: this.tutor.pointer(), marks: this.tutor.marks() }),
+    computation: ({ pointer, marks }, previous) => {
+      if (pointer && pointer !== previous?.source.pointer) {
+        return TABS.indexOf(pointer.target === 'failingTest' ? 'code' : 'exercise');
+      }
+      if (marks.length > 0 && marks !== previous?.source.marks) return TABS.indexOf('code');
+      return previous?.value ?? 0;
+    },
+  });
+  /** Where the tutor points, for the statement. */
+  protected readonly pointer = this.tutor.pointer;
   private readonly seenAnswers = signal(0);
   private readonly tutorVisible = computed(() => {
     if (this.compact()) return this.selectedTab() === TUTOR_TAB;
@@ -377,6 +406,29 @@ export class WorkspacePage {
       this.codeExpanded.set(false);
       this.tutorOpen.set(false);
     }
+  }
+
+  /**
+   * The layout as `setLayout` asks for it (2.5e): the code expanded or not, the tutor docked or
+   * floating, the tab of a phone. Only what it names changes.
+   */
+  private setLayout({
+    codeExpanded,
+    tutor,
+    tab,
+  }: {
+    readonly codeExpanded?: boolean;
+    readonly tutor?: 'docked' | 'floating';
+    readonly tab?: (typeof TABS)[number];
+  }): object {
+    if (tutor !== undefined && (tutor === 'floating') !== this.floatingTutor()) this.toggleDock();
+    if (codeExpanded !== undefined) this.codeExpanded.set(codeExpanded);
+    if (tab !== undefined) this.selectTab(TABS.indexOf(tab));
+    return {
+      codeExpanded: this.codeExpanded(),
+      tutor: this.floatingTutor() ? 'floating' : 'docked',
+      tab: TABS[this.selectedTab()],
+    };
   }
 
   private focusQuestion(): void {

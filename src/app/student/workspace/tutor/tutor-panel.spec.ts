@@ -1,11 +1,13 @@
-import { computed, signal } from '@angular/core';
+import { computed, DestroyRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { provideSessionOf, restoreSession } from '../../../auth/auth-testing';
 import type { Attempt, AttemptHistory, StoredAttemptStatus } from '../../../data/attempt';
+import { appTool, ToolRegistry } from '../../../core/tools/app-tool';
 import { AttemptService } from '../../../data/attempt-service';
+import { TUTOR_TOOL } from '../../../data/tutor/tutor-tools';
 import { DataError } from '../../../data/data-error';
 import type { HintLevel, TutorEvent, TutorInteraction, TutorRequest } from '../../../data/tutor';
 import { TutorService } from '../../../data/tutor-service';
@@ -533,5 +535,47 @@ describe('TutorPanel', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Reintentar' }));
     await fixture.whenStable();
     expect(screen.getByText(/¡Hola/)).toBeTruthy();
+  });
+
+  it('shows what the tutor did under its answer, with the button and the undo (2.5e)', async () => {
+    const settings = vi.fn((): unknown => ({
+      changed: { theme: 'dark' },
+      previous: { theme: 'light' },
+    }));
+    const open = vi.fn((): unknown => ({ opened: 'Suma' }));
+    const { fixture } = await renderPanel({
+      ask: () =>
+        (async function* () {
+          yield {
+            type: 'meta',
+            emotion: 'joy',
+            intensity: 2,
+            hintLevel: 1,
+            actions: [
+              { name: 'updateSettings', arguments: { theme: 'dark' } },
+              { name: 'openExercise', arguments: { exercise: 'next' } },
+            ],
+          } satisfies TutorEvent;
+          yield { type: 'delta', text: 'Hecho.' } satisfies TutorEvent;
+          yield { type: 'done', interactionId: 'i1', silent: false } satisfies TutorEvent;
+        })(),
+    });
+    const registry = TestBed.inject(ToolRegistry);
+    registry.register(appTool(TUTOR_TOOL.updateSettings, settings), TestBed.inject(DestroyRef));
+    registry.register(appTool(TUTOR_TOOL.openExercise, open), TestBed.inject(DestroyRef));
+    const user = userEvent.setup();
+
+    await TestBed.inject(TutorStore).ask('Modo oscuro y el siguiente');
+    await fixture.whenStable();
+
+    const actions = screen.getByRole('list', { name: 'Lo que ha hecho el tutor' });
+    expect(within(actions).getByText('Tema oscuro')).toBeTruthy();
+    await user.click(within(actions).getByRole('button', { name: /Abrir el siguiente ejercicio/ }));
+    expect(open).toHaveBeenCalled();
+
+    await user.click(within(actions).getByRole('button', { name: 'Deshacer' }));
+    expect(settings).toHaveBeenLastCalledWith({ theme: 'light' }, expect.anything());
+    await fixture.whenStable();
+    expect(within(actions).getByText('Ajustes como estaban')).toBeTruthy();
   });
 });

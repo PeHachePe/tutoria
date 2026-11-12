@@ -215,4 +215,27 @@ describe('CodeEditor', () => {
 
     expect(destroy).toHaveBeenCalledOnce();
   });
+
+  it('shows the marks of the tutor and changes them with it (2.5e)', async () => {
+    const result = await render(CodeEditor, {
+      inputs: {
+        initialCode: ['a', 'b', 'c'].join('\n'),
+        label: 'Código',
+        marks: [{ line: 2, note: 'Aquí' }],
+      },
+    });
+    const view = EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Código' }))!;
+    const marked = () => view.dom.querySelectorAll('[class*="bg-tertiary-container/60"]');
+    expect(marked()).toHaveLength(1);
+    expect(screen.getByText('Aquí')).toBeTruthy();
+
+    await result.rerender({ inputs: { marks: [{ line: 1 }, { line: 3 }] }, partialUpdate: true });
+    TestBed.tick();
+    expect(marked()).toHaveLength(2);
+    expect(screen.queryByText('Aquí')).toBeNull();
+
+    await result.rerender({ inputs: { marks: [] }, partialUpdate: true });
+    TestBed.tick();
+    expect(marked()).toHaveLength(0);
+  });
 });

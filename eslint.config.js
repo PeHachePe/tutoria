@@ -104,6 +104,12 @@ module.exports = defineConfig([
     },
   },
   {
+    // WebMCP is experimental by nature (D-047): this is the only file that uses its API, so the rest
+    // of the app keeps to stable APIs and a change of the API stays here (D-051)
+    files: ['src/app/core/tools/app-tool.ts'],
+    rules: { '@angular-eslint/no-experimental': 'off' },
+  },
+  {
     // Not translated: the templates of the tests, and the development tools (dev toolbar, showcase
     // and data explorer), which never reach a production build (D-014, D-023)
     files: ['**/*.spec.ts/**/*.html', 'src/app/dev/**/*.html', 'src/index.html'],

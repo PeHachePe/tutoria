@@ -182,6 +182,7 @@ describe('SupabaseAttemptService', () => {
         emotion: 'encouragement',
         intensity: 1,
         elusion: false,
+        actions: [],
         promptVersion: 'v1',
         createdAt: '2026-09-01T08:05:00.000Z',
       },

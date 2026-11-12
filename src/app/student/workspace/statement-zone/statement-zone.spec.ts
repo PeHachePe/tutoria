@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/angular';
 
 import type { ExerciseDetail } from '../../../data/exercise';
 import { SEED } from '../../../data/mock/fixtures/seed';
+import type { Pointer } from '../tutor-store';
 import { StatementZone } from './statement-zone';
 
 const EXERCISE = SEED.exercises[2];
@@ -56,5 +57,40 @@ describe('StatementZone', () => {
     expect(text(zone)).toContain('Este enunciado solo está en español.');
     const statement = screen.getByText(/que reciba un vector de números enteros/);
     expect(statement.closest('[lang]')?.getAttribute('lang')).toBe('es');
+  });
+
+  it('makes the example or the hidden checks the tutor points at stand out, and shows them (2.5e)', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { rerender } = await render(
+      '<app-statement-zone [detail]="detail" [pointer]="pointer" />',
+      {
+        imports: [StatementZone],
+        componentProperties: {
+          detail: DETAIL,
+          pointer: { target: 'example', example: 2, id: 'p1' } as Pointer | null,
+        },
+      },
+    );
+
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[1].hasAttribute('data-pointed')).toBe(true);
+    expect(rows[0].hasAttribute('data-pointed')).toBe(false);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+
+    await rerender({
+      componentProperties: { detail: DETAIL, pointer: { target: 'hiddenTests', id: 'p2' } },
+    });
+    expect(
+      screen
+        .getByText(/comprobaciones ocultas/)
+        .closest('p')
+        ?.hasAttribute('data-pointed'),
+    ).toBe(true);
+
+    scrollIntoView.mockClear();
+    await rerender({ componentProperties: { detail: DETAIL, pointer: null } });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
   });
 });

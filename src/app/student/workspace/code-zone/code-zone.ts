@@ -33,6 +33,7 @@ import { actionErrorMessage } from './action-error-message';
 import { RunResults } from './run-results';
 import { SaveIndicator } from './save-indicator';
 import { SubmitDialog } from './submit-dialog';
+import { TutorStore } from '../tutor-store';
 
 /** What the zone asks of the editor, without naming its class (see `editableEditor`). */
 interface FormattableEditor {
@@ -92,6 +93,8 @@ export class CodeZone {
   readonly practised = output<void>();
 
   protected readonly store = inject(AttemptStore);
+  /** Where the tutor marks the code and points at the results (2.5e). */
+  protected readonly tutor = inject(TutorStore);
   /** Pastes from outside the code, recorded for the attempt open for changes (2.8). */
   protected readonly signals = inject(BrowserSignals);
   private readonly dialog = inject(MatDialog);
@@ -156,6 +159,12 @@ export class CodeZone {
 
   protected toggleExpanded(): void {
     this.expanded.update((expanded) => !expanded);
+  }
+
+  /** Each edit is saved; the marks of the tutor were about the code as it was (2.5e). */
+  protected updateCode(code: string): void {
+    this.store.updateCode(code);
+    this.tutor.clearMarks();
   }
 
   /** «Formatear el código»: the editor puts it in order, or says why it cannot (2.5d). */

@@ -10,7 +10,12 @@ export const DEFAULT_KEY_SECRET = 'AI_API_KEY';
  */
 const KEY_SECRET = /^AI_(?:[A-Z0-9]+_)*API_KEY$/;
 
-const RESPONSE_FORMATS: readonly ResponseFormatMode[] = ['json_schema', 'json_object', 'none'];
+const RESPONSE_FORMATS: readonly ResponseFormatMode[] = [
+  'json_schema',
+  'json_object',
+  'none',
+  'tools',
+];
 
 /** The limits of the time a model of the setting may take to answer (`timeoutMs`). */
 const MIN_TIMEOUT_MS = 1_000;

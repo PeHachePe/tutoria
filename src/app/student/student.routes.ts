@@ -3,12 +3,14 @@ import { Routes } from '@angular/router';
 
 import { SEGMENTS } from '../core/app-paths';
 import { provideFormFieldDefaults } from '../core/form-field-defaults';
+import { provideAppTools } from '../core/tools/app-tool';
 import { MASCOT_ACCESSORIES } from '../shared/mascot/mascot-accessories';
 import { CatalogPage } from './catalog/catalog-page';
 import { RegisteredDataPage } from './registered-data/registered-data-page';
 import { SettingsPage } from './settings/settings-page';
 import { SettingsStore } from './settings/settings-store';
 import { StudentLayout } from './student-layout/student-layout';
+import { studentTools } from './tools/student-tools';
 
 /** Student area (2.2), loaded lazily by app.routes.ts once the role guard lets the user in. */
 export const studentRoutes: Routes = [
@@ -18,6 +20,8 @@ export const studentRoutes: Routes = [
     // Material defaults of the area, not in app.config.ts (D-021)
     providers: [
       provideFormFieldDefaults(),
+      // The tools of the area, for our tutor and for the agents of the browser (2.5e, D-051)
+      provideAppTools(studentTools),
       // Every mascot of the area wears what the student chose in the settings (1.9)
       {
         provide: MASCOT_ACCESSORIES,

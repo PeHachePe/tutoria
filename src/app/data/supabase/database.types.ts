@@ -491,6 +491,7 @@ export type Database = {
       };
       tutor_interaction: {
         Row: {
+          actions: NonNullable<Json>;
           attempt_id: string;
           created_at: string;
           elusion: boolean;
@@ -508,6 +509,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          actions?: NonNullable<Json>;
           attempt_id: string;
           created_at?: string;
           elusion?: boolean;
@@ -524,6 +526,7 @@ export type Database = {
           trigger: Database['public']['Enums']['tutor_trigger'];
         };
         Update: {
+          actions?: NonNullable<Json>;
           attempt_id?: string;
           created_at?: string;
           elusion?: boolean;
@@ -616,6 +619,7 @@ export type Database = {
       };
       record_tutor_interaction: {
         Args: {
+          answer_actions?: Json;
           answer_elusion: boolean;
           answer_emotion: Database['public']['Enums']['emotion'];
           answer_hint_level: number;

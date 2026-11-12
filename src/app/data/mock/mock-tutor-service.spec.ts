@@ -197,4 +197,41 @@ describe('MockTutorService', () => {
     });
     expect(db.tables().interactions).toEqual([]);
   });
+
+  it('asks for the data of the student first, keeping nothing, and answers with them (2.5e)', async () => {
+    setUp();
+    const asked = request({ kind: 'question', message: '¿Cuántos me quedan?' });
+
+    expect(await collect(service.ask(asked))).toEqual([
+      { type: 'query', calls: [{ name: 'getMyProgress', arguments: {} }] },
+    ]);
+    expect(db.tables().interactions).toEqual([]);
+
+    const results = [
+      {
+        name: 'getMyProgress',
+        arguments: {},
+        result: {
+          subjects: [{ subject: 'Programación básica' }],
+          total: { pending: 2, submitted: 1, assigned: 3 },
+        },
+      },
+    ];
+    const events = await collect(service.ask({ ...asked, results }));
+    expect(events[0]).toEqual(expect.objectContaining({ type: 'meta', reaction: 'applause' }));
+    expect(events[0]).not.toHaveProperty('actions');
+    expect(db.tables().interactions).toHaveLength(1);
+  });
+
+  it('answers with actions and keeps them with the interaction (2.5e)', async () => {
+    setUp();
+
+    const events = await collect(
+      service.ask(request({ kind: 'question', message: 'Pon el modo oscuro' })),
+    );
+
+    const actions = [{ name: 'updateSettings', arguments: { theme: 'dark' } }];
+    expect(events[0]).toEqual(expect.objectContaining({ type: 'meta', actions }));
+    expect(db.tables().interactions[0].actions).toEqual(actions);
+  });
 });

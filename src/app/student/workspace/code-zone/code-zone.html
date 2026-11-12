@@ -100,7 +100,8 @@
         [label]="editorLabel"
         [language]="current.language"
         [placeholder]="current.placeholder"
-        (codeChange)="store.updateCode($event)"
+        [marks]="tutor.marks()"
+        (codeChange)="updateCode($event)"
         (pasted)="signals.pasted($event)"
         (runShortcut)="store.run()"
       />
@@ -230,6 +231,7 @@
     [result]="run"
     [functionName]="exercise()?.functionName ?? ''"
     [outdated]="store.runOutdated()"
+    [pointer]="tutor.pointer()"
   />
 } @else if (store.attempt() && !store.readonly()) {
   <p class="flex items-center gap-2 text-body-small text-on-surface-variant">

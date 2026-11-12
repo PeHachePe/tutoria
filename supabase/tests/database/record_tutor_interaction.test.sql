@@ -2,7 +2,7 @@
 -- with tests failed (attempt ...012); Lucía (...011) has exercise 8 passed (attempt ...008).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(17);
 
 set local role service_role;
 
@@ -53,6 +53,31 @@ select ok(
   'the answer keeps how many answers of the model were turned down'
 );
 
+-- What the tutor did with its tools (2.5e): none by default, and the actions it took
+select is(
+  (select actions from tutor_interaction
+   where request_id = 'a0000000-0000-4000-8000-000000000002'),
+  '[]'::jsonb,
+  'an answer without actions keeps an empty list'
+);
+select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+  'a0000000-0000-4000-8000-000000000009', 'question', 1::smallint, 'Ponme el siguiente',
+  'Te dejo el botón.', 'joy', 2::smallint, false, 'v4', 'gemini-test', false, 0::smallint,
+  '[{"name": "openExercise", "arguments": {"exercise": "next"}}]'::jsonb);
+select is(
+  (select actions -> 0 ->> 'name' from tutor_interaction
+   where request_id = 'a0000000-0000-4000-8000-000000000009'),
+  'openExercise',
+  'the answer keeps the actions of the tutor'
+);
+select throws_ok(
+  $$ select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+       'a0000000-0000-4000-8000-00000000000a', 'question', 1::smallint, 'x', 'y', 'joy',
+       1::smallint, false, 'v4', 'm', false, 0::smallint, '{}'::jsonb) $$,
+  '23514', null,
+  'the actions are a list'
+);
+
 -- The same request twice is one answer
 select throws_ok(
   $$ select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
@@ -85,11 +110,11 @@ select throws_ok(
   'only an intervention may keep quiet'
 );
 
--- The limit counts every call of the last minute: the three answers and the silent intervention
+-- The limit counts every call of the last minute: the four answers and the silent intervention
 select is(
   (select count(*)::integer from latest_tutor_calls('10000000-0000-4000-8000-000000000012',
      now() - interval '1 minute', 10)),
-  4,
+  5,
   'the latest calls count the answers and the silent interventions'
 );
 

@@ -1,4 +1,12 @@
-import { Component, computed, inject, input, model } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  model,
+} from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 
 import { LanguageService } from '../../../core/i18n/language-service';
@@ -8,6 +16,7 @@ import { formatCall, formatValue, isMultilineText } from '../../../shared/format
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { splitInlineCode } from '../../../shared/split-inline-code';
+import type { Pointer } from '../tutor-store';
 
 /** Id of the zone, which the splitter under it controls. */
 export const STATEMENT_ZONE_ID = 'statement-zone';
@@ -52,6 +61,8 @@ export class StatementZone {
   readonly open = model(true);
   /** Share of the column it takes while open on a wide screen, in percent. */
   readonly share = input<number>();
+  /** Where the tutor points: an example or the hidden checks stand out (2.5e). */
+  readonly pointer = input<Pointer | null>(null);
 
   private readonly locale = inject(LanguageService).locale;
 
@@ -85,6 +96,22 @@ export class StatementZone {
           };
     return { statement, untranslated, examples, hiddenTestCount };
   });
+
+  /** The example the tutor points at, by its position from 1. */
+  protected readonly pointedExample = computed(() => {
+    const pointer = this.pointer();
+    return pointer?.target === 'example' ? pointer.example : undefined;
+  });
+  protected readonly pointedHidden = computed(() => this.pointer()?.target === 'hiddenTests');
+
+  constructor() {
+    const host: HTMLElement = inject(ElementRef).nativeElement;
+    // The boundary with the DOM: what the tutor points at scrolls into sight, each time it points
+    afterRenderEffect(() => {
+      if (!this.pointer()) return;
+      host.querySelector('[data-pointed]')?.scrollIntoView({ block: 'nearest' });
+    });
+  }
 
   protected toggle(): void {
     this.open.update((open) => !open);

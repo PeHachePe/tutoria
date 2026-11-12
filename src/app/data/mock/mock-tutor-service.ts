@@ -31,8 +31,22 @@ export class MockTutorService extends TutorService {
 
   private async *answer(request: TutorRequest): AsyncGenerator<TutorEvent> {
     const { answer, interactionId } = await this.network.request(() => this.record(request));
-    const { emotion, intensity, reaction, hintLevel, text, silent, elusion } = answer;
-    yield { type: 'meta', emotion, intensity, hintLevel, reaction, elusion };
+    const { emotion, intensity, reaction, hintLevel, text, silent, elusion, queries, actions } =
+      answer;
+    // It needs data of the student first: the app sends them back with the same request (2.5e)
+    if (queries) {
+      yield { type: 'query', calls: queries };
+      return;
+    }
+    yield {
+      type: 'meta',
+      emotion,
+      intensity,
+      hintLevel,
+      reaction,
+      elusion,
+      ...(actions?.length ? { actions } : {}),
+    };
     for await (const chunk of typeOut(text, this.typingMs)) {
       yield { type: 'delta', text: chunk };
     }
@@ -44,7 +58,7 @@ export class MockTutorService extends TutorService {
     answer: ScriptedAnswer;
     interactionId: string | null;
   } {
-    const { attemptId, kind, message, code, language } = request;
+    const { attemptId, kind, message, code, language, results } = request;
     if (kind === 'question' && !message?.trim()) {
       throw new DataError('invalid', 'A question needs its message');
     }
@@ -68,7 +82,10 @@ export class MockTutorService extends TutorService {
       previous,
       language,
       exerciseFunction: { name: exercise.functionName, parameters: firstTest.input.length },
+      results,
     });
+    // Nothing is kept until it answers with the data (2.5e)
+    if (answer.queries) return { answer, interactionId: null };
     const timestamp = now();
 
     const event = this.eventOf(request, answer, timestamp);
@@ -89,6 +106,7 @@ export class MockTutorService extends TutorService {
       emotion: answer.emotion,
       intensity: answer.intensity,
       elusion: answer.elusion,
+      ...(answer.actions?.length ? { actions: answer.actions } : {}),
       promptVersion: PROMPT_VERSION,
       createdAt: timestamp,
     };

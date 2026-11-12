@@ -85,7 +85,26 @@ export const EMOTION_REACTIONS: Record<Emotion, ReactionKind> = {
   celebration: 'party',
 };
 
-/** Each answer arrives as `meta` → `delta`(s) → `done`. */
+/**
+ * A call to one of the tools of the tutor (2.5e, `tutor-tools.ts`): its name and its arguments,
+ * checked by the server against the contract before they reach the app.
+ */
+export interface ToolRequest {
+  readonly name: string;
+  readonly arguments: Readonly<Record<string, unknown>>;
+}
+
+/** What a query gave, run by the app and sent back with the same request (2.5e, D-051). */
+export interface ToolResult extends ToolRequest {
+  /** The data of the query, or why it failed (`{ error }`). */
+  readonly result: unknown;
+}
+
+/**
+ * Each answer arrives as `meta` → `delta`(s) → `done`. When the model needs data of the student
+ * first, the answer is only `query`: the app runs those queries and asks again with their results
+ * (2.5e).
+ */
 export type TutorEvent =
   | {
       readonly type: 'meta';
@@ -99,8 +118,14 @@ export type TutorEvent =
        * statement (D-044). Without it, false.
        */
       readonly elusion?: boolean;
+      /**
+       * What the tutor does with its tools (2.5e): the views at once, the rest with a button the
+       * student presses. Without it, none.
+       */
+      readonly actions?: readonly ToolRequest[];
     }
   | { readonly type: 'delta'; readonly text: string }
+  | { readonly type: 'query'; readonly calls: readonly ToolRequest[] }
   | {
       readonly type: 'done';
       readonly interactionId: string | null;

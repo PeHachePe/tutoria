@@ -156,6 +156,7 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
         emotion: 'encouragement',
         intensity: 2,
         elusion: false,
+        actions: [],
       },
     ],
   };
@@ -215,6 +216,7 @@ Deno.test(
           emotion: 'encouragement',
           intensity: 2,
           elusion: false,
+          actions: [],
         },
       ],
     };
@@ -366,6 +368,7 @@ Deno.test(
         intensity: 1,
         transcript: 'Ya te lo dije: mira el bucle.',
         elusion: true,
+        actions: [],
       },
     ];
 
@@ -397,6 +400,7 @@ Deno.test('the same request twice at once gets the answer kept first', async () 
       intensity: 3,
       transcript: 'La primera.',
       elusion: false,
+      actions: [],
     });
     return Promise.resolve({ status: 'duplicate' });
   };
@@ -515,4 +519,93 @@ Deno.test('without code there is nothing to try', async () => {
 
   assertEquals(sandbox.requests.length, 0);
   assertStringIncludes(llm.requests[0].at(-1)!.content, '(no hay código que probar)');
+});
+
+// Tools (2.5e)
+
+const QUESTION = { kind: 'question', message: '¿Cuántos me quedan?' };
+const ASKS_PROGRESS = JSON.stringify({
+  message: 'Voy a mirarlo.',
+  emotion: 'joy',
+  intensity: 2,
+  reaction: 'thinking',
+  elusion: false,
+  query: { getMyProgress: {} },
+});
+const PROGRESS = [{ name: 'getMyProgress', arguments: {}, result: { pending: 4 } }];
+
+Deno.test(
+  'the model asks for data first: the app gets the queries and nothing is kept',
+  async () => {
+    const { store, handle } = setup([ASKS_PROGRESS]);
+    const response = await handle(post(QUESTION));
+    assertEquals(response.status, 200);
+    assertEquals(await response.json(), {
+      events: [{ type: 'query', calls: [{ name: 'getMyProgress', arguments: {} }] }],
+    });
+    assertEquals(store.recorded, []);
+  },
+);
+
+Deno.test('with the results, the model answers with the data, once', async () => {
+  // Asking again for data is not taken: its message is the answer
+  const { store, llm, handle } = setup([ASKS_PROGRESS]);
+  const response = await handle(post({ ...QUESTION, results: PROGRESS }));
+  const { events } = await response.json();
+  assertEquals(events[1], { type: 'delta', text: 'Voy a mirarlo.' });
+  assertEquals(llm.requests.length, 1);
+  const sent = llm.requests[0];
+  assertEquals(JSON.parse(sent.at(-2)!.content), { message: '', query: { getMyProgress: {} } });
+  assertStringIncludes(sent.at(-1)!.content, '<resultado_consulta>');
+  assertStringIncludes(sent.at(-1)!.content, 'getMyProgress: {"pending":4}');
+  assertEquals(store.recorded.length, 1);
+});
+
+Deno.test('a hint never waits for data', async () => {
+  const { store, handle } = setup([ASKS_PROGRESS]);
+  const { events } = await (await handle(post())).json();
+  assertEquals(events[0].type, 'meta');
+  assertEquals(store.recorded.length, 1);
+});
+
+Deno.test('results of something that is not a query of the contract are turned down', async () => {
+  for (const results of [
+    [{ name: 'navigate', arguments: { to: 'settings' }, result: 'ok' }],
+    [{ name: 'getMyProgress', arguments: { subject: 3 }, result: {} }],
+    [{ name: 'getMyProgress', arguments: {}, result: 'x'.repeat(13_000) }],
+    [],
+  ]) {
+    const { handle } = setup();
+    assertEquals((await handle(post({ ...QUESTION, results }))).status, 400);
+  }
+});
+
+Deno.test('the actions of the answer reach the app and are kept, also for a retry', async () => {
+  const withActions = JSON.stringify({
+    ...JSON.parse(GOOD),
+    actions: { highlightLines: { lines: [{ line: 1, note: 'Mira el valor inicial' }] } },
+  });
+  const { store, handle } = setup([withActions]);
+  const { events } = await (await handle(post())).json();
+  const actions = [
+    {
+      name: 'highlightLines' as const,
+      arguments: { lines: [{ line: 1, note: 'Mira el valor inicial' }] },
+    },
+  ];
+  assertEquals(events[0].actions, actions);
+  assertEquals(store.recorded[0].answer?.actions, actions);
+
+  store.answers.push({
+    id: `i-${REQUEST_ID}`,
+    attemptId: ATTEMPT_ID,
+    hintLevel: 1,
+    emotion: 'joy',
+    intensity: 2,
+    transcript: 'Mira la línea 1.',
+    elusion: false,
+    actions,
+  });
+  const replayed = await (await handle(post())).json();
+  assertEquals(replayed.events[0].actions, actions);
 });

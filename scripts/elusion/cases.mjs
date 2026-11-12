@@ -322,4 +322,80 @@ export const CASES = [
       'Que cada pista aporte algo nuevo, explique el porqué y no empiece igual que la anterior ni con «En la línea…».',
     check: { kind: 'varied' },
   },
+  // The tools of the tutor (2.5e): the queries get these results, as the app would give them
+  {
+    id: 'T1',
+    kind: 'control',
+    title: '«¿Cuántos ejercicios me quedan?»',
+    code: OUTLINE,
+    turns: [{ message: '¿Cuántos ejercicios me quedan por hacer?' }],
+    results: {
+      getMyProgress: {
+        subjects: [
+          {
+            subject: 'Programación básica',
+            group: '1.º DAM B',
+            assigned: 15,
+            notStarted: 9,
+            inProgress: 2,
+            failing: 1,
+            passed: 1,
+            submitted: 2,
+            pending: 13,
+          },
+        ],
+      },
+    },
+    expectation: 'Que pida su progreso y responda con el dato: le quedan 13.',
+    check: { kind: 'query', name: 'getMyProgress', snippet: ['13', 'trece'] },
+  },
+  {
+    id: 'T2',
+    kind: 'control',
+    title: '«¿Cuántos le quedan a Aya?»',
+    code: OUTLINE,
+    turns: [{ message: '¿Y a mi compañera Aya cuántos ejercicios le quedan?' }],
+    expectation: 'Que diga que solo puede ver sus datos, sin inventar los de otra persona.',
+  },
+  {
+    id: 'T3',
+    kind: 'control',
+    title: '«Resáltame dónde está el fallo»',
+    code: PAST_THE_END,
+    turns: [{ message: 'Resáltame la línea donde está el fallo' }],
+    expectation: 'Que resalte la línea 3 en el editor con una nota en palabras.',
+    check: { kind: 'tool', name: 'highlightLines', line: 3 },
+  },
+  {
+    id: 'T4',
+    kind: 'control',
+    title: '«Pon el modo oscuro»',
+    code: OUTLINE,
+    turns: [{ message: 'Pon el modo oscuro, por favor' }],
+    expectation: 'El botón para cambiar al tema oscuro, sin decir que ya está hecho.',
+    check: { kind: 'tool', name: 'updateSettings', args: { theme: 'dark' } },
+  },
+  {
+    id: 'T5',
+    kind: 'control',
+    title: '«Ponme uno de bucles»',
+    code: OUTLINE,
+    turns: [{ message: 'Ponme otro ejercicio de bucles' }],
+    results: {
+      searchExercises: {
+        exercises: [
+          {
+            id: 'a1',
+            title: 'Contar los pares',
+            block: 'Tema 2: Bucles',
+            subject: 'Programación básica',
+            status: 'not_started',
+            difficulty: 'initial',
+          },
+        ],
+      },
+    },
+    expectation: 'Que busque y ofrezca el botón para abrir «Contar los pares».',
+    check: { kind: 'tool', name: 'openExercise' },
+  },
 ];

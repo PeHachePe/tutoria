@@ -1,6 +1,7 @@
 import { computed, inject, linkedSignal, resource, Service } from '@angular/core';
 
 import { LanguageService } from '../../core/i18n/language-service';
+import { ToolRegistry } from '../../core/tools/app-tool';
 import { AttemptService } from '../../data/attempt-service';
 import {
   answerHintLevel,
@@ -10,15 +11,53 @@ import {
   type Intensity,
   reachedHintLevel,
   type ReactionKind,
+  type ToolRequest,
+  type ToolResult,
   type TutorInteraction,
+  type TutorRequest,
   type TutorTrigger,
 } from '../../data/tutor';
 import { TutorService } from '../../data/tutor-service';
+import { TUTOR_TOOL } from '../../data/tutor/tutor-tools';
+import type { LineMark } from '../../shared/code-editor/line-mark';
 import type { Reaction } from '../../shared/reactions/reaction';
 import { AttemptStore } from './attempt-store';
 
 /** Where an answer is: arriving, complete, or lost on the way. */
 export type TurnStatus = 'answering' | 'done' | 'failed';
+
+/**
+ * Where an action of the tutor is (2.5e): waiting for the student's button, running, done, failed,
+ * undone, or of an earlier visit, which is never run again.
+ */
+export type ActionStatus = 'pending' | 'running' | 'done' | 'failed' | 'undone' | 'past';
+
+/** What the tutor does with one of its tools in an answer (2.5e). */
+export interface TurnAction {
+  readonly call: ToolRequest;
+  readonly status: ActionStatus;
+  /** What the tool gave, once done: what `updateSettings` changed, to undo it. */
+  readonly result?: unknown;
+}
+
+/** The parts of the screen the tutor can point at (`pointAt`, 2.5e). */
+export interface Pointer {
+  readonly target: 'example' | 'failingTest' | 'hiddenTests';
+  /** The example of the statement, from 1. */
+  readonly example?: number;
+  /** A new one each time, so pointing twice at the same place shows it again. */
+  readonly id: string;
+}
+
+/**
+ * Whether an action waits for the student's button: opening another page and changing the language,
+ * which reloads it. The rest only change what the screen shows, or a setting that can be undone,
+ * and run as soon as the answer is whole (2.5e).
+ */
+export function waitsForStudent(call: ToolRequest): boolean {
+  const tool = TUTOR_TOOL[call.name as keyof typeof TUTOR_TOOL];
+  return tool?.use !== 'view' || (call.name === 'updateSettings' && 'language' in call.arguments);
+}
 
 /** One exchange with the tutor: what the student asked, if anything, and the tutor's answer. */
 export interface TutorTurn {
@@ -42,19 +81,26 @@ export interface TutorTurn {
   readonly error?: unknown;
   /** Asked in this visit: its answer is read aloud and counts as new. The past is not. */
   readonly fresh: boolean;
+  /** What the tutor does with its tools in this answer (2.5e). */
+  readonly actions: readonly TurnAction[];
+  /** The queries of the student's data the tutor made before answering (2.5e). */
+  readonly queried: readonly string[];
 }
 
 /**
  * The conversation with the tutor in the workspace (4.5), shared by the chat, the reactions (1.8), the
  * voice (6.1) and the proactive tutor (6.2). It loads the past turns of the attempt, sends each
  * question or hint with the latest code and writes the answer as its events arrive (2.6). The
- * server decides the hint level; the store only shows it.
+ * server decides the hint level; the store only shows it. Since 2.5e, it also runs the tools the
+ * tutor asks for: the queries before it answers, and its actions once the answer is whole, or when
+ * the student presses their button; and it keeps where the tutor marks the code and points.
  */
 @Service({ autoProvided: false }) // provided by the workspace route, with the AttemptStore it follows
 export class TutorStore {
   private readonly tutor = inject(TutorService);
   private readonly attempts = inject(AttemptService);
   private readonly attemptStore = inject(AttemptStore);
+  private readonly tools = inject(ToolRegistry);
   private readonly language = inject(LanguageService).locale;
 
   private readonly attemptId = computed(() => this.attemptStore.attempt()?.id);
@@ -71,6 +117,21 @@ export class TutorStore {
   );
 
   readonly turns = this.turnsState.asReadonly();
+
+  /** The lines of the code the tutor marked (`highlightLines`); none in another exercise. */
+  private readonly marksState = linkedSignal<readonly LineMark[]>(() => {
+    this.attemptId();
+    return [];
+  });
+  readonly marks = this.marksState.asReadonly();
+
+  /** Where the tutor points on the screen (`pointAt`); nowhere in another exercise. */
+  private readonly pointerState = linkedSignal<Pointer | null>(() => {
+    this.attemptId();
+    return null;
+  });
+  readonly pointer = this.pointerState.asReadonly();
+
   readonly loading = this.history.isLoading;
   readonly loadError = computed(() => this.history.error());
   /** A submitted attempt keeps its conversation, but gets no more help (2.4). */
@@ -160,6 +221,80 @@ export class TutorStore {
     this.history.reload();
   }
 
+  /** Marks lines of the code with a note, or clears them with none (2.5e). */
+  mark(lines: readonly LineMark[]): void {
+    this.marksState.set(lines);
+  }
+
+  /** The student edited the code: the marks were about the code as it was. */
+  clearMarks(): void {
+    if (this.marksState().length > 0) this.marksState.set([]);
+  }
+
+  /** Draws attention to a part of the screen (2.5e). */
+  pointAt(target: Pointer['target'], example?: number): void {
+    this.pointerState.set({
+      target,
+      ...(example === undefined ? {} : { example }),
+      id: crypto.randomUUID(),
+    });
+  }
+
+  /** The student pressed the button of an action the tutor offered, or tries it again (2.5e). */
+  async runAction(turnId: string, index: number): Promise<void> {
+    const action = this.actionAt(turnId, index);
+    if (action?.status !== 'pending' && action?.status !== 'failed') return;
+    await this.run(turnId, index, action.call);
+  }
+
+  /** «Deshacer»: the settings the tutor changed go back to how they were (2.5e). */
+  async undoAction(turnId: string, index: number): Promise<void> {
+    const action = this.actionAt(turnId, index);
+    const previous = (action?.result as { readonly previous?: object } | undefined)?.previous;
+    if (action?.status !== 'done' || action.call.name !== 'updateSettings' || !previous) return;
+    const run = await this.tools.run('updateSettings', previous);
+    if (run.ok) this.patchAction(turnId, index, { status: 'undone' });
+  }
+
+  private actionAt(turnId: string, index: number): TurnAction | undefined {
+    return this.turnsState().find((turn) => turn.id === turnId)?.actions[index];
+  }
+
+  private async run(turnId: string, index: number, call: ToolRequest): Promise<void> {
+    this.patchAction(turnId, index, { status: 'running' });
+    const run = await this.tools.run(call.name, call.arguments);
+    this.patchAction(
+      turnId,
+      index,
+      run.ok ? { status: 'done', result: run.result } : { status: 'failed' },
+    );
+  }
+
+  private patchAction(turnId: string, index: number, change: Partial<TurnAction>): void {
+    this.turnsState.update((turns) =>
+      turns.map((turn) =>
+        turn.id === turnId
+          ? {
+              ...turn,
+              actions: turn.actions.map((action, at) =>
+                at === index ? { ...action, ...change } : action,
+              ),
+            }
+          : turn,
+      ),
+    );
+  }
+
+  /** The queries the tutor asked for, run here: what each one gave, or why it could not (2.5e). */
+  private query(calls: readonly ToolRequest[]): Promise<ToolResult[]> {
+    return Promise.all(
+      calls.map(async (call) => {
+        const run = await this.tools.run(call.name, call.arguments);
+        return { ...call, result: run.ok ? run.result : { error: run.error } };
+      }),
+    );
+  }
+
   /**
    * Sends the request with the code as it is now, unsaved changes included, and writes the answer as
    * it arrives. Another exercise opened meanwhile has a conversation of its own, where this turn no
@@ -187,6 +322,8 @@ export class TutorStore {
         createdAt: new Date().toISOString(),
         status: 'answering',
         fresh: true,
+        actions: [],
+        queried: [],
       },
     ]);
     const patch = (change: (turn: TutorTurn) => Partial<TutorTurn>) =>
@@ -195,40 +332,67 @@ export class TutorStore {
       );
 
     try {
-      const events = this.tutor.ask({
+      const request: TutorRequest = {
         requestId: id,
         attemptId: attempt.id,
         kind,
         message,
         code: attempt.currentCode,
         language: this.language,
-      });
-      for await (const event of events) {
-        switch (event.type) {
-          case 'meta':
-            patch(() => ({
-              hintLevel: event.hintLevel,
-              emotion: event.emotion,
-              intensity: event.intensity,
-              reaction: event.reaction ?? EMOTION_REACTIONS[event.emotion],
-              elusion: event.elusion ?? false,
-            }));
-            break;
-          case 'delta':
-            patch((turn) => ({ answer: turn.answer + event.text }));
-            break;
-          case 'done':
-            if (event.silent) {
-              // The tutor chose not to step in: nothing to show (2.7)
-              this.turnsState.update((turns) => turns.filter((turn) => turn.id !== id));
-            }
-            break;
+      };
+      // The tutor may ask for data of the student first: they are read here and the same request
+      // goes again with them, once (2.5e)
+      let asked = request;
+      for (;;) {
+        let queries: readonly ToolRequest[] = [];
+        for await (const event of this.tutor.ask(asked)) {
+          switch (event.type) {
+            case 'query':
+              queries = event.calls;
+              break;
+            case 'meta':
+              patch(() => ({
+                hintLevel: event.hintLevel,
+                emotion: event.emotion,
+                intensity: event.intensity,
+                reaction: event.reaction ?? EMOTION_REACTIONS[event.emotion],
+                elusion: event.elusion ?? false,
+                actions: (event.actions ?? []).map((call) => ({
+                  call,
+                  status: 'pending' as const,
+                })),
+              }));
+              break;
+            case 'delta':
+              patch((turn) => ({ answer: turn.answer + event.text }));
+              break;
+            case 'done':
+              if (event.silent) {
+                // The tutor chose not to step in: nothing to show (2.7)
+                this.turnsState.update((turns) => turns.filter((turn) => turn.id !== id));
+              }
+              break;
+          }
         }
+        if (queries.length === 0 || asked.results) break;
+        const names = queries.map((call) => call.name);
+        patch(() => ({ queried: names }));
+        asked = { ...request, results: await this.query(queries) };
       }
       patch(() => ({ status: 'done' }));
     } catch (error) {
       // What arrived of the answer is dropped: retrying asks again from the start
-      patch(() => ({ status: 'failed', answer: '', error }));
+      patch(() => ({ status: 'failed', answer: '', error, actions: [], queried: [] }));
+      return;
+    }
+    await this.runWithoutWaiting(id);
+  }
+
+  /** Once the answer is whole, the actions that only change the screen run by themselves (2.5e). */
+  private async runWithoutWaiting(turnId: string): Promise<void> {
+    const actions = this.turnsState().find((turn) => turn.id === turnId)?.actions ?? [];
+    for (const [index, action] of actions.entries()) {
+      if (!waitsForStudent(action.call)) await this.run(turnId, index, action.call);
     }
   }
 }
@@ -248,5 +412,8 @@ function pastTurn(interaction: TutorInteraction): TutorTurn {
     createdAt: interaction.createdAt,
     status: 'done',
     fresh: false,
+    // What it did then is not done again
+    actions: (interaction.actions ?? []).map((call) => ({ call, status: 'past' })),
+    queried: [],
   };
 }

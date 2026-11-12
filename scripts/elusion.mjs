@@ -310,17 +310,27 @@ function quickAnswers(answers) {
   return answers
     .map((answer, index) =>
       answer
-        ? `    ${index + 1}. [${answer.emotion}/${answer.intensity} ${answer.reaction ?? '-'}] ${answer.message.replaceAll('\n', '\n       ')}`
+        ? `    ${index + 1}. [${answer.emotion}/${answer.intensity} ${answer.reaction ?? '-'}]${toolsOf(answer)} ${answer.message.replaceAll('\n', '\n       ')}`
         : `    ${index + 1}. (sin respuesta)`,
     )
     .join('\n');
+}
+
+/** The queries and actions of an answer, for a quick read (2.5e). */
+function toolsOf(answer) {
+  const queries = (answer.queries ?? []).map((name) => `?${name}`);
+  const actions = (answer.actions ?? []).map(
+    (action) => `!${action.name}${JSON.stringify(action.arguments)}`,
+  );
+  const tools = [...queries, ...actions];
+  return tools.length > 0 ? ` {${tools.join(' ')}}` : '';
 }
 
 async function runCase(battery, each) {
   const attemptId = await freshAttempt(battery);
   const answers = [];
   for (const turn of each.turns) {
-    const answer = await ask(battery, {
+    const answer = await ask(battery, each, {
       requestId: randomUUID(),
       attemptId,
       kind: turn.hint ? 'hint' : 'question',
@@ -335,8 +345,26 @@ async function runCase(battery, each) {
   return answers;
 }
 
-/** One request to the tutor, waiting when it asks to; what it recorded, read back. */
-async function ask(battery, request) {
+/**
+ * One request to the tutor; what it recorded, read back. When the model asks for data first (2.5e),
+ * the request goes again with the results of the case, as the app would send them, and the answer
+ * says which queries it asked for.
+ */
+async function ask(battery, each, request) {
+  const first = await post(battery, request);
+  const queries = first?.events.find((event) => event.type === 'query')?.calls;
+  if (!queries) return first && recordedAnswer(battery, first.events, first.latencyMs);
+  const results = queries.map((call) => ({
+    ...call,
+    result: each.results?.[call.name] ?? { error: 'Sin datos en este caso de la batería' },
+  }));
+  const second = await post(battery, { ...request, results });
+  const answer = second && (await recordedAnswer(battery, second.events, second.latencyMs));
+  return answer && { ...answer, queries: queries.map((call) => call.name) };
+}
+
+/** Sends a request, waiting when the function asks to: its events, or null if it never answered. */
+async function post(battery, request) {
   for (let tries = 1; tries <= MAX_TRIES; tries++) {
     const started = performance.now();
     const response = await fetch(`${battery.url}/functions/v1/tutor`, {
@@ -351,7 +379,7 @@ async function ask(battery, request) {
     const latencyMs = Math.round(performance.now() - started);
     if (response.ok) {
       const { events } = await response.json();
-      return recordedAnswer(battery, events, latencyMs);
+      return { events, latencyMs };
     }
     const reason = await response.text();
     console.warn(`    ${response.status}: ${reason.slice(0, 200)}`);
@@ -395,6 +423,7 @@ async function recordedAnswer({ admin }, events, latencyMs) {
     intensity: meta.intensity,
     hintLevel: meta.hintLevel,
     ...(meta.reaction ? { reaction: meta.reaction } : {}),
+    ...(meta.actions ? { actions: meta.actions } : {}),
     model: data.model,
     promptVersion: data.prompt_version,
     latencyMs,

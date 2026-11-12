@@ -67,7 +67,15 @@
   } @else {
     <ul class="flex flex-col">
       @for (example of examples(); track example.key) {
-        <li class="flex gap-2 border-t border-outline-variant py-2 first:border-t-0">
+        <li
+          class="flex gap-2 border-t border-outline-variant py-2 first:border-t-0"
+          [class]="
+            pointedExample() === example.key
+              ? 'rounded-lg bg-tertiary-container px-2 text-on-tertiary-container'
+              : ''
+          "
+          [attr.data-pointed]="pointedExample() === example.key ? '' : null"
+        >
           <mat-icon class="shrink-0" [class]="states[example.state].colour">{{
             states[example.state].icon
           }}</mat-icon>
@@ -111,7 +119,11 @@
     </ul>
 
     @if (hiddenChecks().length > 0) {
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div
+        class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg"
+        [class]="pointedHidden() ? 'bg-tertiary-container px-2 py-1' : ''"
+        [attr.data-pointed]="pointedHidden() ? '' : null"
+      >
         <p class="text-body-small text-on-surface-variant" i18n="@@runResults.hiddenChecks">
           Comprobaciones ocultas:
         </p>

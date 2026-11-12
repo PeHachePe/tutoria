@@ -7,12 +7,15 @@ import {
   isStuckMessage,
   type ReactionKind,
   skeletonBlock,
+  type ToolRequest,
+  type ToolResult,
   type TutorInteraction,
   type TutorTrigger,
 } from '../tutor';
 import type { ContentLocale } from '../localized-text';
 import { syntaxBlocks, syntaxTopicsIn } from '../tutor/syntax-examples';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
+import { scriptedTools } from './scripted-tools';
 
 /** What the scripted tutor looks at: the request, the attempt and the conversation so far. */
 export interface ScriptInput {
@@ -26,6 +29,8 @@ export interface ScriptInput {
   readonly language: ContentLocale;
   /** The function the exercise asks for, whose empty skeleton a stuck student gets (2.5d). */
   readonly exerciseFunction: ExerciseFunction;
+  /** What the queries it asked for gave, sent back by the app (2.5e). */
+  readonly results?: readonly ToolResult[];
 }
 
 /** The name of the function of an exercise and how many parameters it takes, from its tests. */
@@ -44,6 +49,10 @@ export interface ScriptedAnswer {
   readonly reaction: ReactionKind;
   readonly elusion: boolean;
   readonly silent: boolean;
+  /** The data it needs before answering: then it answers nothing yet (2.5e). */
+  readonly queries?: readonly ToolRequest[];
+  /** What it does with its tools (2.5e). */
+  readonly actions?: readonly ToolRequest[];
 }
 
 /** Each hint level goes further: it makes the student think, switches on an idea, then takes off. */
@@ -88,6 +97,7 @@ export function scriptedAnswer({
   previous,
   language,
   exerciseFunction,
+  results,
 }: ScriptInput): ScriptedAnswer {
   const script = TUTOR_SCRIPTS[language];
   const hintLevel = answerHintLevel(kind, previous, message);
@@ -119,6 +129,13 @@ export function scriptedAnswer({
         const elusions = previous.filter((interaction) => interaction.elusion).length;
         const joke = ELUSION_REACTIONS[elusions % ELUSION_REACTIONS.length];
         return answer(script.elusion, 'surprise', joke, MAX_INTENSITY, true);
+      }
+      // What a tool does: the data of the student, or an action on the screen (2.5e)
+      const tools = scriptedTools(message ?? '', results, language);
+      if (tools) {
+        return 'queries' in tools
+          ? { ...answer('', 'joy', 'thinking'), queries: tools.queries }
+          : { ...answer(tools.text, 'joy', 'applause'), actions: tools.actions };
       }
       // How something is written: the examples of the catalog, as the server adds them (2.5d)
       const topics = syntaxTopicsIn(message);

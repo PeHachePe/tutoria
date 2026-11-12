@@ -238,6 +238,7 @@ export function interactionRow(
     trigger: 'hint',
     hint_level: 1,
     student_message: null,
+    actions: [],
     transcript: '¿Qué valor tiene el acumulador al empezar?',
     emotion: 'encouragement',
     intensity: 1,

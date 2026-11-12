@@ -99,11 +99,13 @@
     class="app-fill-tabs min-h-0 flex-1"
     mat-stretch-tabs
     preserveContent
+    [selectedIndex]="selectedTab()"
     (selectedIndexChange)="selectTab($event)"
   >
     <mat-tab label="Ejercicio" i18n-label="@@workspace.tab.exercise">
       <app-statement-zone
         [detail]="detail.value()"
+        [pointer]="pointer()"
         [loading]="detail.isLoading()"
         [compact]="true"
       />
@@ -152,6 +154,7 @@
       @if (!codeExpanded()) {
         <app-statement-zone
           [detail]="detail.value()"
+          [pointer]="pointer()"
           [loading]="detail.isLoading()"
           [share]="statementShare()"
           [(open)]="statementOpen"

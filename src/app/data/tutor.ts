@@ -1,5 +1,12 @@
 import type { AppLocale } from '../core/i18n/locale';
-import type { HintLevel, Emotion, Intensity, TutorTrigger } from './tutor/tutor-contract';
+import type {
+  Emotion,
+  HintLevel,
+  Intensity,
+  ToolRequest,
+  ToolResult,
+  TutorTrigger,
+} from './tutor/tutor-contract';
 
 // The contract the Edge Function `tutor` shares with the app lives in a file without imports
 export {
@@ -18,6 +25,8 @@ export {
   type ReactionKind,
   reachedHintLevel,
   skeletonBlock,
+  type ToolRequest,
+  type ToolResult,
   TUTOR_TRIGGERS,
   type TutorEvent,
   type TutorTrigger,
@@ -38,6 +47,11 @@ export interface TutorRequest {
   readonly code: string;
   /** Language of the interface, which the tutor answers in (D-033). */
   readonly language: AppLocale;
+  /**
+   * What the queries the tutor asked for gave, run by the app: the same request goes again with
+   * them, and the tutor answers with the data (2.5e).
+   */
+  readonly results?: readonly ToolResult[];
 }
 
 /** Table `tutor_interaction`, written only by the server. */
@@ -54,6 +68,8 @@ export interface TutorInteraction {
   readonly intensity: Intensity;
   /** The student tried to get the solution. */
   readonly elusion: boolean;
+  /** What the tutor did with its tools (2.5e); none if not said. */
+  readonly actions?: readonly ToolRequest[];
   readonly promptVersion: string;
   readonly createdAt: string;
 }

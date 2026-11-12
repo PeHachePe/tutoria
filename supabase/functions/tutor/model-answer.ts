@@ -8,8 +8,16 @@ import {
   type ReactionKind,
   skeletonBlock,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
+import {
+  type ObjectSchema,
+  type ToolCall,
+  type ToolCallKind,
+  type ToolSchema,
+  toolCallsOf,
+  TUTOR_TOOLS,
+} from '../../../src/app/data/tutor/tutor-tools.ts';
 import { SYNTAX_TOPICS, syntaxBlocks } from '../../../src/app/data/tutor/syntax-examples.ts';
-import type { AnswerFormat } from './llm-provider.ts';
+import type { AnswerFormat, FormatTool } from './llm-provider.ts';
 
 /** What the model answers (2.6), once checked. */
 export interface ModelAnswer {
@@ -20,6 +28,8 @@ export interface ModelAnswer {
   readonly reaction?: ReactionKind;
   /** The student tried to get the solution. */
   readonly elusion: boolean;
+  /** What the tutor does with its tools (2.5e): only calls of the contract, checked. */
+  readonly actions?: readonly ToolCall[];
 }
 
 /** Why an answer of the model is not good enough, which decides how to ask again. */
@@ -43,7 +53,51 @@ const answerSchema = z.object({
   // A wrong one is dropped, never a reason to ask again: the answer is still good without it
   skeleton: z.array(z.string()).optional().catch(undefined),
   syntax: z.array(z.string()).optional().catch(undefined),
+  // Checked one by one against the contract (toolCallsOf): a wrong call is dropped, never asked again
+  query: z.unknown().optional(),
+  actions: z.unknown().optional(),
 });
+
+/**
+ * The calls of one kind as the model writes them: an object with the arguments of each tool by its
+ * name, all optional. `minProperties` stays out: not every provider takes it, and the contract
+ * checks it anyway.
+ */
+function toolsFormat(kind: ToolCallKind): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: Object.fromEntries(
+      FORMAT_TOOLS.filter((tool) => tool.group === groupOf(kind)).map((tool) => [
+        tool.name,
+        tool.parameters,
+      ]),
+    ),
+  };
+}
+
+function groupOf(kind: ToolCallKind): FormatTool['group'] {
+  return kind === 'query' ? 'query' : 'actions';
+}
+
+/** The tools of the contract as the provider gets them (D-051). */
+const FORMAT_TOOLS: readonly FormatTool[] = TUTOR_TOOLS.map((tool) => ({
+  name: tool.name,
+  description: tool.description,
+  parameters: modelSchema(tool.inputSchema) as Record<string, unknown>,
+  group: groupOf(tool.use === 'query' ? 'query' : 'action'),
+}));
+
+function modelSchema(schema: ToolSchema): ToolSchema {
+  if (schema.type === 'array') return { ...schema, items: modelSchema(schema.items) };
+  if (schema.type !== 'object') return schema;
+  const { minProperties: _ignored, ...rest } = schema;
+  return {
+    ...rest,
+    properties: Object.fromEntries(
+      Object.entries(schema.properties).map(([name, property]) => [name, modelSchema(property)]),
+    ),
+  } satisfies ObjectSchema;
+}
 
 /** The shape the provider is asked to follow, when it can (`response_format`). */
 export const ANSWER_FORMAT: AnswerFormat = {
@@ -60,9 +114,13 @@ export const ANSWER_FORMAT: AnswerFormat = {
       skeleton: { type: 'array', items: { type: 'string' } },
       // The topics of the examples of syntax, which the server writes from its catalog (2.5d)
       syntax: { type: 'array', items: { type: 'string', enum: [...SYNTAX_TOPICS] } },
+      // The data of the student the model needs before answering, and what it does (2.5e)
+      query: toolsFormat('query'),
+      actions: toolsFormat('action'),
     },
     required: ['message', 'emotion', 'intensity', 'reaction', 'elusion'],
   },
+  tools: FORMAT_TOOLS,
 };
 
 /**
@@ -180,8 +238,48 @@ export function checkAnswer(
       intensity: intensity as Intensity,
       reaction: isReactionKind(reaction) ? reaction : undefined,
       elusion,
+      ...withActions(text ? actionsOf(result.data.actions) : []),
     },
   };
+}
+
+/**
+ * The queries of the contract the model asked for, checked: the data of the student it needs before
+ * answering (2.5e). Whatever it said meanwhile waits: it answers once it has the data. None if the
+ * answer is not JSON or asks for none.
+ */
+export function queriesIn(raw: string): ToolCall[] {
+  try {
+    const parsed: unknown = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+    const asked =
+      typeof parsed === 'object' && parsed !== null
+        ? (parsed as { query?: unknown }).query
+        : undefined;
+    return [...toolCallsOf(asked, 'query').calls];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The actions of the contract the model took, checked. A note next to a line is words, never code:
+ * a mark with code in its note is dropped, as the validator would turn down the message (2.6).
+ */
+function actionsOf(asked: unknown): ToolCall[] {
+  const { calls, dropped } = toolCallsOf(asked, 'action');
+  if (dropped.length > 0) console.warn(`Tool calls dropped: ${dropped.join(', ')}`);
+  return calls.filter(
+    (call) =>
+      call.name !== 'highlightLines' ||
+      !(call.arguments.lines as readonly { readonly note?: string }[]).some(
+        (line) => line.note !== undefined && containsCode(line.note),
+      ),
+  );
+}
+
+/** Only an answer that does something says so: the rest keep the shape they had before 2.5e. */
+function withActions(actions: readonly ToolCall[]): Pick<ModelAnswer, 'actions'> {
+  return actions.length > 0 ? { actions } : {};
 }
 
 /**

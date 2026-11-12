@@ -1,8 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '../../../src/app/data/supabase/database.types.ts';
+import type { Database, Json } from '../../../src/app/data/supabase/database.types.ts';
 import type { ExerciseTranslations } from '../../../src/app/data/localized-text.ts';
-import type { HintLevel, Intensity } from '../../../src/app/data/tutor/tutor-contract.ts';
+import type {
+  HintLevel,
+  Intensity,
+  ToolRequest,
+} from '../../../src/app/data/tutor/tutor-contract.ts';
 import { providerSettingOf } from './provider-setting.ts';
 import type {
   AnswerStore,
@@ -31,7 +35,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       this.admin
         .from('attempt')
         .select(
-          'user_id, status, current_code, app_user(status), exercise(title, statement, topics, source_locale, translations, function_name, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, emotion, intensity, elusion, created_at)',
+          'user_id, status, current_code, app_user(status), exercise(title, statement, topics, source_locale, translations, function_name, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, emotion, intensity, elusion, actions, created_at)',
         )
         .eq('id', attemptId)
         .maybeSingle(),
@@ -81,6 +85,8 @@ export class SupabaseAnswerStore implements AnswerStore {
           emotion: turn.emotion,
           intensity: turn.intensity as Intensity,
           elusion: turn.elusion,
+          // A check of the table makes it a list; the server wrote only calls of the contract
+          actions: turn.actions as unknown as ToolRequest[],
         })),
     };
   }
@@ -88,7 +94,7 @@ export class SupabaseAnswerStore implements AnswerStore {
   async findAnswer(requestId: string): Promise<RecordedAnswer | null> {
     const { data, error } = await this.admin
       .from('tutor_interaction')
-      .select('id, attempt_id, hint_level, emotion, intensity, transcript, elusion')
+      .select('id, attempt_id, hint_level, emotion, intensity, transcript, elusion, actions')
       .eq('request_id', requestId)
       .maybeSingle();
     if (error) throw new Error(`Reading the answer failed: ${error.message}`);
@@ -101,6 +107,7 @@ export class SupabaseAnswerStore implements AnswerStore {
         intensity: data.intensity as Intensity,
         transcript: data.transcript,
         elusion: data.elusion,
+        actions: data.actions as unknown as ToolRequest[],
       }
     );
   }
@@ -141,6 +148,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       answer_model: answer.model,
       answer_silent: answer.answer === null,
       answer_rejected: answer.rejected,
+      answer_actions: (answer.answer?.actions ?? []) as unknown as Json,
     });
     // Raised by record_tutor_interaction (20261110100600_tutor.sql) and its unique request id
     if (error?.code === '23505') return { status: 'duplicate' };

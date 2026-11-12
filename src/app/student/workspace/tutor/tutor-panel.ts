@@ -24,6 +24,7 @@ import { AttemptStore } from '../attempt-store';
 import { TutorStore, type TutorTurn } from '../tutor-store';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
 import { TutorComposer } from './tutor-composer';
+import { TutorActions } from './tutor-actions';
 import { TutorMessage } from './tutor-message';
 import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
@@ -61,6 +62,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
     HintLevelMeter,
     TutorComposer,
     TutorMessage,
+    TutorActions,
     SignInAgain,
   ],
   templateUrl: './tutor-panel.html',
@@ -184,6 +186,15 @@ export class TutorPanel {
 
   protected retry(turn: TutorTurn): void {
     void this.store.retry(turn.id);
+  }
+
+  /** The student pressed the button of an action of the tutor (2.5e). */
+  protected runAction(turn: TutorTurn, index: number): void {
+    void this.store.runAction(turn.id, index);
+  }
+
+  protected undoAction(turn: TutorTurn, index: number): void {
+    void this.store.undoAction(turn.id, index);
   }
 
   private dayLabel(createdAt: string): string {

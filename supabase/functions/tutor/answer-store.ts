@@ -4,6 +4,7 @@ import type {
   Emotion,
   HintLevel,
   Intensity,
+  ToolRequest,
   TutorTrigger,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
 import type { ModelAnswer } from './model-answer.ts';
@@ -18,6 +19,8 @@ export interface PreviousTurn {
   readonly emotion: Emotion;
   readonly intensity: Intensity;
   readonly elusion: boolean;
+  /** What the tutor did with its tools (2.5e), so it knows it already did it. */
+  readonly actions: readonly ToolRequest[];
 }
 
 /** What the last run left in its `run` event (2.8). */
@@ -54,10 +57,14 @@ export interface RecordedAnswer {
   readonly intensity: Intensity;
   readonly transcript: string;
   readonly elusion: boolean;
+  readonly actions: readonly ToolRequest[];
 }
 
-/** How a provider wants the format of the answer asked: the JSON schema, plain JSON, or nothing. */
-export type ResponseFormatMode = 'json_schema' | 'json_object' | 'none';
+/**
+ * How a provider wants the format of the answer asked: the JSON schema, plain JSON, nothing, or as
+ * calls to tools (the answer is the tool `respond`, 2.5e, D-051).
+ */
+export type ResponseFormatMode = 'json_schema' | 'json_object' | 'none' | 'tools';
 
 /** One model the tutor can ask: where, which, with which key and how (D-044). */
 export interface ModelEndpoint {

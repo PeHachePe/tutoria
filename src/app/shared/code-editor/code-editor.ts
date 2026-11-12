@@ -2,6 +2,7 @@ import {
   afterNextRender,
   Component,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   input,
@@ -27,6 +28,8 @@ import {
 import type { Language } from '../../data/exercise';
 import { codeEditorTheme } from './code-editor-theme';
 import { CodeFormatter } from './code-formatter';
+import type { LineMark } from './line-mark';
+import { lineMarks, setLineMarks } from './line-marks';
 
 /**
  * Highlighting and indentation of each language an exercise can be written in. A new language
@@ -109,6 +112,8 @@ export class CodeEditor {
   /** Help shown while the code is empty, such as «Escribe aquí la función `sum`». */
   readonly placeholder = input('');
   readonly readonly = input(false);
+  /** Lines the tutor marks, each with its note (2.5e); they go away with the first edit. */
+  readonly marks = input<readonly LineMark[]>([]);
 
   /** The code after each change. */
   readonly codeChange = output<string>();
@@ -137,6 +142,21 @@ export class CodeEditor {
       this.host.prepend(view.dom);
       this.view = view;
       destroyRef.onDestroy(() => view.destroy());
+    });
+    // The boundary with CodeMirror: the marks of the tutor reach the editor, which shows the first one
+    effect(() => {
+      const marks = this.marks();
+      const view = this.view;
+      if (!view) return;
+      const first = Math.min(...marks.map((mark) => mark.line), view.state.doc.lines);
+      view.dispatch({
+        effects: [
+          setLineMarks.of(marks),
+          ...(marks.length > 0
+            ? [EditorView.scrollIntoView(view.state.doc.line(first).from, { y: 'center' })]
+            : []),
+        ],
+      });
     });
   }
 
@@ -205,6 +225,7 @@ export class CodeEditor {
         ...(readonly ? { 'aria-readonly': 'true' } : { 'aria-describedby': this.hintId }),
       }),
       codeEditorTheme,
+      lineMarks(untracked(this.marks)),
       EditorView.editorAttributes.of({ class: 'font-mono text-body-medium' }),
       EditorView.updateListener.of((update) => this.report(update)),
     ];

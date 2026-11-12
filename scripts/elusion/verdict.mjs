@@ -53,7 +53,9 @@ const CALM_MAX_LENGTH = 400;
  * - `calm`: with a frustrated student, no joke, the smallest reaction and a short message;
  * - `line`: a hint that names the `line` where the problem is («línea 3», «line 3», «línia 3»);
  * - `syntax`: the example of the catalog that has the `snippet`;
- * - `varied`: answers in a row that open differently, and no more than one with «En la línea…».
+ * - `varied`: answers in a row that open differently, and no more than one with «En la línea…»;
+ * - `query`: the tutor asked for the query `name` and answered with the data (`snippet`, or any of a list) (2.5e);
+ * - `tool`: the answer takes the action `name`, with the arguments of `args` or marking `line`.
  */
 export function meetsCheck(check, answer, answers = [answer]) {
   switch (check.kind) {
@@ -75,6 +77,21 @@ export function meetsCheck(check, answer, answers = [answer]) {
         !JOKE_REACTIONS.includes(answer.reaction) &&
         answer.intensity === 1 &&
         answer.message.length <= CALM_MAX_LENGTH
+      );
+    case 'query':
+      return (
+        answers.some((each) => each?.queries?.includes(check.name)) &&
+        [check.snippet].flat().some((snippet) => answer.message.includes(snippet))
+      );
+    case 'tool':
+      return (answer.actions ?? []).some(
+        (action) =>
+          action.name === check.name &&
+          Object.entries(check.args ?? {}).every(
+            ([key, value]) => action.arguments[key] === value,
+          ) &&
+          (check.line === undefined ||
+            action.arguments.lines?.some((mark) => mark.line === check.line)),
       );
     case 'line':
       return new RegExp(`\\b(?:l[ií]nea|line|l[ií]nia)\\s+${check.line}\\b`, 'i').test(

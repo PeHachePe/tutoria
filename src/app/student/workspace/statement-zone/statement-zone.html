@@ -78,8 +78,16 @@
             </tr>
           </thead>
           <tbody>
-            @for (example of current.examples; track example.key) {
-              <tr class="border-t border-outline-variant align-top">
+            @for (example of current.examples; track example.key; let position = $index) {
+              <tr
+                class="border-t border-outline-variant align-top"
+                [class]="
+                  pointedExample() === position + 1
+                    ? 'bg-tertiary-container text-on-tertiary-container'
+                    : ''
+                "
+                [attr.data-pointed]="pointedExample() === position + 1 ? '' : null"
+              >
                 <td class="py-2 pe-4 font-mono text-body-medium break-all">{{ example.call }}</td>
                 <td class="py-2 font-mono text-body-medium font-semibold break-all">
                   @if (example.multiline) {
@@ -93,7 +101,15 @@
           </tbody>
         </table>
         @if (current.hiddenTestCount > 0) {
-          <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+          <p
+            class="flex items-center gap-2 rounded-lg text-body-small"
+            [class]="
+              pointedHidden()
+                ? 'bg-tertiary-container px-2 py-1 text-on-tertiary-container'
+                : 'text-on-surface-variant'
+            "
+            [attr.data-pointed]="pointedHidden() ? '' : null"
+          >
             <mat-icon class="shrink-0">visibility_off</mat-icon>
             <span i18n="@@workspace.hiddenTests">{current.hiddenTestCount, plural,
               =1 {Y 1 comprobación oculta: verás si la superas, pero no sus datos.}

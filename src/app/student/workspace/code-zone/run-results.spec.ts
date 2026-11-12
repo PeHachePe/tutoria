@@ -153,4 +153,52 @@ describe('testStates', () => {
       ]),
     ).toEqual(['passed', 'error', 'failed', 'timeout', 'notRun']);
   });
+
+  it('makes the first failing test or the hidden checks the tutor points at stand out (2.5e)', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const result: RunResult = {
+      status: 'tests_failed',
+      results: [
+        { testId: 't1', passed: true, timeout: false, input: [[1]], expected: 1, actual: 1 },
+        { testId: 't2', passed: false, timeout: false, input: [[2]], expected: 2, actual: 0 },
+        { testId: 't3', passed: false, timeout: false },
+      ],
+    };
+    const { fixture, rerender } = await render(RunResults, {
+      inputs: { result, functionName: 'suma', pointer: { target: 'failingTest', id: 'p1' } },
+    });
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(text(element.querySelector('[data-pointed]'))).toContain('suma([2])');
+    expect(scrollIntoView).toHaveBeenCalled();
+
+    await rerender({
+      inputs: { pointer: { target: 'hiddenTests', id: 'p2' } },
+      partialUpdate: true,
+    });
+    expect(text(element.querySelector('[data-pointed]'))).toContain('Comprobaciones ocultas');
+
+    await rerender({
+      inputs: { pointer: { target: 'example', example: 1, id: 'p3' } },
+      partialUpdate: true,
+    });
+    expect(element.querySelector('[data-pointed]')).toBeNull();
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+  });
+
+  it('opens again when the tutor points at it', async () => {
+    const result: RunResult = {
+      status: 'passed',
+      results: [{ testId: 't1', passed: true, timeout: false }],
+    };
+    const { rerender } = await render(RunResults, { inputs: { result, functionName: 'suma' } });
+    const toggle = screen.getByRole('button', { expanded: true });
+    toggle.click();
+    await rerender({
+      inputs: { pointer: { target: 'hiddenTests', id: 'p1' } },
+      partialUpdate: true,
+    });
+    expect(screen.getByRole('button', { expanded: true })).toBeTruthy();
+  });
 });

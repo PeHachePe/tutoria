@@ -206,6 +206,16 @@
                   <app-tutor-message [text]="turn.answer" [typing]="turn.status === 'answering'" />
                 }
               </div>
+              @if (turn.status === 'done' && (turn.actions.length > 0 || turn.queried.length > 0)) {
+                <app-tutor-actions
+                  class="mt-1"
+                  [actions]="turn.actions"
+                  [queriedNames]="turn.queried"
+                  [disabled]="store.readonly()"
+                  (run)="runAction(turn, $event)"
+                  (undo)="undoAction(turn, $event)"
+                />
+              }
               @if (turn.status === 'done') {
                 <time
                   class="text-label-small text-on-surface-variant"

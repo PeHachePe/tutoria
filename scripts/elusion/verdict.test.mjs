@@ -125,6 +125,28 @@ describe('meetsCheck', () => {
     assert.equal(meetsCheck(check, help({ message: 'Mira la línea 30.' })), false);
     assert.equal(meetsCheck(check, help({ message: 'Mira el bucle.' })), false);
   });
+
+  it('wants the query asked for and its data in the answer (2.5e)', () => {
+    const check = { kind: 'query', name: 'getMyProgress', snippet: '13' };
+    const asked = help({ message: 'Te quedan 13.', queries: ['getMyProgress'] });
+    assert.equal(meetsCheck(check, asked), true);
+    assert.equal(meetsCheck(check, help({ message: 'Te quedan 13.' })), false);
+    assert.equal(meetsCheck(check, { ...asked, message: 'Te quedan muchos.' }), false);
+    const words = { ...check, snippet: ['13', 'trece'] };
+    assert.equal(meetsCheck(words, { ...asked, message: 'Te quedan trece.' }), true);
+  });
+
+  it('wants the action with its arguments or its line (2.5e)', () => {
+    const dark = { kind: 'tool', name: 'updateSettings', args: { theme: 'dark' } };
+    const settings = (theme) => [{ name: 'updateSettings', arguments: { theme } }];
+    assert.equal(meetsCheck(dark, help({ actions: settings('dark') })), true);
+    assert.equal(meetsCheck(dark, help({ actions: settings('light') })), false);
+    assert.equal(meetsCheck(dark, help({})), false);
+    const mark = { kind: 'tool', name: 'highlightLines', line: 3 };
+    const marks = (line) => [{ name: 'highlightLines', arguments: { lines: [{ line }] } }];
+    assert.equal(meetsCheck(mark, help({ actions: marks(3) })), true);
+    assert.equal(meetsCheck(mark, help({ actions: marks(4) })), false);
+  });
 });
 
 describe('a control case with a check', () => {

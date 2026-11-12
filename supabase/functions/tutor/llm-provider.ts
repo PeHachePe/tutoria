@@ -10,7 +10,22 @@ export interface ChatMessage {
 export interface AnswerFormat {
   readonly name: string;
   readonly schema: Record<string, unknown>;
+  /**
+   * The tools of the answer (2.5e): each one is a property of the group it belongs to (`query` or
+   * `actions`) in the JSON, or a tool of its own when the provider is asked with tools.
+   */
+  readonly tools?: readonly FormatTool[];
 }
+
+export interface FormatTool {
+  readonly name: string;
+  readonly description: string;
+  readonly parameters: Record<string, unknown>;
+  readonly group: 'query' | 'actions';
+}
+
+/** The tool that carries the answer itself when the provider is asked with tools (D-051). */
+export const RESPOND_TOOL = 'respond';
 
 /** The model that writes the tutor's answers (2.6): another provider is another class. */
 export interface LlmProvider {
@@ -118,9 +133,11 @@ export class OpenAICompatibleProvider implements LlmProvider {
         response.status,
       );
     }
-    const content = contentOf(await response.json().catch(() => null));
-    if (content === null) throw new ProviderError('The model sent no answer');
-    return content;
+    const body: unknown = await response.json().catch(() => null);
+    const content = this.settings.responseFormat === 'tools' ? toolAnswerOf(body, format) : null;
+    const answer = content ?? contentOf(body);
+    if (answer === null) throw new ProviderError('The model sent no answer');
+    return answer;
   }
 }
 
@@ -195,7 +212,67 @@ function responseFormatOf(mode: ResponseFormatMode, format: AnswerFormat): Recor
       return { response_format: { type: 'json_object' } };
     case 'none':
       return {};
+    case 'tools':
+      return toolsRequestOf(format);
   }
+}
+
+/**
+ * The answer asked as calls to tools (D-051): the answer itself is the tool `respond`, with the
+ * schema of the answer without its groups of tools, and each tool of the contract is one more. The
+ * model must call at least one, so it never answers in plain text.
+ */
+function toolsRequestOf(format: AnswerFormat): Record<string, unknown> {
+  const tools = format.tools ?? [];
+  const properties = { ...(format.schema.properties as Record<string, unknown>) };
+  for (const group of new Set(tools.map((tool) => tool.group))) delete properties[group];
+  return {
+    tools: [
+      {
+        type: 'function',
+        function: {
+          name: RESPOND_TOOL,
+          description: 'The answer to the student, as described in the instructions.',
+          parameters: { ...format.schema, properties },
+        },
+      },
+      ...tools.map(({ name, description, parameters }) => ({
+        type: 'function',
+        function: { name, description, parameters },
+      })),
+    ],
+    tool_choice: 'required',
+  };
+}
+
+/**
+ * The calls to tools of the model as the JSON of the answer, so the rest of the function reads it as
+ * any other: `respond` gives its fields, and each tool goes into its group. Null if it called none.
+ */
+function toolAnswerOf(body: unknown, format: AnswerFormat): string | null {
+  const calls: unknown = (body as { choices?: { message?: { tool_calls?: unknown } }[] } | null)
+    ?.choices?.[0]?.message?.tool_calls;
+  if (!Array.isArray(calls) || calls.length === 0) return null;
+  const answer: Record<string, unknown> = {};
+  const groups: Record<string, Record<string, unknown>> = {};
+  for (const call of calls) {
+    const name: unknown = call?.function?.name;
+    let args: unknown;
+    try {
+      args = JSON.parse(call?.function?.arguments ?? 'null');
+    } catch {
+      continue;
+    }
+    if (name === RESPOND_TOOL && typeof args === 'object' && args !== null) {
+      Object.assign(answer, args);
+      continue;
+    }
+    const tool = format.tools?.find((candidate) => candidate.name === name);
+    if (tool) groups[tool.group] = { ...groups[tool.group], [tool.name]: args };
+  }
+  // Only a query and no answer: the message waits for the data
+  if (!('message' in answer)) Object.assign(answer, { message: '' });
+  return JSON.stringify({ ...answer, ...groups });
 }
 
 /** A failure of the provider that may pass in a moment, unlike a wrong key or a missing model. */

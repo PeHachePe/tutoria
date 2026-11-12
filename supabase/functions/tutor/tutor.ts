@@ -7,12 +7,23 @@ import {
   TUTOR_TRIGGERS,
   type TutorEvent,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
+import {
+  MAX_TOOL_CALLS,
+  type ToolCall,
+  toolCallsOf,
+} from '../../../src/app/data/tutor/tutor-tools.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
 import { MAX_CODE_LENGTH, minuteBefore, secondsToWait } from '../_shared/limits.ts';
 import type { AnswerStore, ProviderSetting, RecordedAnswer, TutorAttempt } from './answer-store.ts';
 import { type LlmProvider, ProviderError } from './llm-provider.ts';
-import { ANSWER_FORMAT, checkAnswer, type ModelAnswer, signatureOf } from './model-answer.ts';
+import {
+  ANSWER_FORMAT,
+  checkAnswer,
+  type ModelAnswer,
+  queriesIn,
+  signatureOf,
+} from './model-answer.ts';
 import {
   buildMessages,
   PROMPT_VERSION,
@@ -30,6 +41,12 @@ export const TUTOR_CALLS_PER_MINUTE = 6;
 
 /** Far above the 500 characters of the chat: room for a spoken question (6.1). */
 export const MAX_MESSAGE_LENGTH = 2_000;
+
+/**
+ * The data of the queries that come back (2.5e): far above what a student has (42 exercises), well
+ * below what would make the call expensive.
+ */
+export const MAX_RESULTS_LENGTH = 12_000;
 
 /** One more call if the first answer is not good enough; then, the friendly default (2.6). */
 const MODEL_CALLS = 2;
@@ -49,6 +66,27 @@ const requestSchema = z
     message: z.string().trim().max(MAX_MESSAGE_LENGTH).optional(),
     code: z.string().max(MAX_CODE_LENGTH),
     language: z.enum(TUTOR_LANGUAGES),
+    // What the queries the model asked for gave, run by the app (2.5e)
+    results: z
+      .array(
+        z.object({
+          name: z.string(),
+          arguments: z.record(z.string(), z.unknown()),
+          result: z.unknown(),
+        }),
+      )
+      .min(1)
+      .max(MAX_TOOL_CALLS)
+      .refine((results) => JSON.stringify(results).length <= MAX_RESULTS_LENGTH)
+      // Only the queries of the contract, with their arguments: never a way to say anything else
+      .refine(
+        (results) =>
+          toolCallsOf(
+            Object.fromEntries(results.map((result) => [result.name, result.arguments])),
+            'query',
+          ).calls.length === results.length,
+      )
+      .optional(),
   })
   // Only a question carries a message, and it needs one (2.6)
   .refine(({ kind, message }) => (kind === 'question') === Boolean(message));
@@ -85,7 +123,10 @@ export function createTutorHandler({
       if (!userId) return failure(401, 'Sign in to ask the tutor');
       const body = requestSchema.safeParse(await request.json().catch(() => null));
       if (!body.success) {
-        return failure(400, 'Expected { requestId, attemptId, kind, message?, code, language }');
+        return failure(
+          400,
+          'Expected { requestId, attemptId, kind, message?, code, language, results? }',
+        );
       }
       const ask = body.data;
 
@@ -109,7 +150,7 @@ export function createTutorHandler({
       if (!setting) return failure(503, 'No AI provider is set');
       const provider = providerFor(setting);
       const hintLevel = answerHintLevel(ask.kind, attempt.previous, ask.message);
-      const { answer, rejected } = await askModel(provider, {
+      const asked = await askModel(provider, {
         kind: ask.kind,
         hintLevel,
         message: ask.message,
@@ -117,7 +158,12 @@ export function createTutorHandler({
         language: ask.language,
         attempt,
         tried: await tryExamples(sandbox, attempt, ask.code),
+        results: ask.results,
       });
+      // The model needs data of the student first: nothing is kept until it answers with it (2.5e)
+      if ('queries' in asked)
+        return json(200, { events: [{ type: 'query', calls: asked.queries }] });
+      const { answer, rejected } = asked;
 
       const outcome = await store.recordAnswer({
         attemptId: ask.attemptId,
@@ -179,13 +225,21 @@ interface CheckedAnswer {
   readonly rejected: number;
 }
 
+/** The model asked for data of the student before answering (2.5e). */
+interface AskedQueries {
+  readonly queries: readonly ToolCall[];
+}
+
 /**
  * The model's answer, once checked: if it is not valid JSON or it has code, the model is asked once
  * more reinforcing the rule; if it fails again, the default answer, or silence for an intervention
  * of the tutor (a generic message would interrupt for nothing). The answers turned down are counted,
  * to tell the prompt that held from the validator that stopped the model (D-044).
  */
-async function askModel(provider: LlmProvider, input: PromptInput): Promise<CheckedAnswer> {
+async function askModel(
+  provider: LlmProvider,
+  input: PromptInput,
+): Promise<CheckedAnswer | AskedQueries> {
   const mayKeepQuiet = input.kind === 'proactive';
   // The empty function of the exercise is the only code the tutor may write (2.5d)
   const skeleton = signatureOf(input.attempt.exercise);
@@ -193,6 +247,11 @@ async function askModel(provider: LlmProvider, input: PromptInput): Promise<Chec
   let elusion = false;
   for (let call = 1; call <= MODEL_CALLS; call++) {
     const raw = await provider.complete(messages, ANSWER_FORMAT);
+    // A question may need data of the student, once: with the results, it answers (2.5e)
+    if (input.kind === 'question' && !input.results) {
+      const queries = queriesIn(raw);
+      if (queries.length > 0) return { queries };
+    }
     const check = checkAnswer(raw, {
       mayKeepQuiet,
       skeleton,
@@ -225,9 +284,17 @@ function eventsOf(
   interactionId: string | null,
 ): TutorEvent[] {
   if (!answer) return [{ type: 'done', interactionId: null, silent: true }];
-  const { emotion, intensity, reaction, message, elusion } = answer;
+  const { emotion, intensity, reaction, message, elusion, actions } = answer;
   return [
-    { type: 'meta', emotion, intensity, hintLevel, ...(reaction ? { reaction } : {}), elusion },
+    {
+      type: 'meta',
+      emotion,
+      intensity,
+      hintLevel,
+      ...(reaction ? { reaction } : {}),
+      elusion,
+      ...(actions?.length ? { actions } : {}),
+    },
     { type: 'delta', text: message },
     { type: 'done', interactionId, silent: false },
   ];
@@ -237,10 +304,14 @@ function eventsOf(
 function replay(answered: RecordedAnswer, attemptId: string): Response {
   if (answered.attemptId !== attemptId)
     return failure(400, 'The request belongs to another attempt');
-  const { id, hintLevel, emotion, intensity, transcript, elusion } = answered;
+  const { id, hintLevel, emotion, intensity, transcript, elusion, actions } = answered;
   return json(200, {
     // The reaction is not kept (D-036): the app shows the one of the emotion
-    events: eventsOf({ message: transcript, emotion, intensity, elusion }, hintLevel, id),
+    events: eventsOf(
+      { message: transcript, emotion, intensity, elusion, actions: actions as ToolCall[] },
+      hintLevel,
+      id,
+    ),
   });
 }
 

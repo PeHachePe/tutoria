@@ -31,7 +31,9 @@ import { Splitter } from '../../shared/splitter/splitter';
 import type { SaveStatus } from '../../student/workspace/attempt-store';
 import { RunResults } from '../../student/workspace/code-zone/run-results';
 import { SaveIndicator } from '../../student/workspace/code-zone/save-indicator';
+import { TutorActions } from '../../student/workspace/tutor/tutor-actions';
 import { TutorMessage } from '../../student/workspace/tutor/tutor-message';
+import type { TurnAction } from '../../student/workspace/tutor-store';
 import { skeletonBlock } from '../../data/tutor';
 import { CodeBlock } from '../../shared/code-block/code-block';
 import { Brand } from '../../shared/brand/brand';
@@ -92,6 +94,7 @@ import { ShowcaseTable } from './showcase-table';
     SaveIndicator,
     CodeBlock,
     TutorMessage,
+    TutorActions,
     RunResults,
     Splitter,
   ],
@@ -157,6 +160,20 @@ export class ShowcasePage {
   protected readonly saveStatuses: readonly SaveStatus[] = ['saving', 'saved', 'error'];
   /** The empty skeleton the tutor may give a stuck student (2.5d), alone and in an answer. */
   protected readonly skeletonSample = 'function sum(numbers) {\n}';
+  /** What the tutor did with its tools, in every state (2.5e). */
+  protected readonly queriedSample = ['getMyProgress', 'searchExercises'];
+  protected readonly actionSamples: readonly TurnAction[] = [
+    { call: { name: 'highlightLines', arguments: { lines: [{ line: 3 }] } }, status: 'done' },
+    {
+      call: { name: 'updateSettings', arguments: { theme: 'dark' } },
+      status: 'done',
+      result: { changed: { theme: 'dark' }, previous: { theme: 'light' } },
+    },
+    { call: { name: 'openExercise', arguments: { exercise: 'next' } }, status: 'pending' },
+    { call: { name: 'updateSettings', arguments: { language: 'en' } }, status: 'pending' },
+    { call: { name: 'navigate', arguments: { to: 'settings' } }, status: 'failed' },
+    { call: { name: 'navigate', arguments: { to: 'data' } }, status: 'past' },
+  ];
   protected readonly tutorSample = [
     'Sin prisa, vamos paso a paso. Así empieza la función que pide el enunciado, todavía vacía:',
     skeletonBlock('sum', 1, ['numbers']),

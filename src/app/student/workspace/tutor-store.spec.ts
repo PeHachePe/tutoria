@@ -1,4 +1,4 @@
-import { computed, signal } from '@angular/core';
+import { computed, DestroyRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import type { Attempt, AttemptHistory, StoredAttemptStatus } from '../../data/attempt';
@@ -6,8 +6,10 @@ import { AttemptService } from '../../data/attempt-service';
 import { DataError } from '../../data/data-error';
 import type { HintLevel, TutorEvent, TutorInteraction, TutorRequest } from '../../data/tutor';
 import { TutorService } from '../../data/tutor-service';
+import { appTool, ToolError, ToolRegistry } from '../../core/tools/app-tool';
+import { TUTOR_TOOL } from '../../data/tutor/tutor-tools';
 import { AttemptStore } from './attempt-store';
-import { TutorStore } from './tutor-store';
+import { TutorStore, waitsForStudent } from './tutor-store';
 
 function attemptOf(id: string, status: StoredAttemptStatus = 'in_progress'): Attempt {
   return {
@@ -186,6 +188,8 @@ describe('TutorStore', () => {
         createdAt: expect.any(String),
         status: 'done',
         fresh: true,
+        actions: [],
+        queried: [],
       },
     ]);
     expect(store.announcement()).toBe('Hola, ¿qué tal?');
@@ -466,5 +470,274 @@ describe('TutorStore', () => {
     await loaded();
     expect(store.loadError()).toBeUndefined();
     expect(store.canAsk()).toBe(true);
+  });
+
+  describe('with the tools of the tutor (2.5e)', () => {
+    const progress = vi.fn(() => ({ pending: 3 }));
+    const settings = vi.fn((changes: object) => ({
+      changed: changes,
+      previous: { theme: 'light' },
+    }));
+    const open = vi.fn((): unknown => ({ opened: 'Suma' }));
+
+    beforeEach(() => {
+      progress.mockClear();
+      settings.mockClear();
+      open.mockClear();
+      const registry = TestBed.inject(ToolRegistry);
+      const destroyRef = TestBed.inject(DestroyRef);
+      for (const tool of [
+        appTool(TUTOR_TOOL.getMyProgress, progress),
+        appTool(TUTOR_TOOL.updateSettings, settings),
+        appTool(TUTOR_TOOL.openExercise, open),
+        appTool(TUTOR_TOOL.highlightLines, ({ lines }) => store.mark(lines)),
+      ]) {
+        registry.register(tool, destroyRef);
+      }
+    });
+
+    /** An answer with actions, as the server sends them. */
+    async function* acting(actions: { name: string; arguments: object }[]) {
+      yield {
+        type: 'meta',
+        emotion: 'joy',
+        intensity: 1,
+        hintLevel: 1,
+        actions: actions as { name: string; arguments: Record<string, unknown> }[],
+      } satisfies TutorEvent;
+      yield { type: 'delta', text: 'Listo.' } satisfies TutorEvent;
+      yield { type: 'done', interactionId: 'i1', silent: false } satisfies TutorEvent;
+    }
+
+    async function* querying(calls: { name: string; arguments: object }[]) {
+      yield {
+        type: 'query',
+        calls: calls as { name: string; arguments: Record<string, unknown> }[],
+      } satisfies TutorEvent;
+    }
+
+    it('reads the data the tutor asks for and asks again with them, once', async () => {
+      ask
+        .mockImplementationOnce(() =>
+          querying([
+            { name: 'getMyProgress', arguments: {} },
+            { name: 'getSettings', arguments: {} },
+          ]),
+        )
+        .mockImplementationOnce(() => answer(['Te quedan 3.']));
+      await loaded();
+
+      await store.ask('¿Cuántos me quedan?');
+
+      expect(ask).toHaveBeenCalledTimes(2);
+      const [first] = ask.mock.calls[0];
+      const [second] = ask.mock.calls[1];
+      expect(first.results).toBeUndefined();
+      expect(second).toEqual({
+        ...first,
+        results: [
+          { name: 'getMyProgress', arguments: {}, result: { pending: 3 } },
+          {
+            name: 'getSettings',
+            arguments: {},
+            result: { error: 'The tool getSettings is not available here' },
+          },
+        ],
+      });
+      expect(second.requestId).toBe(first.requestId);
+      const [turn] = store.turns();
+      expect(turn.queried).toEqual(['getMyProgress', 'getSettings']);
+      expect(turn.answer).toBe('Te quedan 3.');
+      expect(turn.status).toBe('done');
+    });
+
+    it('never asks a third time, even if the answer asks for data again', async () => {
+      ask.mockImplementation(() => querying([{ name: 'getMyProgress', arguments: {} }]));
+      await loaded();
+
+      await store.ask('¿Cuántos me quedan?');
+
+      expect(ask).toHaveBeenCalledTimes(2);
+      expect(store.turns()[0].status).toBe('done');
+    });
+
+    it('runs at once what only changes the screen, and waits for the student with the rest', async () => {
+      ask.mockImplementationOnce(() =>
+        acting([
+          { name: 'highlightLines', arguments: { lines: [{ line: 2 }] } },
+          { name: 'openExercise', arguments: { exercise: 'next' } },
+          { name: 'updateSettings', arguments: { language: 'en' } },
+          { name: 'updateSettings', arguments: { theme: 'dark' } },
+        ]),
+      );
+      await loaded();
+
+      await store.ask('Hazlo todo');
+
+      expect(store.marks()).toEqual([{ line: 2 }]);
+      expect(store.turns()[0].actions.map((action) => action.status)).toEqual([
+        'done',
+        'pending',
+        'pending',
+        'done',
+      ]);
+      expect(open).not.toHaveBeenCalled();
+      expect(settings).toHaveBeenCalledTimes(1);
+
+      await store.runAction(store.turns()[0].id, 1);
+      expect(open).toHaveBeenCalledWith({ exercise: 'next' }, expect.anything());
+      expect(store.turns()[0].actions[1]).toEqual(
+        expect.objectContaining({ status: 'done', result: { opened: 'Suma' } }),
+      );
+
+      // Once done, pressing again does nothing; and there is nothing at an index without action
+      await store.runAction(store.turns()[0].id, 1);
+      await store.runAction(store.turns()[0].id, 9);
+      await store.runAction('another-turn', 0);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it('changes only the action of its own answer', async () => {
+      ask
+        .mockImplementationOnce(() =>
+          acting([{ name: 'openExercise', arguments: { exercise: 'next' } }]),
+        )
+        .mockImplementationOnce(() =>
+          acting([{ name: 'openExercise', arguments: { exercise: 'next' } }]),
+        );
+      await loaded();
+      await store.ask('Uno');
+      await store.ask('Otro');
+
+      await store.runAction(store.turns()[1].id, 0);
+
+      expect(store.turns().map((turn) => turn.actions[0].status)).toEqual(['pending', 'done']);
+    });
+
+    it('says when an action failed, and lets the student try it again', async () => {
+      open.mockImplementationOnce(() => {
+        throw new ToolError('No such exercise');
+      });
+      ask.mockImplementationOnce(() =>
+        acting([{ name: 'openExercise', arguments: { exercise: 'next' } }]),
+      );
+      await loaded();
+      await store.ask('Ábrelo');
+      const turnId = store.turns()[0].id;
+
+      await store.runAction(turnId, 0);
+      expect(store.turns()[0].actions[0].status).toBe('failed');
+
+      await store.runAction(turnId, 0);
+      expect(store.turns()[0].actions[0].status).toBe('done');
+    });
+
+    it('undoes the settings the tutor changed, and only those', async () => {
+      ask.mockImplementationOnce(() =>
+        acting([
+          { name: 'updateSettings', arguments: { theme: 'dark' } },
+          { name: 'highlightLines', arguments: { lines: [] } },
+        ]),
+      );
+      await loaded();
+      await store.ask('Modo oscuro');
+      const turnId = store.turns()[0].id;
+
+      await store.undoAction(turnId, 1);
+      expect(settings).toHaveBeenCalledTimes(1);
+
+      await store.undoAction(turnId, 0);
+      expect(settings).toHaveBeenLastCalledWith({ theme: 'light' }, expect.anything());
+      expect(store.turns()[0].actions[0].status).toBe('undone');
+
+      await store.undoAction(turnId, 0);
+      expect(settings).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the action done if undoing it fails', async () => {
+      ask.mockImplementationOnce(() =>
+        acting([{ name: 'updateSettings', arguments: { theme: 'dark' } }]),
+      );
+      await loaded();
+      await store.ask('Modo oscuro');
+      settings.mockImplementationOnce(() => {
+        throw new ToolError('Storage is full');
+      });
+
+      await store.undoAction(store.turns()[0].id, 0);
+
+      expect(store.turns()[0].actions[0].status).toBe('done');
+    });
+
+    it('drops the actions of an answer that failed', async () => {
+      ask.mockImplementationOnce(async function* () {
+        yield* acting([{ name: 'highlightLines', arguments: { lines: [{ line: 1 }] } }]);
+        throw new DataError('network');
+      });
+      await loaded();
+
+      await store.ask('Márcalo');
+
+      expect(store.turns()[0]).toEqual(
+        expect.objectContaining({ status: 'failed', actions: [], queried: [] }),
+      );
+      expect(store.marks()).toEqual([]);
+    });
+
+    it('shows what the tutor did in an earlier visit, without doing it again', async () => {
+      history.mockResolvedValue(
+        historyOf(attemptOf('a1'), [
+          {
+            ...interactionOf('a1', 'question', 1, 'Te dejo el botón'),
+            actions: [{ name: 'openExercise', arguments: { exercise: 'next' } }],
+          },
+        ]),
+      );
+      await loaded();
+
+      expect(store.turns()[0].actions).toEqual([
+        { call: { name: 'openExercise', arguments: { exercise: 'next' } }, status: 'past' },
+      ]);
+      await store.runAction(store.turns()[0].id, 0);
+      expect(open).not.toHaveBeenCalled();
+    });
+  });
+
+  it('keeps where the tutor marks the code and points, for the exercise open now', async () => {
+    await loaded();
+    expect(store.marks()).toEqual([]);
+    expect(store.pointer()).toBeNull();
+
+    store.clearMarks();
+    store.mark([{ line: 3, note: 'Aquí' }]);
+    store.pointAt('example', 2);
+    expect(store.marks()).toEqual([{ line: 3, note: 'Aquí' }]);
+    expect(store.pointer()).toEqual({ target: 'example', example: 2, id: expect.any(String) });
+
+    const first = store.pointer();
+    store.pointAt('example', 2);
+    expect(store.pointer()).not.toBe(first);
+    store.pointAt('hiddenTests');
+    expect(store.pointer()).toEqual({ target: 'hiddenTests', id: expect.any(String) });
+
+    store.clearMarks();
+    expect(store.marks()).toEqual([]);
+
+    store.mark([{ line: 1 }]);
+    attempt.set(attemptOf('a2'));
+    expect(store.marks()).toEqual([]);
+    expect(store.pointer()).toBeNull();
+  });
+});
+
+describe('waitsForStudent', () => {
+  it('waits for the student to open a page or change the language, never to change the screen', () => {
+    const call = (name: string, args: Record<string, unknown> = {}) => ({ name, arguments: args });
+    expect(waitsForStudent(call('openExercise', { exercise: 'next' }))).toBe(true);
+    expect(waitsForStudent(call('navigate', { to: 'data' }))).toBe(true);
+    expect(waitsForStudent(call('updateSettings', { language: 'en' }))).toBe(true);
+    expect(waitsForStudent(call('updateSettings', { theme: 'dark' }))).toBe(false);
+    expect(waitsForStudent(call('highlightLines', { lines: [] }))).toBe(false);
+    expect(waitsForStudent(call('unknown'))).toBe(true);
   });
 });
