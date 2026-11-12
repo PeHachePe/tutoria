@@ -371,3 +371,22 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# Step 3.1 · The project in the cloud (docs/DESPLIEGUE.md): `supabase config push` applies this file
+# to it, with these values instead of the local ones. Public sign-up stays closed, as above. What is
+# comfortable in local development keeps the values of Supabase here: emails at most once a minute,
+# 8-digit codes, and the pooler sized by Supabase for the instance.
+[remotes.production]
+project_id = "ymqjqcpzskxqckmtgeow"
+
+[remotes.production.auth]
+site_url = "https://tutoria-rosy.vercel.app"
+additional_redirect_urls = ["https://tutoria-rosy.vercel.app"]
+
+[remotes.production.auth.email]
+max_frequency = "1m0s"
+otp_length = 8
+
+[remotes.production.db.pooler]
+default_pool_size = 15
+max_client_conn = 200

@@ -13,6 +13,9 @@
   },
   "js/ts.updateImportsOnFileMove.enabled": "always",
   "css.lint.unknownAtRules": "ignore",
+  "json.schemaDownload.trustedDomains": {
+    "https://openapi.vercel.sh/": true
+  },
   "files.exclude": {
     "**/.angular": true
   },

@@ -24,4 +24,10 @@ describe('PageReloader', () => {
 
     expect(assign).toHaveBeenCalledWith('/');
   });
+
+  it('loads a page from scratch', () => {
+    TestBed.inject(PageReloader).open('/docente?grupo=1');
+
+    expect(assign).toHaveBeenCalledWith('/docente?grupo=1');
+  });
 });

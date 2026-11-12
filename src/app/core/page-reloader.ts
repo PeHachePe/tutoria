@@ -23,4 +23,9 @@ export class PageReloader {
   openHome(): void {
     this.location.assign(APP_PATHS.root);
   }
+
+  /** Any page, from scratch: with the code of the latest deployment (reloadOnStaleChunk). */
+  open(url: string): void {
+    this.location.assign(url);
+  }
 }

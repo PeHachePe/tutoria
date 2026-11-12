@@ -10,6 +10,7 @@ import {
   TitleStrategy,
   withAutoCleanupInjectors,
   withComponentInputBinding,
+  withNavigationErrorHandler,
 } from '@angular/router';
 
 import { environment } from '../environments/environment';
@@ -17,13 +18,20 @@ import { routes } from './app.routes';
 import { AuthStore } from './auth/auth-store';
 import { AppTitleStrategy } from './core/app-title-strategy';
 import { HeadingFocus } from './core/heading-focus';
+import { reloadOnStaleChunk } from './core/stale-chunk-reload';
 import { ThemeService } from './core/theme-service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    // Route params and data as component inputs; route-provided stores destroyed on leaving (4.5)
-    provideRouter(routes, withComponentInputBinding(), withAutoCleanupInjectors()),
+    // Route params and data as component inputs; route-provided stores destroyed on leaving (4.5);
+    // and a tab opened before a deployment loads the new version when a lazy page fails (D-053)
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withAutoCleanupInjectors(),
+      withNavigationErrorHandler(reloadOnStaleChunk),
+    ),
     // Every tab title ends with the name of the app, without repeating it in each route
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     // Each environment picks the version of the data services and the dev tools (4.4)

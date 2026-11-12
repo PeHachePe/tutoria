@@ -55,7 +55,10 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "security": {
+                "autoCsp": true
+              }
             },
             "demo": {
               "outputPath": "dist/demo",
@@ -124,7 +127,15 @@
           "options": {
             "runnerConfig": "vitest-base.config.mts",
             "setupFiles": ["src/jsdom-testing.ts"],
-            "reporters": ["default", ["json", { "outputFile": "coverage/unit-tests.json" }]],
+            "reporters": [
+              "default",
+              [
+                "json",
+                {
+                  "outputFile": "coverage/unit-tests.json"
+                }
+              ]
+            ],
             "coverage": true,
             "coverageInclude": ["src/**/*.ts"],
             "coverageExclude": [
