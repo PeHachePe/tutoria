@@ -13,8 +13,8 @@ const EXERCISE = 'Suma de los elementos de un vector';
 const WRONG_CODE = 'function sum(numbers) {\n  return 0;\n}\n';
 const RIGHT_CODE =
   'function sum(numbers) {\n  let total = 0;\n  for (const n of numbers) total += n;\n  return total;\n}\n';
-/** The tutor calls a model in the cloud: a free plan may take a while. */
-const TUTOR_TIMEOUT_MS = 45_000;
+/** The tutor calls a model in the cloud: on a free plan, the chain of fallbacks may take a while. */
+const TUTOR_TIMEOUT_MS = 90_000;
 
 async function replaceCode(page: Page, code: string): Promise<void> {
   const editor = page.getByRole('textbox', { name: 'Código' });
@@ -25,8 +25,12 @@ async function replaceCode(page: Page, code: string): Promise<void> {
 }
 
 test('acceso, resolver, pista y entrega en la URL pública', async ({ page }) => {
-  test.skip(!EMAIL || !PASSWORD, 'Faltan SMOKE_EMAIL y SMOKE_PASSWORD (docs/DESPLIEGUE.md)');
-  test.setTimeout(180_000);
+  // A failure, not a skip: a skipped smoke test would look like a passed one
+  expect(
+    EMAIL && PASSWORD,
+    'Faltan SMOKE_EMAIL y SMOKE_PASSWORD (docs/DESPLIEGUE.md, paso 9)',
+  ).toBeTruthy();
+  test.setTimeout(240_000);
   const policyViolations: string[] = [];
   page.on('console', (message) => {
     if (/Content Security Policy/i.test(message.text())) policyViolations.push(message.text());

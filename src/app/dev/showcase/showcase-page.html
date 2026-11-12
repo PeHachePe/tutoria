@@ -31,9 +31,14 @@
 </header>
 
 <main class="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-6">
+  <!-- The page has no menu of its own: in production the administration reaches it from theirs -->
+  <a matButton class="self-start" [routerLink]="homePath">
+    <mat-icon>arrow_back</mat-icon>
+    Volver a la app
+  </a>
   <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <p class="eyebrow">Solo en desarrollo</p>
+      <p class="eyebrow">Desarrollo y administración</p>
       <h1 class="text-headline-medium">Muestrario de la interfaz</h1>
       <p class="text-body-medium text-on-surface-variant">
         Componentes de Material y piezas propias con los tokens del tema.

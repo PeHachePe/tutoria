@@ -41,6 +41,15 @@ describe('ShowcasePage', () => {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';
   }
 
+  it('leads back to the app, as it has no menu of its own (production, D-053)', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const back = [...element.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('Volver a la app'),
+    );
+
+    expect(back?.getAttribute('href')).toBe('/');
+  });
+
   it('shows the page title and one heading per section', () => {
     const element = fixture.nativeElement as HTMLElement;
     const headings = [...element.querySelectorAll('h2')].map((h) => h.textContent?.trim());

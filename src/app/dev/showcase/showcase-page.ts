@@ -19,8 +19,10 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTab, MatTabGroup } from '@angular/material/tabs';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
+import { APP_PATHS } from '../../core/app-paths';
 import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { AttemptStatus } from '../../data/attempt';
 import { DataError } from '../../data/data-error';
@@ -57,6 +59,7 @@ import { ShowcaseTable } from './showcase-table';
 @Component({
   selector: 'app-showcase-page',
   imports: [
+    RouterLink,
     MatToolbar,
     MatButton,
     MatIconButton,
@@ -101,6 +104,8 @@ import { ShowcaseTable } from './showcase-table';
   templateUrl: './showcase-page.html',
 })
 export class ShowcasePage {
+  /** The root leads to the home of the signed-in role, or to the login. */
+  protected readonly homePath = APP_PATHS.root;
   protected readonly theme = inject(ThemeService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);

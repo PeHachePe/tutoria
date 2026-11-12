@@ -38,6 +38,8 @@ export default defineConfig({
     {
       name: 'smoke',
       testMatch: 'smoke/**',
+      // The free cloud starts cold and is farther than the local demo: more room to wait
+      expect: { timeout: 30_000 },
       use: { ...devices['Desktop Chrome'] },
     },
   ],

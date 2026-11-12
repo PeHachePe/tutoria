@@ -24,8 +24,15 @@ export const SEED: MockTables = {
   attempts: ATTEMPTS,
   interactions: INTERACTIONS,
   events: EVENTS,
+  // Free plans only (D-053): when Flash-Lite is saturated (503 or no answer), the Gemma models of
+  // the same API and key, each with its own quota; slower, so they get more time
   aiProvider: {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
     model: 'gemini-3.5-flash-lite',
+    timeoutMs: 10_000,
+    fallbacks: [
+      { model: 'gemma-4-31b-it', timeoutMs: 30_000 },
+      { model: 'gemma-4-26b-a4b-it', timeoutMs: 30_000 },
+    ],
   },
 };
