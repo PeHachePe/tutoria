@@ -47,6 +47,12 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - **Formatear el código** (2.5d): el botón del encabezado «Código», o Mayús + Alt + F en el editor, ordena sangrías, espacios, puntos y coma y llaves, como «Dar formato al documento» en VS Code, con Prettier (dos espacios, comillas simples y líneas de 80). El cursor sigue en el mismo trozo de código, Ctrl + Z lo deshace y el cambio se guarda como cualquier otro. Si el código no se puede leer (un paréntesis sin cerrar), no lo toca y lo dice bajo el editor: «No se puede formatear: el código tiene un error en la línea 4». El aviso se va en cuanto el código cambia. No aparece en un intento entregado.
 - **Ampliar el código** (escritorio y tableta): el botón ⤢ del encabezado «Código» oculta el enunciado y le da su altura al código y a los resultados; el tutor se pliega en la mascota flotante, que lo abre cuando el alumno lo necesita (D-033). El mismo botón vuelve a la vista normal. Es el mismo editor: no se pierde nada de lo escrito ni el historial de deshacer.
 - **Plegar los resultados:** su encabezado, con el resumen, los pliega o los despliega; cada ejecución nueva los vuelve a desplegar.
+- **Lo que hace el tutor en la pantalla** (2.5e, D-051), cuando el alumno se lo pide o le ayuda:
+  - marca líneas del código con un fondo y una nota breve al final de la línea («Revisa esta condición»); el editor se desplaza a la primera y las marcas desaparecen con la primera edición;
+  - señala un ejemplo del enunciado, la primera prueba que falla o las comprobaciones ocultas: se destacan con el color terciario, se desplazan a la vista y los resultados se despliegan;
+  - cambia la disposición (código ampliado, tutor fijo o flotante);
+  - en el móvil, la pestaña cambia a la que tiene lo marcado o señalado (el código, o el ejercicio para un ejemplo o las comprobaciones ocultas).
+    Las mismas herramientas, sin riesgo, se abren a los agentes del navegador con WebMCP (sin escribir, ejecutar ni entregar).
 - **Señales del navegador** (paso 1.6, D-031): en un intento sin entregar se registran, sin nada visible para el alumno, los pegados de texto de fuera del código y las salidas a otra ventana o pestaña de 2 s o más, con su duración. Cerrar sesión espera a guardar el código y a enviar los eventos. La pantalla de datos registrados (1.9) lo explica.
 
 ## Estados
@@ -89,6 +95,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - [ ] El separador vertical da más o menos ancho al tutor, sin bajar de 16rem, y se recuerda al volver (paso 1.7).
 - [ ] Con el código ampliado y en la tableta, el tutor flota en la mascota y el código ocupa todo el ancho (iteración 1 del 1.7).
 - [ ] «Ampliar el código» da al código el sitio del enunciado, con el tutor a la vista y sin perder lo escrito, y los resultados se pliegan al resumen (iteraciones 1 y 2 del 1.5).
+- [x] «Resalta la línea 2» marca esa línea con su nota, y la marca se va al editar; «mira el ejemplo 2» lo destaca; en el móvil, la pestaña cambia (2.5e).
 
 ## Fuera de alcance
 

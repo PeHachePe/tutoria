@@ -450,6 +450,7 @@ src/app/
                       # form-field-defaults.ts, page-reloader.ts, error handler, event-logger.ts
     i18n/             # languages of the interface (D-023): locale.ts, load-locale.ts, language-service.ts,
                       # localized-paginator-intl.ts
+    tools/            # app-tool.ts: the tools of the tutor and of WebMCP, their registry (2.5e, D-051)
   data/
     user.ts  exercise.ts  attempt.ts  process-event.ts  tutor.ts  ai-provider-setting.ts   # data types, one file per concept
     *-service.ts      # data services as abstract classes: exercise-service.ts, attempt-service.ts...
@@ -600,13 +601,13 @@ Un store es un servicio con signals que guarda estado compartido. Solo se crea s
 
 Si no, el componente guarda su estado en signals y lee con `resource()` directamente de los servicios de datos.
 
-| Store           | Por qué hace falta                                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `AuthStore`     | Usuario y rol: los usan los guards, los menús y casi todas las pantallas.                                                |
-| `SettingsStore` | Animaciones, proactividad y voz: los leen las reacciones, el tutor proactivo y el chat. El tema lo lleva `ThemeService`. |
-| `AttemptStore`  | Intento en curso, compartido por el editor, los resultados, «Entregar» y el tutor.                                       |
-| `TutorStore`    | Conversación, compartida por el chat, las reacciones, la voz y el tutor proactivo.                                       |
-| `LiveStore`     | Estado en vivo de cada alumno, que actualiza Realtime y usan la tabla y el detalle.                                      |
+| Store           | Por qué hace falta                                                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AuthStore`     | Usuario y rol: los usan los guards, los menús y casi todas las pantallas.                                                                                                                   |
+| `SettingsStore` | Animaciones, proactividad y voz: los leen las reacciones, el tutor proactivo y el chat. El tema lo lleva `ThemeService`.                                                                    |
+| `AttemptStore`  | Intento en curso, compartido por el editor, los resultados, «Entregar» y el tutor.                                                                                                          |
+| `TutorStore`    | Conversación, compartida por el chat, las reacciones, la voz y el tutor proactivo; y lo que el tutor hace con sus herramientas (2.5e): sus acciones, las marcas del código y adónde señala. |
+| `LiveStore`     | Estado en vivo de cada alumno, que actualiza Realtime y usan la tabla y el detalle.                                                                                                         |
 
 El acceso, el catálogo, el histórico, la gestión de ejercicios y la administración no necesitan store.
 
@@ -1344,24 +1345,40 @@ Probado con Supabase local en el 2.5c, el tutor repetía la misma pregunta a un 
 
 - **Hecho así (D-049):** `isStuckMessage()`, `raisesHintLevel()` y `skeletonBlock()` en `tutor-contract.ts`; dos atascos seguidos suben el nivel (desde 0, al 2) y el chat lo dice con «Más ayuda · nivel N»; el esqueleto lo escribe el servidor a partir del campo `skeleton` del modelo (los nombres de los parámetros), y el validador acepta además un bloque con solo la firma vacía; notas deterministas en la petición (atasco y código que supera los ejemplos); bloques de código en el chat con «Copiar» (`CodeBlock`, `TutorMessage`, `splitCodeBlocks()`), también en `/dev/ui`; tutor simulado con el esqueleto. Iteración 1, a petición del autor: ejemplos de sintaxis de un catálogo fijo que escribe el servidor (`syntax`, `SYNTAX_EXAMPLES`, solo en las preguntas), preguntas directas respondidas como preguntas y no como pistas, y respuestas que explican el porqué sin abrir siempre igual (una nota recuerda cómo empezaban las últimas). Batería: C4 a C9 con comprobación automática (`check`, veredicto «no cumple»). Iteración 2 (D-050): «Formatear el código» con Prettier, descargado al formatear (botón y Mayús + Alt + F), y los mismos colores en el editor y en los bloques del chat (`codeHighlighter`). Prompt v3 con `gemini-3.5-flash-lite`; `gemini-3.8-flash` no tiene cuota en el plan gratuito y se compara en el 3.1.
 
-**2.5e · Herramientas del tutor y WebMCP (≈6 h)** · D-047 · a petición del autor, después del 2.5d y antes de la beta (3.1), para la demo
+**2.5e · Herramientas del tutor y WebMCP (≈8 h)** · D-047 y D-051 · a petición del autor, después del 2.5d y antes de la beta (3.1), para la demo; ampliado con las consultas de progreso y partido en 2.5e y 2.5f
 
-Un único registro de herramientas en Angular, con el formato de WebMCP (nombre, descripción, `inputSchema` con JSON Schema y `execute`), con dos usos:
+Un único registro de herramientas con el tipo de Angular (`WebMcpToolDescriptor`: nombre, descripción, `inputSchema` con JSON Schema, anotaciones y `execute`), con dos usos:
 
-- **Nuestro tutor, siempre y en cualquier navegador** (_function calling_): los esquemas van en un contrato compartido sin imports, como `tutor-contract.ts`. La Edge Function se los pasa al modelo y valida cada llamada (que exista y con argumentos válidos), y el chat ejecuta su `execute`. El alumno lo pide con palabras: «ponme uno de bucles», «el siguiente que me queda», «pon el modo oscuro».
-- **WebMCP, abierto a cualquier agente del navegador** (`provideExperimentalWebMcpTools` en las rutas, que se quitan al salir con `withAutoCleanupInjectors`), para la demo y para quien lo tenga activado. Solo las herramientas sin riesgo.
+- **Nuestro tutor, en cualquier navegador:** los esquemas van en un contrato compartido sin imports (`tutor-tools.ts`), como `tutor-contract.ts`. La Edge Function se los pasa al modelo y descarta cualquier llamada que no esté en el contrato o con argumentos que no valen; el chat ejecuta el mismo `execute`. El alumno lo pide con palabras: «ponme uno de bucles», «¿cuántos me quedan?», «pon el modo oscuro».
+- **WebMCP, abierto a cualquier agente del navegador:** `provideExperimentalWebMcpTools` en las rutas (se quitan al salir, `withAutoCleanupInjectors`) y `declareExperimentalWebMcpTool` en los componentes que las sostienen (el editor). Solo las herramientas sin riesgo. Nuestro chat no pasa por `document.modelContext`, que es para agentes externos: llama al mismo `execute`.
 
-Herramientas:
+Pocas herramientas, agrupadas por parámetros: con muchas, un modelo barato elige peor y cada llamada cuesta más.
 
-- **Abiertas a todos (tutor y WebMCP):** `searchExercises` (por contenido, dificultad o estado, entre los asignados), `openExercise`, `openNextExercise`, `listAttempts`, `highlightLines` (resalta líneas del editor con una nota breve al lado: «aquí falta cerrar el paréntesis», «revisa esta condición»), `getSettings` y `updateSettings` (tema, idioma, reacciones, emojis animados, tutor proactivo y accesorios de la mascota; el idioma avisa de que la app se recarga).
-- **Solo nuestro tutor, nunca por WebMCP** (a petición del autor, nuestra IA tiene más acceso porque pasa por nuestro validador y nuestras reglas): `insertSkeleton` (con un botón «Insertar» que pulsa el alumno), `runTests` («ejecuta las pruebas»), `submitAttempt` (abre el diálogo de confirmación de siempre: entrega solo si el alumno acepta) y `proposeFix` (corrige un despiste que impide ejecutar, con un botón «Aplicar»).
-- **`proposeFix`, la frontera:** corrige lo que impide que el código se ejecute, nunca lo que hace fallar las pruebas. Lo valida el servidor, no el modelo: solo si la última ejecución dio un error de sintaxis o de nombre (el código no carga, o usa una variable o un método que no existe), una sola línea y pocos caracteres, y con el cambio ese error desaparece (se prueba en el sandbox). Con el código cargando y pruebas que fallan, solo puede señalar y dar pistas: pasar `i < n` a `i <= n` también es un carácter, pero es la solución.
-- **Nadie:** escribir código de la lógica del ejercicio, ni siquiera nuestro tutor. Escribir, ejecutar y entregar no se exponen a agentes externos: cualquiera podría resolver y entregar un ejercicio (D-047).
-- Cada herramienta valida sus argumentos en `execute`, porque ni Angular ni WebMCP lo hacen, y responde qué ha hecho, para que el tutor lo confirme («Listo: modo oscuro»).
+- **Consultas** (solo lectura; tutor y WebMCP): `getMyProgress` (asignaturas, grupos y cuántos ejercicios hay asignados, sin empezar, en curso, superados y entregados), `searchExercises` (por texto, estado, dificultad, asignatura o bloque), `getExerciseStats` (intentos, ejecuciones y cuántas fallaron, pruebas que fallan ahora, pistas y nivel) y `getSettings`. Las ejecuta el navegador con los servicios de datos, con la sesión del alumno (la RLS solo le deja ver lo suyo), y el resultado vuelve al servidor en una segunda petición con el mismo `requestId`, para que el modelo responda con los datos. Solo cuesta una segunda llamada al modelo cuando pregunta por sus datos.
+- **Navegación** (tutor, con botón; WebMCP): `openExercise` (por id, por palabras del título o el siguiente pendiente, y un intento concreto) y `navigate` (catálogo con su pestaña, ajustes o datos registrados).
+- **Interfaz del espacio de trabajo** (tutor, directo, porque no cambia nada; WebMCP): `highlightLines` (resalta líneas del editor con una nota breve al lado, o quita el resaltado), `pointAt` (un ejemplo del enunciado, la prueba que falla o las pruebas ocultas) y `setLayout` (código ampliado, tutor fijo o flotante, pestaña del móvil).
+- **Ajustes** (tutor, al momento y con «Deshacer»; WebMCP): `updateSettings` (tema, idioma, reacciones, emojis animados, tutor proactivo y accesorios de la mascota). El idioma recarga la página, así que espera a un botón.
+- **Nadie:** escribir código de la lógica del ejercicio, ni siquiera nuestro tutor; leer o escribir el código, ejecutar o entregar por WebMCP (D-047); preguntar a nuestro tutor por WebMCP (gastaría nuestra cuota y saltaría las reglas del chat); pedir pista como herramienta (el nivel lo decide el servidor, 2.6); cerrar la sesión o borrar la conversación.
+- Cada herramienta valida sus argumentos en `execute` con el validador del contrato, porque ni Angular ni WebMCP lo hacen, y responde qué ha hecho, para que el tutor lo confirme («Listo: modo oscuro»).
+- **Cómo llegan al modelo:** se prueba el _tool calling_ nativo (la respuesta también es una herramienta, `respond`, con `tool_choice: "required"`) frente a un campo `tools` en el JSON de la respuesta, con la batería; gana el que el modelo use mejor. Es un detalle del proveedor: el registro, el chat y WebMCP no cambian.
+- **Tutor simulado:** responde con herramientas a las mismas frases, sobre las fixtures, para la demo con `npm start`.
 
 **Demo:** Chrome con `chrome://flags/#enable-webmcp-testing` y la extensión Model Context Tool Inspector, que lista las herramientas de TutorIA y las llama; y el mismo resultado pedido desde nuestro chat. La API es experimental (prueba de origen en Chrome, el nombre ya cambió de `navigator.modelContext` a `document.modelContext`): en la beta publicada haría falta un token, y nada del producto depende de ella.
 
-🧪 Cada herramienta con TDD (argumentos válidos e inválidos y lo que hace); Deno: `proposeFix` acepta `retrun` → `return` o un `)` que falta y rechaza `i < n` → `i <= n` y cualquier cambio con el código cargando; registro con el polyfill `@mcp-b/webmcp-polyfill`; Deno: el modelo solo puede pedir herramientas del contrato.
+🧪 Validador y cada herramienta con TDD (argumentos válidos e inválidos y lo que hace); registro en WebMCP con un `modelContext` de prueba (sin nombres repetidos entre rutas activas a la vez); Deno: el modelo solo puede pedir herramientas del contrato, la segunda petición con el resultado y el modo nativo; batería: una pregunta de datos y otra sobre los datos de otro alumno.
+✅ Con datos simulados y con Supabase local, «¿cuántos me quedan?», «ponme uno de bucles», «resalta la línea 3» y «pon el modo oscuro» desde el chat; y las mismas herramientas desde el Model Context Tool Inspector.
+
+- **Hecho así (D-051):** contrato `tutor-tools.ts` (diez herramientas, `checkToolArguments()` y `toolCallsOf()`); `appTool()`, `ToolRegistry`, `declareAppTool()` y `provideAppTools()` en `core/tools/app-tool.ts`, el único fichero con la API experimental (excepción del lint acotada); `studentTools()` en la ruta del alumno, `workspaceTools()` en la del espacio de trabajo y `setLayout` en la página; consultas en dos vueltas (evento `query` y `results` con el mismo `requestId`); acciones en el `meta`, guardadas en `tutor_interaction.actions`, con `TutorActions` bajo la respuesta (botón, «Deshacer», «Ha consultado…») y en `/dev/ui`; marcas del editor (`lineMarks`) y señalador del enunciado y los resultados, que en el móvil cambian de pestaña; prompt v4; tutor simulado con herramientas (`scriptedTools`); batería con T1 a T5. Las herramientas van como un campo del JSON de la respuesta: el _tool calling_ nativo (`responseFormat: "tools"`) se probó con la batería y falló en las acciones con `gemini-3.5-flash-lite`; queda como opción por modelo. `playReaction` se descartó: el tutor ya elige la reacción de cada respuesta.
+
+**2.5f · Herramientas que solo usa nuestro tutor (≈4 h)** · D-047 · a petición del autor, después del 2.5e y antes de la beta (3.1)
+
+Con el registro del 2.5e, las herramientas que tocan el código o la entrega, nunca por WebMCP (a petición del autor, nuestra IA tiene más acceso porque pasa por nuestro validador y nuestras reglas), siempre con un botón o un diálogo que pulsa el alumno:
+
+- `insertSkeleton` (botón «Insertar», con `skeletonBlock()`), `formatCode`, `runTests`, `submitAttempt` (abre el diálogo de confirmación de siempre: entrega solo si el alumno acepta), `practiseAgain` y `proposeFix` (botón «Aplicar»). Ctrl + Z deshace lo insertado o aplicado.
+- **`proposeFix`, la frontera:** corrige lo que impide que el código se ejecute, nunca lo que hace fallar las pruebas. Lo valida el servidor, no el modelo: solo si el código no carga o da un error de nombre (usa una variable o un método que no existe), una sola línea y pocos caracteres, y con el cambio ese error desaparece (se prueba en el sandbox). Con el código cargando y pruebas que fallan, solo puede señalar y dar pistas: pasar `i < n` a `i <= n` también es un carácter, pero es la solución.
+
+🧪 Cada herramienta con TDD; Deno: `proposeFix` acepta `retrun` → `return` o un `)` que falta y rechaza `i < n` → `i <= n` y cualquier cambio con el código cargando; batería: «arréglame el código» con pruebas que fallan.
+✅ Con Supabase local, el esqueleto insertado con un botón, un `retrun` corregido con «Aplicar» y la entrega pedida al tutor con su diálogo.
 Commit: `feat: real backend core`.
 
 #### Fase 3 · Beta pública y entrega de la PEC3 (≈10 h)

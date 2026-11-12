@@ -24,6 +24,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
   - antes de cada pista, la etiqueta «Pista · nivel N»; antes de una intervención por iniciativa del tutor, «El tutor se acerca»; cuando el alumno dice otra vez que está atascado («no sé», «no me acuerdo») y el servidor sube el nivel sin que pulse «Pedir pista», «Más ayuda · nivel N» (2.5d);
   - un separador con el día («Hoy» o la fecha) cuando cambia;
   - el código en línea de las respuestas, en monoespaciada, y los bloques de código aparte, con los colores del editor, su lenguaje y «Copiar» («Copiado» durante dos segundos, anunciado a los lectores de pantalla): el esqueleto vacío de la función y los ejemplos genéricos de sintaxis del catálogo, que escribe el servidor (2.5d). Cada línea se ve entera; si no cabe, el bloque se desplaza de lado, también con el teclado;
+  - bajo una respuesta, lo que el tutor ha hecho con sus herramientas (2.5e, D-051): «Ha consultado tu progreso» si leyó datos del alumno antes de responder; lo que hizo al momento («He marcado la línea 3 del código», «Te señalo el ejemplo 2», «Tema oscuro» con «Deshacer»); y, para lo que cambia de página o la recarga, un botón («Abrir el siguiente ejercicio», «Ir a los ajustes», «Cambiar el idioma a inglés» con «La página se vuelve a cargar»). En el historial, lo que propuso («Te propuso: …»), sin volver a hacerlo;
   - se desplaza por dentro y se queda abajo mientras crece.
 - **Sin conversación:** la mascota grande, «¡Hola, Lucía!», «Pregúntame lo que necesites o pide una pista. No te daré la solución, pero te ayudaré a encontrarla» y dos preguntas sugeridas. La primera depende del intento: «¿Por dónde empiezo?», «¿Por qué falla una de las pruebas?» o «¿Se puede mejorar mi código?». La segunda es siempre «No entiendo el enunciado».
 - **Pie:** «Pedir pista» («Otra pista» en el nivel 3), con un tooltip que dice qué dará el siguiente nivel; debajo, el campo «Pregunta al tutor» con el botón de enviar y la ayuda «Intro para enviar; Mayús + Intro, nueva línea».
@@ -54,6 +55,9 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Hacer flotante / Fijar:** pasa el tutor de la columna a la mascota flotante (abierto, con el foco en la pregunta) y de vuelta; fijarlo devuelve también la vista normal si el código estaba ampliado. Se recuerda para el alumno.
 - **Abrir y minimizar** (flotante): la mascota lo abre con el foco en la pregunta; «Minimizar el tutor», la mascota o Esc lo pliegan y el foco vuelve a la mascota. El bocadillo de una respuesta nueva también lo abre.
 - **Móvil:** si llega una respuesta mientras el alumno está en otra pestaña, la pestaña «Tutor» muestra un punto hasta que la abre.
+
+- **Preguntar por sus datos** (2.5e): «¿cuántos me quedan?», «¿qué asignaturas tengo?», «¿cuántos errores llevo?»: el tutor los consulta con la sesión del alumno (solo ve lo suyo) y responde con ellos; mientras, los tres puntos de siempre.
+- **Pedirle que actúe** (2.5e): «ponme uno de bucles», «el siguiente que me queda», «pon el modo oscuro», «resalta la línea 3». El botón de una acción se puede enfocar mientras se ejecuta; si falla, «No se ha podido hacer: …» con «Reintentar». «Deshacer» devuelve los ajustes que cambió.
 
 ## Estados
 
@@ -91,6 +95,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] Ejecutar con todo superado lanza la fiesta, y volver a ejecutar sin romper nada, aplausos; mejorar lanza el ánimo; con fallos no sale nada.
 - [ ] Cada respuesta nueva lanza su reacción con su emoji y mueve la mascota; dos seguidas se suman sin cortarse; sin «Emojis animados», los mismos emojis estáticos; reducidas, su emoji pequeño; desactivadas, nada; con «reducir movimiento», su emoji se desvanece sin moverse.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
+- [x] «¿Cuántos me quedan?» responde con los datos del alumno y dice «Ha consultado tu progreso»; «pon el modo oscuro» lo aplica con «Deshacer»; «ponme el siguiente» deja el botón (2.5e).
 
 ## Fuera de alcance
 

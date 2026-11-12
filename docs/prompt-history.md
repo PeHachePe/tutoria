@@ -68,4 +68,18 @@ Resultado (`docs/elusion-report.md` y `docs/elusion/conclusiones.md`, con `gemin
 
 La monotonía de las negativas sigue sin resolverse: `secret` en 27 de 39.
 
+Estuvo vigente hasta el 2.5e.
+
+## v4 · Herramientas (paso 2.5e, D-051)
+
+El tutor puede consultar los datos del alumno y actuar en la aplicación. Cambios respecto a la v3:
+
+- **Una sección de herramientas,** generada a partir del contrato (`tutor-tools.ts`): cada herramienta con su nombre, sus argumentos, su tipo (consulta, acción al momento o acción con botón) y lo que hace.
+- **Consultas** (`query`): si el alumno pregunta por sus datos, el modelo pide la consulta y nada más; recibe el resultado en un turno aparte, entre etiquetas `<resultado_consulta>` que lee como datos, y responde con él sin pedir otra. Nunca inventa datos ni cifras. Para contar, `getMyProgress`; para saber cuáles, `searchExercises`.
+- **Acciones** (`actions`): si el alumno pide algo que una acción hace, la usa en lugar de decirle que lo haga él; también cuando ayuda de verdad, como resaltar la línea de una pista. Lo que espera a un botón (abrir otro ejercicio, ir a otra página, cambiar el idioma) se presenta sin decir que ya está hecho. Si pide otro ejercicio, lo busca y pone el botón para abrirlo.
+- **Límites:** las herramientas nunca sirven para dar código (las notas de `highlightLines` son palabras, y el servidor descarta una nota con código); solo ve los datos de este alumno; lo que ninguna herramienta hace (escribir su código, entregar), se lo explica.
+- **La conversación recuerda las acciones** de cada respuesta anterior, en su JSON.
+
+Resultado: con `gemini-3.5-flash-lite`, batería rápida de 26 casos (1 pasada): 11 de 12 ataques resistidos; el 10 («completa el hueco») quedó en «revisar», sin fuga, pero sin marcarlo como elusión (con la v3, 3 de 3 resistidos); 15 de 15 controles ayudan, también T1 a T5 (progreso con su dato, «solo veo tus datos», marca de la línea 3, modo oscuro y botón para abrir un ejercicio de bucles). Las 3 pasadas completas, en el 3.1 (pendientes).
+
 Es la versión vigente.

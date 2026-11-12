@@ -1420,3 +1420,40 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - La carga inicial no cambia; el primer formateo descarga unos 140 kB.
 
 **Aprobación:** el autor pidió el formateo («que se indente bien el código») y, sobre los colores, preguntó si serían útiles. El agente recomendó hacerlos porque cuestan poco y ayudan a reconocer las palabras del lenguaje. El diseño, por delegación del autor.
+
+## D-051 · Las herramientas del tutor: un registro con el formato de WebMCP, en el JSON de la respuesta (12/11/2026)
+
+**Contexto:** el paso 2.5e (D-047) da herramientas al tutor y las abre a los agentes del navegador con WebMCP. Al aprobar el plan, el autor pidió además poder preguntar por sus datos («¿qué asignaturas tengo?», «¿cuántos me quedan?», «¿cuántos errores llevo?»), quiso saber si eso iba en el front o en el back y pidió una valoración objetiva de todo el diseño, usando el WebMCP de Angular en lo posible. Con esa valoración, el paso se partió en dos: el 2.5e (registro, consultas, navegación, interfaz y ajustes) y el 2.5f (lo que toca el código o la entrega).
+
+**Decisión:**
+
+- **Un solo registro con el tipo de Angular:** cada herramienta es un `WebMcpToolDescriptor` (`appTool()` en `core/tools/app-tool.ts`) con su esquema del contrato compartido sin imports (`data/tutor/tutor-tools.ts`). Angular deduce los tipos de los argumentos a partir del esquema. `declareAppTool()` registra cada herramienta en nuestro `ToolRegistry` y, si es abierta, con `declareExperimentalWebMcpTool`; `provideAppTools()` lo hace para una ruta, y las dos se quitan al cerrarse su inyector (`withAutoCleanupInjectors`). La página del ejercicio declara `setLayout`, porque la disposición es suya.
+- **Nuestro chat no pasa por `document.modelContext`,** que es para agentes externos: llama al mismo `execute` a través del registro.
+- **Un validador del subconjunto de JSON Schema** que usamos (`checkToolArguments()`), en el contrato: lo usan el `execute` de Angular (ni Angular ni WebMCP comprueban los argumentos), las llamadas de los agentes de WebMCP y la Edge Function.
+- **Diez herramientas, agrupadas por parámetros:** con muchas, un modelo barato elige peor y cada llamada cuesta más.
+  - consultas: `getMyProgress`, `searchExercises`, `getExerciseStats` y `getSettings`;
+  - navegación, con un botón que pulsa el alumno: `openExercise` (por id, por palabras del título o `next`) y `navigate`;
+  - interfaz, al momento: `highlightLines`, `pointAt` y `setLayout`;
+  - `updateSettings`, al momento y con «Deshacer», salvo el idioma, que recarga la página y espera a un botón.
+- **Cómo llegan al modelo: un campo más del JSON de la respuesta** (`query` con las consultas y `actions` con las acciones, una propiedad por herramienta). El servidor descarta cualquier llamada que no esté en el contrato, que sea del otro grupo o con argumentos que no valen, y una nota de `highlightLines` con código. Las acciones se guardan con la interacción (`tutor_interaction.actions`); el historial las muestra sin volver a ejecutarlas.
+- **Las consultas, en el front y en dos vueltas:** el modelo pide la consulta; el servidor la devuelve al navegador (evento `query`) sin guardar nada; el chat la ejecuta con los servicios de datos, con la sesión del alumno (la RLS solo le deja ver lo suyo), y reenvía la misma petición (mismo `requestId`) con el resultado. El servidor lo pasa al modelo entre etiquetas de datos (`<resultado_consulta>`) y ya no admite otra consulta: como mucho, dos llamadas al modelo, y solo cuando se pregunta por datos.
+- **Excepción del lint, acotada:** `@angular-eslint/no-experimental` está desactivada solo en `core/tools/app-tool.ts`, el único fichero que usa la API de WebMCP. El resto de la app sigue usando solo APIs estables, y un cambio de la API se queda en ese fichero.
+- **Prompt v4** (`docs/prompt-history.md`): qué hace cada herramienta, cuándo usarla, que nunca sirven para dar código y que solo ve los datos de este alumno.
+
+**Alternativas:**
+
+- **_Tool calling_ nativo** (`tools` de la API de chat, con la respuesta como una herramienta más, `respond`, y `tool_choice: "required"`): se implementó como un modo más del proveedor (`responseFormat: "tools"`) y se comparó con la batería. Con `gemini-3.5-flash-lite` acertó mejor la consulta del progreso, pero falló en las acciones: no llamaba a `respond` (y el alumno recibía la respuesta por defecto) o no llamaba a la herramienta que decía usar. El campo del JSON usó bien las acciones y funciona igual en toda la cadena de respaldo (D-044). El modo nativo queda disponible por modelo, para compararlo con `gemini-3.8-flash` en el 3.1. No cambia nada fuera del proveedor.
+- **Consultas en el servidor:** habría que escribir cada consulta tres veces (SQL en la Edge Function, Angular para WebMCP y el tutor simulado) y la demo con datos simulados no las tendría.
+- **Un resumen del progreso en cada petición:** encarece todas las llamadas y distrae en las pistas.
+- **Ejecutar todas las acciones al momento:** un modelo barato puede pedir una que nadie pidió; abrir otra página o recargarla espera a un botón (la anotación `consequentialHint` de WebMCP separa lo mismo).
+- **`playReaction`** (prevista en el inventario): nuestro tutor ya elige la reacción de cada respuesta, así que sobraba.
+- **El polyfill `@mcp-b/webmcp-polyfill` en los tests:** un `modelContext` de prueba de pocas líneas comprueba lo mismo sin otra dependencia.
+
+**Consecuencias:**
+
+- Migración `20261112100000_tutor_actions.sql`: columna `actions` y `record_tutor_interaction` con un argumento más.
+- La primera llamada de una consulta no queda en `tutor_interaction`, así que no cuenta para el límite de 6 por minuto: como mucho, el doble de llamadas en las preguntas de datos.
+- WebMCP sigue siendo experimental (en Chrome, con el flag `enable-webmcp-testing`), pero ya está registrado con la API de Angular: se comprobó en la app con un `modelContext` de prueba. La demo, con el Model Context Tool Inspector.
+- El 2.5f añade las herramientas que solo usa nuestro tutor (esqueleto, formatear, ejecutar, entregar, practicar de nuevo y `proposeFix`) sobre este registro.
+
+**Aprobación:** el autor pidió las consultas de datos, aprobó hacerlas en el front, la valoración objetiva y el reparto en dos pasos («Sí, empieza»). El transporte (campo del JSON tras la prueba), el «Deshacer» de los ajustes y la excepción del lint, por delegación del autor («decidir lo más lógico»).

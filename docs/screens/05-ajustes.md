@@ -29,6 +29,7 @@ Que el alumno adapte TutorIA a su gusto: aspecto, idioma, reacciones del tutor (
 
 - Cada control aplica y guarda su cambio al momento; no hay botón de guardar ni formulario (D-038).
 - Con las reacciones desactivadas, «Emojis 3D» y «Probar una reacción» se deshabilitan.
+- Los mismos ajustes se pueden pedir al tutor («pon el modo oscuro») o a un agente del navegador con WebMCP (2.5e, D-051): se aplican al momento y el chat ofrece «Deshacer»; el idioma, con un botón, porque recarga la página.
 
 ## Estados
 
