@@ -13,6 +13,7 @@ import { map } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
+import { DEV_PATHS } from '../../dev/dev-paths';
 import { Brand } from '../brand/brand';
 import { LanguageMenu } from '../language-menu/language-menu';
 import type { NavLink } from '../nav-link';
@@ -52,6 +53,8 @@ const ADMINISTRATION: NavSection = {
       icon: 'manage_accounts',
     },
     { path: APP_PATHS.admin.system, label: $localize`:@@nav.system:Sistema`, icon: 'tune' },
+    // Every build serves the showcase to the administration, production included (D-053)
+    { path: DEV_PATHS.showcase, label: $localize`:@@nav.showcase:Muestrario`, icon: 'palette' },
   ],
 };
 

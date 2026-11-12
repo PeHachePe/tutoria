@@ -78,6 +78,17 @@ describe('StaffLayout', () => {
         .getAttribute('href'),
     ).toBe('/admin/usuarios');
     expect(within(menu()).getByRole('link', { name: /Sistema/ })).toBeTruthy();
+    expect(
+      within(menu())
+        .getByRole('link', { name: /Muestrario/ })
+        .getAttribute('href'),
+    ).toBe('/dev/ui');
+  });
+
+  it('keeps the showcase out of the menu of a teacher', async () => {
+    await renderAs('teacher');
+
+    expect(within(menu()).queryByRole('link', { name: /Muestrario/ })).toBeNull();
   });
 
   it('draws the page inside the main landmark, after a skip link', async () => {

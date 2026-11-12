@@ -79,6 +79,7 @@
     "staff.administration": "Administración",
     "nav.users": "Usuarios",
     "nav.system": "Sistema",
+    "nav.showcase": "Muestrario",
     "status.notStarted": "Sin empezar",
     "status.inProgress": "En curso",
     "status.testsFailed": "Con fallos",
