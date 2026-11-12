@@ -21,12 +21,12 @@ const NEXT: TurnAction = {
 describe('TutorActions', () => {
   async function setup(
     actions: readonly TurnAction[],
-    { queriedNames = [] as string[], disabled = false } = {},
+    { queriedNames = [] as string[], disabled = false, code = '' } = {},
   ) {
     const run = vi.fn();
     const undo = vi.fn();
     await render(TutorActions, {
-      inputs: { actions, queriedNames, disabled },
+      inputs: { actions, queriedNames, disabled, code },
       on: { run, undo },
     });
     return { run, undo };
@@ -74,9 +74,18 @@ describe('TutorActions', () => {
 
   it('tries again what failed', async () => {
     const { run } = await setup([{ ...NEXT, status: 'failed' }]);
-    expect(screen.getByText('No se ha podido hacer: Ejercicio abierto')).toBeTruthy();
+    expect(screen.getByText('No se ha podido hacer: Abrir el siguiente ejercicio')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(run).toHaveBeenCalledWith(0);
+  });
+
+  it('shows what a fix changes in the code as it is now (2.5f)', async () => {
+    const fix = { name: 'proposeFix', arguments: { line: 2, code: '  return a;' } };
+    await setup([{ call: fix, status: 'pending' }], {
+      code: 'function f(a) {\n  retrun a;\n}',
+    });
+    expect(screen.getByRole('button', { name: 'Aplicar la corrección' })).toBeTruthy();
+    expect(screen.getByText('Línea 2: retrun → return')).toBeTruthy();
   });
 
   it('offers nothing to press once the attempt is submitted', async () => {

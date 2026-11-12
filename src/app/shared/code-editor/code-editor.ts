@@ -41,6 +41,9 @@ const LANGUAGES: Record<Language, () => LanguageSupport> = {
 
 let nextId = 0;
 
+/** What «Formatear» did: the code put in order, nothing to change, or code it cannot read. */
+export type FormatOutcome = 'formatted' | 'unchanged' | 'failed';
+
 /**
  * Characters a paste brought from outside the code. Text that was already there, such as a line the
  * student copied to repeat it, is not a paste the teacher needs to see (2.8).
@@ -166,23 +169,70 @@ export class CodeEditor {
    * read stays as it is, and the editor says the line of its error. Nothing in a read only editor,
    * nor if the student typed while it was formatting.
    */
-  async format(): Promise<void> {
+  async format(): Promise<FormatOutcome> {
     const view = this.view;
-    if (!view || this.readonly()) return;
+    if (!view || this.readonly()) return 'unchanged';
     const code = view.state.doc.toString();
     const result = await this.formatter.format(code, view.state.selection.main.head);
     if (!result.ok) {
       this.formatProblem.set({ line: result.line });
-      return;
+      return 'failed';
     }
     this.formatProblem.set(null);
-    if (result.code === code || view.state.doc.toString() !== code) return;
+    if (result.code === code || view.state.doc.toString() !== code) return 'unchanged';
     view.dispatch({
       changes: { from: 0, to: code.length, insert: result.code },
       selection: { anchor: result.cursor },
       scrollIntoView: true,
       userEvent: 'input.format',
     });
+    return 'formatted';
+  }
+
+  /** The code as it is in the editor now, unsaved changes included. */
+  code(): string {
+    return this.view?.state.doc.toString() ?? untracked(this.initialCode);
+  }
+
+  /**
+   * Writes the code the tutor brings when the student presses its button (2.5f): the skeleton or a
+   * fixed slip. Only the part that changes goes in, as one change of the history, so Ctrl + Z
+   * undoes it, and the cursor goes to the end of `line`. It is not a paste (2.8). Nothing in a read
+   * only editor.
+   */
+  replaceCode(code: string, line: number): void {
+    const view = this.view;
+    if (!view || this.readonly()) return;
+    const current = view.state.doc.toString();
+    if (code === current) return;
+    let start = 0;
+    while (start < current.length && start < code.length && current[start] === code[start]) start++;
+    let end = 0;
+    while (
+      end < current.length - start &&
+      end < code.length - start &&
+      current[current.length - 1 - end] === code[code.length - 1 - end]
+    ) {
+      end++;
+    }
+    const lines = code.split('\n');
+    const shown = Math.min(Math.max(line, 1), lines.length);
+    const cursor = lines.slice(0, shown).reduce((total, each) => total + each.length + 1, -1);
+    view.dispatch({
+      changes: {
+        from: start,
+        to: current.length - end,
+        insert: code.slice(start, code.length - end),
+      },
+      selection: { anchor: cursor },
+      scrollIntoView: true,
+      userEvent: 'input.tutor',
+    });
+  }
+
+  /** Puts the focus in the code, as after «Aplicar»: Ctrl + Z is at hand. */
+  focus(): void {
+    this.view?.focus();
   }
 
   private extensions() {

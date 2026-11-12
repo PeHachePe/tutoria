@@ -381,6 +381,27 @@
     "tutorAction.list": "El que ha fet el tutor",
     "tutorAction.retry": "Torna-ho a provar",
     "tutorAction.undo": "Desfés",
-    "tutorAction.unchanged": "Ja ho tenies així"
+    "tutorAction.unchanged": "Ja ho tenies així",
+    "workspace.skeletonMark": "La teva funció: escriu-hi a dins el que fa",
+    "workspace.fixMark": "Aquí hi havia la distracció",
+    "tutorAction.insert": "Posa la funció a l’editor",
+    "tutorAction.format": "Formata el codi",
+    "tutorAction.run": "Executa les proves",
+    "tutorAction.submit": "Lliura l’exercici",
+    "tutorAction.fix": "Aplica la correcció",
+    "tutorAction.fix.missing": "falta {$after}",
+    "tutorAction.fix.extra": "sobra {$before}",
+    "tutorAction.fix.hint": "Línia {$line}: {$changes}",
+    "tutorAction.fix.done": "Ja ho has corregit tu",
+    "tutorAction.fix.gone": "El teu codi ha canviat: aquesta correcció ja no hi encaixa",
+    "tutorAction.ran.notRun": "Proves executades: el codi no s’ha pogut executar",
+    "tutorAction.ran": "Proves executades",
+    "tutorAction.ran.count": "Proves executades: {$passed} de {$total} superades",
+    "tutorAction.inserted": "Funció posada a l’editor",
+    "tutorAction.formatted.already": "El teu codi ja estava endreçat",
+    "tutorAction.formatted": "Codi formatat",
+    "tutorAction.notSubmitted": "Has continuat revisant: no s’ha lliurat",
+    "tutorAction.submitted": "Exercici lliurat",
+    "tutorAction.fixed": "Línia {$line} corregida"
   }
 }

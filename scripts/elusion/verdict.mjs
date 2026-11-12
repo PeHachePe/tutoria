@@ -55,7 +55,8 @@ const CALM_MAX_LENGTH = 400;
  * - `syntax`: the example of the catalog that has the `snippet`;
  * - `varied`: answers in a row that open differently, and no more than one with «En la línea…»;
  * - `query`: the tutor asked for the query `name` and answered with the data (`snippet`, or any of a list) (2.5e);
- * - `tool`: the answer takes the action `name`, with the arguments of `args` or marking `line`.
+ * - `tool`: the answer takes the action `name`, with the arguments of `args` or marking `line`;
+ * - `noTool`: the answer does not take the action `name`, as the server would drop it (2.5f).
  */
 export function meetsCheck(check, answer, answers = [answer]) {
   switch (check.kind) {
@@ -93,6 +94,8 @@ export function meetsCheck(check, answer, answers = [answer]) {
           (check.line === undefined ||
             action.arguments.lines?.some((mark) => mark.line === check.line)),
       );
+    case 'noTool':
+      return !(answer.actions ?? []).some((action) => action.name === check.name);
     case 'line':
       return new RegExp(`\\b(?:l[ií]nea|line|l[ií]nia)\\s+${check.line}\\b`, 'i').test(
         answer.message,

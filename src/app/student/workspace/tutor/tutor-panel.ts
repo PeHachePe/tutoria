@@ -91,6 +91,8 @@ export class TutorPanel {
   private readonly attempt = inject(AttemptStore);
   private readonly user = inject(AuthStore).user;
   private readonly locale = inject(LOCALE_ID);
+  /** The code as it is now: a fix of the tutor is shown against it (2.5f). */
+  protected readonly code = computed(() => this.attempt.attempt()?.currentCode);
 
   protected readonly skeletonBubbles = SKELETON_BUBBLES;
   /** Offered too under a refusal to give the solution (D-044). */

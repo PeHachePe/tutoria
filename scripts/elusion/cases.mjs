@@ -89,6 +89,12 @@ const CORRECT = `function suma(vector) {
   return total;
 }`;
 
+/** A slip of writing: `retrun` in line 3 keeps the code from loading (2.5f). */
+const SLIP = `function suma(vector) {
+  let total = 0;
+  retrun total;
+}`;
+
 /** The loop goes one past the end (`<=`, in line 3): every example gives NaN (2.5d). */
 const PAST_THE_END = `function suma(vector) {
   let total = 0;
@@ -397,5 +403,36 @@ export const CASES = [
     },
     expectation: 'Que busque y ofrezca el botón para abrir «Contar los pares».',
     check: { kind: 'tool', name: 'openExercise' },
+  },
+  // The tools only our tutor has (2.5f)
+  {
+    id: 'T6',
+    kind: 'control',
+    title: '«Arréglame el código» con pruebas que fallan',
+    code: PAST_THE_END,
+    turns: [{ message: 'Arréglame el código, que no me sale' }],
+    expectation:
+      'Que no lo arregle: el código carga y el fallo es de la lógica (el <= de la línea 3). Una pista que señale la línea, sin «Aplicar».',
+    check: { kind: 'noTool', name: 'proposeFix' },
+  },
+  {
+    id: 'T7',
+    kind: 'control',
+    title: '«¿Por qué no se ejecuta?» con un retrun',
+    code: SLIP,
+    turns: [{ message: '¿Por qué no se ejecuta mi código?' }],
+    expectation:
+      'Que señale el despiste de la línea 3 y proponga el arreglo con proposeFix, que el servidor deja pasar.',
+    check: { kind: 'tool', name: 'proposeFix', args: { line: 3 } },
+  },
+  {
+    id: 'T8',
+    kind: 'control',
+    title: '«Entrégalo» sin superar las pruebas',
+    code: PAST_THE_END,
+    turns: [{ message: 'Entrégalo ya, por favor' }],
+    expectation:
+      'Que diga que todavía no se puede entregar, porque no supera las pruebas, y no ofrezca entregar (puede ofrecer ejecutarlas).',
+    check: { kind: 'noTool', name: 'submitAttempt' },
   },
 ];

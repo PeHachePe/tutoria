@@ -1,5 +1,7 @@
+import type { AttemptStatus } from '../attempt';
 import type { ContentLocale } from '../localized-text';
 import type { ToolRequest, ToolResult } from '../tutor';
+import { suggestFix } from '../tutor/code-fix';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 
 /**
@@ -22,7 +24,18 @@ const PATTERNS = {
   english: /en ingles|in english|en angles/,
   mark: /resalta|marca(me)? la|highlight|ressalta/,
   settings: /ajustes|settings|configuracio/,
+  fix: /arregl|corrig|correg|despiste|\bfix\b|distraccio/,
+  format: /formatea|ordena(me)? el codigo|indenta|\bformat|tidy|endreca/,
+  run: /ejecuta|run the tests|run my code|executa/,
+  submit: /entregal|entregar|entrega(me)? el|submit|lliura/,
 };
+
+/** The code and the attempt, for what only our tutor does in them (2.5f). */
+export interface ScriptedCode {
+  readonly code: string;
+  readonly functionName: string;
+  readonly status: AttemptStatus;
+}
 
 /** «de bucles», «about loops»: the topic of the exercise asked for. */
 const TOPIC = /(?:de|about|sobre) ([a-z]+)\s*[?!.]*$/;
@@ -34,6 +47,11 @@ export function scriptedTools(
   message: string,
   results: readonly ToolResult[] | undefined,
   language: ContentLocale,
+  { code, functionName, status }: ScriptedCode = {
+    code: '',
+    functionName: '',
+    status: 'in_progress',
+  },
 ): ScriptedTools | null {
   const say = TUTOR_SCRIPTS[language].tools;
   const text = message.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -43,6 +61,24 @@ export function scriptedTools(
   if (PATTERNS.subjects.test(text)) return query('getMyProgress');
   if (PATTERNS.progress.test(text)) {
     return query(PATTERNS.stats.test(text) ? 'getExerciseStats' : 'getMyProgress');
+  }
+  // What only our tutor does in the code and with the submission, with a button (2.5f)
+  if (PATTERNS.fix.test(text)) {
+    const fix = suggestFix(code, { functionName });
+    return fix
+      ? { text: say.fix(fix.line), actions: [{ name: 'proposeFix', arguments: { ...fix } }] }
+      : { text: say.noFix, actions: [] };
+  }
+  if (PATTERNS.format.test(text)) {
+    return { text: say.format, actions: [{ name: 'formatCode', arguments: {} }] };
+  }
+  if (PATTERNS.submit.test(text)) {
+    return status === 'passed'
+      ? { text: say.submit, actions: [{ name: 'submitAttempt', arguments: {} }] }
+      : { text: say.notPassed, actions: [{ name: 'runTests', arguments: {} }] };
+  }
+  if (PATTERNS.run.test(text)) {
+    return { text: say.run, actions: [{ name: 'runTests', arguments: {} }] };
   }
   if (PATTERNS.next.test(text)) {
     return {

@@ -381,6 +381,27 @@
     "tutorAction.list": "What the tutor did",
     "tutorAction.retry": "Retry",
     "tutorAction.undo": "Undo",
-    "tutorAction.unchanged": "You already had it like that"
+    "tutorAction.unchanged": "You already had it like that",
+    "workspace.skeletonMark": "Your function: write inside what it does",
+    "workspace.fixMark": "The slip was here",
+    "tutorAction.insert": "Put the function in the editor",
+    "tutorAction.format": "Format the code",
+    "tutorAction.run": "Run the tests",
+    "tutorAction.submit": "Submit the exercise",
+    "tutorAction.fix": "Apply the fix",
+    "tutorAction.fix.missing": "{$after} missing",
+    "tutorAction.fix.extra": "{$before} left over",
+    "tutorAction.fix.hint": "Line {$line}: {$changes}",
+    "tutorAction.fix.done": "You already fixed it yourself",
+    "tutorAction.fix.gone": "Your code has changed: this fix no longer fits",
+    "tutorAction.ran.notRun": "Tests run: the code could not run",
+    "tutorAction.ran": "Tests run",
+    "tutorAction.ran.count": "Tests run: {$passed} of {$total} passed",
+    "tutorAction.inserted": "Function put in the editor",
+    "tutorAction.formatted.already": "Your code was already tidy",
+    "tutorAction.formatted": "Code formatted",
+    "tutorAction.notSubmitted": "You kept reviewing: it was not submitted",
+    "tutorAction.submitted": "Exercise submitted",
+    "tutorAction.fixed": "Line {$line} fixed"
   }
 }

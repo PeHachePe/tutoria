@@ -56,6 +56,8 @@ export interface TutorToolDefinition {
   readonly use: ToolUse;
   /** Open to any agent of the browser: never what touches the code, runs or submits (D-047). */
   readonly webMcp: boolean;
+  /** The server adds it from another field of the answer; the model never asks for it (2.5f). */
+  readonly fromServer?: true;
 }
 
 /** The statuses of an exercise the student can ask about; `pending` is any not submitted yet. */
@@ -261,6 +263,80 @@ const UPDATE_SETTINGS = {
   },
 } as const satisfies TutorToolDefinition;
 
+/** The longest line a fix may write, which is far more than a line of a first-year exercise. */
+export const MAX_FIX_LINE_LENGTH = 200;
+
+/** No arguments: what it does depends only on the screen of the exercise. */
+const NO_ARGUMENTS = { type: 'object', properties: {}, additionalProperties: false } as const;
+
+/**
+ * The tools only our tutor has (2.5f, D-047): they touch the code or the submission, so they pass
+ * through our validator and our rules, never through WebMCP, and the student presses their button.
+ */
+const INSERT_SKELETON = {
+  name: 'insertSkeleton',
+  description:
+    'Puts the empty skeleton of the function of the exercise in the editor, with these names for its parameters. The server adds it with the skeleton of the answer.',
+  use: 'confirm',
+  webMcp: false,
+  fromServer: true,
+  inputSchema: {
+    type: 'object',
+    properties: {
+      parameters: {
+        type: 'array',
+        maxItems: 8,
+        items: { type: 'string', minLength: 1, maxLength: 30 },
+      },
+    },
+    required: ['parameters'],
+    additionalProperties: false,
+  },
+} as const satisfies TutorToolDefinition;
+
+const FORMAT_CODE = {
+  name: 'formatCode',
+  description: "Puts the student's code in order: indentation, spaces, semicolons and braces.",
+  use: 'confirm',
+  webMcp: false,
+  inputSchema: NO_ARGUMENTS,
+} as const satisfies TutorToolDefinition;
+
+const RUN_TESTS = {
+  name: 'runTests',
+  description: "Runs every test of the exercise with the student's code, as «Ejecutar» does.",
+  use: 'confirm',
+  webMcp: false,
+  inputSchema: NO_ARGUMENTS,
+} as const satisfies TutorToolDefinition;
+
+const SUBMIT_ATTEMPT = {
+  name: 'submitAttempt',
+  description:
+    'Submits the exercise, only when it passes every test: the student confirms it in the usual dialog, and then the code cannot change.',
+  use: 'confirm',
+  webMcp: false,
+  inputSchema: NO_ARGUMENTS,
+} as const satisfies TutorToolDefinition;
+
+const PROPOSE_FIX = {
+  name: 'proposeFix',
+  description:
+    'Fixes a slip of writing that keeps the code from running: a bracket, a semicolon, a comma or a quote missing or left over, or a misspelt name (`retrun`, `lenght`, `Math.flor`). One line, as it should be (`code`), or a new line with only what closes (`insert`). Never what makes the tests fail: the server turns down any other change.',
+  use: 'confirm',
+  webMcp: false,
+  inputSchema: {
+    type: 'object',
+    properties: {
+      line: { type: 'integer', minimum: 1, maximum: 999 },
+      code: { type: 'string', maxLength: MAX_FIX_LINE_LENGTH },
+      insert: { type: 'boolean', description: 'Adds `code` as a new line before `line`.' },
+    },
+    required: ['line', 'code'],
+    additionalProperties: false,
+  },
+} as const satisfies TutorToolDefinition;
+
 /** Every tool, by name, with the literal types of its schema (Angular infers the arguments). */
 export const TUTOR_TOOL = {
   getMyProgress: GET_MY_PROGRESS,
@@ -273,6 +349,11 @@ export const TUTOR_TOOL = {
   pointAt: POINT_AT,
   setLayout: SET_LAYOUT,
   updateSettings: UPDATE_SETTINGS,
+  insertSkeleton: INSERT_SKELETON,
+  formatCode: FORMAT_CODE,
+  runTests: RUN_TESTS,
+  submitAttempt: SUBMIT_ATTEMPT,
+  proposeFix: PROPOSE_FIX,
 } as const;
 
 export type TutorToolName = keyof typeof TUTOR_TOOL;

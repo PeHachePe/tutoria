@@ -7,6 +7,7 @@ import {
   isStuckMessage,
   type ReactionKind,
   skeletonBlock,
+  skeletonParameters,
   type ToolRequest,
   type ToolResult,
   type TutorInteraction,
@@ -131,7 +132,11 @@ export function scriptedAnswer({
         return answer(script.elusion, 'surprise', joke, MAX_INTENSITY, true);
       }
       // What a tool does: the data of the student, or an action on the screen (2.5e)
-      const tools = scriptedTools(message ?? '', results, language);
+      const tools = scriptedTools(message ?? '', results, language, {
+        code,
+        functionName: exerciseFunction.name,
+        status,
+      });
       if (tools) {
         return 'queries' in tools
           ? { ...answer('', 'joy', 'thinking'), queries: tools.queries }
@@ -150,7 +155,12 @@ export function scriptedAnswer({
         // It does not know the names of the parameters: a, b…
         const skeleton = skeletonBlock(exerciseFunction.name, exerciseFunction.parameters);
         const { before, after } = script.stuck;
-        return answer([before, skeleton, after].join('\n'), 'encouragement', 'empathy');
+        // With «Insertar», as the server adds it (2.5f)
+        const parameters = skeletonParameters(exerciseFunction.parameters);
+        return {
+          ...answer([before, skeleton, after].join('\n'), 'encouragement', 'empathy'),
+          actions: [{ name: 'insertSkeleton', arguments: { parameters } }],
+        };
       }
       if (status === 'passed') return answer(script.passed, 'celebration', 'party');
       if (STATEMENT_PATTERN.test(question)) return answer(script.statement, 'joy', 'hearts');

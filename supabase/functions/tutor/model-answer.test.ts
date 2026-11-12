@@ -240,6 +240,30 @@ Deno.test('the actions of the contract are kept, checked', () => {
   ]);
 });
 
+// Tools only our tutor has (2.5f)
+
+Deno.test('the skeleton comes with «Insertar», which only the server adds', () => {
+  const asked = checkAnswer(answer({ message: 'Así empieza:', skeleton: ['v = []', 'vector'] }), {
+    skeleton: SUMA,
+  });
+  assertEquals(asked.ok && asked.answer.actions, [
+    { name: 'insertSkeleton', arguments: { parameters: ['vector'] } },
+  ]);
+  // The model cannot ask for it on its own, nor sees it among its tools
+  const own = checkAnswer(
+    answer({ actions: { insertSkeleton: { parameters: ['x'] }, runTests: {} } }),
+    { skeleton: SUMA },
+  );
+  assertEquals(own.ok && own.answer.actions, [{ name: 'runTests', arguments: {} }]);
+  const actions = ANSWER_FORMAT.schema.properties as Record<string, { properties: object }>;
+  assertEquals('insertSkeleton' in actions.actions.properties, false);
+  assertEquals('proposeFix' in actions.actions.properties, true);
+  assertEquals(
+    ANSWER_FORMAT.tools?.some((tool) => tool.name === 'insertSkeleton'),
+    false,
+  );
+});
+
 Deno.test('a mark with code in its note is dropped, never shown', () => {
   const check = checkAnswer(
     answer({ actions: { highlightLines: { lines: [{ line: 3, note: 'return total;' }] } } }),

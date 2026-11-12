@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-import { buildRunResult, type RunResult } from '../../../src/app/data/code-runner/run-result.ts';
 import {
   answerHintLevel,
   type HintLevel,
@@ -15,7 +14,8 @@ import {
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
 import { MAX_CODE_LENGTH, minuteBefore, secondsToWait } from '../_shared/limits.ts';
-import type { AnswerStore, ProviderSetting, RecordedAnswer, TutorAttempt } from './answer-store.ts';
+import type { AnswerStore, ProviderSetting, RecordedAnswer } from './answer-store.ts';
+import { checkCodeActions, tryExamples } from './code-actions.ts';
 import { type LlmProvider, ProviderError } from './llm-provider.ts';
 import {
   ANSWER_FORMAT,
@@ -150,6 +150,7 @@ export function createTutorHandler({
       if (!setting) return failure(503, 'No AI provider is set');
       const provider = providerFor(setting);
       const hintLevel = answerHintLevel(ask.kind, attempt.previous, ask.message);
+      const tried = await tryExamples(sandbox, attempt, ask.code);
       const asked = await askModel(provider, {
         kind: ask.kind,
         hintLevel,
@@ -157,13 +158,25 @@ export function createTutorHandler({
         code: ask.code,
         language: ask.language,
         attempt,
-        tried: await tryExamples(sandbox, attempt, ask.code),
+        tried,
         results: ask.results,
       });
       // The model needs data of the student first: nothing is kept until it answers with it (2.5e)
       if ('queries' in asked)
         return json(200, { events: [{ type: 'query', calls: asked.queries }] });
-      const { answer, rejected } = asked;
+      const { rejected } = asked;
+      // What touches the code or the submission is checked against the attempt here (2.5f)
+      const answer = asked.answer?.actions
+        ? withCheckedActions(
+            asked.answer,
+            await checkCodeActions(asked.answer.actions, {
+              attempt,
+              code: ask.code,
+              tried,
+              sandbox,
+            }),
+          )
+        : asked.answer;
 
       const outcome = await store.recordAnswer({
         attemptId: ask.attemptId,
@@ -198,24 +211,10 @@ export function createTutorHandler({
   };
 }
 
-/**
- * The code as it is now with the examples, in the sandbox of `execute` (D-042): what it returns or
- * the error it throws, even if the student did not run it. Only the visible tests: the values of the
- * hidden ones must not reach the model. Nothing to try without code.
- */
-async function tryExamples(
-  sandbox: CodeSandbox,
-  { exercise }: TutorAttempt,
-  code: string,
-): Promise<RunResult | null> {
-  if (!code.trim()) return null;
-  const examples = exercise.tests.filter((test) => !test.isHidden);
-  const outcome = await sandbox.run({
-    code,
-    functionName: exercise.functionName,
-    inputs: examples.map((test) => test.input),
-  });
-  return buildRunResult(examples, outcome);
+/** The answer with the actions that held; with none left, as an answer that does nothing. */
+function withCheckedActions(answer: ModelAnswer, actions: readonly ToolCall[]): ModelAnswer {
+  const { actions: _asked, ...rest } = answer;
+  return actions.length > 0 ? { ...rest, actions } : rest;
 }
 
 /** The answer the student gets, and how many answers of the model the validator turned down. */

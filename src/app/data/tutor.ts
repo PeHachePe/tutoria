@@ -25,6 +25,8 @@ export {
   type ReactionKind,
   reachedHintLevel,
   skeletonBlock,
+  skeletonCode,
+  skeletonParameters,
   type ToolRequest,
   type ToolResult,
   TUTOR_TRIGGERS,

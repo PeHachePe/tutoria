@@ -4,13 +4,13 @@ import { TestBed } from '@angular/core/testing';
 import { AuthStore } from '../../auth/auth-store';
 import { LanguageService } from '../../core/i18n/language-service';
 import { type AppTool, runTool } from '../../core/tools/app-tool';
-import type { Attempt, AttemptHistory } from '../../data/attempt';
+import type { Attempt, AttemptHistory, RunResult } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import type { AssignedExercise } from '../../data/exercise';
 import { ExerciseService } from '../../data/exercise-service';
 import type { ProcessEvent } from '../../data/process-event';
 import type { TutorInteraction } from '../../data/tutor';
-import { AttemptStore } from './attempt-store';
+import { type ActionError, AttemptStore } from './attempt-store';
 import { TutorStore } from './tutor-store';
 import { workspaceTools } from './workspace-tools';
 
@@ -77,6 +77,13 @@ describe('workspaceTools', () => {
   let list: ReturnType<typeof vi.fn>;
   let history: ReturnType<typeof vi.fn>;
   let tutor: { mark: ReturnType<typeof vi.fn>; pointAt: ReturnType<typeof vi.fn> };
+  let attemptStore: {
+    attempt: typeof current;
+    canRun: ReturnType<typeof signal<boolean>>;
+    run: ReturnType<typeof vi.fn>;
+    lastRun: ReturnType<typeof signal<RunResult | undefined>>;
+    actionError: ReturnType<typeof signal<ActionError | undefined>>;
+  };
   let tools: AppTool[];
 
   const use = (name: string, args: unknown) =>
@@ -101,6 +108,13 @@ describe('workspaceTools', () => {
       }),
     );
     tutor = { mark: vi.fn(), pointAt: vi.fn() };
+    attemptStore = {
+      attempt: current,
+      canRun: signal(true),
+      run: vi.fn(() => Promise.resolve()),
+      lastRun: signal<RunResult | undefined>(undefined),
+      actionError: signal<ActionError | undefined>(undefined),
+    };
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthStore, useValue: { userId } },
@@ -112,20 +126,55 @@ describe('workspaceTools', () => {
           },
         },
         { provide: AttemptService, useValue: { list, history } },
-        { provide: AttemptStore, useValue: { attempt: current } },
+        { provide: AttemptStore, useValue: attemptStore },
         { provide: TutorStore, useValue: tutor },
       ],
     });
     tools = TestBed.runInInjectionContext(() => workspaceTools());
   });
 
-  it('are the tools of the workspace, all open to WebMCP', () => {
-    expect(tools.map((tool) => tool.name)).toEqual([
-      'getExerciseStats',
-      'highlightLines',
-      'pointAt',
+  it('are the tools of the workspace, open to WebMCP but running the tests (2.5f)', () => {
+    expect(tools.map((tool) => [tool.name, tool.webMcp])).toEqual([
+      ['getExerciseStats', true],
+      ['highlightLines', true],
+      ['pointAt', true],
+      ['runTests', false],
     ]);
-    expect(tools.every((tool) => tool.webMcp)).toBe(true);
+  });
+
+  it('run the tests, as «Ejecutar» does, and say how it went (2.5f)', async () => {
+    const result = (passed: boolean) => ({ testId: 't', passed, timeout: false });
+    attemptStore.run.mockImplementation(() => {
+      attemptStore.lastRun.set({
+        status: 'tests_failed',
+        results: [result(true), result(false), result(true)],
+      });
+      return Promise.resolve();
+    });
+    expect(await use('runTests', {})).toEqual({ ok: true, result: { passed: 2, total: 3 } });
+
+    attemptStore.run.mockImplementation(() => {
+      attemptStore.lastRun.set({
+        status: 'tests_failed',
+        results: [result(false)],
+        loadError: { kind: 'invalid_code', message: 'SyntaxError: x' },
+      });
+      return Promise.resolve();
+    });
+    expect(await use('runTests', {})).toEqual({ ok: true, result: { loaded: false } });
+  });
+
+  it('say why the tests did not run', async () => {
+    attemptStore.run.mockImplementation(() => {
+      attemptStore.actionError.set({ action: 'run', error: new Error('offline') });
+      return Promise.resolve();
+    });
+    expect(await use('runTests', {})).toEqual({ ok: false, error: 'The tests could not run' });
+    attemptStore.canRun.set(false);
+    expect(await use('runTests', {})).toEqual({
+      ok: false,
+      error: 'The tests cannot run now: the attempt is submitted, running or open elsewhere',
+    });
   });
 
   it('tell how the student is doing with the exercise open now', async () => {

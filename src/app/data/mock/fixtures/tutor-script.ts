@@ -42,6 +42,15 @@ export interface ToolsScript {
   readonly settings: string;
   /** A query that failed: it says so, and never makes up the data. */
   readonly unavailable: string;
+  /** A slip of writing on that line, with «Aplicar» (2.5f). */
+  readonly fix: (line: number) => string;
+  /** Asked to fix the code, without a slip of writing: the logic is the student's (2.5f). */
+  readonly noFix: string;
+  readonly format: string;
+  readonly run: string;
+  readonly submit: string;
+  /** Asked to submit an attempt that does not pass yet: it offers to run the tests. */
+  readonly notPassed: string;
 }
 
 export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
@@ -77,7 +86,7 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       before:
         'Sin prisa, vamos paso a paso. Así empieza la función que pide el enunciado, todavía vacía:',
       after:
-        'Cópiala en el editor. Entre las llaves irá tu código: con el primer ejemplo de la tabla, ¿qué tiene que devolver?',
+        'Pulsa el botón para ponerla en el editor. Entre las llaves irá tu código: con el primer ejemplo de la tabla, ¿qué tiene que devolver?',
     },
     syntax:
       'Así se escribe, con un ejemplo que no tiene nada que ver con tu ejercicio. Fíjate en la forma y piensa cómo usarla en tu caso:',
@@ -97,6 +106,15 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       markNote: 'Revisa esta línea',
       settings: 'Te dejo el botón para ir a los ajustes.',
       unavailable: 'Ahora mismo no puedo consultar tus datos. Prueba en un momento.',
+      fix: (line) =>
+        `En la línea ${line} hay un despiste de escritura. Pulsa «Aplicar» y lo corrijo; fíjate en qué cambia.`,
+      noFix:
+        'No veo ningún despiste de escritura: tu código se puede ejecutar. Lo que falle es de la lógica, y eso lo resuelves tú. ¿Te doy una pista?',
+      format: 'Te dejo el botón para ordenar tu código: sangría, espacios y puntos y coma.',
+      run: 'Te dejo el botón para ejecutar las pruebas. ¡A ver qué dicen!',
+      submit: 'Lo has superado todo. Pulsa el botón para entregarlo: te pediré que lo confirmes.',
+      notPassed:
+        'Todavía no se puede entregar: antes tiene que superar todas las pruebas. ¿Las ejecutamos?',
     },
   },
   en: {
@@ -131,7 +149,7 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       before:
         'No rush, one step at a time. This is how the function the statement asks for starts, still empty:',
       after:
-        'Copy it into the editor. Your code goes between the braces: with the first example of the table, what must it return?',
+        'Press the button to put it in the editor. Your code goes between the braces: with the first example of the table, what must it return?',
     },
     syntax:
       'This is how it is written, with an example that has nothing to do with your exercise. Look at its shape and think how to use it in your case:',
@@ -150,6 +168,14 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       markNote: 'Check this line',
       settings: 'Here is the button to go to the settings.',
       unavailable: 'I cannot look up your data right now. Try again in a moment.',
+      fix: (line) =>
+        `There is a slip of writing on line ${line}. Press «Apply» and I will fix it; look at what changes.`,
+      noFix:
+        'I see no slip of writing: your code can run. What fails is the logic, and that is yours to solve. Shall I give you a hint?',
+      format: 'Here is the button to tidy up your code: indentation, spaces and semicolons.',
+      run: 'Here is the button to run the tests. Let us see what they say!',
+      submit: 'You passed everything. Press the button to submit it: I will ask you to confirm it.',
+      notPassed: 'It cannot be submitted yet: first it has to pass every test. Shall we run them?',
     },
   },
   ca: {
@@ -184,7 +210,7 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       before:
         'Sense pressa, anem pas a pas. Així comença la funció que demana l’enunciat, encara buida:',
       after:
-        'Copia-la a l’editor. Entre les claus hi anirà el teu codi: amb el primer exemple de la taula, què ha de retornar?',
+        'Prem el botó per posar-la a l’editor. Entre les claus hi anirà el teu codi: amb el primer exemple de la taula, què ha de retornar?',
     },
     syntax:
       'Així s’escriu, amb un exemple que no té res a veure amb el teu exercici. Fixa’t en la forma i pensa com fer-la servir en el teu cas:',
@@ -203,6 +229,14 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
       markNote: 'Revisa aquesta línia',
       settings: 'Et deixo el botó per anar a la configuració.',
       unavailable: 'Ara mateix no puc consultar les teves dades. Prova-ho d’aquí a una estona.',
+      fix: (line) =>
+        `A la línia ${line} hi ha una distracció d’escriptura. Prem «Aplica» i la corregeixo; fixa’t en què canvia.`,
+      noFix:
+        'No veig cap distracció d’escriptura: el teu codi es pot executar. El que falla és la lògica, i això ho resols tu. Et dono una pista?',
+      format: 'Et deixo el botó per endreçar el teu codi: sagnat, espais i punts i comes.',
+      run: 'Et deixo el botó per executar les proves. A veure què diuen!',
+      submit: 'Ho has superat tot. Prem el botó per lliurar-lo: et demanaré que ho confirmis.',
+      notPassed: 'Encara no es pot lliurar: abans ha de superar totes les proves. Les executem?',
     },
   },
 };

@@ -609,3 +609,39 @@ Deno.test('the actions of the answer reach the app and are kept, also for a retr
   const replayed = await (await handle(post())).json();
   assertEquals(replayed.events[0].actions, actions);
 });
+
+Deno.test(
+  'what touches the code is checked against the attempt before it reaches the app',
+  async () => {
+    const fixing = (actions: Record<string, unknown>) =>
+      JSON.stringify({ ...JSON.parse(GOOD), actions });
+    // The code runs: no fix, nor a submission of an attempt that did not pass (2.5f)
+    const { store, handle, sandbox } = setup([
+      fixing({
+        proposeFix: { line: 1, code: 'function suma(v) { return 0;; }' },
+        submitAttempt: {},
+      }),
+      fixing({ proposeFix: { line: 1, code: 'function suma(v) { return 0; }' }, runTests: {} }),
+    ]);
+    const first = await (await handle(post())).json();
+    assertEquals(first.events[0].actions, undefined);
+    assertEquals(store.recorded[0].answer?.actions, undefined);
+
+    // The code does not load, and the fix takes the error away in the sandbox
+    sandbox.outcome = { outcomes: [], loadError: { kind: 'invalid_code', message: 'SyntaxError' } };
+    const loads = { outcomes: [{ ok: true as const, value: 6 }] };
+    sandbox.run = (request) => {
+      sandbox.requests.push(request);
+      return Promise.resolve(request.code.includes('retrun') ? sandbox.outcome : loads);
+    };
+    const second = await (
+      await handle(
+        post({ requestId: REQUEST_ID.replace('1', '2'), code: 'function suma(v) { retrun 0; }' }),
+      )
+    ).json();
+    assertEquals(
+      second.events[0].actions.map((action: { name: string }) => action.name),
+      ['runTests', 'proposeFix'],
+    );
+  },
+);

@@ -2,6 +2,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { LOCALE_ID } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
+import { undo } from '@codemirror/commands';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -1453,6 +1454,126 @@ describe('WorkspacePage', () => {
       // Clearing the marks shows nothing new
       await show(() => tutor.clearMarks());
       expect(selected()).toBe(0);
+    });
+  });
+
+  describe('what only our tutor does in the code and with the submission (2.5f)', () => {
+    /** Writes the code in the editor, as the student would. */
+    function write(code: string): void {
+      const view = editorView();
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: code },
+        userEvent: 'input.type',
+      });
+    }
+
+    it('puts the empty function in the editor, marks it, and Ctrl + Z takes it away', async () => {
+      const { fixture } = await renderPage();
+      await showEditor(fixture);
+      const tools = TestBed.inject(ToolRegistry);
+
+      expect(await tools.run('insertSkeleton', { parameters: ['numbers'] })).toEqual({
+        ok: true,
+        result: { inserted: 'sum' },
+      });
+      expect(editorView().state.doc.toString()).toBe('function sum(numbers) {\n}');
+      expect(TestBed.inject(TutorStore).marks()).toEqual([
+        { line: 1, note: 'Tu función: escribe dentro lo que hace' },
+      ]);
+      expect(await tools.run('insertSkeleton', { parameters: ['numbers'] })).toEqual({
+        ok: false,
+        error: 'The code already declares the function sum',
+      });
+
+      write('// mine  ');
+      await tools.run('insertSkeleton', { parameters: ['v'] });
+      expect(editorView().state.doc.toString()).toBe('// mine\n\nfunction sum(v) {\n}');
+      expect(TestBed.inject(TutorStore).marks()).toEqual([expect.objectContaining({ line: 3 })]);
+      undo(editorView());
+      expect(editorView().state.doc.toString()).toBe('// mine  ');
+    });
+
+    it('applies the fix of a slip, checked again, and leaves the focus in the code', async () => {
+      const { fixture } = await renderPage();
+      await showEditor(fixture);
+      const tools = TestBed.inject(ToolRegistry);
+      write('function sum(v) {\n  retrun 0;\n}');
+
+      // The logic is never the tutor's, whatever the server let through
+      expect(await tools.run('proposeFix', { line: 2, code: '  return 1;' })).toEqual({
+        ok: false,
+        error: 'The fix no longer fits the code as it is',
+      });
+      expect(await tools.run('proposeFix', { line: 2, code: '  return 0;' })).toEqual({
+        ok: true,
+        result: { line: 2 },
+      });
+      await fixture.whenStable();
+
+      expect(editorView().state.doc.toString()).toBe('function sum(v) {\n  return 0;\n}');
+      expect(TestBed.inject(TutorStore).marks()).toEqual([
+        { line: 2, note: 'Aquí estaba el despiste' },
+      ]);
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Código' }));
+      expect(await tools.run('proposeFix', { line: 2, code: '  return 0;' })).toEqual({
+        ok: false,
+        error: 'The code is already fixed',
+      });
+    });
+
+    it('formats the code, and says when there was nothing to do or it cannot be read', async () => {
+      const { fixture } = await renderPage();
+      await showEditor(fixture);
+      const tools = TestBed.inject(ToolRegistry);
+      write('function sum(v){\nreturn 0}');
+
+      expect(await tools.run('formatCode', {})).toEqual({ ok: true, result: { formatted: true } });
+      expect(await tools.run('formatCode', {})).toEqual({ ok: true, result: { formatted: false } });
+      write('f(\nx');
+      expect(await tools.run('formatCode', {})).toEqual({
+        ok: false,
+        error: 'The code cannot be read, so it cannot be formatted',
+      });
+    });
+
+    it('touches nothing before the editor has arrived', async () => {
+      await renderPage();
+
+      expect(await TestBed.inject(ToolRegistry).run('formatCode', {})).toEqual({
+        ok: false,
+        error: 'The code cannot be changed now',
+      });
+    });
+
+    it('submits only what passes, and only when the student confirms in the dialog', async () => {
+      const { fixture, submitAttempt } = await renderPage({
+        run: () => Promise.resolve(ALL_PASSED),
+      });
+      const tools = TestBed.inject(ToolRegistry);
+      expect(await tools.run('submitAttempt', {})).toEqual({
+        ok: false,
+        error: 'Only an attempt that passes every test can be submitted',
+      });
+      await userEvent
+        .setup()
+        .click(screen.getByRole('button', { name: /Ejecutar pruebas|Ejecutando…/ }));
+      await fixture.whenStable();
+
+      const kept = tools.run('submitAttempt', {});
+      await userEvent.setup().click(
+        within(await screen.findByRole('dialog')).getByRole('button', {
+          name: 'Seguir revisando',
+        }),
+      );
+      expect(await kept).toEqual({ ok: true, result: { submitted: false } });
+      expect(submitAttempt).not.toHaveBeenCalled();
+
+      const submitted = tools.run('submitAttempt', {});
+      await userEvent
+        .setup()
+        .click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Entregar' }));
+      expect(await submitted).toEqual({ ok: true, result: { submitted: true } });
+      expect(submitAttempt).toHaveBeenCalledTimes(1);
     });
   });
 });

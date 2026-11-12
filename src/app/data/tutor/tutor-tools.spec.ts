@@ -36,6 +36,33 @@ describe('tutor tools', () => {
   });
 });
 
+describe('tools only our tutor has (2.5f)', () => {
+  const ours = ['insertSkeleton', 'formatCode', 'runTests', 'submitAttempt', 'proposeFix'];
+
+  it('touch the code or the submission, so never through WebMCP, and wait for a button', () => {
+    for (const tool of TUTOR_TOOLS) {
+      expect(tool.webMcp).toBe(!ours.includes(tool.name));
+    }
+    for (const name of ours) {
+      expect(TUTOR_TOOL[name as keyof typeof TUTOR_TOOL].use).toBe('confirm');
+    }
+  });
+
+  it('leave the skeleton to the server, which writes it with the answer', () => {
+    expect(TUTOR_TOOLS.filter((tool) => tool.fromServer).map((tool) => tool.name)).toEqual([
+      'insertSkeleton',
+    ]);
+  });
+
+  it('take a fix as a line of code, never a long one', () => {
+    const { inputSchema } = TUTOR_TOOL.proposeFix;
+    expect(checkToolArguments(inputSchema, { line: 6, code: '  return total;' }).ok).toBe(true);
+    expect(checkToolArguments(inputSchema, { line: 7, code: '}', insert: true }).ok).toBe(true);
+    expect(checkToolArguments(inputSchema, { line: 0, code: '}' }).ok).toBe(false);
+    expect(checkToolArguments(inputSchema, { line: 1, code: 'x'.repeat(201) }).ok).toBe(false);
+  });
+});
+
 describe('checkToolArguments', () => {
   const schema = {
     type: 'object',

@@ -16,7 +16,8 @@ import { TutorStore } from './tutor-store';
 /**
  * The tools of the workspace (2.5e), provided by its route: how the student is doing with an
  * exercise, and marking the code or pointing at a part of the screen. The layout is the page's own
- * (`setLayout`, in WorkspacePage). Open to WebMCP as the contract says.
+ * (`setLayout`, in WorkspacePage); and running the tests, only for our tutor (2.5f). Open to WebMCP
+ * as the contract says.
  */
 export function workspaceTools(): AppTool[] {
   const exercises = inject(ExerciseService);
@@ -64,6 +65,24 @@ export function workspaceTools(): AppTool[] {
       }
       tutor.pointAt(target, target === 'example' ? example : undefined);
       return { pointed: target };
+    }),
+    // Only our tutor, with the student's button (2.5f)
+    appTool(TUTOR_TOOL.runTests, async () => {
+      if (!attemptStore.canRun()) {
+        throw new ToolError(
+          'The tests cannot run now: the attempt is submitted, running or open elsewhere',
+        );
+      }
+      await attemptStore.run();
+      const run = attemptStore.lastRun();
+      if (attemptStore.actionError()?.action === 'run' || !run) {
+        throw new ToolError('The tests could not run');
+      }
+      if (run.loadError) return { loaded: false };
+      return {
+        passed: run.results.filter((result) => result.passed).length,
+        total: run.results.length,
+      };
     }),
   ];
 }

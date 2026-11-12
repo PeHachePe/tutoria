@@ -212,6 +212,7 @@
                   [actions]="turn.actions"
                   [queriedNames]="turn.queried"
                   [disabled]="store.readonly()"
+                  [code]="code()"
                   (run)="runAction(turn, $event)"
                   (undo)="undoAction(turn, $event)"
                 />

@@ -9,6 +9,8 @@ import {
   reachedHintLevel,
   isStuckMessage,
   skeletonBlock,
+  skeletonCode,
+  skeletonParameters,
   type TutorTrigger,
 } from './tutor-contract';
 
@@ -163,5 +165,10 @@ describe('skeletonBlock', () => {
       '```js\nfunction sum(numbers) {\n}\n```',
     );
     expect(skeletonBlock('now', 0, ['date'])).toBe('```js\nfunction now() {\n}\n```');
+  });
+
+  it('shares its names and its code with «Insertar» (2.5f)', () => {
+    expect(skeletonParameters(2, ['base'])).toEqual(['base', 'b']);
+    expect(skeletonCode('pow', ['base', 'b'])).toBe('function pow(base, b) {\n}');
   });
 });

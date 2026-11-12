@@ -92,11 +92,15 @@ export class TutorActions {
   readonly queriedNames = input<readonly string[]>([]);
   /** A submitted attempt, or the tutor still answering: nothing to press. */
   readonly disabled = input(false);
+  /** The code as it is now, to show what a fix of the tutor changes in it (2.5f). */
+  readonly code = input<string | undefined>('');
 
   readonly run = output<number>();
   readonly undo = output<number>();
 
-  protected readonly views = computed(() => this.actions().map(actionView));
+  protected readonly views = computed(() =>
+    this.actions().map((action) => actionView(action, this.code())),
+  );
   protected readonly queried = computed(() => queriedText(this.queriedNames()));
 
   /** Running, or the attempt submitted: the button stays focusable, but does nothing. */

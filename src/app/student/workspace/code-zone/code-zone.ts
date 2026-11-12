@@ -21,8 +21,12 @@ import { firstValueFrom } from 'rxjs';
 
 import { APP_PATHS } from '../../../core/app-paths';
 import { PageReloader } from '../../../core/page-reloader';
+import { appTool, declareAppTool, ToolError } from '../../../core/tools/app-tool';
 import type { Exercise } from '../../../data/exercise';
-import { CodeEditor } from '../../../shared/code-editor/code-editor';
+import { skeletonCode } from '../../../data/tutor';
+import { checkFix, type CodeFix, declaresFunction } from '../../../data/tutor/code-fix';
+import { TUTOR_TOOL } from '../../../data/tutor/tutor-tools';
+import { CodeEditor, type FormatOutcome } from '../../../shared/code-editor/code-editor';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { AttemptStore } from '../attempt-store';
@@ -36,9 +40,18 @@ import { SubmitDialog } from './submit-dialog';
 import { TutorStore } from '../tutor-store';
 
 /** What the zone asks of the editor, without naming its class (see `editableEditor`). */
-interface FormattableEditor {
-  format(): Promise<void>;
+interface WritableEditor {
+  format(): Promise<FormatOutcome>;
+  code(): string;
+  replaceCode(code: string, line: number): void;
+  focus(): void;
 }
+
+/** The note next to the function «Insertar» wrote (2.5f). */
+const SKELETON_NOTE = $localize`:@@workspace.skeletonMark:Tu función: escribe dentro lo que hace`;
+
+/** The note next to the line «Aplicar» fixed (2.5f). */
+const FIX_NOTE = $localize`:@@workspace.fixMark:Aquí estaba el despiste`;
 
 /** Id of the zone, which the splitter beside it controls. */
 export const CODE_ZONE_ID = 'code-zone';
@@ -130,7 +143,20 @@ export class CodeZone {
    * The editor the student writes in, found by its name and not by its class: naming the class here
    * would bring CodeMirror into the workspace and undo its `@defer` (4.7).
    */
-  private readonly editableEditor = viewChild<FormattableEditor>('editableEditor');
+  private readonly editableEditor = viewChild<WritableEditor>('editableEditor');
+
+  /**
+   * What only our tutor does in the code and with the submission, when the student presses its
+   * button (2.5f, D-047): never through WebMCP. The zone has the editor and «Entregar».
+   */
+  protected readonly tutorTools = [
+    declareAppTool(appTool(TUTOR_TOOL.formatCode, () => this.formatForTutor())),
+    declareAppTool(
+      appTool(TUTOR_TOOL.insertSkeleton, ({ parameters }) => this.insertSkeleton(parameters)),
+    ),
+    declareAppTool(appTool(TUTOR_TOOL.proposeFix, (fix) => this.applyFix(fix))),
+    declareAppTool(appTool(TUTOR_TOOL.submitAttempt, () => this.submitForTutor())),
+  ];
 
   protected readonly actionSessionExpired = computed(() =>
     isSessionExpired(this.store.actionError()?.error),
@@ -172,15 +198,85 @@ export class CodeZone {
     void this.editableEditor()?.format();
   }
 
-  /** «Entregar» asks first: once submitted, the code cannot change (2.4). */
-  protected async confirmSubmit(): Promise<void> {
-    if (!this.store.canSubmit()) return;
+  /** «Entregar» asks first: once submitted, the code cannot change (2.4). True once submitted. */
+  protected async confirmSubmit(): Promise<boolean> {
+    if (!this.store.canSubmit()) return false;
     const confirmation = this.dialog.open(SubmitDialog);
     // It goes with the zone, as the data notice with the area (StudentLayout)
     const removeClose = this.destroyRef.onDestroy(() => confirmation.close());
     const confirmed = await firstValueFrom(confirmation.afterClosed());
     removeClose();
-    if (confirmed) await this.submit();
+    return confirmed ? this.submit() : false;
+  }
+
+  /** The editor the tutor writes in: none while it downloads, or once submitted. */
+  private writable(): WritableEditor {
+    const editor = this.editableEditor();
+    if (!editor) throw new ToolError('The code cannot be changed now');
+    return editor;
+  }
+
+  /** «Formatear el código», asked by the tutor (2.5f). */
+  private async formatForTutor(): Promise<{ formatted: boolean }> {
+    const outcome = await this.writable().format();
+    if (outcome === 'failed') {
+      throw new ToolError('The code cannot be read, so it cannot be formatted');
+    }
+    return { formatted: outcome === 'formatted' };
+  }
+
+  /**
+   * «Insertar» (2.5f): the empty function of the exercise, alone in an empty editor or after the code
+   * there is, as the chat shows it. Not if the code already declares it.
+   */
+  private insertSkeleton(parameters: readonly string[]): { inserted: string } {
+    const editor = this.writable();
+    const { functionName } = this.exercise()!; // the editor is only there with the exercise
+    const code = editor.code();
+    if (declaresFunction(code, functionName)) {
+      throw new ToolError(`The code already declares the function ${functionName}`);
+    }
+    const before = code.trimEnd();
+    const skeleton = skeletonCode(functionName, parameters);
+    const next = before ? `${before}\n\n${skeleton}` : skeleton;
+    this.write(editor, next, next.split('\n').length - 1, SKELETON_NOTE);
+    return { inserted: functionName };
+  }
+
+  /**
+   * «Aplicar» (2.5f): the slip the tutor found, checked again against the code as it is now, which
+   * may have changed since it answered. Only a slip of writing, never the logic (D-047).
+   */
+  private applyFix(fix: CodeFix): { line: number } {
+    const editor = this.writable();
+    const check = checkFix(editor.code(), fix, { functionName: this.exercise()?.functionName });
+    if (!check.ok) {
+      throw new ToolError(
+        check.problem === 'unchanged'
+          ? 'The code is already fixed'
+          : 'The fix no longer fits the code as it is',
+      );
+    }
+    this.write(editor, check.code, check.line, FIX_NOTE);
+    return { line: check.line };
+  }
+
+  /**
+   * Writes the code, marks the line with a note (which, on a phone, shows the code) and leaves the
+   * focus in the editor, so Ctrl + Z is at hand. The edit clears the marks: the note goes after it.
+   */
+  private write(editor: WritableEditor, code: string, line: number, note: string): void {
+    editor.replaceCode(code, line);
+    this.tutor.mark([{ line, note }]);
+    afterNextRender(() => editor.focus(), { injector: this.injector });
+  }
+
+  /** «Entregar», asked by the tutor (2.5f): the same dialog, and only the student confirms. */
+  private async submitForTutor(): Promise<{ submitted: boolean }> {
+    if (!this.store.canSubmit()) {
+      throw new ToolError('Only an attempt that passes every test can be submitted');
+    }
+    return { submitted: await this.confirmSubmit() };
   }
 
   /** Tries again the run, the submission or the new attempt that failed. */
@@ -217,11 +313,13 @@ export class CodeZone {
    * The buttons give way to the note that says it is submitted: the focus goes there, instead of
    * being lost with the button that had it (WCAG 2.4.3).
    */
-  private async submit(): Promise<void> {
-    if (await this.store.submit()) {
+  private async submit(): Promise<boolean> {
+    const submitted = await this.store.submit();
+    if (submitted) {
       afterNextRender(() => this.submittedNote()?.nativeElement.focus(), {
         injector: this.injector,
       });
     }
+    return submitted;
   }
 }

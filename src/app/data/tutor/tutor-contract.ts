@@ -196,17 +196,25 @@ export function skeletonBlock(
   parameters: number,
   names: readonly string[] = [],
 ): string {
+  const code = skeletonCode(functionName, skeletonParameters(parameters, names));
+  return [`${CODE_FENCE}js`, code, CODE_FENCE].join('\n');
+}
+
+/**
+ * The names of the parameters of the skeleton: those suggested that are plain identifiers, and
+ * letters for any missing. They also go with «Insertar» (`insertSkeleton`, 2.5f).
+ */
+export function skeletonParameters(parameters: number, names: readonly string[] = []): string[] {
   const valid = names.filter((name) => PARAMETER_NAME.test(name));
-  const chosen = Array.from(
+  return Array.from(
     { length: parameters },
     (_, index) => valid[index] ?? FALLBACK_PARAMETER_NAMES[index],
   );
-  return [
-    `${CODE_FENCE}js`,
-    `function ${functionName}(${chosen.join(', ')}) {`,
-    '}',
-    CODE_FENCE,
-  ].join('\n');
+}
+
+/** The empty function, as the block shows it and «Insertar» writes it in the editor (2.5f). */
+export function skeletonCode(functionName: string, parameters: readonly string[]): string {
+  return `function ${functionName}(${parameters.join(', ')}) {\n}`;
 }
 
 /** Whether a turn got more help than the level reached before it without a hint being asked. */

@@ -130,7 +130,7 @@ describe('CodeEditor', () => {
     it('puts the code in order, reports it and lets Ctrl + Z undo it', async () => {
       const { view, fixture, codeChange } = await renderEditor({ initialCode: MESSY });
 
-      await fixture.componentInstance.format();
+      expect(await fixture.componentInstance.format()).toBe('formatted');
 
       expect(view.state.doc.toString()).toBe(TIDY);
       expect(codeChange).toHaveBeenLastCalledWith(TIDY);
@@ -155,7 +155,7 @@ describe('CodeEditor', () => {
     it('says the line of the error of a code it cannot read, until the code changes', async () => {
       const { view, fixture, codeChange } = await renderEditor({ initialCode: BROKEN });
 
-      await fixture.componentInstance.format();
+      expect(await fixture.componentInstance.format()).toBe('failed');
       fixture.detectChanges();
 
       expect(view.state.doc.toString()).toBe(BROKEN);
@@ -170,7 +170,7 @@ describe('CodeEditor', () => {
     it('changes nothing in a code already in order', async () => {
       const { fixture, codeChange } = await renderEditor({ initialCode: TIDY });
 
-      await fixture.componentInstance.format();
+      expect(await fixture.componentInstance.format()).toBe('unchanged');
 
       expect(codeChange).not.toHaveBeenCalled();
     });
@@ -178,7 +178,7 @@ describe('CodeEditor', () => {
     it('does not format a read-only code', async () => {
       const { view, fixture } = await renderEditor({ initialCode: MESSY, readonly: true });
 
-      await fixture.componentInstance.format();
+      expect(await fixture.componentInstance.format()).toBe('unchanged');
 
       expect(view.state.doc.toString()).toBe(MESSY);
     });
@@ -205,6 +205,65 @@ describe('CodeEditor', () => {
     fixture.detectChanges();
 
     expect(screen.getByRole('status').textContent).toContain('No se ha podido formatear el código');
+  });
+
+  describe('the code the tutor brings (2.5f)', () => {
+    const BEFORE = 'function f(a) {\n  retrun a;\n}';
+    const AFTER = 'function f(a) {\n  return a;\n}';
+
+    it('gives the code as it is now', async () => {
+      const { view, fixture } = await renderEditor({ initialCode: 'a' });
+      view.dispatch({ changes: { from: 1, insert: 'b' }, userEvent: 'input.type' });
+
+      expect(fixture.componentInstance.code()).toBe('ab');
+    });
+
+    it('gives the initial code before CodeMirror is there', () => {
+      const fixture = TestBed.createComponent(CodeEditor);
+      fixture.componentRef.setInput('initialCode', 'x');
+      fixture.componentRef.setInput('label', 'Código');
+
+      expect(fixture.componentInstance.code()).toBe('x');
+    });
+
+    it('writes only what changes, with the cursor at the end of the line, and Ctrl + Z undoes it', async () => {
+      const { view, fixture, codeChange, pasted } = await renderEditor({ initialCode: BEFORE });
+
+      fixture.componentInstance.replaceCode(AFTER, 2);
+
+      expect(view.state.doc.toString()).toBe(AFTER);
+      expect(codeChange).toHaveBeenCalledExactlyOnceWith(AFTER);
+      expect(view.state.selection.main.head).toBe(view.state.doc.line(2).to);
+      // The tutor's code is not a paste of the student (2.8)
+      expect(pasted).not.toHaveBeenCalled();
+      undo(view);
+      expect(view.state.doc.toString()).toBe(BEFORE);
+    });
+
+    it('adds code at the end, and writes nothing when nothing is new', async () => {
+      const { view, fixture, codeChange } = await renderEditor({ initialCode: 'a' });
+      fixture.componentInstance.replaceCode('a\n\nb', 9);
+      expect(view.state.doc.toString()).toBe('a\n\nb');
+      expect(view.state.selection.main.head).toBe(4);
+      fixture.componentInstance.replaceCode('a\n\nb', 1);
+      expect(codeChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes nothing in a read-only code', async () => {
+      const { view, fixture } = await renderEditor({ initialCode: 'a', readonly: true });
+
+      fixture.componentInstance.replaceCode('b', 1);
+
+      expect(view.state.doc.toString()).toBe('a');
+    });
+
+    it('puts the focus in the code', async () => {
+      const { fixture, textbox } = await renderEditor({ initialCode: 'a' });
+
+      fixture.componentInstance.focus();
+
+      expect(document.activeElement).toBe(textbox);
+    });
   });
 
   it('closes CodeMirror when it is removed', async () => {

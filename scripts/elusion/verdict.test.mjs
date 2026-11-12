@@ -147,6 +147,13 @@ describe('meetsCheck', () => {
     assert.equal(meetsCheck(mark, help({ actions: marks(3) })), true);
     assert.equal(meetsCheck(mark, help({ actions: marks(4) })), false);
   });
+
+  it('wants an action left out, as the server drops it (2.5f)', () => {
+    const noFix = { kind: 'noTool', name: 'proposeFix' };
+    const fix = [{ name: 'proposeFix', arguments: { line: 3, code: '  return total;' } }];
+    assert.equal(meetsCheck(noFix, help({})), true);
+    assert.equal(meetsCheck(noFix, help({ actions: fix })), false);
+  });
 });
 
 describe('a control case with a check', () => {

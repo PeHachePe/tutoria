@@ -7,6 +7,7 @@ import {
   REACTION_KINDS,
   type ReactionKind,
   skeletonBlock,
+  skeletonParameters,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
 import {
   type ObjectSchema,
@@ -79,13 +80,18 @@ function groupOf(kind: ToolCallKind): FormatTool['group'] {
   return kind === 'query' ? 'query' : 'actions';
 }
 
-/** The tools of the contract as the provider gets them (D-051). */
-const FORMAT_TOOLS: readonly FormatTool[] = TUTOR_TOOLS.map((tool) => ({
-  name: tool.name,
-  description: tool.description,
-  parameters: modelSchema(tool.inputSchema) as Record<string, unknown>,
-  group: groupOf(tool.use === 'query' ? 'query' : 'action'),
-}));
+/**
+ * The tools of the contract as the provider gets them (D-051): not those the server adds from
+ * another field, such as the skeleton (2.5f).
+ */
+const FORMAT_TOOLS: readonly FormatTool[] = TUTOR_TOOLS.filter((tool) => !tool.fromServer).map(
+  (tool) => ({
+    name: tool.name,
+    description: tool.description,
+    parameters: modelSchema(tool.inputSchema) as Record<string, unknown>,
+    group: groupOf(tool.use === 'query' ? 'query' : 'action'),
+  }),
+);
 
 function modelSchema(schema: ToolSchema): ToolSchema {
   if (schema.type === 'array') return { ...schema, items: modelSchema(schema.items) };
@@ -229,7 +235,12 @@ export function checkAnswer(
   const text = message.trim();
   if (!text && !mayKeepQuiet) return { ok: false, problem: 'invalid' };
   if (containsCode(text, skeleton)) return { ok: false, problem: 'code', elusion };
-  const blocks = text ? serverBlocks(text, skeleton, names, examples ? syntax : undefined) : [];
+  // The skeleton the model asks for, which the server writes, if it did not write one itself (2.5d)
+  const parameters =
+    text && skeleton && names?.length && !text.includes('```')
+      ? skeletonParameters(skeleton.parameters ?? names.length, names)
+      : undefined;
+  const blocks = text ? serverBlocks(skeleton, parameters, examples ? syntax : undefined) : [];
   return {
     ok: true,
     answer: {
@@ -238,7 +249,11 @@ export function checkAnswer(
       intensity: intensity as Intensity,
       reaction: isReactionKind(reaction) ? reaction : undefined,
       elusion,
-      ...withActions(text ? actionsOf(result.data.actions) : []),
+      ...withActions([
+        ...(text ? actionsOf(result.data.actions) : []),
+        // «Insertar» goes with the skeleton (2.5f)
+        ...(parameters ? [{ name: 'insertSkeleton' as const, arguments: { parameters } }] : []),
+      ]),
     },
   };
 }
@@ -270,10 +285,12 @@ function actionsOf(asked: unknown): ToolCall[] {
   if (dropped.length > 0) console.warn(`Tool calls dropped: ${dropped.join(', ')}`);
   return calls.filter(
     (call) =>
-      call.name !== 'highlightLines' ||
-      !(call.arguments.lines as readonly { readonly note?: string }[]).some(
-        (line) => line.note !== undefined && containsCode(line.note),
-      ),
+      // The server adds those itself, never because the model asks (2.5f)
+      !TUTOR_TOOLS.some((tool) => tool.name === call.name && tool.fromServer) &&
+      (call.name !== 'highlightLines' ||
+        !(call.arguments.lines as readonly { readonly note?: string }[]).some(
+          (line) => line.note !== undefined && containsCode(line.note),
+        )),
   );
 }
 
@@ -288,14 +305,13 @@ function withActions(actions: readonly ToolCall[]): Pick<ModelAnswer, 'actions'>
  * the catalog it asked for.
  */
 function serverBlocks(
-  text: string,
   skeleton: FunctionSignature | undefined,
-  names: readonly string[] | undefined,
+  parameters: readonly string[] | undefined,
   syntax: readonly string[] | undefined,
 ): string[] {
   const blocks: string[] = [];
-  if (skeleton && names?.length && !text.includes('```')) {
-    blocks.push(skeletonBlock(skeleton.functionName, skeleton.parameters ?? names.length, names));
+  if (skeleton && parameters) {
+    blocks.push(skeletonBlock(skeleton.functionName, parameters.length, parameters));
   }
   const examples = syntaxBlocks(syntax ?? []);
   if (examples) blocks.push(examples);

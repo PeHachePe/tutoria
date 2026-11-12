@@ -1,4 +1,5 @@
 import type { ContentLocale } from '../localized-text';
+import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 import { scriptedTools } from './scripted-tools';
 
 const PROGRESS = {
@@ -117,6 +118,55 @@ describe('scriptedTools', () => {
     expect(scriptedTools('¿Qué es un bucle?', undefined, 'es')).toBeNull();
   });
 
+  describe('what only our tutor does (2.5f)', () => {
+    const code = (text: string, status: 'in_progress' | 'passed' = 'in_progress') => ({
+      code: text,
+      functionName: 'sum',
+      status,
+    });
+    const SLIP = 'function sum(v) {\n  retrun 0;\n}';
+
+    it('proposes the fix of a slip of writing, never of the logic', () => {
+      expect(scriptedTools('Arréglame el código', undefined, 'es', code(SLIP))).toEqual({
+        text: 'En la línea 2 hay un despiste de escritura. Pulsa «Aplicar» y lo corrijo; fíjate en qué cambia.',
+        actions: [{ name: 'proposeFix', arguments: { line: 2, code: '  return 0;' } }],
+      });
+      const logic = scriptedTools(
+        'fix my code',
+        undefined,
+        'en',
+        code('function sum(v) {\n  return 1;\n}'),
+      );
+      expect(logic).toEqual({ text: TUTOR_SCRIPTS.en.tools.noFix, actions: [] });
+    });
+
+    it('offers to format, to run and to submit, only what passed', () => {
+      expect(scriptedTools('Formatea mi código', undefined, 'es', code(SLIP))).toEqual({
+        text: TUTOR_SCRIPTS.es.tools.format,
+        actions: [{ name: 'formatCode', arguments: {} }],
+      });
+      expect(scriptedTools('Ejecuta las pruebas', undefined, 'es', code(SLIP))).toEqual({
+        text: TUTOR_SCRIPTS.es.tools.run,
+        actions: [{ name: 'runTests', arguments: {} }],
+      });
+      expect(scriptedTools('Entrégalo', undefined, 'es', code(SLIP, 'passed'))).toEqual({
+        text: TUTOR_SCRIPTS.es.tools.submit,
+        actions: [{ name: 'submitAttempt', arguments: {} }],
+      });
+      expect(scriptedTools('submit it', undefined, 'en', code(SLIP))).toEqual({
+        text: TUTOR_SCRIPTS.en.tools.notPassed,
+        actions: [{ name: 'runTests', arguments: {} }],
+      });
+    });
+
+    it('has nothing to fix without the code', () => {
+      expect(scriptedTools('corrígelo', undefined, 'ca')).toEqual({
+        text: TUTOR_SCRIPTS.ca.tools.noFix,
+        actions: [],
+      });
+    });
+  });
+
   it('says it all in the three languages', () => {
     for (const language of ['es', 'en', 'ca'] satisfies ContentLocale[]) {
       const progress = scriptedTools('¿Cuántos me quedan?', [PROGRESS], language);
@@ -141,6 +191,12 @@ describe('scriptedTools', () => {
       expect(found && 'text' in found && found.text).toContain('T');
       const marked = scriptedTools('resalta la linea 2', undefined, language);
       expect(marked && 'text' in marked && marked.text).toContain('2');
+      const fixed = scriptedTools('arregla', undefined, language, {
+        code: 'function f() {\n  retrun 1;\n}',
+        functionName: 'f',
+        status: 'in_progress',
+      });
+      expect(fixed && 'text' in fixed && fixed.text).toContain('2');
     }
   });
 });

@@ -219,6 +219,8 @@ describe('scripted answer', () => {
         intensity: 3,
         elusion: false,
         silent: false,
+        // With «Insertar», as the server adds it (2.5f)
+        actions: [{ name: 'insertSkeleton', arguments: { parameters: ['a'] } }],
       });
       expect(stuck({ language: 'ca' }).text).toContain(TUTOR_SCRIPTS.ca.stuck.after);
     });
