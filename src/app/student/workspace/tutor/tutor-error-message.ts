@@ -1,4 +1,5 @@
 import { DataError } from '../../../data/data-error';
+import { isLongWait } from '../../../shared/is-long-wait';
 
 /** What to do about it, from the kind of error (4.2); what the student asked is never lost. */
 function advice(error: unknown): string {
@@ -6,6 +7,9 @@ function advice(error: unknown): string {
     case 'network':
       return $localize`:@@tutor.error.network:Comprueba la conexión e inténtalo de nuevo.`;
     case 'rate_limited':
+      if (isLongWait(error, Date.now())) {
+        return $localize`:@@tutor.error.dailyLimit:Has llegado al límite de preguntas de hoy: podrás volver a preguntar más tarde.`;
+      }
       return $localize`:@@tutor.error.rateLimited:Has preguntado muchas veces seguidas: espera un momento.`;
     case 'unauthorized':
       return $localize`:@@tutor.error.unauthorized:Tu sesión ha caducado: vuelve a entrar para continuar.`;

@@ -15,6 +15,7 @@ import { type ChatMessage, type LlmProvider, ProviderError } from './llm-provide
 import {
   DEFAULT_ANSWERS,
   MAX_MESSAGE_LENGTH,
+  TUTOR_CALLS_PER_DAY,
   TUTOR_CALLS_PER_MINUTE,
   createTutorHandler,
 } from './tutor.ts';
@@ -451,6 +452,33 @@ Deno.test('the tutor answers its limit per minute with how long to wait', async 
   assertEquals(response.status, 429);
   assertEquals(response.headers.get('Retry-After'), '40');
   assertEquals(llm.requests.length, 0);
+});
+
+Deno.test('the tutor answers its limit per day with how long to wait', async () => {
+  const { handle, store, llm } = setup();
+  // Spread over the day, never six in a minute: the oldest one leaves the day in an hour
+  store.calls = Array.from(
+    { length: TUTOR_CALLS_PER_DAY },
+    (_, index) => new Date(NOW - 10 * 60_000 - index * 20 * 60_000),
+  );
+  store.calls[TUTOR_CALLS_PER_DAY - 1] = new Date(NOW - 23 * 3_600_000);
+
+  const response = await handle(post());
+
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get('Retry-After'), '3600');
+  assertEquals(llm.requests.length, 0);
+});
+
+Deno.test('below both limits, the tutor asks the model', async () => {
+  const { handle, store, llm } = setup();
+  store.calls = Array.from(
+    { length: TUTOR_CALLS_PER_DAY - 1 },
+    (_, index) => new Date(NOW - 10 * 60_000 - index * 20 * 60_000),
+  );
+
+  assertEquals((await handle(post())).status, 200);
+  assertEquals(llm.requests.length, 1);
 });
 
 Deno.test('without a provider, or when it fails, the tutor is unavailable', async () => {

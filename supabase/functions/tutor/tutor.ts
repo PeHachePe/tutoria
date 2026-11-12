@@ -13,7 +13,13 @@ import {
 } from '../../../src/app/data/tutor/tutor-tools.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
-import { MAX_CODE_LENGTH, minuteBefore, secondsToWait } from '../_shared/limits.ts';
+import {
+  DAY_MS,
+  dayBefore,
+  MAX_CODE_LENGTH,
+  minuteBefore,
+  secondsToWait,
+} from '../_shared/limits.ts';
 import type { AnswerStore, ProviderSetting, RecordedAnswer } from './answer-store.ts';
 import { checkCodeActions, tryExamples } from './code-actions.ts';
 import { type LlmProvider, ProviderError } from './llm-provider.ts';
@@ -38,6 +44,13 @@ import {
  * provider. A student asks, reads and thinks, so a handful is plenty.
  */
 export const TUTOR_CALLS_PER_MINUTE = 6;
+
+/**
+ * Calls to the model a user may make in a day (the last 24 hours): the free plans of the providers
+ * limit the calls of the whole project in a day, so no student may spend the quota of the rest. A
+ * long session of practice is far below it.
+ */
+export const TUTOR_CALLS_PER_DAY = 60;
 
 /** Far above the 500 characters of the chat: room for a spoken question (6.1). */
 export const MAX_MESSAGE_LENGTH = 2_000;
@@ -139,10 +152,16 @@ export function createTutorHandler({
       const answered = await store.findAnswer(ask.requestId);
       if (answered) return replay(answered, ask.attemptId);
 
-      const wait = secondsToWait(
-        await store.latestCalls(userId, minuteBefore(now()), TUTOR_CALLS_PER_MINUTE),
-        TUTOR_CALLS_PER_MINUTE,
-        now(),
+      // One read for both limits: the calls of the minute are the newest of the day
+      const latest = await store.latestCalls(userId, dayBefore(now()), TUTOR_CALLS_PER_DAY);
+      const minuteStart = minuteBefore(now());
+      const wait = Math.max(
+        secondsToWait(
+          latest.filter((call) => call >= minuteStart),
+          TUTOR_CALLS_PER_MINUTE,
+          now(),
+        ),
+        secondsToWait(latest, TUTOR_CALLS_PER_DAY, now(), DAY_MS),
       );
       if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
 

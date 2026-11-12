@@ -1,3 +1,6 @@
+import { formatDate } from '@angular/common';
+import { LOCALE_ID } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
@@ -43,6 +46,18 @@ describe('RetryButton', () => {
     expect(ready).toHaveProperty('disabled', false);
     ready.click();
     expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('tells a long wait as the time it ends, instead of counting it down', async () => {
+    vi.useFakeTimers({ now: Date.parse('2026-11-10T10:00:00Z') });
+    const error = new DataError('rate_limited', 'Too many', { retryAfterSeconds: 3600 });
+    await renderButton(error);
+
+    const time = formatDate(error.retryAt ?? 0, 'shortTime', TestBed.inject(LOCALE_ID));
+    expect(screen.getByRole('button', { name: `Reintentar a las ${time}` })).toHaveProperty(
+      'disabled',
+      true,
+    );
   });
 
   it('does not wait for an error that is not a DataError', async () => {
