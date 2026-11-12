@@ -15,6 +15,7 @@ import {
   syntaxTopicsIn,
 } from '../../../src/app/data/tutor/syntax-examples.ts';
 import type { PreviousTurn, TutorAttempt } from './answer-store.ts';
+import { type BlockingError, blockingError } from './code-actions.ts';
 import type { ChatMessage } from './llm-provider.ts';
 import { type AnswerProblem, signatureOf } from './model-answer.ts';
 
@@ -270,6 +271,8 @@ export function userPrompt({
     `Qué hace su código ahora con los ejemplos (lo acabamos de probar):\n${tagged('resultado_codigo', triedLines(exercise.functionName, exercise.tests, tried, code))}`,
     `Última vez que pulsó «Ejecutar»: ${lastRunLine(attempt, code)}`,
   ];
+  const blocking = blockingError(tried);
+  if (blocking && kind !== 'proactive') sections.push(slipNote(blocking));
   if (kind === 'question') {
     sections.push(`Mensaje del alumno:\n${tagged('mensaje_alumno', message ?? '')}`);
     if (isStuckMessage(message)) sections.push(stuckNote(exercise, tried));
@@ -440,6 +443,15 @@ function openingsNote(previous: readonly PreviousTurn[]): string | null {
     .map((turn) => turn.transcript.split(/\s+/).slice(0, OPENING_WORDS).join(' '));
   if (openings.length === 0) return null;
   return `Para no repetirte: tus últimas respuestas empezaban «${openings.join('…», «')}…». Empieza de otra forma y aporta algo nuevo, sin repetir lo que ya le dijiste.`;
+}
+
+/**
+ * Said when the code does not run: a slip of writing is fixed with `proposeFix` (2.5f). With the
+ * instruction alone, Flash-Lite took «arréglame el código» for a request of the solution.
+ */
+function slipNote({ message, line }: BlockingError): string {
+  const where = line ? ` en la línea ${line}` : '';
+  return `Nota: su código no se ejecuta (${message}${where}). Si es un despiste de escritura (una palabra mal escrita, un paréntesis, una llave, una coma o un punto y coma), señálalo y propón además el arreglo con proposeFix (la línea tal como debe quedar): arreglar un despiste no es darle la solución ni un intento de obtenerla, y el alumno decide si lo aplica. Si es de la lógica, solo pistas.`;
 }
 
 /** Said along with a question about how something is written: the examples of the catalog (2.5d). */

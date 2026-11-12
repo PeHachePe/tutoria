@@ -101,6 +101,24 @@ Deno.test('proposeFix only counts if the error goes away with it', async () => {
   assertEquals(await kept('', [fix(1, '}', true)]), []);
 });
 
+Deno.test('the server finds the fix of a misspelt name the model did not propose', async () => {
+  const offered = async (code: string, actions: readonly ToolCall[] = []) => {
+    const tried = await tryExamples(sandbox, ATTEMPT, code);
+    return await checkCodeActions(
+      actions,
+      { attempt: ATTEMPT, code, tried, sandbox },
+      {
+        offerFix: true,
+      },
+    );
+  };
+  assertEquals(await offered(withLine(6, '  retrun total;')), [fix(6, SUM[5])]);
+  // Not twice, nor for the logic, nor for a slip it cannot find (a missing bracket)
+  assertEquals(await offered(withLine(6, '  retrun total;'), [fix(6, SUM[5])]), [fix(6, SUM[5])]);
+  assertEquals(await offered(withLine(3, '  for (let i = 1; i < v.length; i++) {')), []);
+  assertEquals(await offered(withLine(3, '  for (let i = 0; i < v.length; i++ {')), []);
+});
+
 Deno.test('the skeleton, formatting and running need the code as it is', async () => {
   const skeleton: ToolCall = { name: 'insertSkeleton', arguments: { parameters: ['v'] } };
   const format: ToolCall = { name: 'formatCode', arguments: {} };

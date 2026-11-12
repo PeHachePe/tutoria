@@ -165,18 +165,18 @@ export function createTutorHandler({
       if ('queries' in asked)
         return json(200, { events: [{ type: 'query', calls: asked.queries }] });
       const { rejected } = asked;
-      // What touches the code or the submission is checked against the attempt here (2.5f)
-      const answer = asked.answer?.actions
+      // What touches the code or the submission is checked against the attempt here, and a slip
+      // that keeps the code from running gets its fix, but not in an intervention (2.5f)
+      const answer = asked.answer
         ? withCheckedActions(
             asked.answer,
-            await checkCodeActions(asked.answer.actions, {
-              attempt,
-              code: ask.code,
-              tried,
-              sandbox,
-            }),
+            await checkCodeActions(
+              asked.answer.actions ?? [],
+              { attempt, code: ask.code, tried, sandbox },
+              { offerFix: ask.kind !== 'proactive' },
+            ),
           )
-        : asked.answer;
+        : null;
 
       const outcome = await store.recordAnswer({
         attemptId: ask.attemptId,

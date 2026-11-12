@@ -1,5 +1,10 @@
 import { buildRunResult, type RunResult } from '../../../src/app/data/code-runner/run-result.ts';
-import { checkFix, type CodeFix, declaresFunction } from '../../../src/app/data/tutor/code-fix.ts';
+import {
+  checkFix,
+  type CodeFix,
+  declaresFunction,
+  suggestFix,
+} from '../../../src/app/data/tutor/code-fix.ts';
 import type { ToolCall } from '../../../src/app/data/tutor/tutor-tools.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import type { TutorAttempt } from './answer-store.ts';
@@ -38,10 +43,16 @@ export async function tryExamples(
  * the skeleton only if the function is not there yet, formatting and running only with code,
  * submitting only a passed attempt, and a fix only of a slip of writing that the sandbox confirms.
  * The rest go through as they came. What is dropped is said, never run.
+ *
+ * With `offerFix`, a code that does not run because of a misspelt name gets its fix even if the
+ * model did not propose it: Flash-Lite took «arréglame el código» for a request of the solution and
+ * stopped proposing it after the first time. The server finds it (`suggestFix`) and checks it the
+ * same way.
  */
 export async function checkCodeActions(
   actions: readonly ToolCall[],
   context: CodeContext,
+  { offerFix = false }: { readonly offerFix?: boolean } = {},
 ): Promise<ToolCall[]> {
   const kept: ToolCall[] = [];
   for (const action of actions) {
@@ -51,7 +62,19 @@ export async function checkCodeActions(
       console.warn(`Action dropped: ${action.name}`);
     }
   }
+  if (offerFix && !kept.some((action) => action.name === 'proposeFix')) {
+    const fix = await serverFix(context);
+    if (fix) kept.push(fix);
+  }
   return kept;
+}
+
+/** The fix of a misspelt name the server finds itself, when the code does not run (2.5f). */
+async function serverFix(context: CodeContext): Promise<ToolCall | null> {
+  if (problemOf(context.tried) === null) return null;
+  const fix = suggestFix(context.code, { functionName: context.attempt.exercise.functionName });
+  if (!fix || !(await fixHolds(fix, context))) return null;
+  return { name: 'proposeFix', arguments: { line: fix.line, code: fix.code } };
 }
 
 async function holds({ name, arguments: args }: ToolCall, context: CodeContext): Promise<boolean> {
@@ -90,16 +113,33 @@ async function fixHolds(fix: CodeFix, { attempt, code, tried, sandbox }: CodeCon
 /** An error of a name: a variable or a method that does not exist. */
 const NAME_ERROR = /ReferenceError|is not defined|is not a function/;
 
+/** Why the code does not run, and where: what the request tells the model (2.5f). */
+export interface BlockingError {
+  readonly message: string;
+  readonly line?: number;
+}
+
 /**
- * What keeps the code from running, said the same way each time to compare it: it does not load, it
- * lacks the function, or a test throws because of a name. Null if it runs, right or wrong.
+ * What keeps the code from running: it does not load (a syntax error), or a test throws because of
+ * a name. Null if it runs, right or wrong, or if it only lacks the function, which is not a slip.
+ */
+export function blockingError(run: RunResult | null): BlockingError | null {
+  if (run?.loadError?.kind === 'invalid_code') {
+    const { message = '', line } = run.loadError;
+    return { message, ...(line ? { line } : {}) };
+  }
+  const failure = run?.results.find((result) => result.error && NAME_ERROR.test(result.error));
+  return failure?.error
+    ? { message: failure.error, ...(failure.line ? { line: failure.line } : {}) }
+    : null;
+}
+
+/**
+ * What keeps the code from running, said the same way each time to compare it: a blocking error, or
+ * the function missing (renaming it is a slip too). Null if it runs, right or wrong.
  */
 function problemOf(run: RunResult | null): string | null {
-  if (!run) return null;
-  if (run.loadError) {
-    const { kind, message = '', line = 0 } = run.loadError;
-    return `${kind}:${message}:${line}`;
-  }
-  const failure = run.results.find((result) => result.error && NAME_ERROR.test(result.error));
-  return failure ? `run:${failure.error}:${failure.line ?? 0}` : null;
+  if (run?.loadError?.kind === 'missing_function') return 'missing_function';
+  const error = blockingError(run);
+  return error ? `${error.message}:${error.line ?? 0}` : null;
 }
