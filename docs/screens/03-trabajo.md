@@ -53,6 +53,12 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
   - cambia la disposición (código ampliado, tutor fijo o flotante);
   - en el móvil, la pestaña cambia a la que tiene lo marcado o señalado (el código, o el ejercicio para un ejemplo o las comprobaciones ocultas).
     Las mismas herramientas, sin riesgo, se abren a los agentes del navegador con WebMCP (sin escribir, ejecutar ni entregar).
+- **Lo que solo hace nuestro tutor en el código** (2.5f, D-052), siempre con un botón que pulsa el alumno, y nunca por WebMCP:
+  - pone el esqueleto vacío de la función en el editor: solo, si está vacío, o después del código que haya; la línea de la firma queda marcada con «Tu función: escribe dentro lo que hace»;
+  - aplica el arreglo de un despiste de escritura en una línea (`retrun`, un `)` que falta), que se vuelve a comprobar contra el código de ese momento; la línea queda marcada con «Aquí estaba el despiste»;
+  - en los dos casos, solo cambia lo necesario, el foco pasa al editor con el cursor en esa línea y Ctrl + Z lo deshace; en el móvil, la pestaña cambia al código;
+  - formatea el código y ejecuta las pruebas, como sus botones;
+  - entrega con el diálogo de siempre, solo si el intento está superado.
 - **Señales del navegador** (paso 1.6, D-031): en un intento sin entregar se registran, sin nada visible para el alumno, los pegados de texto de fuera del código y las salidas a otra ventana o pestaña de 2 s o más, con su duración. Cerrar sesión espera a guardar el código y a enviar los eventos. La pantalla de datos registrados (1.9) lo explica.
 
 ## Estados
@@ -96,6 +102,7 @@ Que el alumno resuelva un ejercicio en una sola pantalla: lee el enunciado y los
 - [ ] Con el código ampliado y en la tableta, el tutor flota en la mascota y el código ocupa todo el ancho (iteración 1 del 1.7).
 - [ ] «Ampliar el código» da al código el sitio del enunciado, con el tutor a la vista y sin perder lo escrito, y los resultados se pliegan al resumen (iteraciones 1 y 2 del 1.5).
 - [x] «Resalta la línea 2» marca esa línea con su nota, y la marca se va al editar; «mira el ejemplo 2» lo destaca; en el móvil, la pestaña cambia (2.5e).
+- [x] «Aplicar» corrige un `retrun`, marca la línea, deja el foco en el editor y Ctrl + Z lo deshace; «Poner la función en el editor» escribe el esqueleto; la entrega pedida al tutor abre su diálogo (2.5f, con datos simulados; con Supabase local, pendiente de la validación del autor).
 
 ## Fuera de alcance
 

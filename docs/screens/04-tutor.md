@@ -57,7 +57,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Móvil:** si llega una respuesta mientras el alumno está en otra pestaña, la pestaña «Tutor» muestra un punto hasta que la abre.
 
 - **Preguntar por sus datos** (2.5e): «¿cuántos me quedan?», «¿qué asignaturas tengo?», «¿cuántos errores llevo?»: el tutor los consulta con la sesión del alumno (solo ve lo suyo) y responde con ellos; mientras, los tres puntos de siempre.
-- **Pedirle que actúe** (2.5e): «ponme uno de bucles», «el siguiente que me queda», «pon el modo oscuro», «resalta la línea 3». El botón de una acción se puede enfocar mientras se ejecuta; si falla, «No se ha podido hacer: …» con «Reintentar». «Deshacer» devuelve los ajustes que cambió.
+- **Pedirle que actúe** (2.5e): «ponme uno de bucles», «el siguiente que me queda», «pon el modo oscuro», «resalta la línea 3». El botón de una acción se puede enfocar mientras se ejecuta; si falla, «No se ha podido hacer: …» (con el texto de su botón) y «Reintentar». «Deshacer» devuelve los ajustes que cambió.
+- **Que toque el código** (2.5f, D-052): «arréglame el código», «formatéalo», «ejecuta las pruebas», «entrégalo», o el esqueleto cuando no sabe empezar. Cada uno deja su botón bajo la respuesta: «Aplicar la corrección», «Formatear el código», «Ejecutar las pruebas», «Entregar el ejercicio» o «Poner la función en el editor». Debajo de «Aplicar» se ve el cambio («Línea 5: retrun → return», «Línea 3: falta )»), para que el alumno vea el despiste. Si ya lo corrigió él, dice «Ya lo has corregido tú»; si el código cambió, que la corrección ya no encaja. Hecho, dice qué pasó: «Línea 5 corregida», «Pruebas ejecutadas: 3 de 5 superadas», «Ejercicio entregado» o «Has seguido revisando: no se ha entregado». Con pruebas que fallan por la lógica, no hay arreglo: solo pistas.
 
 ## Estados
 
@@ -96,6 +97,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] Cada respuesta nueva lanza su reacción con su emoji y mueve la mascota; dos seguidas se suman sin cortarse; sin «Emojis animados», los mismos emojis estáticos; reducidas, su emoji pequeño; desactivadas, nada; con «reducir movimiento», su emoji se desvanece sin moverse.
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 - [x] «¿Cuántos me quedan?» responde con los datos del alumno y dice «Ha consultado tu progreso»; «pon el modo oscuro» lo aplica con «Deshacer»; «ponme el siguiente» deja el botón (2.5e).
+- [x] «Arréglame el código» con un `retrun` deja «Aplicar la corrección» con «Línea 5: retrun → return»; «formatéalo», «ejecuta las pruebas» y «entrégalo» dejan su botón y dicen qué pasó; sin despiste, no hay arreglo (2.5f, con datos simulados).
 
 ## Fuera de alcance
 

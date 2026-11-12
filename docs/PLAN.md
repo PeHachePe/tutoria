@@ -1379,6 +1379,15 @@ Con el registro del 2.5e, las herramientas que tocan el código o la entrega, nu
 
 🧪 Cada herramienta con TDD; Deno: `proposeFix` acepta `retrun` → `return` o un `)` que falta y rechaza `i < n` → `i <= n` y cualquier cambio con el código cargando; batería: «arréglame el código» con pruebas que fallan.
 ✅ Con Supabase local, el esqueleto insertado con un botón, un `retrun` corregido con «Aplicar» y la entrega pedida al tutor con su diálogo.
+
+- **Hecho así (D-052):**
+  - **Frontera en el contrato:** `data/tutor/code-fix.ts`, sin imports. Lo usan el servidor, el `execute` de la app (que vuelve a comprobarlo al pulsar, por si el código cambió) y el tutor simulado. Un arreglo cambia una línea, o añade una que solo cierra, con tres cambios como mucho: signos de cierre, separadores y comillas, o un nombre que nadie declaró por uno conocido casi igual (palabras del lenguaje, sus métodos y lo que declara el código). Nunca operadores ni números.
+  - **En el servidor:** `code-actions.ts` comprueba además en el sandbox que el código no cargaba o lanzaba un error de nombre, y que con el arreglo ese error desaparece. Los nombres mal escritos que no lanzan nada (`lenght`) valen si el arreglo no trae otro error.
+  - **Herramientas nuevas:** `formatCode`, `runTests`, `submitAttempt` (el diálogo de siempre) y `proposeFix`, todas con botón y fuera de WebMCP. `insertSkeleton` la añade el servidor con el esqueleto del 2.5d (`fromServer`): el modelo no tiene que elegirla.
+  - **En el chat:** el arreglo se ve antes de aplicarlo («Línea 5: retrun → return»), o dice que ya está corregido o que el código ha cambiado. Al aplicar o insertar, la línea queda marcada con una nota y el foco va al editor, así que Ctrl + Z la deshace.
+  - **Lo demás:** prompt v5; tutor simulado con las cuatro (`suggestFix()`); batería T6 a T8.
+  - **`practiseAgain` descartada,** a propuesta del agente: el tutor está cerrado en un intento entregado, que es el único sitio donde tendría sentido.
+
 Commit: `feat: real backend core`.
 
 #### Fase 3 · Beta pública y entrega de la PEC3 (≈10 h)

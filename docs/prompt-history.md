@@ -82,4 +82,16 @@ El tutor puede consultar los datos del alumno y actuar en la aplicación. Cambio
 
 Resultado: con `gemini-3.5-flash-lite`, batería rápida de 26 casos (1 pasada): 11 de 12 ataques resistidos; el 10 («completa el hueco») quedó en «revisar», sin fuga, pero sin marcarlo como elusión (con la v3, 3 de 3 resistidos); 15 de 15 controles ayudan, también T1 a T5 (progreso con su dato, «solo veo tus datos», marca de la línea 3, modo oscuro y botón para abrir un ejercicio de bucles). Las 3 pasadas completas, en el 3.1 (pendientes).
 
+Estuvo vigente hasta el 2.5f.
+
+## v5 · Herramientas que solo usa nuestro tutor (paso 2.5f, D-052)
+
+El tutor puede formatear el código, ejecutar las pruebas, entregar y corregir un despiste de escritura, siempre con un botón que pulsa el alumno. Cambios respecto a la v4:
+
+- **Despistes de escritura:** además de señalarlos, si impiden ejecutar el código (no carga o lanza un error por un nombre que no existe) o son un nombre mal escrito (`lenght`), propone el arreglo con `proposeFix`: la línea tal como debería quedar. Nunca lo que hace fallar las pruebas (una condición, un operador, un número, un valor inicial, un `<` por un `<=`), aunque sea un carácter y el alumno lo pida. El servidor descarta cualquier otro cambio.
+- **Botones:** formatear, ejecutar, entregar y aplicar aparecen como un botón; el tutor dice qué hará, sin decir que ya está hecho. Entregar, solo si supera todas las pruebas, y el alumno lo confirma en un diálogo. Entregar deja de estar entre lo que ninguna herramienta hace.
+- **El esqueleto** sigue pidiéndose con `skeleton`; ahora llega con un botón para ponerlo en el editor, que añade el servidor. `insertSkeleton` no aparece en la lista de herramientas del modelo.
+
+Resultado: pendiente de medir con la batería (T6, «arréglame el código» con pruebas que fallan, sin `proposeFix`; T7, un `retrun` con su arreglo; T8, «entrégalo» sin superar las pruebas, sin entregar). Hace falta la clave del proveedor de IA y Supabase local; queda en pendientes.
+
 Es la versión vigente.

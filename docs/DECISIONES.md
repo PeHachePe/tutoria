@@ -1457,3 +1457,40 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - El 2.5f añade las herramientas que solo usa nuestro tutor (esqueleto, formatear, ejecutar, entregar, practicar de nuevo y `proposeFix`) sobre este registro.
 
 **Aprobación:** el autor pidió las consultas de datos, aprobó hacerlas en el front, la valoración objetiva y el reparto en dos pasos («Sí, empieza»). El transporte (campo del JSON tras la prueba), el «Deshacer» de los ajustes y la excepción del lint, por delegación del autor («decidir lo más lógico»).
+
+## D-052 · La frontera de `proposeFix`, en el contrato y en el sandbox, y las herramientas que solo usa nuestro tutor (12/11/2026)
+
+**Contexto:** el paso 2.5f (D-047) añade las herramientas que tocan el código o la entrega: esqueleto, formatear, ejecutar, entregar, practicar de nuevo y `proposeFix`. Esta última tiene que corregir lo que impide ejecutar el código, nunca lo que hace fallar las pruebas. El plan decía «un error de nombre», pero D-047 pone `lenght` como ejemplo, y en JavaScript `v.lenght` no lanza nada: devuelve `undefined` y las pruebas fallan sin error. Además, el tutor está cerrado en un intento entregado (2.4: el servidor responde 409), que es justo donde tendría sentido «practicar de nuevo».
+
+**Decisión:**
+
+- **Qué es un despiste de escritura** lo decide una función pura del contrato (`checkFix()` en `data/tutor/code-fix.ts`, sin imports), nunca el modelo:
+  - cambia una línea o añade una que solo cierra (`}`), con tres cambios como mucho;
+  - los únicos cambios posibles son signos de cierre, separadores y comillas (`` ( ) [ ] { } ; , ' " ` ``), o un nombre que nadie declaró por otro conocido casi igual: palabras del lenguaje, sus métodos más usados o lo que declara el código (funciones, variables, parámetros, desestructuración y `catch`);
+  - casi igual quiere decir una letra en las palabras cortas y dos en las largas, contando como una el intercambio de dos letras (`retrun`);
+  - también vale renombrar la función a la que pide el ejercicio, si el código aún no la declara;
+  - nunca cambia operadores, puntos ni números: `i < n` → `i <= n` se rechaza siempre, también junto a un `)` que falta.
+- **El servidor lo prueba en el sandbox** (`code-actions.ts`): antes del cambio, el código no carga, le falta la función o una prueba lanza un error de nombre (`ReferenceError`, «is not a function»); después, ese error desaparece. Un arreglo que solo cambia nombres puede venir de un código que no lanza nada (`lenght`), y basta con que el código arreglado tampoco lance nada. Con el código cargando y fallando por la lógica, el tutor solo señala y da pistas.
+- **La app lo vuelve a comprobar al pulsar «Aplicar»,** contra el código de ese momento, con la misma función. Antes de pulsar, el chat enseña el cambio («Línea 5: retrun → return»), para que el alumno vea el despiste y aprenda. Si ya lo corrigió él o el código cambió, lo dice en lugar del botón.
+- **Al escribir en el editor** (insertar o aplicar), solo entra la parte que cambia, como un cambio del historial (Ctrl + Z) que no cuenta como pegado (2.8). La línea queda marcada con una nota y el foco pasa al editor, que en el móvil también cambia de pestaña.
+- **`insertSkeleton` la añade el servidor** con el esqueleto del 2.5d, con los mismos nombres de parámetros (`skeletonParameters()`), y no la ofrece si el código ya declara la función. El modelo no la ve (`fromServer`): ya pide el esqueleto con `skeleton`, y una herramienta menos ayuda al modelo barato.
+- **Formatear, ejecutar y entregar** van con un botón. El servidor descarta formatear y ejecutar sin código, y entregar si el intento no está superado. Entregar abre el diálogo de siempre, y si el alumno pulsa «Seguir revisando», el chat lo dice.
+- Todas se declaran donde está lo que tocan: `CodeZone` tiene el editor y «Entregar», y `runTests` va en las herramientas del ejercicio. Ninguna se abre a WebMCP.
+- **`practiseAgain` se descarta:** el tutor está cerrado en un intento entregado (2.4), y «Practicar de nuevo» ya está a un clic en esa pantalla.
+- **Prompt v5** (`docs/prompt-history.md`).
+
+**Alternativas:**
+
+- **Que el servidor calcule el arreglo él solo** (`suggestFix()`, que usa el tutor simulado): encuentra los nombres mal escritos, pero no un `)` que falta sin probar candidatos en el sandbox. El modelo propone y el servidor comprueba.
+- **Solo errores que se lanzan, como decía el plan:** dejaría fuera `lenght`, el ejemplo de D-047, que en JavaScript no lanza nada.
+- **Limitar el tamaño en caracteres:** `i < n` → `i <= n` es un carácter, y es la solución. Lo que se limita es qué clase de cambio es.
+- **Mostrar el arreglo sin vista previa:** el alumno no vería qué se le escapó, y aplicar a ciegas no enseña.
+- **Un «Deshacer» en el chat:** el deshacer de CodeMirror solo deshace el último cambio, y el alumno puede haber escrito después. El foco en el editor deja Ctrl + Z a mano.
+
+**Consecuencias:**
+
+- `TutorToolDefinition` gana `fromServer`. `actionView()` recibe el código para enseñar el arreglo. `CodeEditor` gana `code()`, `replaceCode()` y `focus()`, y `format()` dice qué ha hecho.
+- Un fallo de una acción con botón se nombra por su botón («No se ha podido hacer: Abrir el siguiente ejercicio»).
+- Las inserciones del tutor no son pegados (2.8). Queda en pendientes registrarlas como eventos del proceso para el panel docente.
+
+**Aprobación:** el autor aprobó el plan con sus dos puntos (`lenght` con la regla de los nombres, y `practiseAgain` descartada) y las mejoras propuestas («Sí, empieza»). El diseño de la frontera, por delegación del autor.
