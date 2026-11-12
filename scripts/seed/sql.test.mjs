@@ -111,9 +111,16 @@ describe('authUsersStatement', () => {
 
     assert.match(sql, /insert into auth\.users \(/);
     assert.match(sql, /insert into auth\.identities \(/);
-    assert.match(sql, /extensions\.crypt\('pass''word', extensions\.gen_salt\('bf'\)\)/);
-    assert.match(sql, /\('u1', 'ana@tutoria\.test', 'Ana O''Neil', 'active', 'd1'\)/);
-    assert.match(sql, /\('u2', 'raul@tutoria\.test', 'Raúl', 'disabled', 'd2'\)/);
+    assert.match(sql, /extensions\.crypt\(password, extensions\.gen_salt\('bf'\)\)/);
+    assert.match(sql, /\('u1', 'ana@tutoria\.test', 'Ana O''Neil', 'active', 'd1', 'pass''word'\)/);
+    assert.match(sql, /\('u2', 'raul@tutoria\.test', 'Raúl', 'disabled', 'd2', 'pass''word'\)/);
+  });
+
+  it('gives each account its own password when asked, for the project in the cloud (step 3.1)', () => {
+    const sql = authUsersStatement(users, (user) => `secret-${user.id}`);
+
+    assert.match(sql, /\('u1', 'ana@tutoria\.test', 'Ana O''Neil', 'active', 'd1', 'secret-u1'\)/);
+    assert.match(sql, /\('u2', 'raul@tutoria\.test', 'Raúl', 'disabled', 'd2', 'secret-u2'\)/);
   });
 
   it('bans the disabled accounts in Supabase Auth too', () => {

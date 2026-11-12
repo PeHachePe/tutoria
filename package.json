@@ -23,6 +23,7 @@
     "db:test": "supabase test db",
     "db:types": "supabase gen types typescript --local > src/app/data/supabase/database.types.ts && prettier --write src/app/data/supabase/database.types.ts",
     "e2e": "playwright test --project=e2e",
+    "smoke": "playwright test --project=smoke",
     "screenshots": "node scripts/screenshots.mjs",
     "favicon": "node scripts/generate-favicon.mjs",
     "emojis": "node scripts/generate-reaction-emojis.mjs",

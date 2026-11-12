@@ -61,11 +61,17 @@ select throws_ok(
 );
 select is((select count(*) from app_setting), 0::bigint, 'a teacher cannot read the settings');
 
--- Administrator
+-- Administrator: every attempt is the count without RLS, not that of the seed, so the test passes
+-- in a local database already used by hand
 reset role;
+select set_config('test.all_attempts', (select count(*) from attempt)::text, true);
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000001');
 
-select is((select count(*) from attempt), 209::bigint, 'an administrator sees every attempt');
+select is(
+  (select count(*) from attempt),
+  current_setting('test.all_attempts')::bigint,
+  'an administrator sees every attempt'
+);
 select is((select count(*) from app_setting), 1::bigint, 'an administrator reads the settings');
 
 select * from finish();

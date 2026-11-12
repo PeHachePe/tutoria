@@ -85,24 +85,27 @@ const EMPTY_AUTH_TOKENS = [
 const BANNED_UNTIL = '2999-12-31T00:00:00Z';
 
 /**
- * The Supabase Auth accounts of the seed users, all with the test password and their email already
- * confirmed, each with the identity that email sign-in needs. Only the name goes in the metadata:
+ * The Supabase Auth accounts of the seed users, with their email already confirmed and the identity
+ * that email sign-in needs. The password is the test one of every account, or one for each account
+ * when it is a function (the project in the cloud, step 3.1). Only the name goes in the metadata:
  * the user can edit it, so the role never does (step 2.1).
  */
 export function authUsersStatement(users, password) {
-  const values = users.map(
-    ({ id, email, name, status, createdAt }) =>
-      `  (${[id, email, name, status, createdAt].map((value) => sqlLiteral(value)).join(', ')})`,
-  );
+  const passwordOf = typeof password === 'function' ? password : () => password;
+  const values = users.map((user) => {
+    const { id, email, name, status, createdAt } = user;
+    const row = [id, email, name, status, createdAt, passwordOf(user)];
+    return `  (${row.map((value) => sqlLiteral(value)).join(', ')})`;
+  });
   return [
-    'with seed_user (id, email, name, status, created_at) as (values',
+    'with seed_user (id, email, name, status, created_at, password) as (values',
     `${values.join(',\n')}\n),`,
     'account as (',
     '  insert into auth.users (instance_id, id, aud, role, email, encrypted_password,',
     '    email_confirmed_at, banned_until, raw_app_meta_data, raw_user_meta_data, created_at,',
     `    updated_at, ${EMPTY_AUTH_TOKENS.join(', ')})`,
     "  select '00000000-0000-0000-0000-000000000000', id::uuid, 'authenticated', 'authenticated',",
-    `    email, extensions.crypt(${sqlLiteral(password)}, extensions.gen_salt('bf')),`,
+    "    email, extensions.crypt(password, extensions.gen_salt('bf')),",
     `    created_at::timestamptz, case when status = 'disabled' then ${sqlLiteral(BANNED_UNTIL)}::timestamptz end,`,
     `    '{"provider":"email","providers":["email"]}'::jsonb, jsonb_build_object('name', name),`,
     `    created_at::timestamptz, created_at::timestamptz, ${EMPTY_AUTH_TOKENS.map(() => "''").join(', ')}`,
@@ -119,7 +122,7 @@ export function authUsersStatement(users, password) {
   ].join('\n');
 }
 
-/** The whole seed.sql for a `MockTables` object, with the test password of every account. */
+/** The whole seed.sql for a `MockTables` object, with the passwords of authUsersStatement. */
 export function buildSeedSql(seed, password) {
   const statements = SEED_TABLES.map(({ table, source, jsonb, conflictKey }) =>
     insertStatement(table, seed[source], jsonb, conflictKey),
