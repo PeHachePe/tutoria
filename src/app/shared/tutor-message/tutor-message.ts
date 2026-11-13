@@ -1,9 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 
-import { CodeBlock } from '../../../shared/code-block/code-block';
-import { splitCodeBlocks } from '../../../shared/split-code-blocks';
-import { splitInlineCode } from '../../../shared/split-inline-code';
+import { CodeBlock } from '../code-block/code-block';
+import { splitCodeBlocks } from '../split-code-blocks';
+import { splitInlineCode } from '../split-inline-code';
 
 /**
  * An answer of the tutor: its paragraphs, keeping their line breaks, with the `inline code` in

@@ -25,7 +25,7 @@ import { TutorStore, type TutorTurn } from '../tutor-store';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
 import { TutorComposer } from './tutor-composer';
 import { TutorActions } from './tutor-actions';
-import { TutorMessage } from './tutor-message';
+import { TutorMessage } from '../../../shared/tutor-message/tutor-message';
 import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { tutorErrorMessage } from './tutor-error-message';

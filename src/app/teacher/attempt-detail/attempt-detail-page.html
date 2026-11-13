@@ -1,0 +1,47 @@
+<!-- From xl the page fills the window and the timeline and the code share what is left, each
+     with its own scroll (5.4); below, the page scrolls -->
+<div
+  class="@container flex flex-col gap-5 xl:h-[calc(100dvh-var(--mat-toolbar-standard-height,64px)-3rem)] xl:min-h-[40rem]"
+  [attr.aria-busy]="isLoading()"
+>
+  <a
+    matButton
+    class="-ms-3 -mb-3 self-start"
+    [routerLink]="livePath"
+    [queryParams]="backQuery()"
+    [queryParamsHandling]="backQuery() ? '' : 'preserve'"
+  >
+    <mat-icon>arrow_back</mat-icon>
+    <ng-container i18n="@@detail.back">Volver a la sesión</ng-container>
+  </a>
+  @if (view(); as view) {
+    <app-attempt-detail-view [view]="view" />
+  } @else {
+    <h1 class="text-headline-medium" i18n="@@detail.heading">Detalle del intento</h1>
+    @if (notFound()) {
+      <app-empty-state
+        heading="No encontramos este intento"
+        i18n-heading="@@detail.notFound.heading"
+        text="Puede que sea de un grupo que no es tuyo o que ya no exista."
+        i18n-text="@@detail.notFound.text"
+      />
+    } @else if (error(); as error) {
+      <app-load-error [error]="error" (retry)="reload()" />
+    } @else {
+      <app-loading-skeleton label="Cargando el intento…" i18n-label="@@detail.loading">
+        <div class="flex flex-col gap-4">
+          <app-skeleton class="h-6 w-80 max-w-full rounded-md" />
+          <div class="grid grid-cols-2 gap-3 @xl:grid-cols-3 @5xl:grid-cols-6">
+            @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+              <app-skeleton class="h-20 rounded-xl" />
+            }
+          </div>
+          <div class="grid gap-4 @4xl:grid-cols-2">
+            <app-skeleton class="h-96 rounded-2xl" />
+            <app-skeleton class="h-96 rounded-2xl" />
+          </div>
+        </div>
+      </app-loading-skeleton>
+    }
+  }
+</div>

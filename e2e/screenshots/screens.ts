@@ -25,4 +25,10 @@ export const SCREENS: readonly Screen[] = [
   { code: '05-ajustes', path: '/alumno/ajustes', user: 'studentHalfway' },
   { code: '05b-datos', path: '/alumno/datos', user: 'studentHalfway' },
   { code: '06-en-vivo', path: '/docente/en-vivo', user: 'teacher' },
+  // An attempt of the seed with failed runs, hints answered by the tutor and the submission
+  {
+    code: '07-detalle',
+    path: '/docente/en-vivo/70000000-0000-4000-8000-000000000011',
+    user: 'teacher',
+  },
 ];

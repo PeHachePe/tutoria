@@ -5,6 +5,7 @@ import { provideFormFieldDefaults } from '../core/form-field-defaults';
 import { provideLocalizedPaginator } from '../core/i18n/localized-paginator-intl';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
+import { AttemptDetailPage } from './attempt-detail/attempt-detail-page';
 import { LivePage } from './live/live-page';
 import { LiveStore } from './live/live-store';
 
@@ -19,7 +20,7 @@ export const teacherRoutes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: SEGMENTS.teacher.live },
       {
         path: SEGMENTS.teacher.live,
-        // Shared by the panel and the attempt detail (4.5)
+        // Shared by the panel and the attempt detail (4.5): the detail hears the block live
         providers: [LiveStore],
         children: [
           {
@@ -30,11 +31,7 @@ export const teacherRoutes: Routes = [
           {
             path: ':attemptId',
             title: $localize`:@@route.attempt.title:Detalle del intento`,
-            component: PlaceholderPage,
-            data: {
-              heading: $localize`:@@route.attempt.heading:Detalle del intento`,
-              step: '4.2',
-            },
+            component: AttemptDetailPage,
           },
         ],
       },

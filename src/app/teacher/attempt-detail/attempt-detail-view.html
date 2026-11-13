@@ -1,0 +1,277 @@
+<header class="flex flex-col gap-2">
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <h1 class="text-headline-medium">{{ view().student.name }}</h1>
+    <app-status-chip
+      [status]="view().attempt.status"
+      [testCount]="figures().lastRun ?? undefined"
+    />
+    @if (figures().live) {
+      <span class="flex items-center gap-1.5 text-label-large text-on-surface-variant">
+        <span class="relative flex size-2.5" aria-hidden="true">
+          <span
+            class="absolute inline-flex size-full rounded-full bg-error opacity-60 animate-ping motion-reduce:animate-none"
+          ></span>
+          <span class="relative inline-flex size-2.5 rounded-full bg-error"></span>
+        </span>
+        <ng-container i18n="@@detail.live">En directo</ng-container>
+      </span>
+    }
+  </div>
+  @let place = context();
+  <p class="flex flex-wrap gap-x-2 text-body-large text-on-surface-variant">
+    <span [attr.lang]="place.exerciseLang" class="font-medium text-on-surface">{{
+      place.exercise
+    }}</span>
+    @if (place.position) {
+      <span aria-hidden="true">·</span>
+      <span i18n="@@detail.position">ejercicio {{ place.position }}</span>
+    }
+    @if (place.block) {
+      <span aria-hidden="true">·</span>
+      <span>{{ place.block }}</span>
+    }
+    @if (view().attempt.number > 1) {
+      <span aria-hidden="true">·</span>
+      <span i18n="@@detail.repeating">Intento {{ view().attempt.number }} · Repitiendo</span>
+    }
+  </p>
+  @if (view().attempts.length > 1) {
+    <nav
+      class="flex flex-wrap items-center gap-2"
+      aria-label="Intentos del alumno en este ejercicio"
+      i18n-aria-label="@@detail.attempts"
+    >
+      <span class="text-label-large text-on-surface-variant" i18n="@@detail.attempts.label"
+        >Intentos:</span
+      >
+      @for (attempt of view().attempts; track attempt.id) {
+        <a
+          class="flex size-9 items-center justify-center rounded-full text-label-large"
+          [class]="
+            attempt.id === view().attempt.id
+              ? 'bg-primary text-on-primary'
+              : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+          "
+          [routerLink]="attemptPath(attempt)"
+          queryParamsHandling="preserve"
+          [attr.aria-current]="attempt.id === view().attempt.id ? 'page' : null"
+          >{{ attempt.number }}</a
+        >
+      }
+    </nav>
+  }
+</header>
+
+@if (queued(); as row) {
+  <div
+    class="flex flex-wrap items-center gap-3 rounded-2xl bg-warning-container px-4 py-3 text-on-warning-container"
+    role="status"
+  >
+    <mat-icon aria-hidden="true">front_hand</mat-icon>
+    <p class="flex-1 text-body-large">
+      <app-live-reason [reason]="row.signal" />
+    </p>
+    <button
+      matButton="outlined"
+      type="button"
+      [attr.aria-label]="attendedLabel(row.student.name)"
+      (click)="attend(row.student.id)"
+      i18n="@@live.queue.attend"
+    >
+      Atendido
+    </button>
+  </div>
+}
+
+@let stats = figures();
+<section aria-labelledby="detail-figures-title">
+  <h2 id="detail-figures-title" class="sr-only" i18n="@@detail.figures">Cifras del intento</h2>
+  <dl class="grid grid-cols-2 gap-3 @xl:grid-cols-3 @5xl:grid-cols-6">
+    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
+      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.time">Tiempo</dt>
+      <dd class="text-title-large" i18n="@@detail.figures.minutes">{{ stats.minutes }} min</dd>
+    </div>
+    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
+      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.runs">
+        Ejecuciones
+      </dt>
+      <dd class="text-title-large">
+        {{ stats.runs }}
+        @if (stats.lastRun; as run) {
+          <span class="text-body-medium text-on-surface-variant" i18n="@@detail.figures.lastRun"
+            >· {{ run.passed }}/{{ run.total }} en la última</span
+          >
+        }
+      </dd>
+    </div>
+    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
+      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.hints">Pistas</dt>
+      <dd class="text-title-large">
+        {{ stats.hints }}
+        @if (stats.hintLevel) {
+          <span class="text-body-medium text-on-surface-variant" i18n="@@detail.figures.level"
+            >· nivel {{ stats.hintLevel }}</span
+          >
+        }
+      </dd>
+    </div>
+    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
+      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.questions">
+        Preguntas al tutor
+      </dt>
+      <dd class="text-title-large">{{ stats.questions }}</dd>
+    </div>
+    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
+      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.pastes">
+        Pegados
+      </dt>
+      <dd class="text-title-large">
+        {{ stats.pastes }}
+        @if (stats.pastes > 0) {
+          <span class="text-body-medium text-on-surface-variant" i18n="@@detail.figures.chars"
+            >· {{ stats.pastedChars }} caracteres</span
+          >
+        }
+      </dd>
+    </div>
+    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
+      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.away">
+        Fuera de la ventana
+      </dt>
+      <dd class="text-title-large">
+        {{ stats.focusLosses }}
+        @if (stats.awayMs > 0) {
+          <span class="text-body-medium text-on-surface-variant"
+            >· {{ duration(stats.awayMs) }}</span
+          >
+        }
+      </dd>
+    </div>
+  </dl>
+</section>
+
+<div
+  class="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-rows-[minmax(0,1fr)]"
+>
+  <section
+    aria-labelledby="detail-timeline-title"
+    class="flex max-h-[36rem] min-h-0 flex-col overflow-hidden rounded-2xl bg-panel xl:max-h-none"
+  >
+    <div
+      class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-4 py-3"
+    >
+      <h2 id="detail-timeline-title" class="text-title-medium" i18n="@@detail.timeline.heading">
+        Línea temporal
+      </h2>
+      <!-- On a phone the filters do not fit: they scroll sideways in their own zone -->
+      <div class="max-w-full overflow-x-auto">
+        <mat-button-toggle-group
+          aria-label="Filtrar la línea temporal"
+          i18n-aria-label="@@detail.filter.label"
+          hideSingleSelectionIndicator
+          [value]="filter()"
+          (change)="selectFilter($event.value)"
+        >
+          @for (option of FILTERS; track option.value) {
+            <mat-button-toggle [value]="option.value"
+              >{{ option.label }}
+              <span
+                class="ms-1 inline-flex min-w-5 items-center justify-center rounded-full bg-surface-container-high px-1.5 align-middle text-label-small text-on-surface-variant tabular-nums"
+                >{{ filterCounts()[option.value] }}</span
+              >
+            </mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+      </div>
+    </div>
+    <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1) -->
+    <div
+      tabindex="0"
+      role="group"
+      aria-labelledby="detail-timeline-title"
+      class="min-h-0 flex-1 overflow-y-auto scroll-shadows px-4 py-2 outline-offset-[-2px] focus-visible:outline-2 focus-visible:outline-primary"
+    >
+      @if (shownEntries().length > 0) {
+        <app-attempt-timeline-list
+          [entries]="shownEntries()"
+          [label]="timelineLabel"
+          [showGaps]="filter() === 'all'"
+          [liveSince]="view().loadedAt"
+        />
+      } @else {
+        <p
+          class="py-6 text-center text-body-large text-on-surface-variant"
+          i18n="@@detail.filter.empty"
+        >
+          Nada de esto en este intento.
+        </p>
+      }
+    </div>
+  </section>
+
+  <section
+    aria-labelledby="detail-code-title"
+    class="flex min-h-80 flex-col gap-3 rounded-2xl bg-panel p-4 xl:min-h-0"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 id="detail-code-title" class="text-title-medium">
+        @if (view().attempt.finalCode !== null) {
+          <ng-container i18n="@@detail.code.submitted">Código entregado</ng-container>
+        } @else {
+          <ng-container i18n="@@detail.code.current">Código actual</ng-container>
+        }
+      </h2>
+      @if (codeChanged()) {
+        <p
+          class="flex flex-wrap items-center gap-2 text-body-medium text-on-surface-variant"
+          role="status"
+        >
+          <span i18n="@@detail.code.changed">El código ha cambiado</span>
+          <button
+            matButton="tonal"
+            type="button"
+            (click)="showLatestCode()"
+            i18n="@@detail.code.latest"
+          >
+            Ver el actual
+          </button>
+        </p>
+      }
+    </div>
+    <!-- CodeMirror comes in a chunk of its own (4.7) -->
+    @defer (on viewport; prefetch on idle) {
+      <!-- A new editor for each code, as it reads its input only when created (D-029): each
+           new code switches branch, which destroys the editor and creates another -->
+      @if (editorGeneration() % 2 === 0) {
+        <ng-container [ngTemplateOutlet]="editor" />
+      } @else {
+        <ng-container [ngTemplateOutlet]="editor" />
+      }
+      <ng-template #editor>
+        <app-code-editor
+          class="min-h-48 flex-1"
+          [initialCode]="shownCode()"
+          [label]="editorLabel"
+          [language]="view().exercise.exercise.language"
+          [readonly]="true"
+        />
+      </ng-template>
+    } @placeholder {
+      <div class="min-h-48 flex-1 rounded-lg border border-outline-variant"></div>
+    } @loading (after 300ms; minimum 500ms) {
+      <app-skeleton class="min-h-48 flex-1 rounded-lg" />
+    } @error {
+      <div
+        role="alert"
+        class="flex min-h-48 flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-outline-variant p-6 text-center"
+      >
+        <p class="text-body-medium" i18n="@@workspace.editorError">
+          No se ha podido cargar el editor. Comprueba la conexión y recarga la página.
+        </p>
+        <button matButton="tonal" type="button" (click)="reloadPage()" i18n="@@workspace.reload">
+          Recargar
+        </button>
+      </div>
+    }
+  </section>
+</div>
