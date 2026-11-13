@@ -1,7 +1,7 @@
 import type { Attempt, StoredAttemptStatus } from '../data/attempt';
 import type { StuckThresholds } from '../data/exercise';
 import type { ProcessEvent } from '../data/process-event';
-import { isStuck } from './is-stuck';
+import { failureStreak, isStuck, lastActivityAt, stuckReason } from './is-stuck';
 
 const NOW = Date.parse('2026-11-07T10:00:00.000Z');
 const MINUTE = 60_000;
@@ -157,5 +157,39 @@ describe('isStuck', () => {
 
       expect(isStuck(attempt(status, ago(10)), events, THRESHOLDS, NOW)).toBe(false);
     });
+  });
+});
+
+describe('stuckReason', () => {
+  it('says the repeated failures come first when both thresholds are reached', () => {
+    const events = [run(13, ['t1']), run(12, ['t1']), run(11, ['t1'])];
+
+    expect(stuckReason(attempt('tests_failed', ago(11)), events, THRESHOLDS, NOW)).toBe('failures');
+  });
+
+  it('says the student is idle when only the idle threshold is reached', () => {
+    expect(stuckReason(attempt('in_progress', ago(5)), [], THRESHOLDS, NOW)).toBe('idle');
+  });
+
+  it('is null when the student is not stuck', () => {
+    expect(stuckReason(attempt('in_progress', ago(1)), [], THRESHOLDS, NOW)).toBeNull();
+  });
+});
+
+describe('lastActivityAt', () => {
+  it('is the latest change of the attempt or activity event, in milliseconds', () => {
+    const events = [event('paste', 2), event('focus_lost', 1)];
+
+    expect(lastActivityAt(attempt('in_progress', ago(5)), events)).toBe(NOW - 2 * MINUTE);
+  });
+});
+
+describe('failureStreak', () => {
+  it('counts the latest runs in a row in which one same test failed', () => {
+    expect(failureStreak([run(3, ['t2']), run(2, ['t1', 't2']), run(1, ['t2'])])).toBe(3);
+  });
+
+  it('is 0 without runs', () => {
+    expect(failureStreak([])).toBe(0);
   });
 });

@@ -13,6 +13,9 @@ const ACTIVITY_EVENTS: ReadonlySet<ProcessEventType> = new Set([
   'focus_gained',
 ]);
 
+/** Why a student seems stuck: the same test keeps failing, or nothing happens. */
+export type StuckReason = 'failures' | 'idle';
+
 /**
  * Whether a student seems stuck on an attempt (2.7). It is a reading of the events, not a stored status.
  * Shared by the teacher's live panel and the proactive tutor.
@@ -30,17 +33,29 @@ export function isStuck(
   thresholds: StuckThresholds,
   now: number,
 ): boolean {
+  return stuckReason(attempt, events, thresholds, now) !== null;
+}
+
+/** Why `isStuck()` says so, or null if it does not; the failures come first, as the more precise. */
+export function stuckReason(
+  attempt: Pick<Attempt, 'status' | 'updatedAt'>,
+  events: readonly ProcessEvent[],
+  thresholds: StuckThresholds,
+  now: number,
+): StuckReason | null {
   if (attempt.status !== 'in_progress' && attempt.status !== 'tests_failed') {
-    return false;
+    return null;
   }
-  return (
-    failureStreak(events) >= thresholds.maxRepeatedFailures ||
-    now - lastActivity(attempt, events) >= thresholds.maxIdleMinutes * MINUTE_MS
-  );
+  if (failureStreak(events) >= thresholds.maxRepeatedFailures) {
+    return 'failures';
+  }
+  return now - lastActivityAt(attempt, events) >= thresholds.maxIdleMinutes * MINUTE_MS
+    ? 'idle'
+    : null;
 }
 
 /** Longest run of latest consecutive runs in which one same test failed. */
-function failureStreak(events: readonly ProcessEvent[]): number {
+export function failureStreak(events: readonly ProcessEvent[]): number {
   const runs = events
     .flatMap((event) => (event.type === 'run' ? [event] : []))
     .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
@@ -58,8 +73,8 @@ function trailingFailures(runs: readonly (readonly string[])[], testId: string):
   return count;
 }
 
-/** Time of the latest activity, in milliseconds. */
-function lastActivity(
+/** Time of the latest activity on an attempt, in milliseconds. */
+export function lastActivityAt(
   attempt: Pick<Attempt, 'updatedAt'>,
   events: readonly ProcessEvent[],
 ): number {

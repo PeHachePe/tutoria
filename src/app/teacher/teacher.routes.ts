@@ -5,6 +5,8 @@ import { provideFormFieldDefaults } from '../core/form-field-defaults';
 import { provideLocalizedPaginator } from '../core/i18n/localized-paginator-intl';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
+import { LivePage } from './live/live-page';
+import { LiveStore } from './live/live-store';
 
 /** Teacher area (2.2), also open to the admin. Loaded lazily by app.routes.ts. */
 export const teacherRoutes: Routes = [
@@ -17,15 +19,24 @@ export const teacherRoutes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: SEGMENTS.teacher.live },
       {
         path: SEGMENTS.teacher.live,
-        title: $localize`:@@route.live.title:Sesión en vivo`,
-        component: PlaceholderPage,
-        data: { heading: $localize`:@@route.live.heading:Sesión en vivo`, step: '4.1' },
-      },
-      {
-        path: `${SEGMENTS.teacher.live}/:attemptId`,
-        title: $localize`:@@route.attempt.title:Detalle del intento`,
-        component: PlaceholderPage,
-        data: { heading: $localize`:@@route.attempt.heading:Detalle del intento`, step: '4.2' },
+        // Shared by the panel and the attempt detail (4.5)
+        providers: [LiveStore],
+        children: [
+          {
+            path: '',
+            title: $localize`:@@route.live.title:Sesión en vivo`,
+            component: LivePage,
+          },
+          {
+            path: ':attemptId',
+            title: $localize`:@@route.attempt.title:Detalle del intento`,
+            component: PlaceholderPage,
+            data: {
+              heading: $localize`:@@route.attempt.heading:Detalle del intento`,
+              step: '4.2',
+            },
+          },
+        ],
       },
       {
         path: SEGMENTS.teacher.history,

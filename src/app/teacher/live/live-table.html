@@ -1,0 +1,274 @@
+<ng-template #studentName let-item>
+  @if (item.row.attempt; as attempt) {
+    <a
+      class="font-medium text-primary underline-offset-2 hover:underline"
+      [routerLink]="attemptPath(attempt.id)"
+      queryParamsHandling="preserve"
+      >{{ item.row.student.name }}</a
+    >
+  } @else {
+    <span class="font-medium">{{ item.row.student.name }}</span>
+  }
+</ng-template>
+
+<ng-template #age let-item>
+  @let rowAge = item.age;
+  @switch (rowAge.kind) {
+    @case ('now') {
+      <span i18n="@@live.age.now">Ahora mismo</span>
+    }
+    @case ('minutes') {
+      <span i18n="@@live.age.minutes"
+        >Hace {{ rowAge.kind === 'minutes' ? rowAge.minutes : 0 }} min</span
+      >
+    }
+    @case ('date') {
+      <span>{{ rowAge.kind === 'date' ? (rowAge.at | date: 'd MMM, HH:mm') : '' }}</span>
+    }
+    @default {
+      <span class="text-on-surface-variant">—</span>
+    }
+  }
+</ng-template>
+
+<!-- Desktop: a sortable table -->
+<div class="hidden overflow-x-auto rounded-2xl bg-panel @5xl:block">
+  <table
+    mat-table
+    matSort
+    class="w-full"
+    [dataSource]="sorted()"
+    [trackBy]="trackRow"
+    (matSortChange)="sortBy($event)"
+  >
+    <caption class="sr-only">
+      {{
+        caption()
+      }}
+    </caption>
+
+    <ng-container matColumnDef="student">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.student">Alumno</th>
+      <td mat-cell *matCellDef="let item" class="min-w-36">
+        <ng-container
+          [ngTemplateOutlet]="studentName"
+          [ngTemplateOutletContext]="{ $implicit: item }"
+        />
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="exercise">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.exercise">
+        Ejercicio
+      </th>
+      <td mat-cell *matCellDef="let item" class="min-w-36">
+        @if (item.exercise; as exercise) {
+          <span [attr.lang]="exercise.lang">{{ exercise.title }}</span>
+          @if (item.row.repeating) {
+            <span
+              class="ms-1 rounded-full bg-success-container px-2 text-label-small text-on-success-container"
+              i18n="@@live.repeating"
+              >Repitiendo</span
+            >
+          }
+        } @else {
+          <span class="text-on-surface-variant">—</span>
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.status">Estado</th>
+      <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
+        <app-status-chip [status]="item.row.status" />
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="minutes">
+      <th
+        mat-header-cell
+        class="hidden @6xl:table-cell"
+        *matHeaderCellDef
+        mat-sort-header
+        i18n="@@live.column.minutes"
+      >
+        Tiempo
+      </th>
+      <td mat-cell *matCellDef="let item" class="hidden @6xl:table-cell">
+        @if (item.row.minutes !== null) {
+          <span i18n="@@live.minutes">{{ item.row.minutes }} min</span>
+        } @else {
+          <span class="text-on-surface-variant">—</span>
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="hints">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.hints">Pistas</th>
+      <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
+        {{ item.row.hints }}
+        @if (item.row.hintLevel) {
+          <span class="text-on-surface-variant" i18n="@@live.hintLevel"
+            >(nivel {{ item.row.hintLevel }})</span
+          >
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="pastes">
+      <th
+        mat-header-cell
+        class="hidden @6xl:table-cell"
+        *matHeaderCellDef
+        mat-sort-header
+        i18n="@@live.column.pastes"
+      >
+        Pegados
+      </th>
+      <td mat-cell *matCellDef="let item" class="hidden @6xl:table-cell">{{ item.row.pastes }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="focusLosses">
+      <th mat-header-cell class="hidden @6xl:table-cell" *matHeaderCellDef mat-sort-header>
+        <span i18n="@@live.column.focusLossesShort">Salidas</span
+        ><span class="sr-only" i18n="@@live.column.focusLossesHidden"> de la ventana</span>
+      </th>
+      <td mat-cell *matCellDef="let item" class="hidden @6xl:table-cell">
+        {{ item.row.focusLosses }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="tests">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.tests">Pruebas</th>
+      <td mat-cell *matCellDef="let item">
+        @if (item.row.tests; as tests) {
+          {{ tests.passed }}/{{ tests.total }}
+        } @else {
+          <span class="text-on-surface-variant">—</span>
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="lastActivity">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        mat-sort-header
+        start="desc"
+        class="whitespace-nowrap"
+        i18n="@@live.column.lastActivity"
+      >
+        Última actividad
+      </th>
+      <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
+        <ng-container [ngTemplateOutlet]="age" [ngTemplateOutletContext]="{ $implicit: item }" />
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="signals">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.signals">
+        Observaciones
+      </th>
+      <td mat-cell *matCellDef="let item">
+        <span class="flex flex-wrap gap-1">
+          @for (reason of item.reasons; track reason.kind) {
+            <app-live-chip [reason]="reason" />
+          }
+        </span>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="columns"></tr>
+    <tr
+      mat-row
+      *matRowDef="let item; columns: columns"
+      [appFlashOnChange]="item.row.lastActivity"
+      [class.text-on-surface-variant]="!item.row.active"
+    ></tr>
+  </table>
+</div>
+
+<!-- Phone and tablet: a card per student -->
+<ul class="grid gap-3 @xl:grid-cols-2 @5xl:hidden">
+  @for (item of sorted(); track item.row.student.id) {
+    <li
+      class="flex flex-col gap-2 rounded-2xl bg-panel p-4"
+      [appFlashOnChange]="item.row.lastActivity"
+      [class.text-on-surface-variant]="!item.row.active"
+    >
+      <div class="flex items-start justify-between gap-2">
+        <span>
+          <ng-container
+            [ngTemplateOutlet]="studentName"
+            [ngTemplateOutletContext]="{ $implicit: item }"
+          />
+        </span>
+        <app-status-chip [status]="item.row.status" />
+      </div>
+      @if (item.exercise; as exercise) {
+        <span class="text-body-medium">
+          <span [attr.lang]="exercise.lang">{{ exercise.title }}</span>
+          @if (item.row.repeating) {
+            <span
+              class="ms-1 rounded-full bg-success-container px-2 text-label-small text-on-success-container"
+              i18n="@@live.repeating"
+              >Repitiendo</span
+            >
+          }
+        </span>
+      }
+      <dl class="grid grid-cols-3 gap-2 text-body-small">
+        <div>
+          <dt class="text-on-surface-variant" i18n="@@live.column.minutes">Tiempo</dt>
+          <dd>
+            @if (item.row.minutes !== null) {
+              <span i18n="@@live.minutes">{{ item.row.minutes }} min</span>
+            } @else {
+              —
+            }
+          </dd>
+        </div>
+        <div>
+          <dt class="text-on-surface-variant" i18n="@@live.column.hints">Pistas</dt>
+          <dd>{{ item.row.hints }}</dd>
+        </div>
+        <div>
+          <dt class="text-on-surface-variant" i18n="@@live.column.tests">Pruebas</dt>
+          <dd>
+            @if (item.row.tests; as tests) {
+              {{ tests.passed }}/{{ tests.total }}
+            } @else {
+              —
+            }
+          </dd>
+        </div>
+        <div>
+          <dt class="text-on-surface-variant" i18n="@@live.column.pastes">Pegados</dt>
+          <dd>{{ item.row.pastes }}</dd>
+        </div>
+        <div>
+          <dt class="text-on-surface-variant" i18n="@@live.column.focusLossesShort">Salidas</dt>
+          <dd>{{ item.row.focusLosses }}</dd>
+        </div>
+        <div>
+          <dt class="text-on-surface-variant" i18n="@@live.column.lastActivity">
+            Última actividad
+          </dt>
+          <dd>
+            <ng-container
+              [ngTemplateOutlet]="age"
+              [ngTemplateOutletContext]="{ $implicit: item }"
+            />
+          </dd>
+        </div>
+      </dl>
+      @if (item.reasons.length > 0) {
+        <span class="flex flex-wrap gap-1">
+          @for (reason of item.reasons; track reason.kind) {
+            <app-live-chip [reason]="reason" />
+          }
+        </span>
+      }
+    </li>
+  }
+</ul>

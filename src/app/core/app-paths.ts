@@ -53,3 +53,11 @@ export const STUDENT_PARAMS = {
   /** The attempt of the workspace, by its number; without it, the latest. */
   attempt: 'intento',
 } as const;
+
+/** Query parameters of the teacher's screens (D-046), part of the URLs like the segments. */
+export const TEACHER_PARAMS = {
+  /** The group followed live: its id. */
+  group: 'grupo',
+  /** The block of that group: its id. */
+  block: 'bloque',
+} as const;

@@ -1,0 +1,121 @@
+<div class="flex flex-col gap-6" [attr.aria-busy]="store.isLoading()">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-headline-medium" i18n="@@live.heading">Sesión en vivo</h1>
+      <p class="flex flex-wrap items-center gap-x-2 text-body-large text-on-surface-variant">
+        <span class="relative flex size-3" aria-hidden="true">
+          <span
+            class="absolute inline-flex size-full rounded-full bg-error opacity-60 animate-ping motion-reduce:animate-none"
+          ></span>
+          <span class="relative inline-flex size-3 rounded-full bg-error"></span>
+        </span>
+        <span class="whitespace-nowrap" i18n="@@live.onAir">En directo</span>
+        @if (store.selection()) {
+          <span aria-hidden="true">·</span>
+          <!-- Polite and only when the figures change, not with every event -->
+          <span aria-live="polite">
+            <span i18n="@@live.inSession">{store.summary().inSession, plural,
+              =1 {1 en la sesión}
+              other {{{ store.summary().inSession }} en la sesión}
+            }</span>
+            @if (store.summary().finished > 0) {
+              <span aria-hidden="true"> · </span>
+              <span i18n="@@live.finished">{store.summary().finished, plural,
+                =1 {1 con el bloque entregado}
+                other {{{ store.summary().finished }} con el bloque entregado}
+              }</span>
+            }
+          </span>
+        }
+      </p>
+    </div>
+
+    @if (groupOptions().length > 0) {
+      <div class="flex flex-wrap gap-3">
+        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-96">
+          <mat-label i18n="@@live.group">Grupo</mat-label>
+          <mat-select
+            [value]="store.selection()?.group?.id"
+            (selectionChange)="selectGroup($event.value)"
+          >
+            @for (option of groupOptions(); track option.id) {
+              <mat-option [value]="option.id">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-72">
+          <mat-label i18n="@@live.block">Bloque</mat-label>
+          <mat-select
+            [value]="store.selection()?.blockId"
+            (selectionChange)="selectBlock($event.value)"
+            [disabled]="blockOptions().length === 0"
+          >
+            @for (option of blockOptions(); track option.id) {
+              <!-- The space between the title and «(oculto)», also for its accessible name -->
+              <mat-option [value]="option.id" ngPreserveWhitespaces
+                ><span [attr.lang]="option.lang">{{ option.title }}</span>
+                @if (option.hidden) {
+                  <span class="text-on-surface-variant" i18n="@@live.block.hidden">(oculto)</span>
+                }
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    }
+  </header>
+
+  @if (store.error(); as error) {
+    <app-load-error [error]="error" (retry)="store.reload()" />
+  } @else if (store.hasNoGroups()) {
+    <app-empty-state
+      heading="Todavía no tienes grupos"
+      i18n-heading="@@live.empty.groups.heading"
+      text="Cuando administración te asigne un grupo, podrás seguir aquí su trabajo en directo."
+      i18n-text="@@live.empty.groups.text"
+    />
+  } @else if (store.isLoading() && store.rows().length === 0) {
+    <app-loading-skeleton label="Cargando la sesión…" i18n-label="@@live.loading">
+      <div class="flex flex-col gap-4">
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <app-skeleton class="h-56 rounded-2xl" />
+          <app-skeleton class="h-56 rounded-2xl" />
+        </div>
+        <app-skeleton class="h-96 w-full rounded-2xl" />
+      </div>
+    </app-loading-skeleton>
+  } @else if (!store.selection()) {
+    <app-empty-state
+      heading="Este grupo aún no tiene bloques"
+      i18n-heading="@@live.empty.blocks.heading"
+      text="Crea un bloque y asígnale ejercicios para seguir aquí su trabajo."
+      i18n-text="@@live.empty.blocks.text"
+    />
+  } @else if (store.exercises().length === 0) {
+    <app-empty-state
+      heading="Este bloque no tiene ejercicios"
+      i18n-heading="@@live.empty.exercises.heading"
+      text="Asigna ejercicios al bloque para seguir aquí cómo los resuelve el grupo."
+      i18n-text="@@live.empty.exercises.text"
+    />
+  } @else {
+    <div class="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <app-live-queue [rows]="store.queue()" [now]="store.now()" (attend)="store.attend($event)" />
+      <app-live-class [overview]="store.overview()" />
+    </div>
+
+    <section aria-labelledby="live-students-title" class="flex flex-col gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="live-students-title" class="text-title-large" i18n="@@live.students.heading">
+          Alumnado
+        </h2>
+        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-72">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label i18n="@@live.search">Buscar alumno</mat-label>
+          <input matInput type="search" [value]="search()" (input)="onSearch($event)" />
+        </mat-form-field>
+      </div>
+      <app-live-table [rows]="tableRows()" [caption]="caption()" [now]="store.now()" />
+    </section>
+  }
+</div>
