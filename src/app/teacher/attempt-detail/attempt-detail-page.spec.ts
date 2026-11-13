@@ -1,10 +1,12 @@
-import { provideRouter, Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
+import { provideRouter, Router, TitleStrategy } from '@angular/router';
 import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { EditorView } from '@codemirror/view';
 import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { TEACHER_PARAMS } from '../../core/app-paths';
+import { AppTitleStrategy } from '../../core/app-title-strategy';
 import { PageReloader } from '../../core/page-reloader';
 import { DataError } from '../../data/data-error';
 import { LiveService } from '../../data/live-service';
@@ -66,7 +68,9 @@ describe('AttemptDetailPage', () => {
       // The editor is deferred, and jsdom has no viewport: each test renders it when it needs it
       deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
-        provideRouter([]),
+        // A route with the generic title, as the real one: correcting the URL must not bring it back
+        provideRouter([{ path: '**', title: 'Detalle del intento', children: [] }]),
+        { provide: TitleStrategy, useExisting: AppTitleStrategy },
         LiveStore,
         { provide: LiveService, useValue: service },
         { provide: PageReloader, useValue: { reload } },
@@ -106,6 +110,25 @@ describe('AttemptDetailPage', () => {
       expect.stringContaining('Salió de la ventana · 2 min'),
     ]);
     expect(text(timeline)).toContain('Mira el caso de la lista vacía.');
+    expect(TestBed.inject(Title).getTitle()).toBe(
+      `Ana · ${BLOCK_EXERCISES[0].exercise.title} · TutorIA`,
+    );
+  });
+
+  it('names the tab after the attempt the teacher ends up on, not one left while loading', async () => {
+    let answerFirst: (detail: ReturnType<typeof testDetail>) => void = () => undefined;
+    service.details = (attemptId) =>
+      attemptId === 'a1'
+        ? new Promise((resolve) => (answerFirst = resolve))
+        : Promise.resolve(testDetail({ student: { id: 'bea', name: 'Bea' } }));
+    const { fixture } = await renderPage('/', 'a1', false);
+
+    fixture.componentRef.setInput('attemptId', 'a2');
+    await fixture.whenStable();
+    answerFirst(testDetail());
+    await fixture.whenStable();
+
+    expect(TestBed.inject(Title).getTitle()).toMatch(/^Bea · /);
   });
 
   it('puts the group and the block of the attempt in the URL, and goes back to them', async () => {

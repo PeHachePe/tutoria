@@ -4,8 +4,11 @@ import { MatIcon } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
+import { AppTitleStrategy } from '../../core/app-title-strategy';
+import { LanguageService } from '../../core/i18n/language-service';
 import { DataError } from '../../data/data-error';
 import { type LiveAttemptDetail, LiveService } from '../../data/live-service';
+import { exerciseText } from '../../data/localized-text';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
@@ -39,6 +42,8 @@ export class AttemptDetailPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(LiveStore);
+  private readonly titles = inject(AppTitleStrategy);
+  private readonly locale = inject(LanguageService).locale;
 
   /** From the route, by `withComponentInputBinding()`. */
   readonly attemptId = input.required<string>();
@@ -47,9 +52,16 @@ export class AttemptDetailPage {
 
   private readonly detail = resource({
     params: () => this.attemptId(),
-    loader: async ({ params }) => {
+    loader: async ({ params, abortSignal }) => {
       const detail = await this.live.attemptDetail(params);
-      this.followBlock(detail);
+      await this.followBlock(detail);
+      // The tab says whose attempt it is, not just «Detalle del intento» (WCAG 2.4.2): a teacher
+      // may open several. After correcting the URL, whose navigation sets the title of the route
+      // again, and not if the teacher already left for another attempt.
+      if (!abortSignal.aborted) {
+        const exercise = exerciseText(detail.exercise.exercise, this.locale).title;
+        this.titles.setScreenTitle(`${detail.student.name} · ${exercise}`);
+      }
       return { ...detail, loadedAt: Date.now() };
     },
   });
@@ -98,7 +110,7 @@ export class AttemptDetailPage {
    * The URL takes the group and the block of the attempt, without a new entry in the history: the
    * store then watches them, and «Volver a la sesión» returns there.
    */
-  private followBlock({ groupId, blockId }: LiveAttemptDetail): void {
+  private async followBlock({ groupId, blockId }: LiveAttemptDetail): Promise<void> {
     const query = this.route.snapshot.queryParamMap;
     if (
       query.get(TEACHER_PARAMS.group) === groupId &&
@@ -106,7 +118,7 @@ export class AttemptDetailPage {
     ) {
       return;
     }
-    void this.router.navigate([], {
+    await this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { [TEACHER_PARAMS.group]: groupId, [TEACHER_PARAMS.block]: blockId },
       queryParamsHandling: 'merge',
