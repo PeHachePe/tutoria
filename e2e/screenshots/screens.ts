@@ -24,4 +24,5 @@ export const SCREENS: readonly Screen[] = [
   },
   { code: '05-ajustes', path: '/alumno/ajustes', user: 'studentHalfway' },
   { code: '05b-datos', path: '/alumno/datos', user: 'studentHalfway' },
+  { code: '06-en-vivo', path: '/docente/en-vivo', user: 'teacher' },
 ];

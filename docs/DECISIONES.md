@@ -1533,3 +1533,41 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - El plan gratuito de Supabase pausa el proyecto tras una semana sin uso: se restaura desde el panel.
 
 **Aprobación:** el autor fijó los planes gratuitos y el muestrario solo para la administración; el resto, por delegación del autor («si lo ves bien»).
+
+## D-054 · La sesión en vivo: a quién atender y qué explicar a todos, descrito sin clasificar (13/11/2026)
+
+**Contexto:** el paso 4.1 hace la pantalla que el docente mira en plena clase. El plan pedía tres tarjetas («Necesitan ayuda», «Constancia», «Para revisar») y una tabla. Al probarlas, el autor no las vio útiles: repetían la tabla, obligaban a leer listas largas y no decían qué hacer. También pidió no clasificar a nadie («quién se esfuerza más» o «quién copia») y que la pantalla funcione con datos simulados y reales a la vez.
+
+**Decisión:**
+
+- **La pantalla responde a las dos decisiones del docente en clase,** como en los paneles de aula de la investigación (Lumilo, de Holstein, McLaren y Aleven, 2018–2019, que guiaba al docente hacia quién atender):
+  - **«A quién atender»:** una cola de quien necesita al docente donde el tutor no llega. Los motivos tienen en cuenta lo que ya hizo el tutor: pistas agotadas (tuvo la de nivel 3 y sigue fallando), fallos seguidos de la misma prueba (diciendo si pidió pistas, porque evitar la ayuda es otro problema), pistas en ráfaga sin probarlas (`HINT_RUSH_COUNT = 3`), inactividad y salida de la ventana.
+  - **Orden de la cola:** primero lo que es del código, después la inactividad y por último quien está fuera, que quizá ni está delante de la pantalla; dentro de cada grupo, quien lleva más rato esperando, como manos levantadas. Ordenar solo por tiempo dejaba a un alumno recién atascado detrás de quince que llevaban media hora quietos.
+  - **«Atendido»** quita al alumno de la cola hasta que aparece un motivo posterior (cada señal lleva su `since`). Vive en memoria: es una ayuda de la sesión, no un dato del alumno.
+  - **«La clase en el bloque»:** una barra apilada por ejercicio y la prueba que más falla ahora en la última ejecución de cada alumno, con «Para explicar a todos» desde 3 alumnos (`COMMON_FAILURE_STUDENTS`).
+  - **Debajo, la tabla de todo el alumnado** con buscador; las observaciones (pegados, ráfagas de entregas, constancia) son chips de la fila, no tarjetas.
+- **Describir, no clasificar:** cada texto da el dato («Entregó tras pegar 400 caracteres, sin ejecutar las pruebas»), nunca el juicio («copia»). Sin rankings ni etiquetas sobre la persona; los patrones son indicios para que el docente abra el intento y decida (§2.8).
+- **Ventana de sesión de 60 minutos** (`LIVE_WINDOW_MINUTES`): lo anterior es historia y no da señales. Sin ella, el seed (con fechas pasadas) llenaba la pantalla de «atascados» de hace semanas.
+- **Fuera de la ventana** (`awaySince()`): una salida sin vuelta. Cualquier evento posterior cuenta como vuelta: una pestaña cerrada y abierta más tarde no registra la vuelta y el alumno se quedaba «fuera» para siempre.
+- **Datos simulados y reales a la vez:** `LiveService` con `listGroups()`, `snapshot()` y `watch()`. La versión simulada escucha los cambios de `MockDb` (también los de otra pestaña, con el evento `storage`); la de Supabase, Realtime de `attempt` y `process_event` (migración que los añade a `supabase_realtime`), filtrado por la RLS.
+- **El `watch` empieza dentro del loader del `resource()`** y guarda lo que llega mientras carga la foto, para aplicarlo después; cada carga tiene su número, y un cambio de una selección anterior se ignora.
+- **Container queries** para decidir entre tabla y tarjetas: el menú lateral ocupa sitio y el ancho de la ventana no decía cuánto tenía la tabla.
+- **Simulador en la barra de desarrollo** (`ClassSimulator`): escribe en `MockDb` como lo haría el servidor, así que la pantalla recibe los cambios igual que con Realtime.
+
+**Alternativas:**
+
+- **Las tres tarjetas del plan, filtros sobre la tabla o un mapa de alumnos por ejercicios:** el autor los descartó por redundantes o poco útiles en clase.
+- **Varias vistas con un botón para cambiar:** la cola y la clase arriba y la tabla debajo caben en una pantalla; otra vista añadiría un clic sin dar nada nuevo.
+- **Guardar «Atendido» en la base de datos:** sobrevive a recargar y lo ve otro dispositivo, pero añade tabla y RLS para una ayuda de la sesión; queda en pendientes.
+- **Guardar los eventos que llegan antes que su intento:** el cliente crea el intento antes de registrar eventos y Realtime los entrega en ese orden; se da por supuesto en lugar de añadir un búfer.
+
+**Consecuencias:**
+
+- `is-stuck.ts` exporta `stuckReason()`, `failureStreak()` y `lastActivityAt()`; nuevos `awaySince()` y `lastBreakthrough()` en `shared/`.
+- `MockDb.onChange()` notifica cada cambio de tablas.
+- El 4.1 absorbe el progreso por ejercicio y las pruebas que más fallan del 4.1b, que se queda con la actividad en directo (≈2 h).
+- El Realtime no se filtra por grupo en el canal: llega todo lo que la RLS deja ver y el cliente se queda con lo del grupo. Basta para una clase; con muchos grupos, filtrar por asignaciones (en pendientes).
+- La regla de i18n del lint ignora atributos de configuración de Material y del router (`matColumnDef`, `queryParamsHandling`, `start`, `subscriptSizing`), como ya hacía con `appearance` o `align`.
+- La migración de Realtime se aplica en la nube con `supabase db push --remote`.
+
+**Aprobación:** el autor eligió la cola, la clase por ejercicio y la tabla con buscador, «Repitiendo» para las prácticas y las señales descriptivas sin rankings; el resto, por delegación del autor.

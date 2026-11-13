@@ -1,6 +1,6 @@
 # Guía de desarrollo de TutorIA con asistencia de IA
 
-### Plan v4.4 · noviembre de 2026 · Angular 22.2 · desarrollo local primero, pantalla a pantalla
+### Plan v4.5 · noviembre de 2026 · Angular 22.2 · desarrollo local primero, pantalla a pantalla
 
 Este documento es el plan de construcción de TutorIA. Está pensado para ejecutarse con un agente de codificación (Claude Code) bajo supervisión humana y es autocontenido: incluye la especificación funcional, las decisiones técnicas con su justificación, la forma de trabajar con el agente y los pasos con sus criterios de verificación. En el repositorio vive como `docs/PLAN.md`, y es la única fuente de verdad: no hay una copia aparte de la especificación que pueda desincronizarse.
 
@@ -65,6 +65,17 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - La PEC4 queda para el feedback del consultor, lo opcional (6.3 y 7.3), la versión 1.0 (7.4), la memoria final, el vídeo de defensa, la presentación y el autoinforme.
 - Un solo guion de demo para el vídeo de la PEC3 y los 5 minutos de demostración en directo de la PEC4.
 
+**Cambios de la v4.5** (el panel docente, al empezar el paso 4.1; ver D-054):
+
+- La sesión en vivo se hace con datos simulados y reales a la vez, Realtime incluido (4.1); el 4.5 se queda con la estadística del histórico y la gestión real de ejercicios.
+- Ventana de sesión: en vivo solo cuenta lo que se movió en la última hora; lo anterior sale en gris y sin señales.
+- La pantalla responde a las dos decisiones del docente en clase («el sistema describe, el docente interpreta»): **a quién atender ahora** (una cola con el motivo, que tiene en cuenta lo que ya hizo el tutor, y «Atendido») y **si explicar algo a todos** (la clase ejercicio a ejercicio, con la prueba que más falla). Debajo, la tabla de todo el alumnado con buscador; las observaciones (pegados, ráfagas, constancia) son chips de la fila. Nada de rankings automáticos ni etiquetas sobre la persona.
+- La señal «Fuera» (pendiente de la 1.6): una pérdida de foco sin vuelta se lee como fuera, no como atascado.
+- Un intento de práctica sale en vivo como «Repitiendo».
+- Un paso nuevo, 4.1b, con la actividad en directo del bloque (el progreso por ejercicio y las pruebas que más fallan pasan al 4.1).
+- Fecha de entrega opcional en la asignación (4.3) y, en el histórico (4.4), el ritmo de cada alumno respecto al plazo.
+- Las figuras del panel docente en la memoria son la 9 (boceto) y la 18 (prototipo).
+
 ---
 
 ## 1. Calendario y alcance
@@ -120,7 +131,7 @@ Detalle por pantalla:
 
 - **Catálogo:** con más de un grupo, una pestaña por grupo con el nombre de su asignatura, en la URL (`?grupo=`); ejercicios agrupados por bloque (por su título) con título, contenidos, dificultad, chip de estado, pistas pedidas con su nivel, «Repetido N veces» y botón (Empezar, Continuar o Repasar); progreso «n/N superados» del grupo de la pestaña y por bloque, donde N es el número de ejercicios asignados y «superados» cuenta los superados y los entregados (D-027), con cuántos están listos para entregar; la tarjeta «Continúa donde lo dejaste», que mira todos los grupos, y, con todo entregado, la enhorabuena con la mascota (D-034, D-046).
 - **Pantalla de trabajo:** la asignatura (enlace a su pestaña) y el bloque; enunciado y pruebas visibles; editor; botón para ejecutar las pruebas con resultados ✔ (superada), ✘ (fallida) o ● (error o tiempo agotado); botón Entregar y, una vez entregado, «Practicar de nuevo» y «Siguiente ejercicio» (el siguiente del bloque sin entregar); con varios intentos, un selector «Intento 2 de 3» (`?intento=`) y un aviso mientras se practica; panel del tutor tipo chat con nivel de pista visible y botón «Pedir pista»; reacciones flotantes (D-046).
-- **Sesión en vivo:** de un grupo y un bloque; tabla por alumno con estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas y la señal derivada «atascado»; detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
+- **Sesión en vivo:** de un grupo y un bloque; cola «A quién atender» con el motivo y «Atendido»; «La clase en el bloque», con una barra por ejercicio y la prueba que más falla; tabla por alumno con su intento actual del bloque (ejercicio, estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas, las señales derivadas «atascado» y «fuera», y los patrones como chips), ordenable por cualquier indicador y con buscador; solo cuenta la actividad de la última hora (D-054); actividad en directo (4.1b); detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
 - **Histórico:** gráfica de la media de pistas solicitadas por bloque (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales. Cuenta el intento que cuenta de cada asignación (el primero entregado); las prácticas no cambian los datos de la clase (D-046).
 - **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a un bloque de un grupo; ocultar o mostrar bloques y asignaciones. Un ejercicio con intentos no se borra, para conservar su historial.
 - **Datos registrados (RF-07):** qué registra la aplicación (tiempos, ejecuciones, pistas, pegados y salidas a otra ventana o pestaña, con su duración), qué no registra nunca (el audio), con qué finalidad (formativa, no sancionadora), quién lo ve (su docente) y qué servicios externos intervienen (reconocimiento de voz del navegador, proveedor de IA). La primera vez que el alumno entra, un aviso le resume esto con un enlace a la pantalla, antes de empezar a trabajar, como pide el RGPD citado en la memoria.
@@ -137,7 +148,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - **`exercise_subject`** (exercise_id → exercise, subject_id → subject; clave por pareja): las asignaturas para las que sirve cada ejercicio del banco, para filtrarlo (4.3).
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
 - **`class_block`** (id, group_id → class_group, position, title, source_locale, translations, is_hidden; única por grupo y posición, D-034, D-046): los bloques de ejercicios de cada grupo, con el título libre que les da el docente («Tema 1: Bucles», «Recuperación del tema 2»), traducible. La posición solo ordena y no se muestra. Un bloque oculto no lo ve el alumno, ni sus ejercicios.
-- `exercise_assignment` (id, group_id → class_group, **block_id**, exercise_id → exercise, **is_hidden**; única por bloque y ejercicio; `(group_id, block_id)` → `class_block (group_id, id)`): un ejercicio puede estar en varios bloques del mismo grupo. Oculta, el alumno no la ve.
+- `exercise_assignment` (id, group_id → class_group, **block_id**, exercise_id → exercise, **is_hidden**, **due_at** (fecha de entrega opcional, paso 4.3, D-054); única por bloque y ejercicio; `(group_id, block_id)` → `class_block (group_id, id)`): un ejercicio puede estar en varios bloques del mismo grupo. Oculta, el alumno no la ve.
 - `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), **number** (1 cuenta para la clase; los siguientes son práctica), current_code, final_code, status, started_at, finished_at, **updated_at**; única por alumno, asignación y número, D-046)
 - `tutor_interaction` (id, attempt_id → attempt, **request_id** (única: la petición que respondió, D-043), trigger `question`/`hint`/`proactive`, hint_level 1–3, **student_message**, transcript, emotion, intensity, **elusion**, **prompt_version**, **model**, **rejected_answers** (0–2: respuestas del modelo que el validador rechazó antes de esta, D-044), **created_at**)
 - `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`, **received_at**: la hora de llegada, que el cliente no puede falsear, D-040)
@@ -1420,16 +1431,28 @@ La app que ya funciona en local, publicada en Supabase en la nube y en Vercel, c
 
 Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
-#### Fase 4 · Panel docente (capa 2, ≈20 h)
+#### Fase 4 · Panel docente (capa 2, ≈23 h)
 
-**4.1 · Sesión en vivo, con datos simulados (≈5 h)** · ficha `06-en-vivo` · Figuras 11–12 del TFM
+**4.1 · Sesión en vivo, con datos simulados y reales (≈6 h)** · ficha `06-en-vivo` · Figuras 9 y 18 del TFM
 
-- `LiveStore`: `Map` por alumno dentro de un signal, con actualizaciones inmutables.
-- Tabla (`mat-table` con ordenación) según 2.2, con la señal «atascado» calculada con `isStuck()`; selector de grupo (con su asignatura) y bloque (D-046).
-- Simulador de alumnos en la barra de desarrollo.
-- En el móvil, tarjetas en lugar de tabla.
+- `LiveService` completo: grupos del docente (el administrador, todos) con su asignatura y sus bloques, la foto de un bloque (alumnos, ejercicios con umbrales, intentos y eventos) y `watch()`. Versión simulada (cambios de `MockDb`) y de Supabase (lecturas con la RLS y Realtime de `attempt` y `process_event`, con la migración que los publica).
+- `LiveStore`: `Map` por alumno dentro de un signal, con actualizaciones inmutables, un reloj que avanza cada 15 s y los cambios que llegan mientras carga la foto aplicados después.
+- Ventana de sesión de 60 min (D-054): lo que no se movió en ella sale en gris y sin señales.
+- **A quién atender:** cola de quien necesita al docente donde el tutor no llega (ya tuvo la pista de nivel 3 y sigue fallando; falla seguido la misma prueba, diciendo si pidió pistas; pide pistas seguidas sin probarlas; sin avanzar; fuera de la ventana), primero lo que es del código y, dentro, quien lleva más rato esperando; «Atendido» lo quita hasta un motivo nuevo.
+- **La clase en el bloque:** una barra apilada por ejercicio (sin empezar, en curso, con fallos, superado, entregado) que crece en directo, con su resumen en texto, y la prueba que más falla ahora con «Para explicar a todos» desde 3 alumnos.
+- **Alumnado:** tabla (`mat-table` con ordenación; por defecto, primero lo que necesita atención) según 2.2, con «Repitiendo» en las prácticas, observaciones como chips (patrones descriptivos en funciones puras y umbrales con nombre), buscador sin tildes ni mayúsculas y el nombre del alumno como enlace al detalle; con poco ancho (container queries), tarjetas; las filas destellan al cambiar (sin animación con `prefers-reduced-motion`).
+- Cabecera con «En directo · N en la sesión · N con el bloque entregado», anunciado con `aria-live` solo cuando cambia.
+- Selector de grupo (con su asignatura) y bloque (D-046) en la URL (`?grupo=&bloque=`); por defecto, el bloque con actividad más reciente.
+- Simulador de alumnos en la barra de desarrollo, sobre el grupo y el bloque que se ven, que también provoca atascos y patrones.
 
-🧪 Aplicación de eventos al estado de cada alumno.
+🧪 Aplicación de eventos al estado de cada alumno; señales, patrones, cola, resumen por ejercicio y fila de cada alumno.
+
+**4.1b · Actividad en directo (≈2 h)** · ficha `06-en-vivo`
+
+- Feed corto de lo que pasa en el bloque («Ana entregó el ejercicio 2», «Bea superó una prueba tras 4 intentos»).
+- Actividad de la clase en los últimos 30 min, como una línea por minuto, con su alternativa en texto.
+
+🧪 Agregado de la actividad por minuto.
 
 **4.2 · Detalle del intento (≈3 h)** · ficha `07-detalle`
 
@@ -1443,6 +1466,7 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 - Lista de ejercicios.
 - Formulario con Signal Forms: título, enunciado, dificultad, función, umbrales con slider y pruebas con `applyEach` (entrada, esperado, oculta).
 - Idiomas (D-045): el docente elige el idioma en que escribe y tiene una pestaña por cada uno de los otros, con «Traducir con IA», que deja un borrador para revisar (con la misma cadena de modelos del tutor, D-044); el formulario recomienda escribir el contrato del código (función y textos que devuelve) en inglés.
+- Fecha de entrega opcional en cada asignación (`exercise_assignment.due_at`, D-054), que el alumno ve en el catálogo.
 - Asignación a un bloque de un grupo (D-046): crear, ordenar, titular y traducir bloques («Tema 1: Bucles», «Recuperación del tema 2»), con un ejercicio en varios bloques si hace falta; ocultar o mostrar un bloque o una asignación (`is_hidden`); filtrar el banco por asignatura (`exercise_subject`).
 
 🧪 Validaciones del esquema del formulario.
@@ -1450,12 +1474,12 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 **4.4 · Histórico, con datos simulados (≈3 h)** · ficha `09-historico` · Figuras 13–14 del TFM
 
 - Gráfica de barras propia por bloque, con una tabla alternativa accesible, y los KPI; selector de grupo (con su asignatura). Cuenta el intento que cuenta de cada asignación (D-046).
+- Ritmo de cada alumno respecto a la fecha de entrega (D-054): cuántas entregas llegan en las últimas horas antes del plazo y quién no ha entregado, descrito sin etiquetar.
 
 🧪 Una serie descendente pinta N barras con sus valores.
 
-**4.5 · Panel docente con datos reales (≈4 h)**
+**4.5 · Panel docente con datos reales (≈3 h)**
 
-- Realtime: inserciones en `process_event` y cambios en `attempt` (la RLS filtra por grupo).
 - RPC `group_block_stats`, con test en pgTAP: el intento que cuenta de cada asignación, sin las prácticas (D-046).
 - Gestión real de ejercicios, pruebas y asignaciones.
 
