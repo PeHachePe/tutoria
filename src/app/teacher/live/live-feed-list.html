@@ -1,0 +1,58 @@
+<div class="border-b border-outline-variant px-4 py-3">
+  <h2 id="live-feed-title" class="text-title-medium" i18n="@@live.feed.heading">Lo último</h2>
+</div>
+@if (entries().length === 0) {
+  <p class="px-4 py-4 text-body-medium text-on-surface-variant" i18n="@@live.feed.empty">
+    Cuando alguien supere pruebas, entregue o pase a otro ejercicio, saldrá aquí.
+  </p>
+} @else {
+  <ol class="flex flex-col py-2">
+    @for (item of entries(); track item.entry.id) {
+      @let entry = item.entry;
+      <li class="flex items-start gap-3 px-4 py-2 animate-live-in motion-reduce:animate-none">
+        <mat-icon class="shrink-0" [class]="item.tone" aria-hidden="true">{{ item.icon }}</mat-icon>
+        <p class="min-w-0 flex-1 text-body-medium">
+          <a
+            class="font-medium text-primary underline-offset-2 hover:underline"
+            [routerLink]="item.path"
+            queryParamsHandling="preserve"
+            >{{ entry.student.name }}</a
+          >
+          {{ ' ' }}
+          @switch (entry.kind) {
+            @case ('started') {
+              @if (entry.practice) {
+                <span i18n="@@live.feed.practice"
+                  >empezó a repetir el ejercicio {{ entry.position }}</span
+                >
+              } @else {
+                <span i18n="@@live.feed.started">empezó el ejercicio {{ entry.position }}</span>
+              }
+            }
+            @case ('recovered') {
+              <span i18n="@@live.feed.recovered"
+                >superó una prueba del ejercicio {{ entry.position }} que había fallado
+                {{ entry.kind === 'recovered' ? entry.failures : 0 }} veces seguidas</span
+              >
+            }
+            @case ('all_passed') {
+              <span i18n="@@live.feed.allPassed"
+                >superó todas las pruebas del ejercicio {{ entry.position }}</span
+              >
+            }
+            @case ('submitted') {
+              <span i18n="@@live.feed.submitted">entregó el ejercicio {{ entry.position }}</span>
+            }
+          }
+        </p>
+        <span class="shrink-0 text-body-small whitespace-nowrap text-on-surface-variant">
+          @if (item.minutesAgo === 0) {
+            <ng-container i18n="@@live.feed.now">Ahora</ng-container>
+          } @else {
+            <ng-container i18n="@@live.feed.minutes">Hace {{ item.minutesAgo }} min</ng-container>
+          }
+        </span>
+      </li>
+    }
+  </ol>
+}

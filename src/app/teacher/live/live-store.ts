@@ -4,6 +4,8 @@ import { ActivatedRoute, type ParamMap } from '@angular/router';
 
 import { TEACHER_PARAMS } from '../../core/app-paths';
 import { type LiveGroup, LiveService, type LiveUpdate } from '../../data/live-service';
+import { activityByMinute } from './activity-by-minute';
+import { liveFeed } from './live-feed';
 import { exerciseOverview } from './live-overview';
 import { liveRow, type LiveRow, type LiveSignal } from './live-row';
 import { applyLiveUpdate, liveState, type StudentActivity } from './live-state';
@@ -159,6 +161,18 @@ export class LiveStore {
   readonly overview = computed(() => {
     const state = this.state();
     return state ? exerciseOverview(state) : [];
+  });
+
+  /** What just happened in the block, the latest first (4.1b). */
+  readonly feed = computed(() => {
+    const state = this.state();
+    return state ? liveFeed(state, this.nowState()) : [];
+  });
+
+  /** Runs and hints of the class in the last minutes, for the chart (4.1b). */
+  readonly activity = computed(() => {
+    const state = this.state();
+    return state ? activityByMinute(state, this.nowState()) : [];
   });
 
   /**

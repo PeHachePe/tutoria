@@ -12,7 +12,9 @@ import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
+import { LiveActivity } from './live-activity';
 import { LiveClass } from './live-class';
+import { LiveFeedList } from './live-feed-list';
 import { LiveQueue } from './live-queue';
 import { LiveStore } from './live-store';
 import { LiveTable } from './live-table';
@@ -47,6 +49,8 @@ function searchable(text: string): string {
     Skeleton,
     LiveQueue,
     LiveClass,
+    LiveActivity,
+    LiveFeedList,
     LiveTable,
   ],
   templateUrl: './live-page.html',

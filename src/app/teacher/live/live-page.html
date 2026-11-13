@@ -100,8 +100,18 @@
     />
   } @else {
     <div class="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <app-live-queue [rows]="store.queue()" [now]="store.now()" (attend)="store.attend($event)" />
-      <app-live-class [overview]="store.overview()" />
+      <div class="flex min-w-0 flex-col gap-4">
+        <app-live-queue
+          [rows]="store.queue()"
+          [now]="store.now()"
+          (attend)="store.attend($event)"
+        />
+        <app-live-activity [minutes]="store.activity()" />
+      </div>
+      <div class="flex min-w-0 flex-col gap-4">
+        <app-live-class [overview]="store.overview()" />
+        <app-live-feed-list [feed]="store.feed()" [now]="store.now()" />
+      </div>
     </div>
 
     <section aria-labelledby="live-students-title" class="flex flex-col gap-3">

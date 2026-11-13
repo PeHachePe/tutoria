@@ -72,6 +72,8 @@ describe('LivePage', () => {
     const queue = screen.getByRole('region', { name: /^A quién atender/ });
     expect(within(queue).getByRole('link', { name: 'Bea' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'La clase en el bloque' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Actividad' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Lo último' })).toBeTruthy();
     expect(screen.getByRole('table', { name: '1.º DAW A · b2' })).toBeTruthy();
   });
 

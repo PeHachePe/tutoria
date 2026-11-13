@@ -196,6 +196,22 @@ describe('LiveStore', () => {
     expect(store.overview().map((exercise) => exercise.counts.submitted)).toEqual([1, 1]);
   });
 
+  it('tells the recent activity of the block, minute by minute and as a feed', async () => {
+    service.snapshots = () =>
+      Promise.resolve(
+        testSnapshot({
+          attempts: [testAttempt('a1', 'ana', { startedAt: ago(3) })],
+          events: [e.run('a1', ago(2)), e.hint('a1', ago(1))],
+        }),
+      );
+
+    const store = await create();
+
+    expect(store.feed().map((entry) => entry.kind)).toEqual(['all_passed']);
+    expect(store.activity().at(-3)).toEqual({ start: ago(2), runs: 1, hints: 0 });
+    expect(store.activity().at(-2)).toEqual({ start: ago(1), runs: 0, hints: 1 });
+  });
+
   it('has no rows nor selection without groups', async () => {
     service.groups = () => Promise.resolve([]);
 
@@ -206,6 +222,8 @@ describe('LiveStore', () => {
     expect(store.rows()).toEqual([]);
     expect(store.exercises()).toEqual([]);
     expect(store.overview()).toEqual([]);
+    expect(store.feed()).toEqual([]);
+    expect(store.activity()).toEqual([]);
   });
 
   it('reloads the groups when they failed', async () => {
