@@ -1,4 +1,4 @@
-import { computed, Service, signal } from '@angular/core';
+import { computed, DestroyRef, DOCUMENT, inject, Service, signal } from '@angular/core';
 
 import { DataError } from '../data-error';
 import type { AppUser, Role } from '../user';
@@ -8,6 +8,9 @@ import type { MockTables } from './mock-tables';
 export const MOCK_DB_STORAGE_KEY = 'tutoria.mock-db';
 export const MOCK_SESSION_STORAGE_KEY = 'tutoria.mock-session';
 
+/** Called after every change of the tables, with the new ones and the previous ones. */
+export type MockDbListener = (tables: MockTables, previous: MockTables) => void;
+
 interface SavedTables {
   readonly version: number;
   readonly tables: MockTables;
@@ -16,12 +19,14 @@ interface SavedTables {
 /**
  * The simulated database (4.3): every table in one immutable signal, saved in localStorage with the
  * seed version, plus the signed-in user, which plays the part of the Supabase Auth session.
- * Only the mock services and the dev toolbar use it.
+ * Only the mock services and the dev toolbar use it. It tells its listeners about every change, also
+ * those another tab saves, as Realtime does for the teacher's live panel (4.1).
  */
 @Service()
 export class MockDb {
   private readonly tablesState = signal(readSavedTables());
   private readonly sessionState = signal(readSavedSession());
+  private readonly listeners = new Set<MockDbListener>();
 
   readonly tables = this.tablesState.asReadonly();
   readonly sessionUserId = this.sessionState.asReadonly();
@@ -32,19 +37,38 @@ export class MockDb {
     return user?.status === 'active' ? user : null;
   });
 
+  constructor() {
+    // Another tab of the same browser saved its changes (a student working while the teacher watches)
+    const window = inject(DOCUMENT).defaultView;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === MOCK_DB_STORAGE_KEY) {
+        this.setTables(readSavedTables());
+      }
+    };
+    window?.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() => window?.removeEventListener('storage', onStorage));
+  }
+
   /** Replaces one table with the result of `change`, which must not mutate its rows. */
   update<K extends keyof MockTables>(
     table: K,
     change: (rows: MockTables[K]) => MockTables[K],
   ): void {
-    this.tablesState.update((tables) => ({ ...tables, [table]: change(tables[table]) }));
+    const tables = this.tablesState();
+    this.setTables({ ...tables, [table]: change(tables[table]) });
     this.save();
   }
 
   /** Back to the seed. The session is kept: the seed users never change their ids. */
   reset(): void {
-    this.tablesState.set(SEED);
+    this.setTables(SEED);
     this.save();
+  }
+
+  /** Calls `listener` after every change of the tables; returns the function that stops it. */
+  onChange(listener: MockDbListener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   setSession(userId: string | null): void {
@@ -73,6 +97,14 @@ export class MockDb {
       throw new DataError('forbidden');
     }
     return user;
+  }
+
+  private setTables(tables: MockTables): void {
+    const previous = this.tablesState();
+    this.tablesState.set(tables);
+    for (const listener of this.listeners) {
+      listener(tables, previous);
+    }
   }
 
   private save(): void {

@@ -20,6 +20,49 @@ describe('MockDb', () => {
     return JSON.parse(localStorage.getItem(MOCK_DB_STORAGE_KEY) ?? 'null');
   }
 
+  describe('listeners', () => {
+    it('hear every change with the new and the previous tables, until they stop', () => {
+      const db = create();
+      const listener = vi.fn();
+      const stop = db.onChange(listener);
+
+      db.update('groups', () => []);
+      db.reset();
+      stop();
+      db.update('groups', () => []);
+
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener.mock.calls[0][0].groups).toEqual([]);
+      expect(listener.mock.calls[0][1]).toBe(SEED);
+      expect(listener.mock.calls[1][0]).toBe(SEED);
+    });
+
+    it('hear the changes another tab saves, and only those of the tables', () => {
+      const db = create();
+      const listener = vi.fn();
+      db.onChange(listener);
+      const otherTab = { version: SEED_VERSION, tables: { ...SEED, groups: [] } };
+      localStorage.setItem(MOCK_DB_STORAGE_KEY, JSON.stringify(otherTab));
+
+      window.dispatchEvent(new StorageEvent('storage', { key: 'another-key' }));
+      window.dispatchEvent(new StorageEvent('storage', { key: MOCK_DB_STORAGE_KEY }));
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(db.tables().groups).toEqual([]);
+    });
+
+    it('stop hearing other tabs once destroyed', () => {
+      const db = create();
+      const listener = vi.fn();
+      db.onChange(listener);
+      TestBed.resetTestingModule();
+
+      window.dispatchEvent(new StorageEvent('storage', { key: MOCK_DB_STORAGE_KEY }));
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
   describe('tables', () => {
     it('start with the seed when nothing is saved', () => {
       expect(create().tables()).toEqual(SEED);
