@@ -64,6 +64,30 @@ describe('HeadingFocus', () => {
     expect(heading('Segunda')?.tabIndex).toBe(0);
   });
 
+  it('leaves the focus where it is when only the query or the fragment change', async () => {
+    const harness = await start();
+    await harness.navigateByUrl('/segunda');
+    await harness.fixture.whenStable();
+    const button = document.body.appendChild(document.createElement('button'));
+    button.focus();
+
+    await harness.navigateByUrl('/segunda?grupo=g1&bloque=b1');
+    await harness.navigateByUrl('/segunda?grupo=g1#notas');
+    await harness.fixture.whenStable();
+
+    expect(document.activeElement).toBe(button);
+    button.remove();
+  });
+
+  it('leaves the focus alone when the first page load only fixes its query', async () => {
+    const harness = await start();
+
+    await harness.navigateByUrl('/primera?grupo=g1');
+    await harness.fixture.whenStable();
+
+    expect(document.activeElement).not.toBe(heading('Primera'));
+  });
+
   it('does nothing when the page has no main heading', async () => {
     const harness = await start();
     const focused = document.activeElement;

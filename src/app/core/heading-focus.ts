@@ -4,7 +4,10 @@ import { NavigationEnd, Router } from '@angular/router';
 /**
  * After each navigation, moves the focus to the main heading of the new page (`main h1`), so screen
  * reader and keyboard users start reading the new content instead of staying on the old link
- * (4.8, D-002). The first page load is left alone: the browser already starts at the top.
+ * (4.8, D-002). The first page load is left alone: the browser already starts at the top. So is a
+ * navigation that only changes the query or the fragment, such as a selector of the page (the group
+ * of the live session) or a page fixing its own URL (the attempt detail): the focus stays on the
+ * control, and the page is the same.
  */
 @Service()
 export class HeadingFocus {
@@ -12,16 +15,18 @@ export class HeadingFocus {
   private readonly injector = inject(Injector);
 
   constructor() {
-    let firstNavigation = true;
+    /** The path of the current page, without query nor fragment; null before the first load. */
+    let currentPath: string | null = null;
     // Router.events is the only API that reports finished navigations (RxJS only where an API is
     // already an Observable, 4.8).
     const subscription = inject(Router).events.subscribe((event) => {
       if (!(event instanceof NavigationEnd)) return;
-      if (firstNavigation) {
-        firstNavigation = false;
-        return;
+      const path = event.urlAfterRedirects.split(/[?#]/)[0];
+      const isNewPage = currentPath !== null && path !== currentPath;
+      currentPath = path;
+      if (isNewPage) {
+        afterNextRender(() => this.focusHeading(), { injector: this.injector });
       }
-      afterNextRender(() => this.focusHeading(), { injector: this.injector });
     });
     inject(DestroyRef).onDestroy(() => subscription.unsubscribe());
   }
