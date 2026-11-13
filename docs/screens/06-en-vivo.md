@@ -70,7 +70,7 @@ Que el docente, en plena clase, decida dos cosas de un vistazo: **a quién atend
 - [x] Un intento de práctica sale como «Repitiendo».
 - [x] La tabla se ordena por cualquier columna y el buscador encuentra «Álvaro» con «alvaro».
 - [x] Grupo y bloque en la URL; recargar los conserva.
-- [ ] Con Supabase local, la pantalla carga los datos reales y, con dos navegadores, lo que hace el alumno llega solo (pendiente de la prueba del autor; e2e en el 7.1).
+- [x] Con Supabase local, la pantalla carga los datos reales y, con dos navegadores, lo que hace el alumno llega solo (probado por el autor; e2e en el 7.1).
 - [x] Responsive en el móvil, a 1024, 1200, 1366, 1600 y 1920 px con el menú abierto, sin scroll horizontal de la página; claro y oscuro.
 
 ## Fuera de alcance
