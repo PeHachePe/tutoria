@@ -19,6 +19,7 @@ describe('ClassSimulator', () => {
     // A class that has not started: every action can be told apart
     db.update('attempts', () => []);
     db.update('events', () => []);
+    db.update('interactions', () => []);
     simulator = TestBed.inject(ClassSimulator);
     target = simulator.targetFor(convertToParamMap({})) as SimulationTarget;
   });
@@ -103,7 +104,7 @@ describe('ClassSimulator', () => {
     expect(attempts()[0].finishedAt).not.toBeNull();
   });
 
-  it('asks for hints of growing level up to the last one', () => {
+  it('asks for hints of growing level up to the last one, each with the answer of the tutor', () => {
     roll(0.6);
     for (let step = 0; step < 5; step++) {
       simulator.step(target);
@@ -112,6 +113,37 @@ describe('ClassSimulator', () => {
     expect(
       db.tables().events.map((event) => (event.type === 'hint_requested' ? event.detail.level : 0)),
     ).toEqual([1, 2, 3, 3]);
+    expect(db.tables().interactions.map(({ trigger, hintLevel }) => [trigger, hintLevel])).toEqual([
+      ['hint', 1],
+      ['hint', 2],
+      ['hint', 3],
+      ['hint', 3],
+    ]);
+  });
+
+  it('asks the tutor a question, answered at the level reached and without an event', () => {
+    roll(0.67);
+    simulator.step(target);
+    simulator.step(target);
+
+    expect(eventTypes()).toEqual([]);
+    expect(db.tables().interactions.at(-1)).toMatchObject({
+      trigger: 'question',
+      hintLevel: 1,
+      studentMessage: expect.any(String),
+    });
+  });
+
+  it('writes one more line of code before each run, up to the whole function', () => {
+    roll(0.1);
+    simulator.step(target);
+    simulator.step(target);
+    expect(attempts()[0].currentCode).toBe('function solve(items) {');
+
+    for (let step = 0; step < 10; step++) {
+      simulator.step(target);
+    }
+    expect(attempts()[0].currentCode.split('\n')).toHaveLength(7);
   });
 
   it('pastes a little', () => {

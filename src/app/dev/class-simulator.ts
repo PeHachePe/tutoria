@@ -7,7 +7,7 @@ import { canManageGroup } from '../data/mock/mock-access';
 import { MockDb } from '../data/mock/mock-db';
 import { mockLiveGroups } from '../data/mock/mock-live-service';
 import type { ProcessEvent } from '../data/process-event';
-import { MAX_HINT_LEVEL, type HintLevel } from '../data/tutor';
+import { MAX_HINT_LEVEL, type HintLevel, type TutorInteraction } from '../data/tutor';
 import { pickSelection } from '../teacher/live/live-store';
 
 /** Time between two actions of the simulated class. */
@@ -24,10 +24,34 @@ const PATTERN_AWAY_MS = 90_000;
 
 /**
  * What a student does in a tick, as cumulative odds: a passed attempt is submitted half the time;
- * otherwise, runs the tests, asks for a hint, pastes, or leaves or comes back to the window (the
- * rest).
+ * otherwise, runs the tests, asks for a hint, asks the tutor a question, pastes, or leaves or comes
+ * back to the window (the rest).
  */
-const ODDS = { submitPassed: 0.5, run: 0.55, hint: 0.7, paste: 0.8 } as const;
+const ODDS = { submitPassed: 0.5, run: 0.55, hint: 0.65, question: 0.7, paste: 0.8 } as const;
+
+/** What the simulated tutor says for each hint level, as the server would record it. */
+const SIMULATED_HINTS: Record<HintLevel, string> = {
+  1: '¿Qué tiene que devolver la función si la lista está vacía?',
+  2: 'Recorre la lista con un bucle y ve guardando el resultado en una variable.',
+  3: 'Antes del bucle, la variable empieza en `0`; dentro, súmale cada elemento.',
+};
+
+/** A question of the simulated student and the answer of the tutor. */
+const SIMULATED_QUESTION = {
+  message: '¿Por qué me sale undefined?',
+  answer: 'Mira si tu función tiene un `return` en todos los caminos.',
+} as const;
+
+/** Lines the simulated student writes, one more on every run, so the code changes as in class. */
+const SIMULATED_CODE = [
+  'function solve(items) {',
+  '  let result = 0;',
+  '  for (const item of items) {',
+  '    result += item;',
+  '  }',
+  '  return result;',
+  '}',
+] as const;
 
 /** Chance that each test fails in a simulated run. */
 const TEST_FAILURE_ODDS = 0.35;
@@ -112,10 +136,18 @@ export class ClassSimulator {
         this.testIds(attempt).filter(() => Math.random() < TEST_FAILURE_ODDS),
       );
     } else if (roll < ODDS.hint) {
-      this.record(attempt, {
-        type: 'hint_requested',
-        detail: { level: this.nextHintLevel(attempt) },
-      });
+      const level = this.nextHintLevel(attempt);
+      this.record(attempt, { type: 'hint_requested', detail: { level } });
+      this.answer(attempt, 'hint', level, null, SIMULATED_HINTS[level]);
+    } else if (roll < ODDS.question) {
+      const level = this.reachedHintLevel(attempt);
+      this.answer(
+        attempt,
+        'question',
+        level,
+        SIMULATED_QUESTION.message,
+        SIMULATED_QUESTION.answer,
+      );
     } else if (roll < ODDS.paste) {
       const length = SMALL_PASTE.min + Math.floor(Math.random() * SMALL_PASTE.spread);
       this.record(attempt, { type: 'paste', detail: { length } });
@@ -197,6 +229,7 @@ export class ClassSimulator {
   }
 
   private run(attempt: Attempt, failedTestIds: readonly string[]): void {
+    this.write(attempt);
     const total = this.testIds(attempt).length;
     this.record(
       attempt,
@@ -234,10 +267,54 @@ export class ClassSimulator {
   }
 
   private nextHintLevel(attempt: Attempt): HintLevel {
-    const hints = this.db
+    return Math.min(this.hintCount(attempt) + 1, MAX_HINT_LEVEL) as HintLevel;
+  }
+
+  /** The level a question is answered at: the last hint reached, or the first. */
+  private reachedHintLevel(attempt: Attempt): HintLevel {
+    return Math.max(1, Math.min(this.hintCount(attempt), MAX_HINT_LEVEL)) as HintLevel;
+  }
+
+  private hintCount(attempt: Attempt): number {
+    return this.db
       .tables()
-      .events.filter((event) => event.attemptId === attempt.id && event.type === 'hint_requested');
-    return Math.min(hints.length + 1, MAX_HINT_LEVEL) as HintLevel;
+      .events.filter((event) => event.attemptId === attempt.id && event.type === 'hint_requested')
+      .length;
+  }
+
+  /** The answer of the tutor, recorded as the Edge Function `tutor` does (2.6). */
+  private answer(
+    attempt: Attempt,
+    trigger: TutorInteraction['trigger'],
+    hintLevel: HintLevel,
+    studentMessage: string | null,
+    transcript: string,
+  ): void {
+    const interaction: TutorInteraction = {
+      id: crypto.randomUUID(),
+      attemptId: attempt.id,
+      trigger,
+      hintLevel,
+      studentMessage,
+      transcript,
+      emotion: 'encouragement',
+      intensity: 1,
+      elusion: false,
+      promptVersion: 'simulated',
+      createdAt: new Date().toISOString(),
+    };
+    this.db.update('interactions', (rows) => [...rows, interaction]);
+  }
+
+  /** One more line of code before running, so the teacher sees the code change. */
+  private write(attempt: Attempt): void {
+    const current = this.attempt(attempt.id).currentCode;
+    const lines = current === '' ? 0 : current.split('\n').length;
+    if (lines >= SIMULATED_CODE.length) return;
+    const currentCode = SIMULATED_CODE.slice(0, lines + 1).join('\n');
+    this.db.update('attempts', (rows) =>
+      rows.map((row) => (row.id === attempt.id ? { ...row, currentCode } : row)),
+    );
   }
 
   /** Adds the event and, as the server would, changes the attempt. */
