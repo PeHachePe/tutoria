@@ -25,11 +25,12 @@ Que el docente, en plena clase, decida dos cosas de un vistazo: **a quién atend
   - Motivos: «Ya tuvo la pista de nivel 3 y sigue fallando»; «Falla N veces seguidas la misma prueba» (y «… y no ha pedido ninguna pista» si no la pidió); «Ha pedido N pistas seguidas sin ejecutar las pruebas»; «No escribe ni ejecuta desde hace un rato»; «Ha salido de la ventana».
   - Orden: primero lo que es del código (pistas agotadas y fallos seguidos), después las pistas en ráfaga, la inactividad y por último quien está fuera; dentro de cada grupo, quien lleva más rato esperando.
   - Enseña 6 y «Ver los N»; sin nadie, la mascota con «Todo en orden: nadie necesita ayuda ahora mismo».
-- **La clase en el bloque** (derecha en escritorio, la misma altura): leyenda de estados y una barra apilada por ejercicio (sin empezar, en curso, con fallos, superado, entregado) que crece y mengua en directo. Debajo, «Más falla ahora:» con la llamada de la prueba (`isValidEmail("ana@example.com")`), «(prueba oculta)» si lo es, y cuántos alumnos la fallan; desde 3, la marca «Para explicar a todos».
+- **La clase en el bloque** (derecha en escritorio, con «Lo último» debajo): leyenda de estados y una barra apilada por ejercicio (sin empezar, en curso, con fallos, superado, entregado) que crece y mengua en directo. Debajo, «Más falla ahora:» con la llamada de la prueba (`isValidEmail("ana@example.com")`), «(prueba oculta)» si lo es, y cuántos alumnos la fallan; desde 3, la marca «Para explicar a todos».
 - **Alumnado:** buscador por nombre (sin tildes ni mayúsculas) y la tabla: alumno (enlace a su intento), ejercicio (con «Repitiendo» si es una práctica), estado, tiempo, pistas y nivel, pegados, salidas de la ventana, pruebas superadas, última actividad («Ahora mismo», «Hace 5 min» o la fecha) y observaciones como chips (la señal, entrega con pegado, pegado al volver, ráfaga de entregas, sin actividad, repite ejercicios, superó tras insistir). Ordenable por cualquier columna; por defecto, primero lo que necesita atención y luego quien se movió último.
 - **Ancho disponible** (container queries, no el de la ventana, porque el menú lateral ocupa sitio): tabla completa desde `@6xl`; entre `@5xl` y `@6xl`, sin tiempo, pegados ni salidas; por debajo, una tarjeta por alumno con todo.
 - Animaciones: el punto en directo late, las entradas de la cola llegan deslizando, las barras cambian de ancho con transición y una fila destella al cambiar; todo se queda quieto con `prefers-reduced-motion`.
-- **Actividad en directo (4.1b):** feed corto y actividad de la clase en los últimos 30 min.
+- **Actividad** (4.1b, bajo la cola): las ejecuciones y las pistas de toda la clase minuto a minuto en los últimos 30 min, como dos líneas (las pistas, discontinuas), con sus totales («26 ejecuciones · 8 pistas») como leyenda. Si las pistas suben más que las ejecuciones, la clase se atasca; si las dos bajan, ha parado o ha acabado. Sin actividad, «Nadie ha ejecutado las pruebas ni pedido pistas en este rato».
+- **Lo último** (4.1b, bajo la clase): las 8 noticias más recientes de los últimos 30 min, solo de avance: «Ana empezó el ejercicio 2» (uno que no es el primero), «empezó a repetir el ejercicio 1», «superó una prueba del ejercicio 1 que había fallado 4 veces seguidas» (desde 3), «superó todas las pruebas del ejercicio 1» y «entregó el ejercicio 1», con «Ahora» o «Hace N min». Abrir el primer ejercicio no sale (lo hace toda la clase a la vez), ni los pegados o las salidas (están en la tabla y la cola). El nombre lleva al intento.
 
 ## Interacciones
 
@@ -38,7 +39,7 @@ Que el docente, en plena clase, decida dos cosas de un vistazo: **a quién atend
 - **Ver los N / Ver menos:** despliega la cola entera.
 - **Buscar alumno:** filtra la tabla y las tarjetas.
 - **Ordenar** por una columna (lo anuncia el lector de pantalla); el tercer clic vuelve al orden por atención.
-- **Nombre del alumno** (cola o tabla): abre el detalle de su intento (4.2), conservando el grupo y el bloque. Sin intento, no es enlace.
+- **Nombre del alumno** (cola, «Lo último» o tabla): abre el detalle de su intento (4.2), conservando el grupo y el bloque. Sin intento, no es enlace.
 - **Reintentar** (error): vuelve a cargar.
 - Barra de desarrollo, «Simular la clase»: alumnos al azar que abren, ejecutan, piden pistas, pegan, salen y entregan; «Atascar a un alumno» y «Provocar un patrón», sobre el grupo y el bloque que se ven.
 
@@ -58,6 +59,8 @@ Que el docente, en plena clase, decida dos cosas de un vistazo: **a quién atend
 - Los selectores y el buscador tienen etiqueta; la tabla, `caption` (oculto) con el grupo y el bloque, y las cabeceras ordenables anuncian el orden (`LiveAnnouncer`).
 - La cifra de la cabecera es una región `aria-live="polite"` que solo cambia cuando cambian las cifras, para no anunciar cada evento.
 - Ninguna señal depende solo del color: chips e iconos con texto.
+- La gráfica de actividad es decorativa (`aria-hidden`): los totales de la leyenda son texto, y un texto oculto dice el minuto con más actividad. Las dos líneas se distinguen también por el trazo (continuo y discontinuo).
+- «Actividad» y «Lo último» son regiones con nombre. «Lo último» no es una región `aria-live`: sus «Hace N min» cambian cada minuto y el lector de pantalla los leería sin parar; las cifras ya se anuncian en la cabecera.
 - Mientras carga, `aria-busy`, esqueleto con `aria-hidden` y «Cargando la sesión…» para el lector de pantalla.
 
 ## Criterios de aceptación
@@ -72,6 +75,8 @@ Que el docente, en plena clase, decida dos cosas de un vistazo: **a quién atend
 - [x] Grupo y bloque en la URL; recargar los conserva.
 - [x] Con Supabase local, la pantalla carga los datos reales y, con dos navegadores, lo que hace el alumno llega solo (probado por el autor; e2e en el 7.1).
 - [x] Responsive en el móvil, a 1024, 1200, 1366, 1600 y 1920 px con el menú abierto, sin scroll horizontal de la página; claro y oscuro.
+- [x] Con el simulador, la gráfica de actividad crece y «Lo último» cuenta entregas, pruebas superadas y cambios de ejercicio, con enlace al intento (4.1b).
+- [x] La pestaña del detalle dice de quién es el intento y qué ejercicio («Ana García · Validar un correo electrónico · TutorIA»), también después de corregir la URL al bloque del intento (4.1b).
 
 ## Fuera de alcance
 

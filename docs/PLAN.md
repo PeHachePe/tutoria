@@ -1454,6 +1454,8 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
 🧪 Agregado de la actividad por minuto.
 
+- **Hecho así (D-056):** `activityByMinute()` (ejecuciones y pistas por minuto) y `liveFeed()` (solo avances: empezar un ejercicio que no es el primero o repetir uno, superar una prueba tras 3 o más fallos seguidos, superar todas, entregar) como funciones puras con TDD, servidas por el `LiveStore`; tarjeta «Actividad» con dos líneas en SVG propio bajo la cola y «Lo último» bajo la clase, con el nombre como enlace al intento. Además, la pestaña del detalle del intento dice el alumno y el ejercicio.
+
 **4.2 · Detalle del intento (≈3 h)** · ficha `07-detalle`
 
 - Línea temporal de eventos e interacciones con el tutor.

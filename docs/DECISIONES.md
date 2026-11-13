@@ -1601,3 +1601,32 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Las capturas incluyen `07-detalle` (`e2e/screenshots/screens.ts`).
 
 **Aprobación:** el plan del paso, aprobado por el autor; el resto, por delegación del autor.
+
+## D-056 · La actividad en directo: solo avances, dos líneas y sin región viva (13/11/2026)
+
+**Contexto:** el paso 4.1b añade a la sesión en vivo un feed corto de lo que pasa en el bloque y la actividad de la clase en los últimos 30 minutos. La sesión ya tiene la cola (quién necesita ayuda), la clase por ejercicio y la tabla con todas las observaciones de cada alumno, y D-054 pide describir sin clasificar ni vigilar.
+
+**Decisión:**
+
+- **El feed cuenta solo avances** (`liveFeed()`): empezar un ejercicio que no es el primero o repetir uno, superar una prueba que había fallado 3 o más ejecuciones seguidas (`RECOVERY_FAILURES`), superar todas las pruebas (una vez, hasta que una ejecución vuelva a fallar) y entregar. Los pegados y las salidas de la ventana ya están en la tabla y en la cola; en el feed serían una lista de vigilancia. Abrir el primer ejercicio tampoco sale: toda la clase lo hace a la vez al empezar y taparía lo demás. Las rachas de fallos cuentan también las ejecuciones anteriores a la ventana.
+- **8 noticias de los últimos 30 minutos** (`FEED_SIZE`, `LIVE_ACTIVITY_MINUTES`), con el nombre del alumno como enlace a su intento, como en la cola y la tabla.
+- **La actividad son dos líneas por minuto, ejecuciones y pistas** (`activityByMinute()`), en un SVG propio sin librerías: las pistas subiendo más que las ejecuciones dicen que la clase se atasca, algo que una sola línea de «acciones» escondería. Las líneas se distinguen también por el trazo; la gráfica es decorativa y los totales de la leyenda y el minuto con más actividad van en texto.
+- **«Lo último» no es una región `aria-live`:** sus «Hace N min» cambian cada minuto y el lector de pantalla los leería sin parar. La cabecera ya anuncia cuando cambian las cifras.
+- **Disposición:** «Actividad» bajo la cola y «Lo último» bajo «La clase en el bloque», para que las dos columnas queden parejas y la gráfica tenga ancho.
+- **La pestaña del detalle dice el alumno y el ejercicio** («Ana García · Validar un correo electrónico · TutorIA», WCAG 2.4.2), con `AppTitleStrategy.setScreenTitle()`, después de corregir la URL al bloque del intento: esa navegación vuelve a poner el título de la ruta.
+- `preserveAspectRatio` y `vector-effect` entran en los atributos que la regla de i18n del lint ignora, como `d` o `stroke-linejoin`: son del dibujo, no texto.
+
+**Alternativas:**
+
+- **Feed con todos los eventos:** demasiado ruido y un tono de vigilancia contrario a D-054.
+- **Agrupar las noticias iguales** («12 alumnos empezaron el ejercicio 1»): más complejo y, sin la apertura del primer ejercicio, apenas hace falta.
+- **Una sola línea de actividad, o barras:** una línea no distingue trabajar de atascarse, y 30 barras dobles en una tarjeta estrecha se leen peor que dos líneas.
+- **Una sola tarjeta con la gráfica y el feed:** dejaba una columna mucho más larga que la otra.
+- **Librería de gráficas:** no compensa para dos líneas y el plan ya pide gráficas propias (4.4).
+
+**Consecuencias:**
+
+- Las capturas del paso salen con el seed, sin actividad reciente: la gráfica y el feed muestran sus estados vacíos. Con datos se comprueban con el simulador.
+- El feed y la gráfica salen del mismo estado del `LiveStore`, así que funcionan igual con Supabase sin consultas nuevas.
+
+**Aprobación:** el plan del paso, aprobado por el autor; la disposición, el filtro del feed y la región no viva, por delegación del autor.
