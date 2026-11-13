@@ -6,7 +6,7 @@ import { TEACHER_PARAMS } from '../../core/app-paths';
 import { type LiveGroup, LiveService, type LiveUpdate } from '../../data/live-service';
 import { exerciseOverview } from './live-overview';
 import { liveRow, type LiveRow, type LiveSignal } from './live-row';
-import { applyLiveUpdate, liveState } from './live-state';
+import { applyLiveUpdate, liveState, type StudentActivity } from './live-state';
 
 /**
  * Order of the queue: whoever struggles with the code before whoever is idle or away, who may
@@ -22,6 +22,9 @@ const QUEUE_TIERS: Record<LiveSignal['kind'], number> = {
 
 /** How often the clock of the panel moves: the same as the check of the proactive tutor (2.7). */
 export const LIVE_CLOCK_MS = 15_000;
+
+/** A row of the queue: always with the signal that brought the student there. */
+export type QueuedRow = LiveRow & { readonly signal: LiveSignal };
 
 /** The group and the block the panel follows. */
 export interface LiveSelection {
@@ -139,18 +142,17 @@ export class LiveStore {
   readonly queue = computed(() => {
     const attended = this.attendedState();
     return this.rows()
-      .flatMap((row) => {
+      .flatMap((row): QueuedRow[] => {
         const { signal } = row;
         return signal && signal.since > (attended.get(row.student.id) ?? 0)
-          ? [{ row, signal }]
+          ? [{ ...row, signal }]
           : [];
       })
       .sort(
         (a, b) =>
           QUEUE_TIERS[a.signal.kind] - QUEUE_TIERS[b.signal.kind] ||
           a.signal.since - b.signal.since,
-      )
-      .map(({ row }) => row);
+      );
   });
 
   /** The class exercise by exercise, with the test that fails most. */
@@ -158,6 +160,24 @@ export class LiveStore {
     const state = this.state();
     return state ? exerciseOverview(state) : [];
   });
+
+  /**
+   * What the block knows of an attempt, live: the activity of its student (their attempts, events
+   * and the tutor interactions that arrived), or undefined if the attempt is not in the block.
+   */
+  activityOf(attemptId: string): StudentActivity | undefined {
+    const state = this.state();
+    return state
+      ? [...state.students.values()].find(({ attempts }) =>
+          attempts.some((a) => a.id === attemptId),
+        )
+      : undefined;
+  }
+
+  /** The row of the queue that leads to this attempt, if its student waits for the teacher. */
+  queuedFor(attemptId: string): QueuedRow | undefined {
+    return this.queue().find((row) => row.attempt?.id === attemptId);
+  }
 
   constructor() {
     const clock = setInterval(() => this.nowState.set(Date.now()), LIVE_CLOCK_MS);

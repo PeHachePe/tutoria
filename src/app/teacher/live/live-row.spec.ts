@@ -6,7 +6,7 @@ import type { StudentActivity } from './live-state';
 import { ago, BLOCK_EXERCISES, NOW, STUDENTS, testAttempt } from './live-testing';
 
 function activity(overrides: Partial<StudentActivity> = {}): StudentActivity {
-  return { student: STUDENTS[0], attempts: [], events: [], ...overrides };
+  return { student: STUDENTS[0], attempts: [], events: [], interactions: [], ...overrides };
 }
 
 const row = (overrides: Partial<StudentActivity> = {}, classActive = true) =>

@@ -1,6 +1,7 @@
 import type { Attempt } from '../../data/attempt';
 import type { ClassBlock, Exercise, Test } from '../../data/exercise';
 import {
+  type LiveAttemptDetail,
   type LiveExercise,
   type LiveGroup,
   LiveService,
@@ -10,6 +11,7 @@ import {
 } from '../../data/live-service';
 import { SUBJECTS } from '../../data/mock/fixtures/subjects';
 import { EXERCISES } from '../../data/mock/fixtures/exercises';
+import type { TutorInteraction } from '../../data/tutor';
 import { liveRow, type LiveRow } from './live-row';
 import { liveState } from './live-state';
 
@@ -85,6 +87,44 @@ export function testSnapshot(overrides: Partial<LiveSnapshot> = {}): LiveSnapsho
   };
 }
 
+let nextInteraction = 0;
+
+/** A tutor interaction of an attempt at `at`: a hint of level 1 unless told otherwise. */
+export function testInteraction(
+  attemptId: string,
+  at: number,
+  overrides: Partial<TutorInteraction> = {},
+): TutorInteraction {
+  return {
+    id: `interaction-${++nextInteraction}`,
+    attemptId,
+    trigger: 'hint',
+    hintLevel: 1,
+    studentMessage: null,
+    transcript: 'Mira qué devuelve la función con una lista vacía.',
+    emotion: 'encouragement',
+    intensity: 1,
+    elusion: false,
+    promptVersion: 'v5',
+    createdAt: new Date(at).toISOString(),
+    ...overrides,
+  };
+}
+
+/** The detail of Ana's attempt `a1` at the first exercise of the block, in group g1 and block b1. */
+export function testDetail(overrides: Partial<LiveAttemptDetail> = {}): LiveAttemptDetail {
+  return {
+    groupId: 'g1',
+    blockId: 'b1',
+    student: STUDENTS[0],
+    exercise: BLOCK_EXERCISES[0],
+    attempt: testAttempt('a1', 'ana'),
+    events: [],
+    interactions: [],
+    ...overrides,
+  };
+}
+
 /** The rows of a snapshot at NOW, with a class at work. */
 export function testRows(snapshot: LiveSnapshot): LiveRow[] {
   return [...liveState(snapshot).students.values()].map((activity) =>
@@ -123,7 +163,11 @@ export class FakeLiveService extends LiveService {
   /** Something to do inside `snapshot()`, before it answers. */
   duringSnapshot: () => void = () => undefined;
 
+  details: (attemptId: string) => Promise<LiveAttemptDetail> = () => Promise.resolve(testDetail());
+
   listGroups = vi.fn(() => this.groups());
+
+  attemptDetail = vi.fn((attemptId: string) => this.details(attemptId));
 
   snapshot(groupId: string, blockId: string): Promise<LiveSnapshot> {
     this.snapshotCalls.push(`${groupId}/${blockId}`);

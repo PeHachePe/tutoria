@@ -10,6 +10,7 @@ import {
   eventRow,
   exerciseRow,
   FakeSupabaseServer,
+  interactionRow,
   provideFakeSupabase,
   subjectRow,
   testRow,
@@ -147,6 +148,60 @@ describe('SupabaseLiveService', () => {
     });
   });
 
+  describe('attemptDetail', () => {
+    const detailRow = (overrides: Record<string, unknown> = {}) => ({
+      ...attemptRow({ assignment_id: 'as1' }),
+      app_user: { id: 'user-1', name: 'Ana' },
+      process_event: [
+        eventRow({ id: 'e2', timestamp: '2026-11-13T10:05:00.000Z' }),
+        eventRow({ id: 'e1', timestamp: '2026-11-13T10:01:00.000Z' }),
+      ],
+      tutor_interaction: [
+        interactionRow({ id: 'i2', created_at: '2026-11-13T10:04:00.000Z' }),
+        interactionRow({ id: 'i1', created_at: '2026-11-13T10:02:00.000Z' }),
+      ],
+      exercise_assignment: {
+        id: 'as1',
+        group_id: 'daw',
+        block_id: 'b1',
+        exercise: {
+          ...exerciseRow(),
+          test: [testRow({ id: 't2', position: 2 }), testRow({ id: 't1', position: 1 })],
+        },
+      },
+      ...overrides,
+    });
+
+    it('reads the attempt with its student, exercise, assignment, events and interactions in one request', async () => {
+      server.on('GET', '/rest/v1/attempt', { body: detailRow() });
+
+      const detail = await service.attemptDetail('attempt-1');
+
+      expect(detail.attempt.id).toBe('attempt-1');
+      expect(detail).toMatchObject({
+        groupId: 'daw',
+        blockId: 'b1',
+        student: { id: 'user-1', name: 'Ana' },
+        exercise: { assignmentId: 'as1', exercise: { maxIdleMinutes: 4 } },
+      });
+      expect(detail.exercise.tests.map((test) => test.id)).toEqual(['t1', 't2']);
+      expect(detail.events.map((event) => event.id)).toEqual(['e1', 'e2']);
+      expect(detail.interactions.map((interaction) => interaction.id)).toEqual(['i1', 'i2']);
+      expect(server.sentTo('GET', '/rest/v1/attempt')[0].params.get('id')).toBe('eq.attempt-1');
+    });
+
+    it.each([
+      ['an attempt the RLS hides', null],
+      ['an attempt without assignment', detailRow({ exercise_assignment: null })],
+    ])('does not find %s', async (_, body) => {
+      server.on('GET', '/rest/v1/attempt', { body });
+
+      await expect(service.attemptDetail('attempt-1')).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+    });
+  });
+
   describe('watch', () => {
     type Handler = (change: { eventType: string; new: unknown }) => void;
     let handlers: Map<string, Handler>;
@@ -166,16 +221,17 @@ describe('SupabaseLiveService', () => {
       vi.spyOn(client, 'removeChannel').mockResolvedValue('ok');
     });
 
-    it('tells the attempts that change and the new events, until it stops', () => {
+    it('tells the attempts that change and the new events and interactions, until it stops', () => {
       const updates: LiveUpdate[] = [];
       const stop = service.watch('daw', (update) => updates.push(update));
 
       handlers.get('attempt')?.({ eventType: 'UPDATE', new: attemptRow({ status: 'passed' }) });
       handlers.get('attempt')?.({ eventType: 'DELETE', new: {} });
       handlers.get('process_event')?.({ eventType: 'INSERT', new: eventRow() });
+      handlers.get('tutor_interaction')?.({ eventType: 'INSERT', new: interactionRow() });
       stop();
 
-      expect(updates.map((update) => update.type)).toEqual(['attempt', 'event']);
+      expect(updates.map((update) => update.type)).toEqual(['attempt', 'event', 'interaction']);
       expect(updates[0]).toMatchObject({ attempt: { status: 'passed' } });
       expect(TestBed.inject(SUPABASE_CLIENT).channel).toHaveBeenCalledWith('live:daw');
       expect(TestBed.inject(SUPABASE_CLIENT).removeChannel).toHaveBeenCalledWith(channel);

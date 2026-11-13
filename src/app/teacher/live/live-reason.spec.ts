@@ -134,7 +134,7 @@ describe('reasonsOf', () => {
       e.focusLost('a2', ago(1)),
     ];
     const row = liveRow(
-      { student: STUDENTS[0], attempts: [submitted, practice], events },
+      { student: STUDENTS[0], attempts: [submitted, practice], events, interactions: [] },
       BLOCK_EXERCISES,
       NOW,
       true,

@@ -103,6 +103,78 @@ describe('MockLiveService', () => {
     });
   });
 
+  describe('attemptDetail', () => {
+    /** An attempt of the seed with events and more than one tutor interaction. */
+    const talkative = () =>
+      SEED.attempts.find(
+        (attempt) =>
+          attempt.assignmentId !== null &&
+          SEED.interactions.filter((i) => i.attemptId === attempt.id).length > 1 &&
+          SEED.events.some((e) => e.attemptId === attempt.id),
+      ) as Attempt;
+
+    it('gives the attempt with its student, exercise, group, block, events and interactions', async () => {
+      db.setSession(TEACHER_ID);
+      const attempt = talkative();
+      const assignment = SEED.assignments.find((a) => a.id === attempt.assignmentId);
+
+      const detail = await service.attemptDetail(attempt.id);
+
+      expect(detail.attempt).toEqual(attempt);
+      expect(detail.groupId).toBe(assignment?.groupId);
+      expect(detail.blockId).toBe(assignment?.blockId);
+      expect(detail.student).toEqual({
+        id: attempt.userId,
+        name: SEED.users.find((user) => user.id === attempt.userId)?.name,
+      });
+      expect(detail.exercise.assignmentId).toBe(attempt.assignmentId);
+      expect(detail.exercise.exercise.id).toBe(attempt.exerciseId);
+      const positions = detail.exercise.tests.map((test) => test.position);
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+      expect(detail.events.length).toBeGreaterThan(0);
+      expect(detail.events.every((event) => event.attemptId === attempt.id)).toBe(true);
+      const times = detail.events.map((event) => event.timestamp);
+      expect(times).toEqual([...times].sort());
+      expect(detail.interactions.length).toBeGreaterThan(0);
+      const created = detail.interactions.map((interaction) => interaction.createdAt);
+      expect(created).toEqual([...created].sort());
+    });
+
+    it('is open to an administrator', async () => {
+      db.setSession(ADMIN_ID);
+
+      await expect(service.attemptDetail(talkative().id)).resolves.toBeDefined();
+    });
+
+    it.each([
+      [
+        'an attempt of a group of another teacher',
+        () => ({ assignmentId: assignmentId(DAM_GROUP_ID, 1) }),
+      ],
+      ['an attempt without assignment', () => ({ assignmentId: null })],
+    ])('hides %s', async (_, change) => {
+      db.setSession(TEACHER_ID);
+      const attempt = { ...talkative(), id: 'hidden-attempt', ...change() };
+      db.update('attempts', (rows) => [...rows, attempt]);
+
+      await expect(service.attemptDetail(attempt.id)).rejects.toMatchObject({ kind: 'not_found' });
+    });
+
+    it('does not find an unknown attempt', async () => {
+      db.setSession(TEACHER_ID);
+
+      await expect(service.attemptDetail('unknown')).rejects.toMatchObject({ kind: 'not_found' });
+    });
+
+    it('is forbidden for a student', async () => {
+      db.setSession(DAW_STUDENT_IDS[0]);
+
+      await expect(service.attemptDetail(talkative().id)).rejects.toMatchObject({
+        kind: 'forbidden',
+      });
+    });
+  });
+
   describe('watch', () => {
     const attempt = (): Attempt => ({
       ...SEED.attempts[0],
@@ -116,19 +188,27 @@ describe('MockLiveService', () => {
       return updates;
     }
 
-    it('tells the new and changed attempts of the group and the new events of its attempts', () => {
+    it('tells the new and changed attempts of the group and the new events and interactions of its attempts', () => {
       db.setSession(TEACHER_ID);
       const updates = watch();
       const event = { ...SEED.events[0], id: 'new-event', attemptId: 'new-attempt' };
       const other = { ...SEED.events[0], id: 'other-event', attemptId: 'elsewhere' };
+      const interaction = {
+        ...SEED.interactions[0],
+        id: 'new-interaction',
+        attemptId: 'new-attempt',
+      };
+      const otherInteraction = { ...interaction, id: 'other-interaction', attemptId: 'elsewhere' };
 
       db.update('attempts', (rows) => [...rows, attempt()]);
       db.update('events', (rows) => [...rows, event, other]);
+      db.update('interactions', (rows) => [...rows, interaction, otherInteraction]);
       db.update('users', (rows) => [...rows]);
 
       expect(updates).toEqual([
         { type: 'attempt', attempt: attempt() },
         { type: 'event', event },
+        { type: 'interaction', interaction },
       ]);
     });
 

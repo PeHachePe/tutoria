@@ -1,7 +1,7 @@
 import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
-import type { LiveGroup, LiveSnapshot, LiveUpdate } from '../live-service';
+import type { LiveAttemptDetail, LiveGroup, LiveSnapshot, LiveUpdate } from '../live-service';
 import { LiveService } from '../live-service';
 import { canManageGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
@@ -63,6 +63,39 @@ export class MockLiveService extends LiveService {
     });
   }
 
+  attemptDetail(attemptId: string): Promise<LiveAttemptDetail> {
+    return this.network.request(() => {
+      const user = this.db.requireUser('teacher', 'admin');
+      const tables = this.db.tables();
+      const attempt = findRow(tables.attempts, attemptId);
+      // An attempt without assignment belongs to no group: nothing of the panel leads to it
+      const assignment = findRow(tables.assignments, attempt.assignmentId ?? '');
+      if (!canManageGroup(user, findRow(tables.groups, assignment.groupId))) {
+        throw new DataError('not_found');
+      }
+      const { id, name } = findRow(tables.users, attempt.userId);
+      return {
+        groupId: assignment.groupId,
+        blockId: assignment.blockId,
+        student: { id, name },
+        exercise: {
+          assignmentId: assignment.id,
+          exercise: findRow(tables.exercises, assignment.exerciseId),
+          tests: tables.tests
+            .filter((test) => test.exerciseId === assignment.exerciseId)
+            .sort((a, b) => a.position - b.position),
+        },
+        attempt,
+        events: tables.events
+          .filter((event) => event.attemptId === attemptId)
+          .sort((a, b) => a.timestamp.localeCompare(b.timestamp)),
+        interactions: tables.interactions
+          .filter((interaction) => interaction.attemptId === attemptId)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      };
+    });
+  }
+
   watch(groupId: string, onUpdate: (update: LiveUpdate) => void): () => void {
     const user = this.db.currentUser();
     const group = this.db.tables().groups.find((candidate) => candidate.id === groupId);
@@ -79,12 +112,18 @@ export class MockLiveService extends LiveService {
       );
       const attemptIds = new Set(attempts.map((attempt) => attempt.id));
       const knownEvents = new Set<object>(previous.events);
+      const knownInteractions = new Set<object>(previous.interactions);
       for (const attempt of attempts.filter((row) => !known.has(row))) {
         onUpdate({ type: 'attempt', attempt });
       }
       for (const event of tables.events) {
         if (!knownEvents.has(event) && attemptIds.has(event.attemptId)) {
           onUpdate({ type: 'event', event });
+        }
+      }
+      for (const interaction of tables.interactions) {
+        if (!knownInteractions.has(interaction) && attemptIds.has(interaction.attemptId)) {
+          onUpdate({ type: 'interaction', interaction });
         }
       }
     });

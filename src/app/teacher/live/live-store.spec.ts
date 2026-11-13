@@ -158,6 +158,27 @@ describe('LiveStore', () => {
     expect(store.queue().map((row) => row.student.id)).toEqual(['ana']);
   });
 
+  it('gives the live activity of an attempt of the block and its row in the queue', async () => {
+    service.snapshots = () =>
+      Promise.resolve(
+        testSnapshot({ attempts: [testAttempt('a1', 'ana', { updatedAt: ago(9) })] }),
+      );
+    const store = await create();
+    expect(store.activityOf('a1')?.student.id).toBe('ana');
+    expect(store.activityOf('unknown')).toBeUndefined();
+    expect(store.queuedFor('a1')?.student.id).toBe('ana');
+
+    store.attend('ana');
+
+    expect(store.queuedFor('a1')).toBeUndefined();
+  });
+
+  it('knows no attempt before the snapshot arrives', () => {
+    service.snapshots = () => new Promise(() => undefined);
+
+    expect(TestBed.inject(LiveStore).activityOf('a1')).toBeUndefined();
+  });
+
   it('counts who has the whole block submitted and gives the class by exercise', async () => {
     const submitted = (id: string, assignmentId: string) =>
       testAttempt(id, 'cai', {

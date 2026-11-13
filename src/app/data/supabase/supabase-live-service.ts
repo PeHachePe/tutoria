@@ -1,7 +1,13 @@
 import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
-import { type LiveGroup, LiveService, type LiveSnapshot, type LiveUpdate } from '../live-service';
+import {
+  type LiveAttemptDetail,
+  type LiveGroup,
+  LiveService,
+  type LiveSnapshot,
+  type LiveUpdate,
+} from '../live-service';
 import { SUPABASE_CLIENT } from './supabase-client';
 import { unwrap } from './supabase-error';
 import {
@@ -12,13 +18,15 @@ import {
   toProcessEvent,
   toSubject,
   toTest,
+  toTutorInteraction,
 } from './supabase-rows';
 
 /**
  * The live panel in Supabase (4.1). The RLS decides what the teacher reads: their own groups and
- * the attempts and events of their students; the administrator, all (2.3). Realtime sends the
- * changes of `attempt` and the new rows of `process_event` with the same RLS, published by the
- * migration `live_realtime`.
+ * the attempts, events and tutor interactions of their students; the administrator, all (2.3).
+ * Realtime sends the changes of `attempt` and the new rows of `process_event` and
+ * `tutor_interaction` with the same RLS, published by the migrations `live_realtime` and
+ * `attempt_detail_realtime`.
  */
 @Service({ autoProvided: false })
 export class SupabaseLiveService extends LiveService {
@@ -92,6 +100,43 @@ export class SupabaseLiveService extends LiveService {
     };
   }
 
+  /** One request: the attempt with everything embedded, sorted here. */
+  async attemptDetail(attemptId: string): Promise<LiveAttemptDetail> {
+    const row = unwrap(
+      await this.supabase
+        .from('attempt')
+        .select(
+          '*, app_user(id, name), process_event(*), tutor_interaction(*), exercise_assignment(id, group_id, block_id, exercise(*, test(*)))',
+        )
+        .eq('id', attemptId)
+        .maybeSingle(),
+    );
+    // Hidden by the RLS, or without assignment: nothing of the panel leads to it
+    const assignment = row?.exercise_assignment;
+    if (!row || !assignment) {
+      throw new DataError('not_found');
+    }
+    const { test, ...exercise } = assignment.exercise;
+    return {
+      groupId: assignment.group_id,
+      blockId: assignment.block_id,
+      student: { id: row.app_user.id, name: row.app_user.name },
+      exercise: {
+        assignmentId: assignment.id,
+        exercise: toExercise(exercise),
+        tests: test.map(toTest).sort((a, b) => a.position - b.position),
+      },
+      // toAttempt() reads the columns of the attempt and leaves what is embedded aside
+      attempt: toAttempt(row),
+      events: row.process_event
+        .map(toProcessEvent)
+        .sort((a, b) => a.timestamp.localeCompare(b.timestamp)),
+      interactions: row.tutor_interaction
+        .map(toTutorInteraction)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    };
+  }
+
   watch(groupId: string, onUpdate: (update: LiveUpdate) => void): () => void {
     const channel = this.supabase
       .channel(`live:${groupId}`)
@@ -109,6 +154,11 @@ export class SupabaseLiveService extends LiveService {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'process_event' },
         (change) => onUpdate({ type: 'event', event: toProcessEvent(change.new) }),
+      )
+      .on<Row<'tutor_interaction'>>(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'tutor_interaction' },
+        (change) => onUpdate({ type: 'interaction', interaction: toTutorInteraction(change.new) }),
       )
       .subscribe();
     return () => void this.supabase.removeChannel(channel);

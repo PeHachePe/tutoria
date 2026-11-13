@@ -1,6 +1,6 @@
 import { testEvents } from '../../data/process-event-testing';
 import { applyLiveUpdate, liveState } from './live-state';
-import { NOW, testAttempt, testSnapshot } from './live-testing';
+import { NOW, testAttempt, testInteraction, testSnapshot } from './live-testing';
 
 describe('liveState', () => {
   it('gives every student their attempts and the events of those attempts', () => {
@@ -14,6 +14,7 @@ describe('liveState', () => {
       student: { id: 'ana', name: 'Ana' },
       attempts: [attempt],
       events: [run],
+      interactions: [],
     });
     expect(state.students.get('bea')?.attempts).toEqual([]);
     expect([...state.students.keys()]).toEqual(['ana', 'bea', 'cai']);
@@ -63,5 +64,28 @@ describe('applyLiveUpdate', () => {
 
     expect(applyLiveUpdate(start, { type: 'event', event: testEvents.run('x', NOW) })).toBe(start);
     expect(applyLiveUpdate(withEvent, { type: 'event', event })).toBe(withEvent);
+  });
+});
+
+describe('applyLiveUpdate with tutor interactions', () => {
+  const start = liveState(testSnapshot({ attempts: [testAttempt('a1', 'ana')] }));
+
+  it('adds a new interaction to the student of its attempt', () => {
+    const interaction = testInteraction('a1', NOW);
+
+    const state = applyLiveUpdate(start, { type: 'interaction', interaction });
+
+    expect(state.students.get('ana')?.interactions).toEqual([interaction]);
+    expect(state.students.get('bea')).toBe(start.students.get('bea'));
+  });
+
+  it('ignores an interaction of an unknown attempt and one it already has', () => {
+    const interaction = testInteraction('a1', NOW);
+    const withOne = applyLiveUpdate(start, { type: 'interaction', interaction });
+
+    expect(
+      applyLiveUpdate(start, { type: 'interaction', interaction: testInteraction('x', NOW) }),
+    ).toBe(start);
+    expect(applyLiveUpdate(withOne, { type: 'interaction', interaction })).toBe(withOne);
   });
 });

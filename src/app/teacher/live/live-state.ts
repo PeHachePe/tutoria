@@ -1,12 +1,18 @@
 import type { Attempt } from '../../data/attempt';
 import type { LiveExercise, LiveSnapshot, LiveStudent, LiveUpdate } from '../../data/live-service';
 import type { ProcessEvent } from '../../data/process-event';
+import type { TutorInteraction } from '../../data/tutor';
 
 /** What a student has done in the block: their attempts and the events of those attempts. */
 export interface StudentActivity {
   readonly student: LiveStudent;
   readonly attempts: readonly Attempt[];
   readonly events: readonly ProcessEvent[];
+  /**
+   * Tutor interactions that arrived live: the snapshot does not carry them, the panel does not need
+   * them, and the detail of the attempt (4.2) adds them to the ones it loads.
+   */
+  readonly interactions: readonly TutorInteraction[];
 }
 
 /** A block followed live: its exercises and, by student id, what each one has done. */
@@ -23,7 +29,7 @@ export function liveState(snapshot: LiveSnapshot): LiveState {
       const attempts = snapshot.attempts.filter((attempt) => attempt.userId === student.id);
       const attemptIds = new Set(attempts.map((attempt) => attempt.id));
       const events = snapshot.events.filter((event) => attemptIds.has(event.attemptId));
-      return [student.id, { student, attempts, events }];
+      return [student.id, { student, attempts, events, interactions: [] }];
     }),
   );
   return { exercises: snapshot.exercises, students };
@@ -35,9 +41,24 @@ export function liveState(snapshot: LiveSnapshot): LiveState {
  * the very same state, so nothing derived from it recomputes.
  */
 export function applyLiveUpdate(state: LiveState, update: LiveUpdate): LiveState {
-  return update.type === 'attempt'
-    ? applyAttempt(state, update.attempt)
-    : applyEvent(state, update.event);
+  switch (update.type) {
+    case 'attempt':
+      return applyAttempt(state, update.attempt);
+    case 'event':
+      return applyEvent(state, update.event);
+    case 'interaction':
+      return applyInteraction(state, update.interaction);
+  }
+}
+
+function applyInteraction(state: LiveState, interaction: TutorInteraction): LiveState {
+  const activity = [...state.students.values()].find(({ attempts }) =>
+    attempts.some((attempt) => attempt.id === interaction.attemptId),
+  );
+  if (!activity || activity.interactions.some((known) => known.id === interaction.id)) {
+    return state;
+  }
+  return withStudent(state, { ...activity, interactions: [...activity.interactions, interaction] });
 }
 
 function applyAttempt(state: LiveState, attempt: Attempt): LiveState {
