@@ -108,6 +108,46 @@
         </button>
       </div>
 
+      <div class="flex flex-col items-start gap-2">
+        <h3 class="eyebrow">Simular la clase</h3>
+        <p class="text-body-small text-on-surface-variant">
+          @if (simulator.target(); as target) {
+            Simulando {{ target.label }}
+          } @else if (canSimulate()) {
+            Alumnos al azar en el grupo y el bloque de la sesión en vivo.
+          } @else {
+            Entra como docente o administración para simular su clase.
+          }
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="!canSimulate()"
+            (click)="toggleSimulation()"
+          >
+            <mat-icon>{{ simulator.running() ? 'stop' : 'play_arrow' }}</mat-icon>
+            {{ simulator.running() ? 'Parar' : 'Simular la clase' }}
+          </button>
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="!canSimulate()"
+            (click)="stuckOne()"
+          >
+            Atascar a un alumno
+          </button>
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="!canSimulate()"
+            (click)="patternOne()"
+          >
+            Provocar un patrón
+          </button>
+        </div>
+      </div>
+
       <div class="flex flex-col gap-2">
         <h3 class="eyebrow">Herramientas del tutor y WebMCP</h3>
         <app-tool-inspector />

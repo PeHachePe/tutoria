@@ -10,13 +10,14 @@ import {
   MatOption,
   MatSelect,
 } from '@angular/material/select';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { provideFormFieldDefaults } from '../../core/form-field-defaults';
 import type { DataErrorKind } from '../../data/data-error';
 import { MockDb } from '../../data/mock/mock-db';
 import { DEFAULT_LATENCY, LatencyRange, MockNetwork } from '../../data/mock/mock-network';
 import type { AppUser } from '../../data/user';
+import { ClassSimulator } from '../class-simulator';
 import { DEV_PATHS } from '../dev-paths';
 import { describeEvent } from './describe-event';
 import { ToolInspector } from './tool-inspector';
@@ -54,7 +55,8 @@ const NONE = 'none';
 
 /**
  * Development-only toolbar (4.3): sign in as any seed user, simulated latency, fail the next request,
- * reset the mock data, try the tools of the screen (2.5e) and watch the latest process events. Drawn by App when the environment provides it.
+ * reset the mock data, simulate a class for the live panel (4.1), try the tools of the screen (2.5e)
+ * and watch the latest process events. Drawn by App when the environment provides it.
  */
 @Component({
   selector: 'app-dev-toolbar',
@@ -84,6 +86,8 @@ export class DevToolbar {
   private readonly db = inject(MockDb);
   private readonly network = inject(MockNetwork);
   private readonly reloader = inject(PageReloader);
+  private readonly router = inject(Router);
+  protected readonly simulator = inject(ClassSimulator);
   private readonly toggleButton = viewChild.required('toggle', { read: ElementRef<HTMLElement> });
 
   protected readonly none = NONE;
@@ -93,6 +97,11 @@ export class DevToolbar {
   protected readonly open = signal(false);
   protected readonly currentUser = this.db.currentUser;
   protected readonly failNext = computed(() => this.network.failNext() ?? NONE);
+  /** The simulator works on the block a teacher or an administrator follows live. */
+  protected readonly canSimulate = computed(() => {
+    const role = this.currentUser()?.role;
+    return role === 'teacher' || role === 'admin';
+  });
 
   /**
    * Active seed users, grouped as the selector shows them. Students go by class: the groups of a
@@ -185,7 +194,33 @@ export class DevToolbar {
     this.network.failNextRequest(kind === NONE ? null : kind);
   }
 
+  /** Starts the simulated class on the block of the live panel, or stops it. */
+  protected toggleSimulation(): void {
+    const target = this.simulationTarget();
+    if (this.simulator.running() || !target) {
+      this.simulator.stop();
+    } else {
+      this.simulator.start(target);
+    }
+  }
+
+  protected stuckOne(): void {
+    const target = this.simulationTarget();
+    if (target) this.simulator.stuckOne(target);
+  }
+
+  protected patternOne(): void {
+    const target = this.simulationTarget();
+    if (target) this.simulator.patternOne(target);
+  }
+
+  /** The group and the block of the URL of the live panel, or those it shows by default. */
+  private simulationTarget() {
+    return this.simulator.targetFor(this.router.parseUrl(this.router.url).queryParamMap);
+  }
+
   protected resetData(): void {
+    this.simulator.stop();
     this.db.reset();
     this.reloader.reload();
   }

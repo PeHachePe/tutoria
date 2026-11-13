@@ -11,6 +11,7 @@ import { SEED } from '../../data/mock/fixtures/seed';
 import { DAW_STUDENT_IDS, TEACHER_ID } from '../../data/mock/fixtures/users';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockNetwork } from '../../data/mock/mock-network';
+import { ClassSimulator } from '../class-simulator';
 import { DevToolbar } from './dev-toolbar';
 import { PageReloader } from '../../core/page-reloader';
 
@@ -78,6 +79,7 @@ describe('DevToolbar', () => {
       'Sesión',
       'Red simulada',
       'Datos simulados',
+      'Simular la clase',
       'Herramientas del tutor y WebMCP',
       'Últimos eventos',
     ]);
@@ -219,6 +221,73 @@ describe('DevToolbar', () => {
 
     expect(db.tables()).toEqual(SEED);
     expect(reload).toHaveBeenCalledOnce();
+  });
+
+  describe('simulated class', () => {
+    function button(text: RegExp): Promise<MatButtonHarness> {
+      return loader.getHarness(MatButtonHarness.with({ text }));
+    }
+
+    afterEach(() => TestBed.inject(ClassSimulator).stop());
+
+    it('asks for a teacher or an administrator', async () => {
+      await openPanel();
+
+      expect(element().textContent).toContain('Entra como docente o administración');
+      expect(await (await button(/Simular la clase/)).isDisabled()).toBe(true);
+      expect(await (await button(/Atascar a un alumno/)).isDisabled()).toBe(true);
+    });
+
+    it('starts and stops the class of the live panel, and acts on one student', async () => {
+      db.setSession(TEACHER_ID);
+      const simulator = TestBed.inject(ClassSimulator);
+      const stuckOne = vi.spyOn(simulator, 'stuckOne').mockReturnValue();
+      const patternOne = vi.spyOn(simulator, 'patternOne').mockReturnValue();
+      const start = vi.spyOn(simulator, 'start');
+      await openPanel();
+      expect(element().textContent).toContain('Alumnos al azar en el grupo y el bloque');
+
+      await (await button(/Simular la clase/)).click();
+      expect(start).toHaveBeenCalledOnce();
+      expect(element().textContent).toMatch(/Simulando 1\.º DAW A · /);
+
+      await (await button(/Parar/)).click();
+      expect(simulator.running()).toBe(false);
+
+      await (await button(/Atascar a un alumno/)).click();
+      await (await button(/Provocar un patrón/)).click();
+      expect(stuckOne).toHaveBeenCalledOnce();
+      expect(patternOne).toHaveBeenCalledOnce();
+    });
+
+    it('does nothing when the session ends with the panel open', async () => {
+      db.setSession(TEACHER_ID);
+      await openPanel();
+      const simulator = TestBed.inject(ClassSimulator);
+      const start = vi.spyOn(simulator, 'start');
+      const stuckOne = vi.spyOn(simulator, 'stuckOne');
+      const patternOne = vi.spyOn(simulator, 'patternOne');
+      const component = fixture.componentInstance as unknown as Record<string, () => void>;
+      db.setSession(null);
+
+      component['toggleSimulation']();
+      component['stuckOne']();
+      component['patternOne']();
+
+      expect(start).not.toHaveBeenCalled();
+      expect(stuckOne).not.toHaveBeenCalled();
+      expect(patternOne).not.toHaveBeenCalled();
+    });
+
+    it('stops the class when the data are reset', async () => {
+      db.setSession(TEACHER_ID);
+      await openPanel();
+      await (await button(/Simular la clase/)).click();
+
+      await (await button(/Reiniciar datos/)).click();
+
+      expect(TestBed.inject(ClassSimulator).running()).toBe(false);
+    });
   });
 
   describe('latest events', () => {
