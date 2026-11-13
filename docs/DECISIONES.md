@@ -1571,3 +1571,33 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - La migración de Realtime se aplica en la nube con `supabase db push --remote`.
 
 **Aprobación:** el autor eligió la cola, la clase por ejercicio y la tabla con buscador, «Repitiendo» para las prácticas y las señales descriptivas sin rankings; el resto, por delegación del autor.
+
+## D-055 · El detalle del intento: datos propios, el directo del panel y el tutor por Realtime (13/11/2026)
+
+**Contexto:** el paso 4.2 hace el detalle de un intento (RF-12, CU-04 flujo 3a), que se abre desde la cola o la tabla de la sesión en vivo. `AttemptService.history()` ya daba el intento con sus eventos e interacciones, pero no quién es el alumno, el ejercicio con sus pruebas ni su grupo y bloque. Además, el docente suele abrirlo mientras el alumno sigue trabajando.
+
+**Decisión:**
+
+- **`LiveService.attemptDetail(id)`,** en el servicio del docente y no en el del alumno. En una sola petición (Supabase) da el intento con su alumno, su ejercicio con todas las pruebas, su grupo y bloque, sus eventos y sus interacciones. Así un enlace directo funciona sin depender de lo que tenga cargado el panel. Un intento sin asignación o ajeno es `not_found`.
+- **El directo llega por el `LiveStore` de la ruta padre,** sin otra suscripción: el detalle junta lo cargado con lo que oye el panel (`mergeById()`, `latestAttempt()`). Si la URL no lleva el grupo y el bloque del intento, se corrigen con `replaceUrl`, así el store vigila ese bloque y «Volver a la sesión» vuelve a él.
+- **`tutor_interaction` entra en Realtime** (migración `attempt_detail_realtime`, con su test en pgTAP), con la RLS de siempre: el docente ve en directo lo que su alumno pregunta al tutor. `LiveUpdate` gana el tipo `interaction`, y el estado del panel las guarda por alumno. El 4.1b podrá usarlas en el feed.
+- **Línea temporal como función pura** (`attemptTimeline()`): cada respuesta del tutor una sola vez, emparejada con el evento de pista o intervención que se guardó con ella (el servidor los escribe a la vez; margen de 60 s para los datos simulados); las pistas sin respuesta guardada y las intervenciones en las que el tutor calló, aparte; la salida de la ventana junto con su vuelta; los silencios de 5 min o más, marcados. Filtros por categoría (pruebas, tutor, pegados y salidas), y las cifras del intento en `attemptFigures()`.
+- **El código en solo lectura respeta D-029:** el editor no copia cambios externos, así que si el alumno lo cambia aparece «El código ha cambiado · Ver el actual», que crea otro editor. Para crearlo sin el aviso NG0956 de `@for` con un solo elemento, el editor alterna entre dos ramas de un `@if` (`editorGeneration`).
+- **Página y vista separadas:** `AttemptDetailPage` carga y muestra los estados (cargando, error, no encontrado); `AttemptDetailView` pinta un intento cargado, sin comprobaciones de «aún no hay datos».
+- **`TutorMessage` pasa a `shared/`,** porque ahora lo usan el alumno y el docente.
+- **La cola del store tipa sus filas con la señal obligatoria** (`QueuedRow`).
+- **El simulador de la clase escribe también las respuestas del tutor y el código,** como el servidor, para que el detalle se pueda probar sin Supabase.
+
+**Alternativas:**
+
+- **Ampliar `AttemptService.history()`:** es el servicio del alumno; mezclar ahí los datos del docente (nombre, pruebas ocultas) confundiría quién puede leer qué.
+- **Cargar solo lo que tiene el panel:** un enlace directo o un intento de otro bloque no funcionaría.
+- **Recargar las interacciones cuando llega un evento de pista:** las preguntas no generan evento; Realtime de la tabla es más simple y completo.
+- **`replaceCode()` del editor en solo lectura:** contradice D-029, y el editor lo ignora en solo lectura.
+
+**Consecuencias:**
+
+- La migración de Realtime se aplica en la nube con `supabase db push --remote`.
+- Las capturas incluyen `07-detalle` (`e2e/screenshots/screens.ts`).
+
+**Aprobación:** el plan del paso, aprobado por el autor; el resto, por delegación del autor.
