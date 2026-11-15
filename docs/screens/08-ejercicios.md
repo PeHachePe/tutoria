@@ -119,7 +119,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Archivar y desarchivar un ejercicio, con «Archivados» en el banco (4.3d).
 - [x] Mover un ejercicio a otro bloque del grupo, con el menú o arrastrándolo, aunque esté empezado (4.3d).
 - [x] Probar el ejercicio como alumno, con el tutor en vista previa y sin guardar nada (4.3e).
-- [ ] Revisión visual del autor.
+- [x] Revisión visual del autor (4.3e).
 
 ## Fuera de alcance
 
