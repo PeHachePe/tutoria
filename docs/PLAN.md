@@ -73,7 +73,7 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - La señal «Fuera» (pendiente de la 1.6): una pérdida de foco sin vuelta se lee como fuera, no como atascado.
 - Un intento de práctica sale en vivo como «Repitiendo».
 - Un paso nuevo, 4.1b, con la actividad en directo del bloque (el progreso por ejercicio y las pruebas que más fallan pasan al 4.1).
-- Fecha de entrega opcional en la asignación (4.3) y, en el histórico (4.4), el ritmo de cada alumno respecto al plazo.
+- Fecha de entrega opcional en la asignación (4.3b) y, en el histórico (4.4), el ritmo de cada alumno respecto al plazo.
 - Las figuras del panel docente en la memoria son la 9 (boceto) y la 18 (prototipo).
 
 ---
@@ -112,20 +112,20 @@ TutorIA es una aplicación web educativa para aprender programación en Formaci�
 - **Docente:** sigue a sus grupos en vivo, consulta el histórico, gestiona sus grupos y su matrícula (RF-16) y el banco de ejercicios, sus pruebas, sus umbrales y sus asignaciones.
 - **Administrador:** gestiona usuarios y la configuración del sistema; además puede entrar en todas las pantallas del docente con acceso a todos los grupos, incluida la gestión de grupos y matrícula. La cuenta del tribunal es de administrador.
 
-| Ruta                    | Pantalla                                                                  | Rol             | Capa     | Referencia de diseño   |
-| ----------------------- | ------------------------------------------------------------------------- | --------------- | -------- | ---------------------- |
-| `/login`                | Acceso                                                                    | Todos           | 1        | —                      |
-| `/alumno`               | Catálogo de ejercicios                                                    | Alumno          | 1        | Figuras 7 y 16 del TFM |
-| `/alumno/ejercicio/:id` | Pantalla de trabajo de una asignación: enunciado, editor, pruebas y tutor | Alumno          | 1, 3 y 4 | Figuras 8, 15 y 17     |
-| `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                             | Alumno          | 1        | —                      |
-| `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve        | Alumno          | 1        | Figuras 14 y 23        |
-| `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId`  | Docente y admin | 2        | Figuras 11–12 del TFM  |
-| `/docente/historico`    | Histórico del grupo                                                       | Docente y admin | 2        | Figuras 13–14 del TFM  |
-| `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                      | Docente y admin | 2        | Figuras 15–16 del TFM  |
-| `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos        | Docente y admin | 2        | —                      |
-| `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                 | Admin           | —        | —                      |
-| `/admin/sistema`        | Ajustes del sistema: adaptador de IA activo                               | Admin           | —        | —                      |
-| `/dev/ui`               | Muestrario de componentes y temas (solo en desarrollo)                    | —               | —        | —                      |
+| Ruta                    | Pantalla                                                                  | Rol             | Capa     | Referencia de diseño    |
+| ----------------------- | ------------------------------------------------------------------------- | --------------- | -------- | ----------------------- |
+| `/login`                | Acceso                                                                    | Todos           | 1        | —                       |
+| `/alumno`               | Catálogo de ejercicios                                                    | Alumno          | 1        | Figuras 7 y 16 del TFM  |
+| `/alumno/ejercicio/:id` | Pantalla de trabajo de una asignación: enunciado, editor, pruebas y tutor | Alumno          | 1, 3 y 4 | Figuras 8, 15 y 17      |
+| `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                             | Alumno          | 1        | —                       |
+| `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve        | Alumno          | 1        | Figuras 14 y 23         |
+| `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId`  | Docente y admin | 2        | Figuras 11–12 del TFM   |
+| `/docente/historico`    | Histórico del grupo                                                       | Docente y admin | 2        | Figuras 13–14 del TFM   |
+| `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                      | Docente y admin | 2        | Figuras 11 y 20 del TFM |
+| `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos        | Docente y admin | 2        | —                       |
+| `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                 | Admin           | —        | —                       |
+| `/admin/sistema`        | Ajustes del sistema: adaptador de IA activo                               | Admin           | —        | —                       |
+| `/dev/ui`               | Muestrario de componentes y temas (solo en desarrollo)                    | —               | —        | —                       |
 
 Detalle por pantalla:
 
@@ -144,7 +144,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - **`subject`** (id, name, source_locale, translations `jsonb` con el nombre en los otros idiomas, D-046): la asignatura («Programación básica»), que gestiona el administrador. No supone programación: el editor y la corrección son del ejercicio según su `kind` (D-029).
 - `class_group` (id, name, school_year, teacher_id → app_user, **subject_id** → subject)
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
-- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **source_locale** (`es`/`en`/`ca`, por defecto `es`: el idioma de título, enunciado y contenidos) y **translations** (`jsonb`: los mismos textos en los otros idiomas, cada uno opcional, D-045), **kind** (por defecto `code`, D-029), **language** (por defecto `javascript`), **function_name**, **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
+- `exercise` (id, title, statement, difficulty `initial`/`medium`/`advanced`/`extension`, **topics** (`text[]`, los contenidos que practica, D-027), **source_locale** (`es`/`en`/`ca`, por defecto `es`: el idioma de título, enunciado y contenidos) y **translations** (`jsonb`: los mismos textos en los otros idiomas, cada uno opcional, D-045), **kind** (por defecto `code`, D-029), **language** (por defecto `javascript`), **function_name**, **parameters** (`text[]`, los nombres de sus parámetros en inglés, que el tutor usa en el esqueleto, D-057), **max_repeated_failures** (por defecto 3), **max_idle_minutes** (por defecto 4), **created_by** → app_user, created_at, updated_at)
 - **`exercise_subject`** (exercise_id → exercise, subject_id → subject; clave por pareja): las asignaturas para las que sirve cada ejercicio del banco, para filtrarlo (4.3).
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
 - **`class_block`** (id, group_id → class_group, position, title, source_locale, translations, is_hidden; única por grupo y posición, D-034, D-046): los bloques de ejercicios de cada grupo, con el título libre que les da el docente («Tema 1: Bucles», «Recuperación del tema 2»), traducible. La posición solo ordena y no se muestra. Un bloque oculto no lo ve el alumno, ni sus ejercicios.
@@ -193,7 +193,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - **Pruebas ocultas:** el alumno solo ve ✔ o ✘. Sirven para evitar que se programe «para las pruebas».
 - **Cómo se llaman en la interfaz del alumno:** «Ejemplos» para las visibles, como una tabla de llamadas y resultados esperados (`sum([1,2,3])` → `6`), y «comprobaciones ocultas» para las ocultas. «Prueba visible» y «prueba oculta» quedan para el docente y el código (iteración 2 del paso 0.5).
 - Siempre se ejecutan todas las pruebas, y la comparación se hace fuera del código del alumno.
-- **Idiomas (D-045):** el código del ejercicio va siempre en inglés (nombre de la función y textos que devuelve), igual en los tres idiomas; título, enunciado y contenidos se escriben en un idioma (`source_locale`) y se traducen a los otros (`translations`). El alumno los lee en el idioma de la interfaz o, si falta la traducción, en el original con un aviso. Es la norma del seed y la recomendación del formulario (4.3), no una prohibición: un docente puede escribir su contrato en español.
+- **Idiomas (D-045):** el código del ejercicio va siempre en inglés (nombre de la función y textos que devuelve), igual en los tres idiomas; título, enunciado y contenidos se escriben en un idioma (`source_locale`) y se traducen a los otros (`translations`). El alumno los lee en el idioma de la interfaz o, si falta la traducción, en el original con un aviso. Es la norma del seed y la recomendación del formulario (4.3), no una prohibición: un docente puede escribir su contrato en español. Los nombres de los parámetros también se guardan (`parameters`), para que el tutor no invente otros (D-057).
 
 **Batería inicial (seed):**
 
@@ -1465,15 +1465,34 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
 - **Hecho así (D-055):** `LiveService.attemptDetail()` (simulado y Supabase, en una petición) con el alumno, el ejercicio con sus pruebas, el grupo y el bloque; el directo llega por el `LiveStore` de la ruta padre y la URL se corrige al grupo y bloque del intento; `tutor_interaction` en Realtime (migración `attempt_detail_realtime`); línea temporal pura (`attemptTimeline()`), con cada respuesta del tutor emparejada con su evento, salidas con su vuelta, silencios marcados y filtros; cifras del intento; franja de la cola con «Atendido»; enlaces a los demás intentos; código en solo lectura con «Ver el actual» (D-029); `AttemptDetailPage` (carga y estados) y `AttemptDetailView` (el intento); `TutorMessage` en `shared/`; el simulador escribe respuestas del tutor y código. El autor quiere revisarlo más adelante (pendientes), y propuso una ficha del alumno.
 
-**4.3 · Gestión de ejercicios y asignaciones (≈5 h)** · ficha `08-ejercicios` · Figuras 15–16 del TFM
+**4.3 · Banco de ejercicios y formulario (≈5 h)** · ficha `08-ejercicios` · Figuras 11 y 20 del TFM
 
-- Lista de ejercicios.
-- Formulario con Signal Forms: título, enunciado, dificultad, función, umbrales con slider y pruebas con `applyEach` (entrada, esperado, oculta).
-- Idiomas (D-045): el docente elige el idioma en que escribe y tiene una pestaña por cada uno de los otros, con «Traducir con IA», que deja un borrador para revisar (con la misma cadena de modelos del tutor, D-044); el formulario recomienda escribir el contrato del código (función y textos que devuelve) en inglés.
+El paso original se partió en tres (D-057): con sus pendientes, no cabía en una sesión.
+
+- **Banco:** por defecto, las asignaturas de los grupos del docente; otra asignatura o todas se piden al servidor. Buscar, filtrar por dificultad y «Solo los míos», con 20 por página y todo en la URL. Duplicar, editar y borrar (solo lo propio y lo que nadie ha empezado).
+- **Formulario con Signal Forms:** título, enunciado y contenidos; dificultad; asignaturas (al menos una); función y parámetros (en inglés, D-057); umbrales con deslizador; y pruebas con `applyEach` (argumentos y resultado en JSON, oculta).
+- **Idiomas (D-045):** el docente elige el idioma en que escribe y tiene una pestaña por cada uno de los otros, opcional pero completa si se empieza; el formulario recomienda el contrato del código en inglés.
+- **Ver como el alumno** (CU-05, 5b), aviso al editar un ejercicio ya empezado y antes de salir sin guardar.
+- **Supabase:** `save_exercise()` en una transacción, RLS por autor y `exercise_student_counts()`.
+
+🧪 Validaciones del esquema del formulario; conversión del modelo; filtro y páginas del banco.
+
+**4.3b · Bloques y asignaciones (≈3 h)** · ficha `08-ejercicios`
+
+- Asignación a un bloque de un grupo (D-046): crear, ordenar, titular y traducir bloques («Tema 1: Bucles», «Recuperación del tema 2»), con un ejercicio en varios bloques si hace falta; ocultar o mostrar un bloque o una asignación (`is_hidden`); el banco filtrado por la asignatura del grupo.
+- Orden de los ejercicios dentro del bloque (`exercise_assignment.position`).
 - Fecha de entrega opcional en cada asignación (`exercise_assignment.due_at`, D-054), que el alumno ve en el catálogo.
-- Asignación a un bloque de un grupo (D-046): crear, ordenar, titular y traducir bloques («Tema 1: Bucles», «Recuperación del tema 2»), con un ejercicio en varios bloques si hace falta; ocultar o mostrar un bloque o una asignación (`is_hidden`); filtrar el banco por asignatura (`exercise_subject`).
 
-🧪 Validaciones del esquema del formulario.
+🧪 Orden y validaciones de bloques y asignaciones.
+
+**4.3c · Probar y traducir ejercicios (≈3 h)** · ficha `08-ejercicios`
+
+- «Traducir con IA»: un borrador de la traducción para revisar, con la misma cadena de modelos del tutor (D-044).
+- «Probar mi solución»: el docente ejecuta su solución contra las pruebas del formulario en la Edge Function `execute`, sin guardarla.
+- «Probar como alumno»: la pantalla de trabajo con el ejercicio, sin crear intentos ni eventos.
+- El formulario como herramienta de WebMCP (`experimentalWebMcpTool`, D-051).
+
+🧪 Comprobación de la solución en el servidor y borrador de la traducción.
 
 **4.4 · Histórico, con datos simulados (≈3 h)** · ficha `09-historico` · Figuras 13–14 del TFM
 

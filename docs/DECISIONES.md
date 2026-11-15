@@ -1630,3 +1630,37 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - El feed y la gráfica salen del mismo estado del `LiveStore`, así que funcionan igual con Supabase sin consultas nuevas.
 
 **Aprobación:** el plan del paso, aprobado por el autor; la disposición, el filtro del feed y la región no viva, por delegación del autor.
+
+## D-057 · El banco de ejercicios: por asignaturas, de su autor y con el código en inglés (15/11/2026)
+
+**Contexto:** el paso 4.3 construye el banco de ejercicios y su formulario. El banco es común a todo el centro y a todas sus asignaturas (D-029), y hasta ahora cualquier docente podía editar o borrar cualquier ejercicio. El tutor escribía el esqueleto de la función con los nombres de parámetros que proponía el modelo, que podían salir en español (`count(palabra)`). El paso era demasiado grande para una sesión: los pendientes que apuntaban a él lo doblaban.
+
+**Decisión:**
+
+- **El paso se parte en tres:** 4.3 (banco y formulario), 4.3b (bloques y asignaciones) y 4.3c («Traducir con IA», «Probar mi solución», «Probar como alumno» y el formulario como herramienta de WebMCP).
+- **El banco trae por asignaturas** (`listBank(scope)`): por defecto, las de los grupos del docente; también una concreta o todas, que se piden al servidor. Así lo que se descarga crece con la asignatura del docente, no con el centro. Buscar, filtrar por dificultad y por autor y paginar (20 por página) se hacen sobre lo cargado, al instante, y viven en la URL. Mientras llega otra asignatura se queda lo que se ve, con una barra fina encima. Cada ejercicio necesita al menos una asignatura: sin ella, nadie lo encontraría.
+- **Cada ejercicio es de su autor:** solo él o la administración lo cambia o lo borra, con sus pruebas y sus asignaturas (`can_edit_exercise()` en la RLS). Los demás lo ven en solo lectura y lo duplican para adaptarlo. El banco dice «Tuyo» o «De otro docente», sin el nombre, así que la RLS de `app_user` no cambia.
+- **Guardar es una sola transacción:** `save_exercise()` crea o actualiza el ejercicio y reemplaza sus pruebas y sus asignaturas. Es `security invoker`, así que la RLS decide, y un ejercicio ajeno da «no encontrado».
+- **El uso de un ejercicio se ve antes de tocarlo:** `exercise_student_counts()` cuenta los alumnos que lo han empezado en cualquier grupo, solo la cifra. El formulario avisa al editar uno empezado, y el banco no deja borrarlo (sus intentos lo guardan).
+- **El código, en inglés y sin mezclas:** el ejercicio guarda los nombres de sus parámetros (`exercise.parameters`, identificadores ASCII distintos). El tutor los usa siempre en el esqueleto y en el «Insertar», los pone en el prompt y no acepta un esqueleto del modelo con otros nombres. El formulario lo recomienda con un ejemplo. Los 42 ejercicios del seed los tienen, y los tests del proyecto dejan de usar `suma`, `sumar(vector)` o `contarVocales`.
+- **El formulario vive en la página, con Signal Forms:** el modelo son los textos que teclea el docente (una pestaña por idioma; argumentos y resultado en JSON), y `toDraft()` los convierte al guardar. Las pestañas y la lista de pruebas son componentes que editan su rama del formulario. La vista previa reutiliza la zona del enunciado de la pantalla de trabajo, con el idioma de la pestaña.
+- **Los botones flotan como el tutor:** «Nuevo ejercicio» es un botón flotante extendido, y guardar va en un panel flotante del color de los paneles, los dos abajo a la derecha.
+
+**Alternativas:**
+
+- **Hacer todo el paso en una sesión:** más de 10 horas, en contra de los pasos cortos.
+- **Traer el banco entero:** con miles de ejercicios de otras asignaturas, la mayor parte de lo descargado no le sirve al docente.
+- **Búsqueda y paginación en el servidor:** sin necesidad con el tamaño de una asignatura y con más complejidad (búsqueda sin tildes en JSON, una espera tras cada tecla y esperas a cada filtro). Queda en [PENDIENTES](PENDIENTES.md) si una asignatura llega a miles.
+- **Editar cualquier ejercicio del banco:** un docente cambiaría las pruebas de los grupos de otro sin saberlo.
+- **Mostrar el nombre del autor:** obliga a abrir la RLS de `app_user` a todos los docentes, y para elegir un ejercicio basta saber si es propio.
+- **«Probar mi solución» en el navegador:** con los datos simulados funciona, pero en producción la CSP prohíbe `new Function` y el sandbox de verdad está en el servidor. Pasa al 4.3c con la Edge Function `execute`.
+- **Una barra de guardar de lado a lado:** no existe en ninguna otra pantalla y desentonaba.
+
+**Consecuencias:**
+
+- `SEED_VERSION` sube a 9: los datos simulados guardados en un navegador se descartan, porque no tenían los parámetros.
+- Los ejercicios de Programación avanzada del seed pasan a ser del otro docente, para ver un banco con ejercicios ajenos.
+- El prompt del tutor cambia («Función que se pide: sum (parámetros: numbers)»): falta pasar la batería contra el modelo real.
+- La pantalla de trabajo y el formulario comparten `StatementZone`, que admite un contenido sin asignación y un idioma.
+
+**Aprobación:** el plan y la partición, aprobados por el autor («Sí, empieza»); los parámetros en inglés, a petición suya; los botones flotantes y el banco por asignaturas, a partir de sus preguntas; el resto, por delegación del autor.
