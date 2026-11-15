@@ -46,23 +46,32 @@ export class MockExerciseService extends ExerciseService {
       }
       const tables = this.db.tables();
       const groupIds = enrolledGroupIds(tables, userId);
-      return tables.assignments
-        .filter(
-          (assignment) =>
-            groupIds.has(assignment.groupId) && canSeeAssignment(tables, user, assignment),
-        )
-        .sort((a, b) => a.id.localeCompare(b.id))
-        .map((assignment) => {
-          const attempts = tables.attempts
-            .filter((a) => a.userId === userId && a.assignmentId === assignment.id)
-            .map((attempt) =>
-              summarizeAttempt(
-                attempt,
-                tables.interactions.filter((i) => i.attemptId === attempt.id),
-              ),
-            );
-          return assignedExercise(this.card(assignment), attempts);
-        });
+      return (
+        tables.assignments
+          .filter(
+            (assignment) =>
+              groupIds.has(assignment.groupId) && canSeeAssignment(tables, user, assignment),
+          )
+          // By group, block and place in the block, as the catalog shows them
+          .sort(
+            (a, b) =>
+              a.groupId.localeCompare(b.groupId) ||
+              findRow(tables.classBlocks, a.blockId).position -
+                findRow(tables.classBlocks, b.blockId).position ||
+              a.position - b.position,
+          )
+          .map((assignment) => {
+            const attempts = tables.attempts
+              .filter((a) => a.userId === userId && a.assignmentId === assignment.id)
+              .map((attempt) =>
+                summarizeAttempt(
+                  attempt,
+                  tables.interactions.filter((i) => i.attemptId === attempt.id),
+                ),
+              );
+            return assignedExercise(this.card(assignment), attempts);
+          })
+      );
     });
   }
 
@@ -183,50 +192,6 @@ export class MockExerciseService extends ExerciseService {
     });
   }
 
-  listAssignments(groupId: string): Promise<ExerciseAssignment[]> {
-    return this.network.request(() => {
-      this.requireGroupManager(groupId);
-      return this.db
-        .tables()
-        .assignments.filter((assignment) => assignment.groupId === groupId)
-        .sort((a, b) => a.id.localeCompare(b.id));
-    });
-  }
-
-  assign(assignment: Omit<ExerciseAssignment, 'id'>): Promise<ExerciseAssignment> {
-    return this.network.request(() => {
-      this.requireGroupManager(assignment.groupId);
-      const tables = this.db.tables();
-      findRow(tables.exercises, assignment.exerciseId);
-      if (findRow(tables.classBlocks, assignment.blockId).groupId !== assignment.groupId) {
-        throw new DataError('invalid', 'The block is of another group');
-      }
-      const repeated = tables.assignments.some(
-        (row) => row.blockId === assignment.blockId && row.exerciseId === assignment.exerciseId,
-      );
-      if (repeated) {
-        throw new DataError('invalid', 'The exercise is already in that block');
-      }
-      const created: ExerciseAssignment = { id: crypto.randomUUID(), ...assignment };
-      this.db.update('assignments', (rows) => [...rows, created]);
-      return created;
-    });
-  }
-
-  unassign(assignmentId: string): Promise<void> {
-    return this.network.request(() => {
-      const assignment = findRow(this.db.tables().assignments, assignmentId);
-      this.requireGroupManager(assignment.groupId);
-      this.db.update('assignments', (rows) => rows.filter((row) => row.id !== assignmentId));
-      // Like `on delete set null`: the attempts and their history stay.
-      this.db.update('attempts', (rows) =>
-        rows.map((row) =>
-          row.assignmentId === assignmentId ? { ...row, assignmentId: null } : row,
-        ),
-      );
-    });
-  }
-
   /** The exercise of the assignment, with its group, subject and block. */
   private card(assignment: ExerciseAssignment): AssignmentCard {
     const tables = this.db.tables();
@@ -236,6 +201,7 @@ export class MockExerciseService extends ExerciseService {
       assignmentId: assignment.id,
       group: { id: group.id, name: group.name, subject: findRow(tables.subjects, group.subjectId) },
       block: findRow(tables.classBlocks, assignment.blockId),
+      dueAt: assignment.dueAt,
     };
   }
 
@@ -296,13 +262,6 @@ export class MockExerciseService extends ExerciseService {
       ...rows.filter((row) => row.exerciseId !== exerciseId),
       ...tests,
     ]);
-  }
-
-  private requireGroupManager(groupId: string): void {
-    const user = this.db.requireUser();
-    if (!canManageGroup(user, findRow(this.db.tables().groups, groupId))) {
-      throw new DataError('forbidden');
-    }
   }
 }
 

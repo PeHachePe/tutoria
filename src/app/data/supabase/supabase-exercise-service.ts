@@ -2,13 +2,7 @@ import { inject, Service } from '@angular/core';
 
 import { assignedExercise, type AttemptSummary, summarizeAttempt } from '../attempt-progress';
 import { DataError } from '../data-error';
-import type {
-  AssignedExercise,
-  AssignedGroup,
-  Exercise,
-  ExerciseAssignment,
-  ExerciseDetail,
-} from '../exercise';
+import type { AssignedExercise, AssignedGroup, Exercise, ExerciseDetail } from '../exercise';
 import {
   type BankExercise,
   type BankScope,
@@ -26,10 +20,10 @@ import { SUPABASE_CLIENT } from './supabase-client';
 import { unwrap } from './supabase-error';
 import {
   type Row,
-  toAssignment,
   toClassBlock,
   toExercise,
   toIso,
+  toIsoOrNull,
   toSubject,
   toTest,
 } from './supabase-rows';
@@ -52,10 +46,10 @@ export class SupabaseExerciseService extends ExerciseService {
       this.supabase
         .from('exercise_assignment')
         .select(
-          'id, exercise(*), class_block(*), class_group!inner(id, name, subject(*), enrollment!inner(user_id))',
+          'id, due_at, exercise(*), class_block(*), class_group!inner(id, name, subject(*), enrollment!inner(user_id))',
         )
         .eq('class_group.enrollment.user_id', userId)
-        .order('id'),
+        .order('position'),
       this.supabase
         .from('attempt')
         .select('assignment_id, number, status, updated_at, tutor_interaction(trigger, hint_level)')
@@ -84,6 +78,7 @@ export class SupabaseExerciseService extends ExerciseService {
           assignmentId: assignment.id,
           group: toAssignedGroup(assignment.class_group),
           block: toClassBlock(assignment.class_block),
+          dueAt: toIsoOrNull(assignment.due_at),
         },
         attemptsOf.get(assignment.id) ?? [],
       ),
@@ -98,7 +93,9 @@ export class SupabaseExerciseService extends ExerciseService {
     const assignment = unwrap(
       await this.supabase
         .from('exercise_assignment')
-        .select('id, exercise(*, test(*)), class_block(*), class_group(id, name, subject(*))')
+        .select(
+          'id, due_at, exercise(*, test(*)), class_block(*), class_group(id, name, subject(*))',
+        )
         .eq('id', assignmentId)
         .eq('exercise.test.is_hidden', false)
         .order('position', { referencedTable: 'exercise.test' })
@@ -113,6 +110,7 @@ export class SupabaseExerciseService extends ExerciseService {
       assignmentId: assignment.id,
       group: toAssignedGroup(assignment.class_group),
       block: toClassBlock(assignment.class_block),
+      dueAt: toIsoOrNull(assignment.due_at),
       visibleTests: test.map(toTest),
       hiddenTestCount: hidden,
     };
@@ -237,37 +235,6 @@ export class SupabaseExerciseService extends ExerciseService {
   async remove(exerciseId: string): Promise<void> {
     const deleted = unwrap(
       await this.supabase.from('exercise').delete().eq('id', exerciseId).select('id'),
-    );
-    if (deleted.length === 0) throw new DataError('not_found');
-  }
-
-  async listAssignments(groupId: string): Promise<ExerciseAssignment[]> {
-    const rows = unwrap(
-      await this.supabase.from('exercise_assignment').select().eq('group_id', groupId).order('id'),
-    );
-    return rows.map(toAssignment);
-  }
-
-  async assign(assignment: Omit<ExerciseAssignment, 'id'>): Promise<ExerciseAssignment> {
-    const row = unwrap(
-      await this.supabase
-        .from('exercise_assignment')
-        .insert({
-          group_id: assignment.groupId,
-          block_id: assignment.blockId,
-          exercise_id: assignment.exerciseId,
-          is_hidden: assignment.isHidden,
-        })
-        .select()
-        .single(),
-    );
-    return toAssignment(row);
-  }
-
-  /** The attempts stay, without their assignment (`on delete set null`). */
-  async unassign(assignmentId: string): Promise<void> {
-    const deleted = unwrap(
-      await this.supabase.from('exercise_assignment').delete().eq('id', assignmentId).select('id'),
     );
     if (deleted.length === 0) throw new DataError('not_found');
   }

@@ -23,6 +23,7 @@ describe('assignedExercise', () => {
     assignmentId: SEED.assignments[0].id,
     group: { id: SEED.groups[0].id, name: '1.º DAW A', subject: SEED.subjects[0] },
     block: SEED.classBlocks[0],
+    dueAt: null,
   };
 
   it('is not started without attempts', () => {

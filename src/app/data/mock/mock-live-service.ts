@@ -39,7 +39,7 @@ export class MockLiveService extends LiveService {
       );
       const assignments = tables.assignments
         .filter((assignment) => assignment.blockId === blockId)
-        .sort((a, b) => a.id.localeCompare(b.id));
+        .sort((a, b) => a.position - b.position);
       const assignmentIds = new Set(assignments.map((assignment) => assignment.id));
       const attempts = tables.attempts.filter(
         (attempt) => attempt.assignmentId !== null && assignmentIds.has(attempt.assignmentId),

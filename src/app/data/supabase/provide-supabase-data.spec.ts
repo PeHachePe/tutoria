@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
+import { BlockService } from '../block-service';
 import { CodeRunnerService } from '../code-runner-service';
 import { EventService } from '../event-service';
 import { ExerciseService } from '../exercise-service';
@@ -16,6 +17,7 @@ import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
 import { SupabaseLiveService } from './supabase-live-service';
+import { SupabaseBlockService } from './supabase-block-service';
 import { SupabaseTutorService } from './supabase-tutor-service';
 
 describe('provideSupabaseData', () => {
@@ -43,6 +45,7 @@ describe('provideSupabaseData', () => {
     expect(TestBed.inject(CodeRunnerService)).toBeInstanceOf(SupabaseCodeRunnerService);
     expect(TestBed.inject(TutorService)).toBeInstanceOf(SupabaseTutorService);
     expect(TestBed.inject(LiveService)).toBeInstanceOf(SupabaseLiveService);
+    expect(TestBed.inject(BlockService)).toBeInstanceOf(SupabaseBlockService);
   });
 
   it('creates one client for the project, with the publishable key', async () => {

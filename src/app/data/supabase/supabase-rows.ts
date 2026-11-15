@@ -20,7 +20,7 @@ export function toIso(timestamp: string): string {
   return new Date(timestamp).toISOString();
 }
 
-function toIsoOrNull(timestamp: string | null): string | null {
+export function toIsoOrNull(timestamp: string | null): string | null {
   return timestamp === null ? null : toIso(timestamp);
 }
 
@@ -88,7 +88,9 @@ export function toAssignment(row: Row<'exercise_assignment'>): ExerciseAssignmen
     groupId: row.group_id,
     blockId: row.block_id,
     exerciseId: row.exercise_id,
+    position: row.position,
     isHidden: row.is_hidden,
+    dueAt: toIsoOrNull(row.due_at),
   };
 }
 

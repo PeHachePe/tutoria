@@ -69,8 +69,12 @@ export interface ExerciseAssignment {
   readonly groupId: string;
   readonly blockId: string;
   readonly exerciseId: string;
+  /** Sorts the exercises of the block (4.3b); never shown. */
+  readonly position: number;
   /** Hidden from the students, as the whole block can be. */
   readonly isHidden: boolean;
+  /** Optional due date the students see in the catalog (D-054), as an ISO date, or null. */
+  readonly dueAt: string | null;
 }
 
 /** The group of an assigned exercise, with its subject: the tabs of the catalog. */
@@ -89,6 +93,8 @@ export interface AssignedExercise {
   readonly assignmentId: string;
   readonly group: AssignedGroup;
   readonly block: ClassBlock;
+  /** Due date of the assignment (D-054), or null. */
+  readonly dueAt: string | null;
   /** Last change of the attempt that counts, or null without one. */
   readonly updatedAt: string | null;
   /** Status of the attempt that counts, or `not_started`. */
@@ -109,6 +115,8 @@ export interface ExerciseDetail {
   readonly assignmentId: string;
   readonly group: AssignedGroup;
   readonly block: ClassBlock;
+  /** Due date of the assignment (D-054), or null. */
+  readonly dueAt: string | null;
   /** Sorted by position. */
   readonly visibleTests: readonly Test[];
   /** Hidden tests are counted but never sent to the student. */

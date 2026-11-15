@@ -48,6 +48,7 @@ function detailOf(index: number): ExerciseDetail {
       subject: SEED.subjects.find((subject) => subject.id === group.subjectId)!,
     },
     block: SEED.classBlocks.find((block) => block.id === assignment.blockId)!,
+    dueAt: null,
     visibleTests: tests.filter((test) => !test.isHidden),
     hiddenTestCount: tests.filter((test) => test.isHidden).length,
   };
@@ -1345,6 +1346,7 @@ describe('WorkspacePage', () => {
         assignmentId: 'next-assignment',
         group: SUM.group,
         block: SUM.block,
+        dueAt: null,
         updatedAt: null,
         status: 'not_started',
         hintCount: 0,

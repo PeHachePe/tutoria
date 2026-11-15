@@ -451,6 +451,8 @@ interface BlockFixture {
   /** Exercises of the block the teacher has not shown yet. */
   readonly hiddenExercises?: readonly number[];
   readonly isHidden?: boolean;
+  /** Due date of every exercise of the block (4.3b), if it has one. */
+  readonly dueAt?: string;
 }
 
 function titles(en: string, ca: string): BlockFixture['translations'] {
@@ -490,6 +492,7 @@ const BLOCK_FIXTURES: readonly BlockFixture[] = [
     title: 'Tema 4: Cadenas y formato',
     translations: titles('Topic 4: Strings and formatting', 'Tema 4: Cadenes i format'),
     exercises: [6, 7, 8],
+    dueAt: '2026-11-06T22:59:00.000Z',
   },
   {
     groupId: DAW_GROUP_ID,
@@ -497,6 +500,7 @@ const BLOCK_FIXTURES: readonly BlockFixture[] = [
     title: 'Recuperación del tema 2',
     translations: titles('Topic 2 resit', 'Recuperació del tema 2'),
     exercises: [3, 4, 2],
+    dueAt: '2026-11-20T22:59:00.000Z',
     hiddenExercises: [2],
   },
   {
@@ -534,6 +538,7 @@ const BLOCK_FIXTURES: readonly BlockFixture[] = [
     title: 'Tema 2: URL y peticiones',
     translations: titles('Topic 2: URLs and requests', 'Tema 2: URL i peticions'),
     exercises: [10, 19, 28],
+    dueAt: '2026-11-18T22:59:00.000Z',
   },
   {
     groupId: DAM_ADVANCED_GROUP_ID,
@@ -556,6 +561,7 @@ const BLOCK_FIXTURES: readonly BlockFixture[] = [
     title: 'Tema 5: Funciones con números',
     translations: titles('Topic 5: Functions with numbers', 'Tema 5: Funcions amb nombres'),
     exercises: [11, 12, 14, 17],
+    dueAt: '2026-11-27T22:59:00.000Z',
   },
   {
     groupId: DAW_GROUP_ID,
@@ -570,6 +576,7 @@ const BLOCK_FIXTURES: readonly BlockFixture[] = [
     title: 'Tema 3: Recorridos y cadenas',
     translations: titles('Topic 3: Traversals and strings', 'Tema 3: Recorreguts i cadenes'),
     exercises: [5, 6, 7, 8],
+    dueAt: '2026-11-19T22:59:00.000Z',
   },
   {
     groupId: DAM_GROUP_ID,
@@ -659,11 +666,13 @@ export function assignmentId(groupId: string, n: number): string {
 }
 
 export const ASSIGNMENTS: readonly ExerciseAssignment[] = BLOCK_FIXTURES.flatMap((block, index) =>
-  block.exercises.map((n) => ({
+  block.exercises.map((n, position) => ({
     id: blockAssignmentId(index + 1, n),
     groupId: block.groupId,
     blockId: fixtureId('block', index + 1),
     exerciseId: exerciseId(n),
+    position: position + 1,
     isHidden: block.hiddenExercises?.includes(n) ?? false,
+    dueAt: block.dueAt ?? null,
   })),
 );

@@ -28,6 +28,8 @@ const KIND_OF_CODE: Readonly<Record<string, DataErrorKind>> = {
   '23505': 'invalid',
   '23503': 'invalid',
   '23514': 'invalid',
+  // A value an RPC does not accept, such as a new order without every row (reorder_blocks)
+  '22023': 'invalid',
   // The RLS or the column privileges reject the write
   '42501': 'forbidden',
   // Auth: a disabled account, which Auth tells before checking the password (D-041)

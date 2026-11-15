@@ -201,6 +201,21 @@ export function blockRow(overrides: Partial<Row<'class_block'>> = {}): Row<'clas
   };
 }
 
+export function assignmentRow(
+  overrides: Partial<Row<'exercise_assignment'>> = {},
+): Row<'exercise_assignment'> {
+  return {
+    id: 'a-1',
+    group_id: 'daw',
+    block_id: 'block-1',
+    exercise_id: 'exercise-1',
+    position: 1,
+    is_hidden: false,
+    due_at: null,
+    ...overrides,
+  };
+}
+
 export function testRow(overrides: Partial<Row<'test'>> = {}): Row<'test'> {
   return {
     id: 'test-1',

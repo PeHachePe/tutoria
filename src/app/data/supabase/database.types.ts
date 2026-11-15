@@ -323,25 +323,31 @@ export type Database = {
       exercise_assignment: {
         Row: {
           block_id: string;
+          due_at: string | null;
           exercise_id: string;
           group_id: string;
           id: string;
           is_hidden: boolean;
+          position: number;
         };
         ComputedFields: never;
         Insert: {
           block_id: string;
+          due_at?: string | null;
           exercise_id: string;
           group_id: string;
           id?: string;
           is_hidden?: boolean;
+          position: number;
         };
         Update: {
           block_id?: string;
+          due_at?: string | null;
           exercise_id?: string;
           group_id?: string;
           id?: string;
           is_hidden?: boolean;
+          position?: number;
         };
         Relationships: [
           {
@@ -561,10 +567,59 @@ export type Database = {
     };
     Functions: {
       are_valid_parameters: { Args: { names: string[] }; Returns: boolean };
+      assign_exercises: {
+        Args: { exercise_ids: string[]; target_block_id: string };
+        Returns: {
+          block_id: string;
+          due_at: string | null;
+          exercise_id: string;
+          group_id: string;
+          id: string;
+          is_hidden: boolean;
+          position: number;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'exercise_assignment';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      assignment_student_counts: {
+        Args: { target_group_id: string };
+        Returns: {
+          assignment_id: string;
+          student_count: number;
+        }[];
+      };
       can_edit_exercise: { Args: { target_exercise_id: string }; Returns: boolean };
       can_open_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       can_read_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
       can_record_event: { Args: { target_attempt_id: string }; Returns: boolean };
+      create_block: {
+        Args: {
+          block_is_hidden: boolean;
+          block_source_locale: Database['public']['Enums']['app_locale'];
+          block_title: string;
+          block_translations: Json;
+          target_group_id: string;
+        };
+        Returns: {
+          group_id: string;
+          id: string;
+          is_hidden: boolean;
+          position: number;
+          source_locale: Database['public']['Enums']['app_locale'];
+          title: string;
+          translations: NonNullable<Json>;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'class_block';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       current_app_role: {
         Args: Record<PropertyKey, never>;
         Returns: Database['public']['Enums']['user_role'];
@@ -581,6 +636,8 @@ export type Database = {
       is_assigned_to_me: { Args: { target_exercise_id: string }; Returns: boolean };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
+      is_started_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
+      is_started_block: { Args: { target_block_id: string }; Returns: boolean };
       is_valid_exercise_translations: {
         Args: { source_locale: Database['public']['Enums']['app_locale']; translations: Json };
         Returns: boolean;
@@ -647,6 +704,14 @@ export type Database = {
           target_request_id: string;
         };
         Returns: string;
+      };
+      reorder_assignments: {
+        Args: { assignment_ids: string[]; target_block_id: string };
+        Returns: undefined;
+      };
+      reorder_blocks: {
+        Args: { block_ids: string[]; target_group_id: string };
+        Returns: undefined;
       };
       retry_attempt: {
         Args: { target_assignment_id: string };

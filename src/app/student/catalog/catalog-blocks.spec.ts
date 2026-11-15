@@ -47,6 +47,7 @@ function entry(
     assignmentId: `a-${id}`,
     group,
     block: block(blockPosition, group),
+    dueAt: null,
     updatedAt,
     status,
     hintCount: 0,

@@ -40,6 +40,7 @@ function entry(id: string, title: string): AssignedExercise {
       translations: {},
       isHidden: false,
     },
+    dueAt: null,
     updatedAt: null,
     status: 'tests_failed',
     hintCount: 0,

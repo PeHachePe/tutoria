@@ -39,6 +39,7 @@ function entry(id: string, title: string, status: AssignedExercise['status']): A
       translations: {},
       isHidden: false,
     },
+    dueAt: null,
     updatedAt: null,
     status,
     hintCount: 0,

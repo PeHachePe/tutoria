@@ -99,9 +99,9 @@ select throws_ok(
   'every block has a title'
 );
 select throws_ok(
-  $$ insert into exercise_assignment (group_id, block_id, exercise_id) values
+  $$ insert into exercise_assignment (group_id, block_id, exercise_id, position) values
      ('20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000007',
-      '40000000-0000-4000-8000-000000000005') $$,
+      '40000000-0000-4000-8000-000000000005', 9) $$,
   '23503', null,
   'an assignment is in a block of its own group'
 );

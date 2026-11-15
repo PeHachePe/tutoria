@@ -55,9 +55,16 @@ describe('SupabaseExerciseService', () => {
       server
         .on('GET', '/rest/v1/exercise_assignment', {
           body: [
-            { id: 'a-1', exercise: SUM, class_block: blockRow(), class_group: GROUP },
+            {
+              id: 'a-1',
+              due_at: '2026-11-20 22:59:00+00',
+              exercise: SUM,
+              class_block: blockRow(),
+              class_group: GROUP,
+            },
             {
               id: 'a-2',
+              due_at: null,
               exercise: VOWELS,
               class_block: blockRow({ id: 'block-2', position: 2, title: 'Repaso' }),
               class_group: GROUP,
@@ -100,7 +107,7 @@ describe('SupabaseExerciseService', () => {
 
       const [assignments] = server.sentTo('GET', '/rest/v1/exercise_assignment');
       expect(assignments.params.get('class_group.enrollment.user_id')).toBe('eq.lucia');
-      expect(assignments.params.get('order')).toBe('id.asc');
+      expect(assignments.params.get('order')).toBe('position.asc');
       const [attempts] = server.sentTo('GET', '/rest/v1/attempt');
       expect(attempts.params.get('user_id')).toBe('eq.lucia');
       expect(server.requests).toHaveLength(2);
@@ -131,6 +138,7 @@ describe('SupabaseExerciseService', () => {
           translations: {},
           isHidden: false,
         },
+        dueAt: '2026-11-20T22:59:00.000Z',
         updatedAt: '2026-10-01T09:30:00.000Z',
         status: 'submitted',
         hintCount: 2,
@@ -166,6 +174,7 @@ describe('SupabaseExerciseService', () => {
         .on('GET', '/rest/v1/exercise_assignment', {
           body: {
             id: 'a-1',
+            due_at: null,
             exercise: { ...SUM, test: [testRow({ id: 't-1' }), testRow({ id: 't-2' })] },
             class_block: blockRow(),
             class_group: { id: 'daw', name: '1.º DAW A', subject: subjectRow() },
@@ -180,6 +189,7 @@ describe('SupabaseExerciseService', () => {
         assignmentId: 'a-1',
         group: { id: 'daw', subject: { name: 'Programación básica' } },
         block: { title: 'Tema 1: Bucles' },
+        dueAt: null,
         hiddenTestCount: 3,
       });
       expect(detail.exercise).not.toHaveProperty('test');
@@ -410,71 +420,6 @@ describe('SupabaseExerciseService', () => {
       });
 
       await expect(service.remove('sum')).rejects.toMatchObject({ kind: 'invalid' });
-    });
-  });
-
-  describe('assignments', () => {
-    const ROW = {
-      id: 'a-1',
-      group_id: 'daw',
-      block_id: 'block-1',
-      exercise_id: 'sum',
-      is_hidden: false,
-    };
-    const ASSIGNMENT = {
-      id: 'a-1',
-      groupId: 'daw',
-      blockId: 'block-1',
-      exerciseId: 'sum',
-      isHidden: false,
-    };
-    const NEW_ASSIGNMENT = {
-      groupId: 'daw',
-      blockId: 'block-1',
-      exerciseId: 'sum',
-      isHidden: false,
-    };
-
-    it('lists those of a group', async () => {
-      server.on('GET', '/rest/v1/exercise_assignment', { body: [ROW] });
-
-      await expect(service.listAssignments('daw')).resolves.toEqual([ASSIGNMENT]);
-      expect(server.requests[0].params.get('group_id')).toBe('eq.daw');
-    });
-
-    it('assigns an exercise to a block', async () => {
-      server.on('POST', '/rest/v1/exercise_assignment', { status: 201, body: ROW });
-
-      await expect(service.assign(NEW_ASSIGNMENT)).resolves.toEqual(ASSIGNMENT);
-      expect(server.requests[0].body).toEqual({
-        group_id: 'daw',
-        block_id: 'block-1',
-        exercise_id: 'sum',
-        is_hidden: false,
-      });
-    });
-
-    it('rejects assigning the same exercise twice to a block', async () => {
-      server.on('POST', '/rest/v1/exercise_assignment', {
-        status: 409,
-        body: { code: '23505', message: 'duplicate key value' },
-      });
-
-      await expect(service.assign(NEW_ASSIGNMENT)).rejects.toMatchObject({ kind: 'invalid' });
-    });
-
-    it('unassigns an exercise', async () => {
-      server.on('DELETE', '/rest/v1/exercise_assignment', { body: [{ id: 'a-1' }] });
-
-      await service.unassign('a-1');
-
-      expect(server.requests[0].params.get('id')).toBe('eq.a-1');
-    });
-
-    it('is not found when unassigning an assignment the user cannot see', async () => {
-      server.on('DELETE', '/rest/v1/exercise_assignment', { body: [] });
-
-      await expect(service.unassign('a-1')).rejects.toMatchObject({ kind: 'not_found' });
     });
   });
 });

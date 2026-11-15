@@ -67,7 +67,7 @@ export class SupabaseLiveService extends LiveService {
         .select('id, exercise(*, test(*))')
         .eq('group_id', groupId)
         .eq('block_id', blockId)
-        .order('id'),
+        .order('position'),
     ]);
     if (unwrap(block) === null) {
       throw new DataError('not_found');

@@ -5,7 +5,7 @@ import type { HintLevel, TutorTrigger } from './tutor';
 /** What a catalog card says of the assignment, before looking at the attempts. */
 export type AssignmentCard = Pick<
   AssignedExercise,
-  'exercise' | 'assignmentId' | 'group' | 'block'
+  'exercise' | 'assignmentId' | 'group' | 'block' | 'dueAt'
 >;
 
 /**

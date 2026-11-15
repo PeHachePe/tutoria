@@ -51,6 +51,7 @@ function entry(
       translations: {},
       isHidden: false,
     },
+    dueAt: null,
     updatedAt,
     status,
     hintCount: 0,

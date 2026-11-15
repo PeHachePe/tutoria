@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
+import { BlockService } from '../block-service';
 import { CodeRunnerService } from '../code-runner-service';
 import { EventService } from '../event-service';
 import { ExerciseService } from '../exercise-service';
@@ -13,6 +14,7 @@ import { keepaliveFetch } from './keepalive-fetch';
 import { SUPABASE_CLIENT, type SupabaseConfig } from './supabase-client';
 import { SupabaseAttemptService } from './supabase-attempt-service';
 import { SupabaseAuthService } from './supabase-auth-service';
+import { SupabaseBlockService } from './supabase-block-service';
 import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
@@ -39,5 +41,6 @@ export function provideSupabaseData(config: SupabaseConfig): EnvironmentProvider
     { provide: CodeRunnerService, useClass: SupabaseCodeRunnerService },
     { provide: TutorService, useClass: SupabaseTutorService },
     { provide: LiveService, useClass: SupabaseLiveService },
+    { provide: BlockService, useClass: SupabaseBlockService },
   ]);
 }

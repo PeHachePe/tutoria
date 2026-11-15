@@ -1,11 +1,4 @@
-import type {
-  AssignedExercise,
-  Difficulty,
-  Exercise,
-  ExerciseAssignment,
-  ExerciseDetail,
-  Test,
-} from './exercise';
+import type { AssignedExercise, Difficulty, Exercise, ExerciseDetail, Test } from './exercise';
 import type { ContentLocale, ExerciseTranslations } from './localized-text';
 import type { Subject } from './subject';
 
@@ -89,7 +82,7 @@ export interface ExerciseBank {
 }
 
 /**
- * Exercises, their tests and their assignments. Abstract class without a decorator: it is the injection
+ * Exercises and their tests; the assignments are in `BlockService` (4.3b). Abstract class without a decorator: it is the injection
  * token (4.2, D-005). Every teacher reads the whole bank, but only its author or the administration
  * changes or deletes an exercise (4.3, D-057).
  */
@@ -126,10 +119,4 @@ export abstract class ExerciseService {
 
   /** `invalid` if someone has started it: their attempts keep it. `forbidden` as `update`. */
   abstract remove(exerciseId: string): Promise<void>;
-
-  abstract listAssignments(groupId: string): Promise<ExerciseAssignment[]>;
-
-  abstract assign(assignment: Omit<ExerciseAssignment, 'id'>): Promise<ExerciseAssignment>;
-
-  abstract unassign(assignmentId: string): Promise<void>;
 }

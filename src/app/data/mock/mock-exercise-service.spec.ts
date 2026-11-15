@@ -4,7 +4,6 @@ import type { ExerciseDraft } from '../exercise-service';
 import {
   assignmentId,
   blockAssignmentId,
-  DAM_FIRST_BLOCK,
   DAW_HIDDEN_BLOCK,
   DAW_RESIT_BLOCK,
   DAW_WEB_FIRST_BLOCK,
@@ -84,7 +83,8 @@ describe('MockExerciseService', () => {
         .filter((a) => a.blockId !== fixtureId('block', DAW_HIDDEN_BLOCK))
         .map((a) => a.id)
         .sort();
-      expect(entries.map((entry) => entry.assignmentId)).toEqual(visible);
+      // By group, block and place: compared without the order here
+      expect(entries.map((entry) => entry.assignmentId).sort()).toEqual(visible);
       expect(entries.slice(0, 8).map((entry) => entry.assignmentId)).toEqual(
         [1, 2, 3, 4, 5, 6, 7, 8].map((n) => assignmentId(DAW_GROUP_ID, n)),
       );
@@ -458,96 +458,6 @@ describe('MockExerciseService', () => {
     it('fails to update or remove an unknown exercise', async () => {
       await expect(service.update('missing', DRAFT)).rejects.toMatchObject({ kind: 'not_found' });
       await expect(service.remove('missing')).rejects.toMatchObject({ kind: 'not_found' });
-    });
-  });
-
-  describe('assignments', () => {
-    it('lists the assignments of a group to its teacher and to the administrator', async () => {
-      db.setSession(TEACHER_ID);
-      const assignments = await service.listAssignments(DAW_GROUP_ID);
-      expect(assignments).toHaveLength(
-        SEED.assignments.filter((a) => a.groupId === DAW_GROUP_ID).length,
-      );
-      expect(assignments[0]).toEqual(SEED.assignments[0]);
-
-      db.setSession(ADMIN_ID);
-      await expect(service.listAssignments(DAM_GROUP_ID)).resolves.toHaveLength(15);
-    });
-
-    it("does not let a teacher manage another teacher's group", async () => {
-      db.setSession(OTHER_TEACHER_ID);
-
-      await expect(service.listAssignments(DAW_GROUP_ID)).rejects.toMatchObject({
-        kind: 'forbidden',
-      });
-      await expect(
-        service.assign({
-          groupId: DAW_GROUP_ID,
-          blockId: fixtureId('block', 1),
-          exerciseId: exerciseId(5),
-          isHidden: false,
-        }),
-      ).rejects.toMatchObject({ kind: 'forbidden' });
-      await expect(service.unassign(assignmentId(DAW_GROUP_ID, 1))).rejects.toMatchObject({
-        kind: 'forbidden',
-      });
-    });
-
-    it('fails for an unknown group', async () => {
-      db.setSession(ADMIN_ID);
-
-      await expect(service.listAssignments('missing')).rejects.toMatchObject({ kind: 'not_found' });
-    });
-
-    it('assigns an exercise to a block of a group', async () => {
-      db.setSession(OTHER_TEACHER_ID);
-      const assignment = {
-        groupId: DAM_GROUP_ID,
-        blockId: fixtureId('block', DAM_FIRST_BLOCK),
-        exerciseId: exerciseId(5),
-        isHidden: true,
-      };
-
-      const created = await service.assign(assignment);
-
-      expect(created).toEqual({ id: expect.any(String), ...assignment });
-      expect(await service.listAssignments(DAM_GROUP_ID)).toContainEqual(created);
-    });
-
-    it('rejects a repeated assignment, a block of another group or an unknown exercise', async () => {
-      db.setSession(TEACHER_ID);
-      const assignment = {
-        groupId: DAW_GROUP_ID,
-        blockId: fixtureId('block', 1),
-        exerciseId: exerciseId(1),
-        isHidden: false,
-      };
-
-      await expect(service.assign(assignment)).rejects.toMatchObject({ kind: 'invalid' });
-      await expect(
-        service.assign({ ...assignment, blockId: fixtureId('block', DAM_FIRST_BLOCK) }),
-      ).rejects.toMatchObject({ kind: 'invalid' });
-      await expect(service.assign({ ...assignment, exerciseId: 'missing' })).rejects.toMatchObject({
-        kind: 'not_found',
-      });
-    });
-
-    it('unassigns, keeping the attempts without their assignment', async () => {
-      db.setSession(TEACHER_ID);
-      const id = assignmentId(DAW_GROUP_ID, 1);
-
-      const linked = db.tables().attempts.filter((a) => a.assignmentId === id);
-
-      await service.unassign(id);
-
-      const { assignments, attempts } = db.tables();
-      expect(linked.length).toBeGreaterThan(0);
-      expect(assignments.some((a) => a.id === id)).toBe(false);
-      expect(attempts).toHaveLength(SEED.attempts.length);
-      expect(
-        linked.every((a) => attempts.find((row) => row.id === a.id)?.assignmentId === null),
-      ).toBe(true);
-      expect(attempts.some((a) => a.assignmentId === assignmentId(DAM_GROUP_ID, 1))).toBe(true);
     });
   });
 });
