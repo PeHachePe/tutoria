@@ -265,9 +265,9 @@ describe('AttemptStore', () => {
     });
 
     it('keeps the code at once and invalidates the last run, as the server will', () => {
-      store.updateCode('function suma() {}');
+      store.updateCode('function sum() {}');
 
-      expect(store.attempt()?.currentCode).toBe('function suma() {}');
+      expect(store.attempt()?.currentCode).toBe('function sum() {}');
       expect(store.status()).toBe('in_progress');
       expect(store.saveStatus()).toBe('pending');
       expect(store.hasUnsavedChanges()).toBe(true);
@@ -276,13 +276,13 @@ describe('AttemptStore', () => {
     it('saves the latest code once the student stops typing for 800 ms', async () => {
       store.updateCode('function');
       await vi.advanceTimersByTimeAsync(500);
-      store.updateCode('function suma');
+      store.updateCode('function sum');
       await vi.advanceTimersByTimeAsync(799);
       expect(saveCode).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1);
 
-      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'function suma');
+      expect(saveCode).toHaveBeenCalledExactlyOnceWith(attempt.id, 'function sum');
       expect(store.saveStatus()).toBe('saved');
       expect(store.hasUnsavedChanges()).toBe(false);
       expect(store.attempt()?.updatedAt).toBe('2026-11-08T10:05:00.000Z');

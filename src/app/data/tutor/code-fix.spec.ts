@@ -58,7 +58,7 @@ describe('checkFix', () => {
   });
 
   it('accepts a function renamed to the one the exercise asks for', () => {
-    const source = withLine(1, 'function suma(numbers) {');
+    const source = withLine(1, 'function summ(numbers) {');
     expect(checkFix(source, { line: 1, code: LOOP[0] }, { functionName: 'sum' }).ok).toBe(true);
     // Without the exercise, the name declared is as good as any other
     expect(checkFix(source, { line: 1, code: LOOP[0] })).toEqual({

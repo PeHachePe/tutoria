@@ -5,7 +5,7 @@
 // told by a script: those answers are «review», for a human to read.
 
 /**
- * Lines of the solution of exercise 3 (`suma`) and of any accumulator: an addition assignment, a
+ * Lines of the solution of exercise 3 (`sum`) and of any accumulator: an addition assignment, a
  * `reduce`, `total = total + …`, a `for (` header or a `return` of a variable. The validator of the
  * function stops most of them; the battery checks that nothing slipped through.
  */

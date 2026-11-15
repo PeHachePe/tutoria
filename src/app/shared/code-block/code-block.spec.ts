@@ -10,7 +10,7 @@ describe('CodeBlock', () => {
   async function setup(language = 'js') {
     copy.mockClear();
     return render(CodeBlock, {
-      inputs: { code: 'function suma(vector) {\n}', language },
+      inputs: { code: 'function sum(numbers) {\n}', language },
       providers: [{ provide: Clipboard, useValue: { copy } }],
     });
   }
@@ -22,7 +22,7 @@ describe('CodeBlock', () => {
 
     expect(screen.getByText('JavaScript')).toBeTruthy();
     const code = screen.getByRole('code');
-    expect(code.textContent).toBe('function suma(vector) {\n}');
+    expect(code.textContent).toBe('function sum(numbers) {\n}');
     expect(code.parentElement?.tagName).toBe('PRE');
     // A wide line scrolls, also with the keyboard
     const block = screen.getByRole('group', { name: 'JavaScript' });
@@ -42,7 +42,7 @@ describe('CodeBlock', () => {
     await setup();
 
     expect((await screen.findByText('function')).className).toBe('font-semibold text-primary');
-    expect(screen.getByRole('code').textContent).toBe('function suma(vector) {\n}');
+    expect(screen.getByRole('code').textContent).toBe('function sum(numbers) {\n}');
   });
 
   it('leaves another language plain', async () => {
@@ -58,7 +58,7 @@ describe('CodeBlock', () => {
 
     await user.click(screen.getByRole('button', { name: 'Copiar' }));
 
-    expect(copy).toHaveBeenCalledWith('function suma(vector) {\n}');
+    expect(copy).toHaveBeenCalledWith('function sum(numbers) {\n}');
     expect(screen.getByRole('button', { name: 'Copiado' })).toBeTruthy();
     expect(screen.getByText('Código copiado')).toBeTruthy();
 

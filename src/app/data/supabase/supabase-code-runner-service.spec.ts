@@ -20,11 +20,11 @@ describe('SupabaseCodeRunnerService', () => {
   it('sends the attempt and the code to the Edge Function execute', async () => {
     server.on('POST', EXECUTE, { body: { status: 'passed', results: [] } });
 
-    const result = await service.run('attempt-1', 'function suma() {}');
+    const result = await service.run('attempt-1', 'function sum() {}');
 
     expect(server.sentTo('POST', EXECUTE)[0].body).toEqual({
       attemptId: 'attempt-1',
-      code: 'function suma() {}',
+      code: 'function sum() {}',
     });
     expect(result).toEqual({ status: 'passed', results: [] });
   });

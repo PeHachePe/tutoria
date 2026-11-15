@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 
 import { lineMarks, markDecorations, setLineMarks } from './line-marks';
 
-const CODE = 'function suma(v) {\n  let total = 0;\n  return total;\n}';
+const CODE = 'function sum(v) {\n  let total = 0;\n  return total;\n}';
 
 function decorated(state: EditorState, marks = markDecorations(state, [])) {
   const found: { from: number; to: number; line: boolean }[] = [];

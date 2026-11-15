@@ -17,19 +17,19 @@ describe('TutorMessage', () => {
 
   it('shows a block of code between the text, with «Copiar»', async () => {
     const { container } = await setup(
-      'Así:\n```js\nfunction suma(v) {\n}\n```\nY dentro, el bucle.',
+      'Así:\n```js\nfunction sum(v) {\n}\n```\nY dentro, el bucle.',
     );
 
     expect([...container.querySelectorAll('p')].map((p) => p.textContent?.trim())).toEqual([
       'Así:',
       'Y dentro, el bucle.',
     ]);
-    expect(screen.getByRole('code').textContent).toBe('function suma(v) {\n}');
+    expect(screen.getByRole('code').textContent).toBe('function sum(v) {\n}');
     expect(screen.getByRole('button', { name: 'Copiar' })).toBeTruthy();
   });
 
   it('blinks a caret after the last words while it arrives, also after a block', async () => {
-    const { container, rerender } = await setup('Así:\n```js\nfunction suma(', true);
+    const { container, rerender } = await setup('Así:\n```js\nfunction sum(', true);
     expect(container.lastElementChild?.getAttribute('data-testid')).toBe('tutor-caret');
     expect(screen.getAllByTestId('tutor-caret')).toHaveLength(1);
 

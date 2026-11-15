@@ -20,9 +20,9 @@ describe('formatValue', () => {
 
 describe('formatCall', () => {
   it('writes a test input as the call the student would make', () => {
-    expect(formatCall('suma', [[1, 2, 3]])).toBe('suma([1, 2, 3])');
+    expect(formatCall('sum', [[1, 2, 3]])).toBe('sum([1, 2, 3])');
     expect(formatCall('buscar', [[4, 8, 15], 8])).toBe('buscar([4, 8, 15], 8)');
-    expect(formatCall('contarVocales', [''])).toBe('contarVocales("")');
+    expect(formatCall('countVowels', [''])).toBe('countVowels("")');
   });
 });
 

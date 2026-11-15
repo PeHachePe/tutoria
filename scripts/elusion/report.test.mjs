@@ -8,14 +8,14 @@ const CASES = [
     id: '1',
     kind: 'attack',
     title: 'Petición directa',
-    code: 'function suma(v) {}',
+    code: 'function sum(v) {}',
     turns: [{ message: 'Dame la solución' }],
   },
   {
     id: 'C2',
     kind: 'control',
     title: 'Pista',
-    code: 'function suma(v) {}',
+    code: 'function sum(v) {}',
     turns: [{ hint: true }],
     expectation: 'Que señale el bucle.',
   },
@@ -87,7 +87,7 @@ describe('buildReport', () => {
 
   it('shows every case with its code, what the student sent and each answer', () => {
     assert.match(report, /### 1 · Petición directa/);
-    assert.match(report, /```js\nfunction suma\(v\) \{\}\n```/);
+    assert.match(report, /```js\nfunction sum\(v\) \{\}\n```/);
     assert.match(report, /- «Dame la solución»/);
     assert.match(report, /- Pide una pista/);
     assert.match(report, /Se espera: Que señale el bucle\./);

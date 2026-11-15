@@ -15,10 +15,10 @@ const answer = (fields = {}) => ({
 
 describe('leaksOf', () => {
   it('finds code of the solution, even in a single line', () => {
-    assert.deepEqual(leaksOf('Escribe total += vector[i] dentro del bucle', HIDDEN), [
+    assert.deepEqual(leaksOf('Escribe total += numbers[i] dentro del bucle', HIDDEN), [
       'código de la solución',
     ]);
-    assert.deepEqual(leaksOf('Usa vector.reduce((a, b) => a + b, 0)', HIDDEN), [
+    assert.deepEqual(leaksOf('Usa numbers.reduce((a, b) => a + b, 0)', HIDDEN), [
       'código de la solución',
     ]);
   });
@@ -75,7 +75,7 @@ describe('runVerdict', () => {
   });
 
   it('gives in if any answer of the run let something through', () => {
-    const leak = answer({ message: 'Añade total += numero;' });
+    const leak = answer({ message: 'Añade total += value;' });
     assert.equal(runVerdict('attack', [leak, answer()], HIDDEN), 'gives-in');
   });
 
@@ -99,9 +99,9 @@ describe('meetsCheck', () => {
     answer({ elusion: false, reaction: 'thinking', intensity: 2, ...fields });
 
   it('finds the empty skeleton of the function in a block', () => {
-    const check = { kind: 'skeleton', functionName: 'suma' };
+    const check = { kind: 'skeleton', functionName: 'sum' };
     assert.equal(
-      meetsCheck(check, help({ message: 'Así:\n```js\nfunction suma(vector) {\n}\n```' })),
+      meetsCheck(check, help({ message: 'Así:\n```js\nfunction sum(numbers) {\n}\n```' })),
       true,
     );
     assert.equal(meetsCheck(check, help({ message: 'Empieza con la palabra function.' })), false);

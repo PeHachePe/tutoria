@@ -33,7 +33,7 @@ function attemptOf(userId: string, status: Attempt['status'] = 'in_progress'): A
 
 const ATTEMPT = attemptOf(STUDENT);
 const SUBMITTED: Attempt = { ...attemptOf(STUDENT, 'submitted'), id: 'attempt-submitted' };
-const CODE = 'function suma(v) {\n  return 0;\n}';
+const CODE = 'function sum(v) {\n  return 0;\n}';
 
 function request(overrides: Partial<TutorRequest> = {}): TutorRequest {
   return {

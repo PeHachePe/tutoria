@@ -13,7 +13,7 @@ const REQUEST: TutorRequest = {
   requestId: 'request-1',
   attemptId: 'attempt-1',
   kind: 'hint',
-  code: 'function suma(v) {}',
+  code: 'function sum(v) {}',
   language: 'es',
 };
 

@@ -34,16 +34,16 @@ async function renderEditor({
 
 describe('CodeEditor', () => {
   it('shows the initial code in a text area named by its label', async () => {
-    const { textbox, view } = await renderEditor({ initialCode: 'function suma(v) {}' });
+    const { textbox, view } = await renderEditor({ initialCode: 'function sum(v) {}' });
 
-    expect(textbox.textContent).toContain('function suma(v) {}');
-    expect(view.state.doc.toString()).toBe('function suma(v) {}');
+    expect(textbox.textContent).toContain('function sum(v) {}');
+    expect(view.state.doc.toString()).toBe('function sum(v) {}');
   });
 
   it('shows the help while the code is empty', async () => {
-    await renderEditor({ placeholder: 'Escribe aquí la función suma' });
+    await renderEditor({ placeholder: 'Escribe aquí la función sum' });
 
-    expect(screen.getByText('Escribe aquí la función suma')).toBeTruthy();
+    expect(screen.getByText('Escribe aquí la función sum')).toBeTruthy();
   });
 
   it('reports the code after each change, and nothing as pasted when typed', async () => {

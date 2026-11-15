@@ -144,7 +144,7 @@ describe('MockCodeRunnerService', () => {
       worker.emit({ type: 'result', index: 0, outcome: { ok: true, value: 6 } });
       // …and the second test never ends
     };
-    const running = service.run(ATTEMPT_ID, 'function suma(v) { while (true) {} }');
+    const running = service.run(ATTEMPT_ID, 'function sum(v) { while (true) {} }');
 
     await vi.advanceTimersByTimeAsync(RUN_TIME_LIMIT_MS - 1);
     expect(workers[0].terminated).toBe(false);
@@ -175,12 +175,12 @@ describe('MockCodeRunnerService', () => {
   });
 
   it('reports code that does not load, saving it as it is', async () => {
-    const result = await service.run(ATTEMPT_ID, 'function suma(v) {');
+    const result = await service.run(ATTEMPT_ID, 'function sum(v) {');
 
     expect(result.loadError).toEqual({ kind: 'invalid_code', message: expect.any(String) });
     expect(result.results.every((test) => !test.passed)).toBe(true);
     expect(storedAttempt()).toMatchObject({
-      currentCode: 'function suma(v) {',
+      currentCode: 'function sum(v) {',
       status: 'tests_failed',
     });
     expect(workers[0].terminated).toBe(true);

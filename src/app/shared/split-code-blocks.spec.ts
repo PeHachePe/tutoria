@@ -3,10 +3,10 @@ import { splitCodeBlocks } from './split-code-blocks';
 describe('splitCodeBlocks', () => {
   it('splits a text around its fenced blocks, with their language', () => {
     expect(
-      splitCodeBlocks('Empieza así:\n```js\nfunction suma(vector) {\n}\n```\nY dentro, el bucle.'),
+      splitCodeBlocks('Empieza así:\n```js\nfunction sum(numbers) {\n}\n```\nY dentro, el bucle.'),
     ).toEqual([
       { kind: 'text', text: 'Empieza así:' },
-      { kind: 'block', code: 'function suma(vector) {\n}', language: 'js' },
+      { kind: 'block', code: 'function sum(numbers) {\n}', language: 'js' },
       { kind: 'text', text: 'Y dentro, el bucle.' },
     ]);
   });
@@ -19,9 +19,9 @@ describe('splitCodeBlocks', () => {
   });
 
   it('shows a block that is still arriving as a block, without its backticks', () => {
-    expect(splitCodeBlocks('Así:\n```js\nfunction suma(v')).toEqual([
+    expect(splitCodeBlocks('Así:\n```js\nfunction sum(v')).toEqual([
       { kind: 'text', text: 'Así:' },
-      { kind: 'block', code: 'function suma(v', language: 'js' },
+      { kind: 'block', code: 'function sum(v', language: 'js' },
     ]);
     expect(splitCodeBlocks('Así:\n```')).toEqual([{ kind: 'text', text: 'Así:' }]);
   });

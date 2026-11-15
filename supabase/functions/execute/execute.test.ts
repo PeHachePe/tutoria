@@ -8,13 +8,13 @@ import type { RecordOutcome, RunAttempt, RunStore } from './run-store.ts';
 
 const NOW = Date.parse('2026-11-10T10:00:00Z');
 const ATTEMPT_ID = '70000000-0000-4000-8000-000000000012';
-const CODE = 'function suma(v) { return 6; }';
+const CODE = 'function sum(v) { return 6; }';
 
 const ATTEMPT: RunAttempt = {
   userId: 'hugo',
   ownerActive: true,
   status: 'in_progress',
-  functionName: 'suma',
+  functionName: 'sum',
   tests: [
     { id: 't1', input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
     { id: 't2', input: [[7, -3, 1]], expectedOutput: 5, isHidden: true },
@@ -91,7 +91,7 @@ Deno.test('a run answers with its result, encoded, and records it', async () => 
   });
   // The sandbox gets the inputs, never the expected values
   assertEquals(sandbox.requests, [
-    { code: CODE, functionName: 'suma', inputs: [[[1, 2, 3]], [[7, -3, 1]]] },
+    { code: CODE, functionName: 'sum', inputs: [[[1, 2, 3]], [[7, -3, 1]]] },
   ]);
   assertEquals(
     store.recorded.map(({ attemptId, code, result }) => [attemptId, code, result.status]),

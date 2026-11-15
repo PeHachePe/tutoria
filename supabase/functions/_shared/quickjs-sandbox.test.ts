@@ -6,18 +6,18 @@ import { DEFAULT_LIMITS, QuickJsSandbox } from './quickjs-sandbox.ts';
 /** Shorter limits, so the tests that run out of time take little. */
 const sandbox = new QuickJsSandbox({ ...DEFAULT_LIMITS, testTimeMs: 50, runTimeMs: 200 });
 
-/** Exercise 3 of the seed: `suma` of a vector. */
+/** Exercise 3 of the seed: `sum` of a numbers. */
 const SUM_INPUTS = [[[1, 2, 3]], [[5]], [[]], [[-2, 2, 10]], [[7, -3, 1]]];
 
-function run(code: string, inputs: unknown[][] = SUM_INPUTS, functionName = 'suma') {
+function run(code: string, inputs: unknown[][] = SUM_INPUTS, functionName = 'sum') {
   const request: RunRequest = { code, functionName, inputs };
   return sandbox.run(request);
 }
 
 Deno.test('a correct solution returns the value of every test', async () => {
-  const outcome = await run(`function suma(vector) {
+  const outcome = await run(`function sum(numbers) {
     let total = 0;
-    for (const n of vector) total += n;
+    for (const n of numbers) total += n;
     return total;
   }`);
 
@@ -27,13 +27,13 @@ Deno.test('a correct solution returns the value of every test', async () => {
 });
 
 Deno.test('the function may be declared with const or as an arrow', async () => {
-  const outcome = await run('const suma = (v) => v.reduce((a, b) => a + b, 0);', [[[1, 2]]]);
+  const outcome = await run('const sum = (v) => v.reduce((a, b) => a + b, 0);', [[[1, 2]]]);
 
   assertEquals(outcome.outcomes, [{ ok: true, value: 3 }]);
 });
 
 Deno.test('a syntax error is invalid code, with the message of the error', async () => {
-  const outcome = await run('function suma(vector) { return vector.length');
+  const outcome = await run('function sum(numbers) { return numbers.length');
 
   assertEquals(outcome.outcomes, []);
   assertEquals(outcome.loadError?.kind, 'invalid_code');
@@ -42,7 +42,7 @@ Deno.test('a syntax error is invalid code, with the message of the error', async
 
 Deno.test('a syntax error says the line where it is', async () => {
   const outcome = await run(
-    ['function suma(v) {', '  let total = 0', '  for (let i = 0; i < v.length i++) {}', '}'].join(
+    ['function sum(v) {', '  let total = 0', '  for (let i = 0; i < v.length i++) {}', '}'].join(
       '\n',
     ),
   );
@@ -55,7 +55,7 @@ Deno.test('a syntax error says the line where it is', async () => {
 });
 
 Deno.test('an error outside the function is invalid code too', async () => {
-  const outcome = await run('throw new TypeError("Mal"); function suma() {}');
+  const outcome = await run('throw new TypeError("Mal"); function sum() {}');
 
   assertEquals(outcome.loadError, { kind: 'invalid_code', message: 'TypeError: Mal', line: 1 });
 });
@@ -63,14 +63,14 @@ Deno.test('an error outside the function is invalid code too', async () => {
 Deno.test(
   'code without the function, or with something else under its name, misses it',
   async () => {
-    assertEquals((await run('function sumar() {}')).loadError, { kind: 'missing_function' });
-    assertEquals((await run('const suma = 3;')).loadError, { kind: 'missing_function' });
+    assertEquals((await run('function addUp() {}')).loadError, { kind: 'missing_function' });
+    assertEquals((await run('const sum = 3;')).loadError, { kind: 'missing_function' });
   },
 );
 
 Deno.test('an exception in a test is its error, and the other tests still run', async () => {
   const outcome = await run(
-    'function suma(v) { if (v.length === 0) throw new RangeError("Vacío"); return v[0]; }',
+    'function sum(v) { if (v.length === 0) throw new RangeError("Vacío"); return v[0]; }',
   );
 
   assertEquals(outcome.outcomes[2], { ok: false, error: 'RangeError: Vacío' });
@@ -80,7 +80,7 @@ Deno.test('an exception in a test is its error, and the other tests still run', 
 Deno.test('an error in a test says the line of the code where it was thrown', async () => {
   const outcome = await run(
     [
-      'function suma(v) {',
+      'function sum(v) {',
       '  for (let i = 0; i < v.length; i++) {',
       '    total += v[i];',
       '  }',
@@ -95,13 +95,13 @@ Deno.test('an error in a test says the line of the code where it was thrown', as
 });
 
 Deno.test('anything thrown that is not an error is its text', async () => {
-  const outcome = await run('function suma() { throw 42; }', [[[]]]);
+  const outcome = await run('function sum() { throw 42; }', [[[]]]);
 
   assertEquals(outcome.outcomes, [{ ok: false, error: '42' }]);
 });
 
 Deno.test('an endless loop in a test times it out, and the next tests still run', async () => {
-  const outcome = await run('function suma(v) { while (v.length === 1) {} return v.length; }');
+  const outcome = await run('function sum(v) { while (v.length === 1) {} return v.length; }');
 
   assertEquals(outcome.outcomes, [
     { ok: true, value: 3 },
@@ -113,7 +113,7 @@ Deno.test('an endless loop in a test times it out, and the next tests still run'
 });
 
 Deno.test('when the run runs out of time, the pending tests time out', async () => {
-  const outcome = await run('function suma() { while (true) {} }');
+  const outcome = await run('function sum() { while (true) {} }');
 
   // 200 ms for the run and 50 for each test: four start, and the fifth never does
   assertEquals(outcome.outcomes.length, 4);
@@ -122,11 +122,11 @@ Deno.test('when the run runs out of time, the pending tests time out', async () 
 });
 
 Deno.test('an endless loop while loading times out every test', async () => {
-  assertEquals(await run('while (true) {} function suma() {}'), { outcomes: [] });
+  assertEquals(await run('while (true) {} function sum() {}'), { outcomes: [] });
 });
 
 Deno.test('an endless recursion overflows the stack as in the browser', async () => {
-  const outcome = await run('function suma(v) { return suma(v); }', [[[]]]);
+  const outcome = await run('function sum(v) { return sum(v); }', [[[]]]);
 
   assertEquals(outcome.outcomes, [
     { ok: false, error: 'RangeError: Maximum call stack size exceeded' },
@@ -134,14 +134,14 @@ Deno.test('an endless recursion overflows the stack as in the browser', async ()
 });
 
 Deno.test('a memory bomb fails its test without hurting the function', async () => {
-  const outcome = await run('function suma() { let s = "x"; while (true) s += s; }', [[[]]]);
+  const outcome = await run('function sum() { let s = "x"; while (true) s += s; }', [[[]]]);
 
   assertEquals(outcome.outcomes, [{ ok: false, error: 'InternalError: out of memory' }]);
-  assertEquals((await run('const suma = () => 1;', [[[]]])).outcomes, [{ ok: true, value: 1 }]);
+  assertEquals((await run('const sum = () => 1;', [[[]]])).outcomes, [{ ok: true, value: 1 }]);
 });
 
 Deno.test('a value too large to return fails its test', async () => {
-  const outcome = await run('function suma() { return "x".repeat(200000); }', [[[]]]);
+  const outcome = await run('function sum() { return "x".repeat(200000); }', [[[]]]);
 
   assertEquals(outcome.outcomes, [
     { ok: false, error: 'RangeError: The value returned is too large' },
@@ -150,7 +150,7 @@ Deno.test('a value too large to return fails its test', async () => {
 
 Deno.test('the values JSON lacks come out as they are', async () => {
   const outcome = await run(
-    'function suma(i) { return [undefined, 0 / 0, 1 / 0, -1 / 0, { a: undefined, b: [NaN] }][i]; }',
+    'function sum(i) { return [undefined, 0 / 0, 1 / 0, -1 / 0, { a: undefined, b: [NaN] }][i]; }',
     [[0], [1], [2], [3], [4]],
   );
 
@@ -165,7 +165,7 @@ Deno.test('the values JSON lacks come out as they are', async () => {
 
 Deno.test('what JSON cannot carry is normalized as in the mock runner', async () => {
   const outcome = await run(
-    `function suma(i) {
+    `function sum(i) {
       const loop = [];
       loop.push(loop);
       return [() => 1, 10n, new Date(0), { f() {}, k: 1 }, loop][i];
@@ -183,14 +183,14 @@ Deno.test('what JSON cannot carry is normalized as in the mock runner', async ()
 });
 
 Deno.test('a key called __proto__ stays a key of the value', async () => {
-  const outcome = await run('const suma = () => JSON.parse(\'{"__proto__": 1}\');', [[[]]]);
+  const outcome = await run('const sum = () => JSON.parse(\'{"__proto__": 1}\');', [[[]]]);
   const value = outcome.outcomes[0]?.ok ? (outcome.outcomes[0].value as object) : null;
 
   assertEquals(Object.keys(value ?? {}), ['__proto__']);
 });
 
 Deno.test('each test gets its own copy of the arguments', async () => {
-  const outcome = await run('function suma(v) { v.push(1); return v.length; }', [[[]], [[]]]);
+  const outcome = await run('function sum(v) { v.push(1); return v.length; }', [[[]], [[]]]);
 
   assertEquals(outcome.outcomes, [
     { ok: true, value: 1 },
@@ -200,7 +200,7 @@ Deno.test('each test gets its own copy of the arguments', async () => {
 
 Deno.test('nothing outside plain JavaScript is reachable', async () => {
   const outcome = await run(
-    `function suma() {
+    `function sum() {
       return [typeof fetch, typeof Deno, typeof process, typeof require, typeof setTimeout,
         typeof WebAssembly, typeof importScripts];
     }`,
@@ -211,17 +211,17 @@ Deno.test('nothing outside plain JavaScript is reachable', async () => {
 });
 
 Deno.test('nothing passes from one run to the next', async () => {
-  await run('globalThis.leftover = 1; const suma = () => 0;', [[[]]]);
+  await run('globalThis.leftover = 1; const sum = () => 0;', [[[]]]);
 
-  const outcome = await run('const suma = () => typeof leftover;', [[[]]]);
+  const outcome = await run('const sum = () => typeof leftover;', [[[]]]);
 
   assertEquals(outcome.outcomes, [{ ok: true, value: 'undefined' }]);
 });
 
 Deno.test('tampering with JSON only breaks or fakes its own values', async () => {
-  const broken = await run('JSON.stringify = () => "{"; const suma = () => 1;', [[[]]]);
+  const broken = await run('JSON.stringify = () => "{"; const sum = () => 1;', [[[]]]);
   const faked = await run(
-    'JSON.stringify = () => \'{"ok":true,"value":6}\'; const suma = () => 0;',
+    'JSON.stringify = () => \'{"ok":true,"value":6}\'; const sum = () => 0;',
     [[[1, 2, 3]]],
   );
 

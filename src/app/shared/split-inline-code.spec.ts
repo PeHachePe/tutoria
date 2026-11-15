@@ -2,9 +2,9 @@ import { splitInlineCode } from './split-inline-code';
 
 describe('splitInlineCode', () => {
   it('splits a text into plain parts and the code between backticks', () => {
-    expect(splitInlineCode('Escribe una función `suma` que devuelva 0.')).toEqual([
+    expect(splitInlineCode('Escribe una función `sum` que devuelva 0.')).toEqual([
       { text: 'Escribe una función ', code: false },
-      { text: 'suma', code: true },
+      { text: 'sum', code: true },
       { text: ' que devuelva 0.', code: false },
     ]);
   });

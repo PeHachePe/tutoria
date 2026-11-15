@@ -27,7 +27,7 @@ function attemptOf(status: StoredAttemptStatus = 'in_progress'): Attempt {
     userId: 'student-1',
     assignmentId: null,
     number: 1,
-    currentCode: 'function suma(v) {}',
+    currentCode: 'function sum(v) {}',
     finalCode: null,
     status,
     startedAt: LONG_AGO,
@@ -452,7 +452,7 @@ describe('TutorPanel', () => {
         interactionOf('question', '¿Qué palabra declara una función?', {
           studentMessage: 'No me acuerdo de cómo se empieza',
         }),
-        interactionOf('question', 'Así empieza:\n```js\nfunction suma(vector) {\n}\n```', {
+        interactionOf('question', 'Así empieza:\n```js\nfunction sum(numbers) {\n}\n```', {
           hintLevel: 2,
           studentMessage: 'Ni idea',
         }),
@@ -462,7 +462,7 @@ describe('TutorPanel', () => {
 
     expect(chat.getAllByText(/Más ayuda/)).toHaveLength(1);
     expect(chat.getByText('Más ayuda · nivel 2')).toBeTruthy();
-    expect(chat.getByRole('code').textContent).toBe('function suma(vector) {\n}');
+    expect(chat.getByRole('code').textContent).toBe('function sum(numbers) {\n}');
     expect(chat.getByRole('button', { name: 'Copiar' })).toBeTruthy();
     expect(screen.getByText('Pista nivel 2 de 3 · Concepto')).toBeTruthy();
   });

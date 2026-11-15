@@ -178,9 +178,9 @@ describe('MockAttemptService', () => {
       const other = await service.openOrCreate(assignmentAt(4));
       vi.setSystemTime(LATER);
 
-      const saved = await service.saveCode(attempt.id, 'function suma() {}');
+      const saved = await service.saveCode(attempt.id, 'function sum() {}');
 
-      expect(saved).toEqual({ ...attempt, currentCode: 'function suma() {}', updatedAt: LATER });
+      expect(saved).toEqual({ ...attempt, currentCode: 'function sum() {}', updatedAt: LATER });
       expect(db.tables().attempts).toEqual([saved, other]);
     });
 

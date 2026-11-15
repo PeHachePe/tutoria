@@ -18,7 +18,7 @@ function attemptOf(id: string, status: StoredAttemptStatus = 'in_progress'): Att
     userId: 'student-1',
     assignmentId: null,
     number: 1,
-    currentCode: 'function suma(v) {}',
+    currentCode: 'function sum(v) {}',
     finalCode: null,
     status,
     startedAt: '2026-11-09T10:00:00.000Z',
@@ -170,7 +170,7 @@ describe('TutorStore', () => {
       attemptId: 'a1',
       kind: 'question',
       message: '¿Por dónde empiezo?',
-      code: 'function suma(v) {}',
+      code: 'function sum(v) {}',
       language: 'es',
     };
     expect(ask).toHaveBeenCalledWith(request);

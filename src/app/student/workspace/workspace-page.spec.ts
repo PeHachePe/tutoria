@@ -1175,7 +1175,7 @@ describe('WorkspacePage', () => {
   it('says the code came back from the local draft, and keeps saying it until the student types', async () => {
     localStorage.setItem(
       `tutoria.code-draft.attempt-${SUM.exercise.id}`,
-      JSON.stringify({ code: 'function sumar() {}', base: '' }),
+      JSON.stringify({ code: 'function sum() {}', base: '' }),
     );
     const { fixture } = await renderPage();
     await showEditor(fixture);
@@ -1183,7 +1183,7 @@ describe('WorkspacePage', () => {
     expect(text(screen.getByRole('status'))).toContain(
       'Hemos recuperado el código que no llegó a guardarse. Ya se está guardando.',
     );
-    expect(editorView().state.doc.toString()).toBe('function sumar() {}');
+    expect(editorView().state.doc.toString()).toBe('function sum() {}');
 
     type(' ');
     await fixture.whenStable();

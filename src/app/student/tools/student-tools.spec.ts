@@ -142,7 +142,7 @@ describe('studentTools', () => {
     });
     expect(navigate).toHaveBeenCalledWith(['/alumno/ejercicio/a-2'], { queryParams: {} });
 
-    await run('openExercise', { exercise: 'suma', attempt: 2 });
+    await run('openExercise', { exercise: 'sum', attempt: 2 });
     expect(navigate).toHaveBeenLastCalledWith(['/alumno/ejercicio/a-1'], {
       queryParams: { intento: 2 },
     });

@@ -9,7 +9,7 @@ function text(element: Element | null): string {
 
 async function renderResults(result: RunResult, outdated = false): Promise<HTMLElement> {
   const { fixture } = await render(RunResults, {
-    inputs: { result, functionName: 'suma', outdated },
+    inputs: { result, functionName: 'sum', outdated },
   });
   return fixture.nativeElement as HTMLElement;
 }
@@ -55,9 +55,9 @@ describe('RunResults', () => {
     });
 
     expect(text(element)).toContain('0 de 4 superadas');
-    expect(text(element)).toContain('Error: suma([])');
+    expect(text(element)).toContain('Error: sum([])');
     expect(text(element)).toContain('TypeError: x is undefined');
-    expect(text(element)).toContain('Tiempo agotado: suma([1])');
+    expect(text(element)).toContain('Tiempo agotado: sum([1])');
     expect(element.querySelector('pre')?.textContent).toBe('2 x 1 = 2\n2 x 2 = 4');
     // It never started: the visible test before it ran out of time
     expect(screen.getByText('Comprobación oculta 1: Sin ejecutar')).toBeTruthy();
@@ -82,7 +82,7 @@ describe('RunResults', () => {
 
     expect(text(element)).toContain('El código no se ha podido ejecutar');
     expect(text(element)).toContain(
-      'No se encuentra la función suma. Comprueba que se llama exactamente así.',
+      'No se encuentra la función sum. Comprueba que se llama exactamente así.',
     );
     expect(element.querySelector('li')).toBeNull();
   });
@@ -109,7 +109,7 @@ describe('RunResults folding', () => {
 
   it('folds to the summary and unfolds again, as an accordion', async () => {
     const { fixture } = await render(RunResults, {
-      inputs: { result: FAILED, functionName: 'suma' },
+      inputs: { result: FAILED, functionName: 'sum' },
     });
     const toggle = screen.getByRole('button', { name: /Resultados/ });
     const body = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
@@ -128,7 +128,7 @@ describe('RunResults folding', () => {
 
   it('unfolds by itself when a new run arrives', async () => {
     const { fixture } = await render(RunResults, {
-      inputs: { result: FAILED, functionName: 'suma' },
+      inputs: { result: FAILED, functionName: 'sum' },
     });
     const toggle = screen.getByRole('button', { name: /Resultados/ });
     toggle.click();
@@ -166,11 +166,11 @@ describe('testStates', () => {
       ],
     };
     const { fixture, rerender } = await render(RunResults, {
-      inputs: { result, functionName: 'suma', pointer: { target: 'failingTest', id: 'p1' } },
+      inputs: { result, functionName: 'sum', pointer: { target: 'failingTest', id: 'p1' } },
     });
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(text(element.querySelector('[data-pointed]'))).toContain('suma([2])');
+    expect(text(element.querySelector('[data-pointed]'))).toContain('sum([2])');
     expect(scrollIntoView).toHaveBeenCalled();
 
     await rerender({
@@ -192,7 +192,7 @@ describe('testStates', () => {
       status: 'passed',
       results: [{ testId: 't1', passed: true, timeout: false }],
     };
-    const { rerender } = await render(RunResults, { inputs: { result, functionName: 'suma' } });
+    const { rerender } = await render(RunResults, { inputs: { result, functionName: 'sum' } });
     const toggle = screen.getByRole('button', { expanded: true });
     toggle.click();
     await rerender({
