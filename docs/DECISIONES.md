@@ -1724,3 +1724,32 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Probado con `gemini-3.5-flash-lite` en cuatro casos, todos a la primera y con el código intacto. Queda en [PENDIENTES](PENDIENTES.md) medir cuántas traducciones rechaza `keepsCode()` con más ejercicios. «Probar como alumno» es el 4.3e.
 
 **Aprobación:** el plan, con «Probar como alumno» en el 4.3e, aprobado por el autor («Sí, con el 4.3e aparte»). El autor recordó que la traducción no puede tocar los nombres de las funciones ni de las variables: la comprobación del servidor responde a eso. El detalle técnico, por delegación del autor.
+
+## D-060 · Más sobre bloques: fecha de apertura en la RLS, archivar en lugar de borrar y mover ejercicios con sus intentos (15/11/2026)
+
+**Contexto:** el 4.3d se propuso al cerrar el 4.3b (D-058) con tres piezas: la fecha de apertura de un bloque, duplicar un bloque en otro grupo y archivar ejercicios. Al empezarlo, el autor preguntó para qué servía duplicar un bloque. El caso real es preparar un curso a partir del anterior o de un grupo paralelo, y eso es copiar todos los bloques de un grupo, no uno. También preguntó si tenía sentido borrar ejercicios: un ejercicio que nadie ha empezado se puede borrar sin perder nada, pero uno empezado lo guardan los intentos de sus alumnos (D-057), y hasta ahora solo quedaba un «Borrar (ya tiene intentos)» desactivado. Por último, mover un ejercicio de un bloque a otro exigía quitarlo y añadirlo, y solo si nadie lo había empezado.
+
+**Decisión:**
+
+- **Fecha de apertura, en la RLS:** `class_block.opens_at` (opcional). Mientras no llega, el bloque es para sus alumnos como uno oculto: la política de lectura de `class_block` y `is_visible_assignment()` piden `opens_at is null or opens_at <= now()`. Así el alumno no ve el bloque ni sus ejercicios, y tampoco abre intentos (`can_open_assignment`). El docente lo ve siempre, con «Se abre el lun 23 nov, 09:00 · en 8 días» hasta entonces. En el diálogo del bloque, día y hora opcionales; sin hora, a las 0:00 (`DEFAULT_OPENING_TIME`), y con hora pero sin día, un error. `create_block()` admite la fecha como sexto argumento, opcional.
+- **Archivar, no borrar, lo que alguien empezó:** `exercise.archived_at`, que cambia quien puede editar el ejercicio (la misma política, con su `grant update` de columna). El menú del banco ofrece «Archivar» y «Borrar» si nadie lo ha empezado, y solo «Archivar» si alguien lo hizo. Un archivado sale del banco (hay un interruptor «Archivados», en la URL, que los muestra en lugar de los demás), de «Añadir ejercicios» y de «Asignar a un bloque…», y en su menú tiene «Desarchivar». Sigue en los bloques donde ya estaba, con «Archivado» en Bloques: sus alumnos lo siguen viendo y trabajando. El formulario añade «Archivar» al aviso de un ejercicio empezado y un aviso propio con «Desarchivar». Archivar tiene «Deshacer» y no pregunta, porque se deshace.
+- **Lo archivado se filtra en el cliente:** `listBank` sigue trayendo los archivados, y `filterBank()` enseña unos u otros. El servidor no impide asignar un archivado: es una forma de ordenar el banco, no una regla de seguridad, y desarchivarlo lo arregla.
+- **Mover un ejercicio a otro bloque, empezado o no:** `move_assignment(asignación, bloque, posición)`, con seguridad del invocador (la RLS decide quién mueve), cierra el hueco en el bloque de origen y hace sitio en el de destino en una transacción (restricción de orden diferida). Los intentos apuntan a la asignación, que solo cambia de bloque, así que nadie pierde su trabajo. Un ejercicio está una sola vez en cada bloque (23505). En la pantalla, «Mover a otro bloque» abre un submenú con los demás bloques del grupo (desactivados los que ya lo tienen) y lo lleva al final; también se arrastra de un bloque a otro (listas de la CDK conectadas y un predicado que rechaza el bloque que ya lo tiene), al sitio donde se suelta. Se ve al momento, se anuncia, vuelve atrás si falla y el aviso tiene «Deshacer», que lo devuelve en el servidor y recarga los bloques.
+- **Duplicar un bloque, fuera del paso:** pasa a [PENDIENTES](PENDIENTES.md) como copiar los bloques de un grupo en otro, para la fase 5 (gestión de grupos) o trabajo futuro.
+
+**Alternativas:**
+
+- **La fecha de apertura solo en el cliente:** el alumno vería el bloque llamando a la API.
+- **Un estado del bloque (borrador, programado, publicado):** duplicaba lo que ya dicen `is_hidden` y la fecha.
+- **Borrar un ejercicio empezado con sus intentos:** el alumno perdería su trabajo y el docente su histórico.
+- **Ocultar el ejercicio en todos sus bloques al archivarlo:** quitaba el ejercicio a quien lo está haciendo; archivar es para el banco, y ocultar sigue siendo cosa de cada bloque.
+- **Mover como quitar y añadir:** crea otra asignación, y los intentos se quedarían en la antigua.
+- **«Deshacer» de mover en la página, sin recargar:** obligaba a buscar de nuevo el ejercicio y su bloque, que pueden haber cambiado; el servidor sabe dónde está todo.
+
+**Consecuencias:**
+
+- Migración `block_opening_and_archive`, con 18 tests de pgTAP. `BlockDraft.opensAt`, `BlockService.moveAssignment()` y `ExerciseService.setArchived()`, en simulado y Supabase. Seed v11: «Tabla de multiplicar» archivado y «Examen de los temas 5 y 6», que se abre el 23 de noviembre.
+- El catálogo del alumno no necesita cambios: la RLS (y su imitación en `mock-access.ts`) ya le quita el bloque.
+- Queda en [PENDIENTES](PENDIENTES.md) copiar los bloques de un grupo en otro.
+
+**Aprobación:** el autor dejó duplicar un bloque para más adelante y aprobó archivar y mover («hazlo va»). El detalle técnico, por delegación del autor.

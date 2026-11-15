@@ -1510,15 +1510,17 @@ Separado del 4.3c (D-059): necesita un modo de vista previa en el servidor y una
 
 🧪 El tutor en vista previa no guarda nada y solo responde a docentes.
 
-**4.3d · Más sobre bloques (≈2 h, propuesto)** · ficha `08-ejercicios`
+**4.3d · Más sobre bloques (≈2 h)** · ficha `08-ejercicios`
 
-Propuesto al cerrar el 4.3b (D-058), pendiente de que el autor lo confirme o lo deje para trabajo futuro.
+Propuesto al cerrar el 4.3b (D-058). Al empezarlo, el autor cambió duplicar un bloque por mover ejercicios entre bloques (D-060).
 
 - Fecha de apertura de un bloque (`class_block.opens_at`): una recuperación que aparece sola el día del examen. La hace cumplir la RLS, como `is_hidden`.
-- Duplicar un bloque en otro grupo del docente, con sus ejercicios, su orden y sus fechas.
-- Archivar un ejercicio con intentos (`exercise.archived_at`), que deja de salir en el banco y en «Añadir ejercicios».
+- Archivar un ejercicio (`exercise.archived_at`), que deja de salir en el banco, en «Añadir ejercicios» y en «Asignar a un bloque…».
+- Mover un ejercicio a otro bloque del grupo, también si alguien lo ha empezado: con el menú y arrastrándolo.
 
-🧪 La RLS de la fecha de apertura en pgTAP y la copia de un bloque.
+🧪 La RLS de la fecha de apertura, archivar y mover en pgTAP.
+
+- **Hecho así (D-060):** migración `block_opening_and_archive`: `class_block.opens_at` en la política de lectura de los bloques y en `is_visible_assignment` (el alumno no ve el bloque, ni sus ejercicios, ni abre intentos hasta la fecha), `create_block` con la fecha, `exercise.archived_at` (lo cambia quien edita el ejercicio) y `move_assignment()`, que cierra el hueco en un bloque y hace sitio en el otro sin tocar los intentos; 18 tests de pgTAP. En Bloques, el diálogo pide el día y la hora de apertura (sin hora, a las 0:00) y la tarjeta dice «Se abre el lun 23 nov, 09:00 · en 8 días» hasta entonces; «Editar el título» pasa a «Editar el bloque». Cada ejercicio tiene «Mover a otro bloque» (submenú con los demás bloques; desactivados los que ya lo tienen) y se arrastra de un bloque a otro (listas conectadas, con un predicado que rechaza el bloque que ya lo tiene), con anuncio, vuelta atrás si falla y «Deshacer». Los archivados llevan «Archivado» en Bloques. En el banco, «Archivados» (en la URL) y, en el menú, «Archivar» y «Borrar» si nadie lo empezó, solo «Archivar» si alguien lo hizo, y «Desarchivar» en los archivados, que no se asignan. El formulario añade «Archivar» al aviso de un ejercicio empezado y un aviso con «Desarchivar». Seed v11 con «Tabla de multiplicar» archivado y un examen de los temas 5 y 6 que se abre el 23 de noviembre. Duplicar un bloque, a PENDIENTES como copiar los bloques de un grupo en otro.
 
 **4.4 · Histórico, con datos simulados (≈3 h)** · ficha `09-historico` · Figuras 13–14 del TFM
 

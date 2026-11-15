@@ -25,16 +25,16 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 **Banco** (escritorio, tablet y móvil en una columna; dos columnas de tarjetas desde `2xl`):
 
 - Cabecera con el título y lo que es el banco.
-- Filtros, en la URL: buscar (título y contenidos en cualquier idioma, y la función, sin tildes ni mayúsculas), asignatura («Mis asignaturas», cada asignatura con las del docente primero, «Todas»), dificultad y «Solo los míos».
+- Filtros, en la URL: buscar (título y contenidos en cualquier idioma, y la función, sin tildes ni mayúsculas), asignatura («Mis asignaturas», cada asignatura con las del docente primero, «Todas»), dificultad, «Solo los míos» y «Archivados» (4.3d), que muestra los archivados en lugar de los demás.
 - «30 ejercicios», o «5 ejercicios de 30» al filtrar, anunciado con `aria-live`.
-- Una tarjeta por ejercicio: el título como enlace al formulario, los contenidos, la dificultad, sus asignaturas, `función()`, «Tuyo» o «De otro docente», las pruebas, dónde está asignado y cuántos alumnos lo han empezado. Un menú con «Editar» o «Ver», «Duplicar» y «Borrar» (solo lo propio, y desactivado si alguien lo ha empezado).
+- Una tarjeta por ejercicio: el título como enlace al formulario, los contenidos, la dificultad, sus asignaturas, `función()`, «Tuyo» o «De otro docente», las pruebas, dónde está asignado y cuántos alumnos lo han empezado. Un menú con «Editar» o «Ver», «Duplicar», «Asignar a un bloque…» y, en lo propio, «Archivar» y «Borrar» si nadie lo ha empezado; si alguien lo empezó, solo «Archivar» (4.3d). Un archivado lleva «Archivado» y, en su menú, «Desarchivar» en lugar de «Asignar» y «Archivar».
 - 20 por página, con el paginador solo si hay más.
 - «Nuevo ejercicio», botón flotante abajo a la derecha, como el tutor de la pantalla de trabajo.
 
 **Formulario** (Figura 20 de la memoria; dos columnas desde `xl`):
 
 - Volver a los ejercicios y el título: «Nuevo ejercicio», «Nuevo ejercicio a partir de otro», «Editar el ejercicio» o «Ejercicio de otro docente».
-- Avisos: el de otro docente, con «Duplicar», y el de un ejercicio que ya han empezado alumnos, con «Duplicar».
+- Avisos: el de otro docente, con «Duplicar»; el de un ejercicio que ya han empezado alumnos, con «Duplicar» y «Archivar»; y el de un archivado, con «Desarchivar» (4.3d).
 - **Título y enunciado:** el idioma en que se escribe y una pestaña por idioma, con su marca de traducido o de error. Cada pestaña tiene título, enunciado (con el código entre comillas invertidas) y contenidos. Debajo, «Ver como el alumno».
 - **Dificultad y asignaturas:** dificultad con botones y asignaturas en un desplegable múltiple.
 - **Umbrales del tutor proactivo:** dos deslizadores con su valor (fallos seguidos de la misma prueba, de 1 a 10; minutos sin actividad, de 1 a 30).
@@ -47,10 +47,10 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 **Bloques** (`/docente/bloques?grupo=`, captura `08c-bloques`):
 
 - Cabecera con el título, lo que es la pantalla y el grupo (desplegable con la asignatura, o su nombre si solo hay uno).
-- Una tarjeta por bloque: asa para arrastrar (no en el móvil), título en su idioma, cuántos ejercicios tiene y si está oculto, «Visible» y un menú con «Editar el título», «Añadir ejercicios», «Fecha de entrega para todo el bloque», «Subir», «Bajar» y «Borrar» (desactivado si alguien ha empezado alguno de sus ejercicios).
-- Dentro, sus ejercicios en orden: asa, número, título (enlace al formulario), quién lo ha empezado, dificultad, fecha de entrega («mié 18 nov, 23:59 · en 3 días» o «Sin fecha de entrega»), mostrar u ocultar y un menú con «Subir», «Bajar» y «Quitar del bloque». Debajo, «Añadir ejercicios».
+- Una tarjeta por bloque: asa para arrastrar (no en el móvil), título en su idioma, cuántos ejercicios tiene, si está oculto y, hasta que se abre, cuándo («Se abre el lun 23 nov, 09:00 · en 8 días», 4.3d), «Visible» y un menú con «Editar el bloque», «Añadir ejercicios», «Fecha de entrega para todo el bloque», «Subir», «Bajar» y «Borrar» (desactivado si alguien ha empezado alguno de sus ejercicios).
+- Dentro, sus ejercicios en orden: asa, número, título (enlace al formulario), quién lo ha empezado, «Archivado» si lo está, dificultad, fecha de entrega («mié 18 nov, 23:59 · en 3 días» o «Sin fecha de entrega»), mostrar u ocultar y un menú con «Subir», «Bajar», «Mover a otro bloque» (un submenú con los demás bloques del grupo; desactivados los que ya lo tienen) y «Quitar del bloque». Debajo, «Añadir ejercicios».
 - «Nuevo bloque», botón flotante abajo a la derecha.
-- Diálogos: el del bloque (título, idioma en que se escribe, títulos en los otros idiomas y «Oculto para los alumnos»), «Añadir ejercicios» (el banco de la asignatura del grupo o de todas, con buscador; marca los que ya están y en qué otros bloques), la fecha de entrega (día y hora, «Quitar la fecha») y, desde el banco, «Asignar a un bloque…» (grupo y bloque).
+- Diálogos: el del bloque (título, idioma en que se escribe, títulos en los otros idiomas, «Oculto para los alumnos» y, opcional, el día y la hora en que se abre a los alumnos), «Añadir ejercicios» (el banco de la asignatura del grupo o de todas, con buscador; marca los que ya están y en qué otros bloques), la fecha de entrega (día y hora, «Quitar la fecha») y, desde el banco, «Asignar a un bloque…» (grupo y bloque).
 - El alumno ve la fecha en su catálogo («Entrega: vie 20 nov, 23:59 · en 5 días») hasta que entrega.
 
 ## Interacciones
@@ -59,12 +59,15 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - **Crear un bloque:** va al final, y la página baja hasta él con el foco en su título.
 - **Quitar un ejercicio:** sin preguntar, con «Deshacer», que lo devuelve a su sitio con su fecha y su visibilidad. **Borrar un bloque:** pregunta antes y dice cuántos ejercicios salen con él.
 - **Fecha de entrega:** sin hora, a las 23:59; el día se escribe en el orden del idioma («25/11/2026»).
+- **Fecha de apertura** (4.3d): sin hora, a las 0:00. Hasta ese momento, el alumno no ve el bloque ni sus ejercicios, como si estuviera oculto (lo hace cumplir la RLS); el docente lo ve con «Se abre el…».
+- **Mover a otro bloque** (4.3d): con el submenú (va al final) o arrastrándolo a otro bloque (al sitio donde se suelta; un bloque que ya lo tiene no lo acepta). También si alguien lo ha empezado: los intentos van con él. Se anuncia («… en «Repaso final», en el lugar 3 de 3»), vuelve atrás si no se puede guardar y el aviso tiene «Deshacer».
 
 - **Buscar y filtrar:** cambian la URL sin llenar el historial y vuelven a la página 1. Solo la asignatura pide datos al servidor; mientras llegan, se quedan los filtros y la lista con una barra fina encima.
 - **Quitar los filtros:** conserva la asignatura. **Buscar en todas las asignaturas:** cuando no se encuentra nada en la asignatura elegida.
 - **Cambiar de página:** el foco vuelve a la lista.
 - **Duplicar:** abre el formulario nuevo con todo copiado y «(copia)» en los títulos.
 - **Borrar:** pregunta antes (y dice de qué bloques saldrá), borra y lo dice con un aviso.
+- **Archivar** (4.3d): sin preguntar, con «Deshacer». Sale del banco, de «Añadir ejercicios» y de «Asignar a un bloque…», pero sigue en los bloques donde ya estaba, con sus intentos. «Desarchivar» lo devuelve.
 - **Nuevo ejercicio:** empieza en el idioma de la interfaz, con una prueba vacía y la asignatura que mostraba el banco.
 - **Guardar:** si falta algo, marca los errores y lleva el foco al primero, abriendo su pestaña si es de otro idioma. Si va bien, «Cambios guardados» o «Ejercicio creado», y el nuevo se abre como tal.
 - **Ver como el alumno:** un diálogo con la zona del enunciado de la pantalla de trabajo, en el idioma de la pestaña abierta.
@@ -104,13 +107,15 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Probar la solución del docente contra las pruebas del formulario, en el servidor y sin guardarla (4.3c).
 - [x] Borrador de la traducción con la IA, que conserva el código del enunciado (4.3c).
 - [x] El formulario como herramienta de WebMCP, que rellena sin guardar (4.3c).
+- [x] Fecha de apertura de un bloque, que la RLS hace cumplir (4.3d).
+- [x] Archivar y desarchivar un ejercicio, con «Archivados» en el banco (4.3d).
+- [x] Mover un ejercicio a otro bloque del grupo, con el menú o arrastrándolo, aunque esté empezado (4.3d).
 - [ ] Revisión visual del autor.
 
 ## Fuera de alcance
 
-- Fecha de apertura de un bloque, duplicar un bloque en otro grupo y archivar ejercicios (4.3d, propuesto).
 - «Probar como alumno», con el tutor en vista previa (4.3e, propuesto).
-- Archivar un ejercicio con intentos para que deje de salir en el banco ([PENDIENTES](../PENDIENTES.md)).
+- Copiar los bloques de un grupo en otro, para el curso siguiente o un grupo paralelo ([PENDIENTES](../PENDIENTES.md)).
 
 ## Pulido pendiente
 
