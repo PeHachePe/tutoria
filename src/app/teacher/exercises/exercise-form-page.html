@@ -74,8 +74,10 @@
     }
 
     <form [formRoot]="exerciseForm" class="flex flex-col gap-6">
+      <!-- min-w-0: a grid item does not shrink below its content by default, and the tabs of the
+           languages would widen the column past a phone screen instead of scrolling -->
       <div class="grid items-start gap-6 xl:grid-cols-2">
-        <div class="flex flex-col gap-6">
+        <div class="flex min-w-0 flex-col gap-6">
           <section
             class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
             aria-labelledby="statement-heading"
@@ -197,7 +199,7 @@
           </section>
         </div>
 
-        <div class="flex flex-col gap-6">
+        <div class="flex min-w-0 flex-col gap-6">
           <section
             class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
             aria-labelledby="function-heading"
