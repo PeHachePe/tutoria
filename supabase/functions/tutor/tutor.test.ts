@@ -10,12 +10,14 @@ import type {
 } from './answer-store.ts';
 import type { RunOutcome, RunRequest } from '../../../src/app/data/code-runner/run-result.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
+import type { StaffRequestKind, StaffRequests } from '../_shared/staff-requests.ts';
 import { type ChatMessage, type LlmProvider, ProviderError } from '../_shared/llm-provider.ts';
 import {
   DEFAULT_ANSWERS,
   MAX_MESSAGE_LENGTH,
   TUTOR_CALLS_PER_DAY,
   TUTOR_CALLS_PER_MINUTE,
+  TUTOR_PREVIEWS_PER_MINUTE,
   createTutorHandler,
 } from './tutor.ts';
 import { PROMPT_VERSION } from './prompt.ts';
@@ -90,6 +92,18 @@ class FakeStore implements AnswerStore {
   }
 }
 
+/** The limit of the staff: Hugo is a teacher here, unless `teacher` says otherwise. */
+class FakeStaff implements StaffRequests {
+  teacher = true;
+  wait = 0;
+  readonly claims: [string, StaffRequestKind, number][] = [];
+
+  claim(userId: string, kind: StaffRequestKind, perMinute: number) {
+    this.claims.push([userId, kind, perMinute]);
+    return Promise.resolve(this.teacher ? this.wait : null);
+  }
+}
+
 /** A model that answers what the test says, one answer per call, and remembers what it got. */
 class FakeProvider implements LlmProvider {
   readonly model = 'flash';
@@ -117,8 +131,10 @@ function setup(answers: (string | Error)[] = [GOOD]) {
   const llm = new FakeProvider(answers);
   const sandbox = new FakeSandbox();
   const settings: ProviderSetting[] = [];
+  const staff = new FakeStaff();
   const handle = createTutorHandler({
     store,
+    staff,
     providerFor: (setting) => {
       settings.push(setting);
       return llm;
@@ -126,7 +142,7 @@ function setup(answers: (string | Error)[] = [GOOD]) {
     sandbox,
     now: () => NOW,
   });
-  return { store, llm, settings, handle, sandbox };
+  return { store, staff, llm, settings, handle, sandbox };
 }
 
 function post(body: Record<string, unknown> = {}, token: string | null = 'token-hugo'): Request {
@@ -673,3 +689,136 @@ Deno.test(
     );
   },
 );
+
+/** What the form sends to try «Suma» as a student (4.3e): the exercise and the try so far. */
+const PREVIEW = {
+  exercise: {
+    title: 'Suma',
+    statement: 'Escribe una función `sum`.',
+    topics: ['Bucles'],
+    sourceLocale: 'es',
+    translations: {},
+    functionName: 'sum',
+    parameters: ['values'],
+    tests: [
+      { input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
+      { input: [[]], expectedOutput: 0, isHidden: true },
+    ],
+  },
+  status: 'tests_failed',
+  lastRun: { passed: 1, failed: 1, failedTestIds: ['test-2'] },
+  previous: [
+    {
+      trigger: 'hint',
+      hintLevel: 1,
+      studentMessage: null,
+      transcript: 'Mira el bucle.',
+      emotion: 'encouragement',
+      intensity: 2,
+      elusion: false,
+      actions: [],
+    },
+  ],
+};
+
+function postPreview(
+  body: Record<string, unknown> = {},
+  token: string | null = 'token-hugo',
+): Request {
+  return new Request('http://functions.test/tutor', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: JSON.stringify({
+      requestId: REQUEST_ID,
+      kind: 'hint',
+      code: CODE,
+      language: 'es',
+      preview: PREVIEW,
+      ...body,
+    }),
+  });
+}
+
+Deno.test(
+  'a teacher trying an exercise gets the answer of a student, and nothing is kept',
+  async () => {
+    const { handle, store, staff, llm, sandbox } = setup();
+
+    const response = await handle(postPreview());
+
+    assertEquals(response.status, 200);
+    assertEquals(await response.json(), {
+      events: [
+        {
+          type: 'meta',
+          emotion: 'encouragement',
+          intensity: 2,
+          hintLevel: 2,
+          reaction: 'thinking',
+          elusion: false,
+        },
+        { type: 'delta', text: '¿Qué valor tiene el total antes del bucle?' },
+        { type: 'done', interactionId: null, silent: false },
+      ],
+    });
+    assertEquals(staff.claims, [['hugo', 'tutor', TUTOR_PREVIEWS_PER_MINUTE]]);
+    assertEquals(store.recorded, []);
+    // The exercise of the form reaches the model, and only its visible examples are tried
+    const prompt = llm.requests[0].map((message) => message.content).join('\n');
+    assertStringIncludes(prompt, 'Escribe una función `sum`.');
+    assertStringIncludes(prompt, 'Usa el nivel 2.');
+    assertEquals(sandbox.requests, [{ code: CODE, functionName: 'sum', inputs: [[[1, 2, 3]]] }]);
+  },
+);
+
+Deno.test('only an active teacher tries an exercise, within its own limit', async () => {
+  const { handle, staff, llm } = setup();
+
+  staff.teacher = false;
+  assertEquals((await handle(postPreview())).status, 403);
+  staff.teacher = true;
+  staff.wait = 25;
+  const limited = await handle(postPreview());
+  assertEquals(limited.status, 429);
+  assertEquals(limited.headers.get('Retry-After'), '25');
+  assertEquals(llm.requests.length, 0);
+  assertEquals((await handle(postPreview({}, null))).status, 401);
+});
+
+Deno.test('a preview needs the exercise, and never an attempt with it', async () => {
+  const { handle, staff } = setup();
+  const { exercise } = PREVIEW;
+
+  assertEquals((await handle(postPreview({ attemptId: ATTEMPT_ID }))).status, 400);
+  assertEquals(
+    (await handle(postPreview({ preview: { ...PREVIEW, exercise: { ...exercise, tests: [] } } })))
+      .status,
+    400,
+  );
+  assertEquals(
+    (
+      await handle(
+        postPreview({ preview: { ...PREVIEW, exercise: { ...exercise, functionName: ' ' } } }),
+      )
+    ).status,
+    400,
+  );
+  assertEquals(
+    (await handle(postPreview({ preview: { ...PREVIEW, status: 'submitted' } }))).status,
+    400,
+  );
+  assertEquals((await handle(postPreview({ kind: 'question' }))).status, 400);
+  // Nothing invalid counts against the limit
+  assertEquals(staff.claims, []);
+});
+
+Deno.test('a preview that needs data asks for them before answering', async () => {
+  const { handle, store } = setup([ASKS_PROGRESS]);
+
+  const response = await handle(postPreview(QUESTION));
+
+  assertEquals(await response.json(), {
+    events: [{ type: 'query', calls: [{ name: 'getMyProgress', arguments: {} }] }],
+  });
+  assertEquals(store.recorded, []);
+});

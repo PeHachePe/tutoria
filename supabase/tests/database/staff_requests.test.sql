@@ -21,7 +21,8 @@ select ok(
   'past the limit, the seconds to wait'
 );
 select is(
-  (select count(*) from staff_request where user_id = '10000000-0000-4000-8000-000000000002'),
+  (select count(*) from staff_request
+   where user_id = '10000000-0000-4000-8000-000000000002' and kind = 'check'),
   2::bigint,
   'a request past the limit is not recorded'
 );

@@ -12,6 +12,7 @@ import {
   toolCallsOf,
 } from '../../../src/app/data/tutor/tutor-tools.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
+import type { StaffRequests } from '../_shared/staff-requests.ts';
 import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
 import {
   DAY_MS,
@@ -20,7 +21,7 @@ import {
   minuteBefore,
   secondsToWait,
 } from '../_shared/limits.ts';
-import type { AnswerStore, RecordedAnswer } from './answer-store.ts';
+import type { AnswerStore, RecordedAnswer, TutorAttempt } from './answer-store.ts';
 import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import { checkCodeActions, tryExamples } from './code-actions.ts';
 import { type LlmProvider, ProviderError } from '../_shared/llm-provider.ts';
@@ -31,6 +32,7 @@ import {
   queriesIn,
   signatureOf,
 } from './model-answer.ts';
+import { previewAttempt, previewSchema } from './preview.ts';
 import {
   buildMessages,
   PROMPT_VERSION,
@@ -53,6 +55,12 @@ export const TUTOR_CALLS_PER_MINUTE = 6;
  */
 export const TUTOR_CALLS_PER_DAY = 60;
 
+/**
+ * Calls to the model a teacher may make in a minute while trying an exercise as a student (4.3e,
+ * D-061): as many as a student, counted apart with the requests of the staff.
+ */
+export const TUTOR_PREVIEWS_PER_MINUTE = TUTOR_CALLS_PER_MINUTE;
+
 /** Far above the 500 characters of the chat: room for a spoken question (6.1). */
 export const MAX_MESSAGE_LENGTH = 2_000;
 
@@ -72,43 +80,57 @@ export const DEFAULT_ANSWERS: Record<TutorLanguage, string> = {
   ca: 'Vas per bon camí! Prova la funció amb l’exemple més senzill i compara el que retorna amb el que s’espera. On comencen a separar-se?',
 };
 
-const requestSchema = z
-  .object({
-    requestId: z.uuid(),
-    attemptId: z.uuid(),
-    kind: z.enum(TUTOR_TRIGGERS),
-    message: z.string().trim().max(MAX_MESSAGE_LENGTH).optional(),
-    code: z.string().max(MAX_CODE_LENGTH),
-    language: z.enum(TUTOR_LANGUAGES),
-    // What the queries the model asked for gave, run by the app (2.5e)
-    results: z
-      .array(
-        z.object({
-          name: z.string(),
-          arguments: z.record(z.string(), z.unknown()),
-          result: z.unknown(),
-        }),
-      )
-      .min(1)
-      .max(MAX_TOOL_CALLS)
-      .refine((results) => JSON.stringify(results).length <= MAX_RESULTS_LENGTH)
-      // Only the queries of the contract, with their arguments: never a way to say anything else
-      .refine(
-        (results) =>
-          toolCallsOf(
-            Object.fromEntries(results.map((result) => [result.name, result.arguments])),
-            'query',
-          ).calls.length === results.length,
-      )
-      .optional(),
-  })
-  // Only a question carries a message, and it needs one (2.6)
-  .refine(({ kind, message }) => (kind === 'question') === Boolean(message));
+/** What every request carries, from a student or from a teacher trying an exercise. */
+const askFields = {
+  requestId: z.uuid(),
+  kind: z.enum(TUTOR_TRIGGERS),
+  message: z.string().trim().max(MAX_MESSAGE_LENGTH).optional(),
+  code: z.string().max(MAX_CODE_LENGTH),
+  language: z.enum(TUTOR_LANGUAGES),
+  // What the queries the model asked for gave, run by the app (2.5e)
+  results: z
+    .array(
+      z.object({
+        name: z.string(),
+        arguments: z.record(z.string(), z.unknown()),
+        result: z.unknown(),
+      }),
+    )
+    .min(1)
+    .max(MAX_TOOL_CALLS)
+    .refine((results) => JSON.stringify(results).length <= MAX_RESULTS_LENGTH)
+    // Only the queries of the contract, with their arguments: never a way to say anything else
+    .refine(
+      (results) =>
+        toolCallsOf(
+          Object.fromEntries(results.map((result) => [result.name, result.arguments])),
+          'query',
+        ).calls.length === results.length,
+    )
+    .optional(),
+};
+
+// Only a question carries a message, and it needs one (2.6)
+const asksRight = ({ kind, message }: { kind: string; message?: string }) =>
+  (kind === 'question') === Boolean(message);
+
+const requestSchema = z.object({ ...askFields, attemptId: z.uuid() }).refine(asksRight);
+
+/** A teacher trying an exercise as a student (4.3e, D-061): the exercise instead of an attempt. */
+const previewRequestSchema = z
+  .object({ ...askFields, preview: previewSchema })
+  .strict()
+  .refine(asksRight);
 
 type TutorRequestBody = z.infer<typeof requestSchema>;
 
+/** What a turn asks, whoever asks it. */
+type Ask = Omit<TutorRequestBody, 'attemptId'>;
+
 export interface TutorDependencies {
   readonly store: AnswerStore;
+  /** The limit of the teachers who try an exercise (4.3e). */
+  readonly staff: StaffRequests;
   /** The provider of the setting, with the key of the secrets. */
   readonly providerFor: (setting: ProviderSetting) => LlmProvider;
   /** Where the code is tried with the examples, so the model knows what it does now. */
@@ -121,9 +143,14 @@ export interface TutorDependencies {
  * the hint level, tries the code with the examples, asks the model with the context of the attempt, checks its answer (2.6), keeps it
  * with its process event and answers with the events `meta` → `delta` → `done` all at once (no
  * streaming, D-043). A retry of a request already answered gets that answer back.
+ *
+ * With `preview` instead of `attemptId`, a teacher tries an exercise as a student (4.3e, D-061): the
+ * exercise and the try come from the form, the limit is that of the staff, and the answer is the
+ * same, but nothing is kept: no interaction, no process event.
  */
 export function createTutorHandler({
   store,
+  staff,
   providerFor,
   sandbox,
   now = Date.now,
@@ -135,7 +162,9 @@ export function createTutorHandler({
       const token = bearerToken(request);
       const userId = token ? await store.userOf(token) : null;
       if (!userId) return failure(401, 'Sign in to ask the tutor');
-      const body = requestSchema.safeParse(await request.json().catch(() => null));
+      const raw: unknown = await request.json().catch(() => null);
+      if (isPreview(raw)) return await answerPreview(userId, raw);
+      const body = requestSchema.safeParse(raw);
       if (!body.success) {
         return failure(
           400,
@@ -166,37 +195,9 @@ export function createTutorHandler({
       );
       if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
 
-      const setting = await store.providerSetting();
-      if (!setting) return failure(503, 'No AI provider is set');
-      const provider = providerFor(setting);
-      const hintLevel = answerHintLevel(ask.kind, attempt.previous, ask.message);
-      const tried = await tryExamples(sandbox, attempt, ask.code);
-      const asked = await askModel(provider, {
-        kind: ask.kind,
-        hintLevel,
-        message: ask.message,
-        code: ask.code,
-        language: ask.language,
-        attempt,
-        tried,
-        results: ask.results,
-      });
-      // The model needs data of the student first: nothing is kept until it answers with it (2.5e)
-      if ('queries' in asked)
-        return json(200, { events: [{ type: 'query', calls: asked.queries }] });
-      const { rejected } = asked;
-      // What touches the code or the submission is checked against the attempt here, and a slip
-      // that keeps the code from running gets its fix, but not in an intervention (2.5f)
-      const answer = asked.answer
-        ? withCheckedActions(
-            asked.answer,
-            await checkCodeActions(
-              asked.answer.actions ?? [],
-              { attempt, code: ask.code, tried, sandbox },
-              { offerFix: ask.kind !== 'proactive' },
-            ),
-          )
-        : null;
+      const turn = await answerTurn(ask, attempt);
+      if (turn instanceof Response) return turn;
+      const { answer, hintLevel, rejected, model } = turn;
 
       const outcome = await store.recordAnswer({
         attemptId: ask.attemptId,
@@ -206,7 +207,7 @@ export function createTutorHandler({
         studentMessage: ask.kind === 'question' ? (ask.message ?? null) : null,
         answer,
         promptVersion: PROMPT_VERSION,
-        model: provider.model,
+        model,
         rejected,
       });
       switch (outcome.status) {
@@ -229,6 +230,76 @@ export function createTutorHandler({
       return failure(500, 'The tutor failed');
     }
   };
+
+  /** The turn of a teacher trying an exercise: answered as a student's, and kept nowhere. */
+  async function answerPreview(userId: string, raw: unknown): Promise<Response> {
+    const body = previewRequestSchema.safeParse(raw);
+    if (!body.success) {
+      return failure(
+        400,
+        'Expected { requestId, preview, kind, message?, code, language, results? }',
+      );
+    }
+    const { preview, ...ask } = body.data;
+    const wait = await staff.claim(userId, 'tutor', TUTOR_PREVIEWS_PER_MINUTE);
+    if (wait === null) return failure(403, 'Only a teacher tries an exercise');
+    if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
+    const turn = await answerTurn(ask, previewAttempt(userId, ask.code, preview));
+    if (turn instanceof Response) return turn;
+    return json(200, { events: eventsOf(turn.answer, turn.hintLevel, null) });
+  }
+
+  /**
+   * What the tutor answers to a turn about an attempt: the level, the code tried with the examples,
+   * the model's answer checked (2.6) and its actions checked against the attempt (2.5f); or the
+   * response to give at once, when there is no provider or the model needs data first (2.5e).
+   */
+  async function answerTurn(ask: Ask, attempt: TutorAttempt): Promise<AnsweredTurn | Response> {
+    const setting = await store.providerSetting();
+    if (!setting) return failure(503, 'No AI provider is set');
+    const provider = providerFor(setting);
+    const hintLevel = answerHintLevel(ask.kind, attempt.previous, ask.message);
+    const tried = await tryExamples(sandbox, attempt, ask.code);
+    const asked = await askModel(provider, {
+      kind: ask.kind,
+      hintLevel,
+      message: ask.message,
+      code: ask.code,
+      language: ask.language,
+      attempt,
+      tried,
+      results: ask.results,
+    });
+    // The model needs data of the student first: nothing is kept until it answers with it (2.5e)
+    if ('queries' in asked) return json(200, { events: [{ type: 'query', calls: asked.queries }] });
+    // What touches the code or the submission is checked against the attempt here, and a slip
+    // that keeps the code from running gets its fix, but not in an intervention (2.5f)
+    const answer = asked.answer
+      ? withCheckedActions(
+          asked.answer,
+          await checkCodeActions(
+            asked.answer.actions ?? [],
+            { attempt, code: ask.code, tried, sandbox },
+            { offerFix: ask.kind !== 'proactive' },
+          ),
+        )
+      : null;
+    return { answer, hintLevel, rejected: asked.rejected, model: provider.model };
+  }
+}
+
+/** The answer to a turn, ready to keep and to give. */
+interface AnsweredTurn {
+  /** `null` means keeping quiet. */
+  readonly answer: ModelAnswer | null;
+  readonly hintLevel: HintLevel;
+  readonly rejected: number;
+  readonly model: string;
+}
+
+/** A preview carries the exercise instead of an attempt. */
+function isPreview(body: unknown): boolean {
+  return typeof body === 'object' && body !== null && 'preview' in body;
 }
 
 /** The answer with the actions that held; with none left, as an answer that does nothing. */

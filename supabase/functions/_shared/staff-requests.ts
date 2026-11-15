@@ -1,5 +1,8 @@
-/** What a teacher asks of the Edge Functions that is neither a run nor the tutor (4.3c, D-059). */
-export type StaffRequestKind = 'check' | 'translate';
+/**
+ * What a teacher asks of the Edge Functions that is not a student's (4.3c, D-059): checking a solution,
+ * translating, and the tutor in preview mode (4.3e, D-061).
+ */
+export type StaffRequestKind = 'check' | 'translate' | 'tutor';
 
 /** The limit per minute of the requests of the staff, with `claim_staff_request`. */
 export interface StaffRequests {

@@ -867,7 +867,7 @@ export type Database = {
         | 'paste'
         | 'focus_lost'
         | 'focus_gained';
-      staff_request_kind: 'check' | 'translate';
+      staff_request_kind: 'check' | 'translate' | 'tutor';
       tutor_trigger: 'question' | 'hint' | 'proactive';
       user_role: 'student' | 'teacher' | 'admin';
       user_status: 'active' | 'disabled';
@@ -1000,7 +1000,7 @@ export const Constants = {
         'focus_lost',
         'focus_gained',
       ],
-      staff_request_kind: ['check', 'translate'],
+      staff_request_kind: ['check', 'translate', 'tutor'],
       tutor_trigger: ['question', 'hint', 'proactive'],
       user_role: ['student', 'teacher', 'admin'],
       user_status: ['active', 'disabled'],
