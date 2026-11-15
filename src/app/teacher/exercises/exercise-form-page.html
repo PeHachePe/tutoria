@@ -44,7 +44,27 @@
         </a>
       </div>
     } @else if (usage(); as usage) {
-      @if (usage.studentCount > 0) {
+      @if (archivedAt()) {
+        <!-- Out of the bank, not deleted: whoever has it in a block keeps it (D-060) -->
+        <div
+          class="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 rounded-2xl bg-info-container p-4 text-on-info-container md:grid-cols-[auto_1fr_auto] md:items-center"
+        >
+          <mat-icon aria-hidden="true">inventory_2</mat-icon>
+          <p i18n="@@exerciseForm.archived.notice">
+            Archivado: ya no sale en el banco ni se asigna a más bloques. Los alumnos que lo tienen
+            en un bloque lo siguen viendo, con sus intentos.
+          </p>
+          <button
+            matButton="filled"
+            type="button"
+            class="col-start-2 justify-self-start md:col-start-3"
+            (click)="setArchived(usage.exercise.id, false)"
+          >
+            <mat-icon aria-hidden="true">unarchive</mat-icon>
+            <span i18n="@@exerciseForm.unarchive">Desarchivar</span>
+          </button>
+        </div>
+      } @else if (usage.studentCount > 0) {
         <div
           class="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 rounded-2xl bg-warning-container p-4 text-on-warning-container md:grid-cols-[auto_1fr_auto] md:items-center"
         >
@@ -57,18 +77,20 @@
             {{ ' ' }}
             <span i18n="@@exerciseForm.used.notice"
               >Corregir una errata no afecta a nadie, pero si cambias las pruebas, sus intentos se
-              comprobaron con las de antes. Para un cambio grande, mejor duplícalo.</span
+              comprobaron con las de antes. Para un cambio grande, mejor duplícalo; si ya no lo
+              usas, archívalo.</span
             >
           </p>
-          <a
-            matButton
-            class="col-start-2 justify-self-start md:col-start-3"
-            [routerLink]="paths.newExercise"
-            [queryParams]="copyQuery()"
-          >
-            <mat-icon aria-hidden="true">content_copy</mat-icon>
-            <span i18n="@@exerciseForm.duplicate">Duplicar</span>
-          </a>
+          <div class="col-start-2 -ms-3 flex flex-wrap gap-1 md:col-start-3 md:ms-0">
+            <a matButton [routerLink]="paths.newExercise" [queryParams]="copyQuery()">
+              <mat-icon aria-hidden="true">content_copy</mat-icon>
+              <span i18n="@@exerciseForm.duplicate">Duplicar</span>
+            </a>
+            <button matButton type="button" (click)="setArchived(usage.exercise.id, true)">
+              <mat-icon aria-hidden="true">archive</mat-icon>
+              <span i18n="@@exerciseForm.archive">Archivar</span>
+            </button>
+          </div>
         </div>
       }
     }

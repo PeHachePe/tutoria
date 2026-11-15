@@ -210,6 +210,9 @@ export class ExerciseFormPage implements WithUnsavedChanges {
     return this.mode() === 'edit' && entry ? entry : null;
   });
 
+  /** When its author archived it (D-060); changed in place by «Archivar» and «Desarchivar». */
+  protected readonly archivedAt = linkedSignal(() => this.usage()?.exercise.archivedAt ?? null);
+
   /** The signature the student will start from: `function countWords(text) {}`. */
   protected readonly signature = computed(() => {
     const { functionName, parameters } = this.model();
@@ -297,6 +300,23 @@ export class ExerciseFormPage implements WithUnsavedChanges {
 
   protected warnBeforeUnload(event: BeforeUnloadEvent): void {
     if (this.hasUnsavedChanges()) event.preventDefault();
+  }
+
+  /** Out of the bank or back in it, without touching the form: the changes not saved stay. */
+  protected async setArchived(exerciseId: string, archived: boolean): Promise<void> {
+    try {
+      const exercise = await this.exercises.setArchived(exerciseId, archived);
+      this.archivedAt.set(exercise.archivedAt);
+      this.snackBar.open(
+        archived
+          ? $localize`:@@exerciseForm.archived:Ejercicio archivado`
+          : $localize`:@@exerciseForm.unarchived:Ejercicio devuelto al banco`,
+      );
+    } catch {
+      this.snackBar.open(
+        $localize`:@@exerciseForm.archive.failed:No se ha podido guardar. Inténtalo de nuevo.`,
+      );
+    }
   }
 
   /** Creates it or saves its changes; a new one opens as itself, so saving again updates it. */

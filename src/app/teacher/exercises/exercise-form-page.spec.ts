@@ -195,6 +195,38 @@ describe('ExerciseFormPage', () => {
       expect(screen.queryByText('Hay cambios sin guardar')).toBeNull();
     });
 
+    it('archives an exercise students started, and takes it back to the bank', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`);
+      const stored = () =>
+        TestBed.inject(MockDb)
+          .tables()
+          .exercises.find((e) => e.id === SUM.id)?.archivedAt;
+
+      await userEvent.click(screen.getByRole('button', { name: 'Archivar' }));
+      await settle();
+      expect(snackBar).toHaveBeenCalledWith('Ejercicio archivado');
+      expect(screen.getByText(/ya no sale en el banco/)).toBeTruthy();
+      expect(screen.queryByText(/alumnos ya lo han empezado/)).toBeNull();
+      expect(stored()).not.toBeNull();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Desarchivar' }));
+      await settle();
+      expect(snackBar).toHaveBeenCalledWith('Ejercicio devuelto al banco');
+      expect(screen.getByText(/alumnos ya lo han empezado/)).toBeTruthy();
+      expect(stored()).toBeNull();
+    });
+
+    it('says when it could not archive it', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`);
+
+      TestBed.inject(MockNetwork).failNextRequest('unknown');
+      await userEvent.click(screen.getByRole('button', { name: 'Archivar' }));
+      await settle();
+
+      expect(snackBar).toHaveBeenCalledWith('No se ha podido guardar. Inténtalo de nuevo.');
+      expect(screen.queryByText(/ya no sale en el banco/)).toBeNull();
+    });
+
     it('adds a test with the focus on it and removes it again', async () => {
       await renderForm(`/docente/ejercicios/${SUM.id}`);
       const count = screen.getAllByRole('group', { name: /^Prueba / }).length;

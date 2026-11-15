@@ -2,6 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, FormRoot } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import {
+  MatDatepicker,
+  MatDatepickerInput,
+  MatDatepickerToggle,
+} from '@angular/material/datepicker';
+import {
   MAT_DIALOG_DATA,
   MatDialogActions,
   MatDialogClose,
@@ -9,16 +14,23 @@ import {
   MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
-import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
+import { MatError, MatFormField, MatHint, MatLabel, MatSuffix } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
+import {
+  MatTimepicker,
+  MatTimepickerInput,
+  MatTimepickerToggle,
+} from '@angular/material/timepicker';
 
 import { LANGUAGE_OPTIONS } from '../../core/i18n/locale';
 import { LOCALE_NAMES } from '../../core/i18n/locale-names';
+import { provideLocalizedDateAdapter } from '../../core/i18n/localized-date-adapter';
 import type { BlockDraft } from '../../data/block-service';
 import type { ClassBlock } from '../../data/exercise';
 import type { ContentLocale } from '../../data/localized-text';
+import { DEFAULT_OPENING_TIME } from '../../shared/due-date';
 import { blockSchema, toBlockDraft, toBlockFormModel } from './block-form';
 
 /** The block to edit, or null for a new one, and the language of the interface. */
@@ -30,12 +42,14 @@ export interface BlockDialogData {
 }
 
 /**
- * Creates a block or changes its title, its translations and whether the students see it
- * (4.3b, D-046): «Tema 1: Bucles», «Recuperación del tema 2». The title is required in the language
- * it is written in; the others are optional translations (D-045).
+ * Creates a block or changes its title, its translations, whether the students see it (4.3b, D-046)
+ * and the day it opens to them (4.3d, D-060): «Tema 1: Bucles», «Recuperación del tema 2». The
+ * title is required in the language it is written in; the others are optional translations (D-045).
  */
 @Component({
   selector: 'app-block-dialog',
+  // The adapter takes the language of the build (LOCALE_ID)
+  providers: [provideLocalizedDateAdapter()],
   imports: [
     FormRoot,
     FormField,
@@ -52,6 +66,13 @@ export interface BlockDialogData {
     MatSelect,
     MatOption,
     MatSlideToggle,
+    MatSuffix,
+    MatDatepicker,
+    MatDatepickerInput,
+    MatDatepickerToggle,
+    MatTimepicker,
+    MatTimepickerInput,
+    MatTimepickerToggle,
   ],
   template: `
     <h2 mat-dialog-title>
@@ -99,6 +120,30 @@ export interface BlockDialogData {
           <mat-slide-toggle [formField]="blockForm.isHidden" i18n="@@blockDialog.hidden"
             >Oculto para los alumnos mientras lo preparas</mat-slide-toggle
           >
+          <!-- A resit or an exam appears by itself on its day: until then, as if hidden -->
+          <div class="mt-4 flex flex-col gap-x-4 sm:flex-row">
+            <mat-form-field class="sm:flex-1">
+              <mat-label i18n="@@blockDialog.opensDay">Se abre a los alumnos el día</mat-label>
+              <input matInput [matDatepicker]="dayPicker" [formField]="blockForm.opensDay" />
+              <mat-datepicker-toggle matIconSuffix [for]="dayPicker" />
+              <mat-datepicker #dayPicker />
+              <mat-hint i18n="@@blockDialog.opensDay.hint"
+                >Opcional: hasta ese día no lo ven</mat-hint
+              >
+              @if (blockForm.opensDay().errors()[0]; as error) {
+                <mat-error>{{ error.message }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field class="sm:flex-1">
+              <mat-label i18n="@@blockDialog.opensTime">Hora</mat-label>
+              <input matInput [matTimepicker]="timePicker" [formField]="blockForm.opensTime" />
+              <mat-timepicker-toggle matIconSuffix [for]="timePicker" />
+              <mat-timepicker #timePicker />
+              <mat-hint i18n="@@blockDialog.opensTime.hint"
+                >Sin hora, a las {{ openingTime }}</mat-hint
+              >
+            </mat-form-field>
+          </div>
           @if (failed()) {
             <p class="text-body-medium text-error" role="alert" i18n="@@blockDialog.failed">
               No se ha podido guardar. Inténtalo de nuevo.
@@ -129,6 +174,7 @@ export class BlockDialog {
 
   protected readonly languages = LANGUAGE_OPTIONS;
   protected readonly failed = signal(false);
+  protected readonly openingTime = `${DEFAULT_OPENING_TIME.hours}:${String(DEFAULT_OPENING_TIME.minutes).padStart(2, '0')}`;
 
   private readonly model = signal(toBlockFormModel(this.data.block, this.data.locale));
 

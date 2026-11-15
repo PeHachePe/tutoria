@@ -81,6 +81,8 @@ export const TEACHER_PARAMS = {
   difficulty: 'dificultad',
   /** Only the exercises the user wrote: any value. */
   mine: 'mios',
+  /** The archived exercises instead of the others (4.3d): any value. */
+  archived: 'archivados',
   /** The page of the bank, from 1. */
   page: 'pagina',
 } as const;

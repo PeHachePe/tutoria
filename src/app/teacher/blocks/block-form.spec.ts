@@ -13,6 +13,7 @@ const BLOCK: ClassBlock = {
   sourceLocale: 'es',
   translations: { en: { title: 'Topic 1: Loops' } },
   isHidden: true,
+  opensAt: null,
 };
 
 describe('toBlockFormModel', () => {
@@ -21,6 +22,8 @@ describe('toBlockFormModel', () => {
       sourceLocale: 'ca',
       titles: { es: '', en: '', ca: '' },
       isHidden: false,
+      opensDay: null,
+      opensTime: null,
     });
   });
 
@@ -29,6 +32,17 @@ describe('toBlockFormModel', () => {
       sourceLocale: 'es',
       titles: { es: 'Tema 1: Bucles', en: 'Topic 1: Loops', ca: '' },
       isHidden: true,
+      opensDay: null,
+      opensTime: null,
+    });
+  });
+
+  it('puts the opening date in its day and time', () => {
+    const opensAt = new Date(2026, 10, 23, 9, 30).toISOString();
+
+    expect(toBlockFormModel({ ...BLOCK, opensAt }, 'es')).toMatchObject({
+      opensDay: new Date(opensAt),
+      opensTime: new Date(opensAt),
     });
   });
 });
@@ -40,13 +54,27 @@ describe('toBlockDraft', () => {
         sourceLocale: 'en',
         titles: { es: '  Repaso ', en: ' Review ', ca: '   ' },
         isHidden: false,
+        opensDay: null,
+        opensTime: null,
       }),
     ).toEqual({
       title: 'Review',
       sourceLocale: 'en',
       translations: { es: { title: 'Repaso' } },
       isHidden: false,
+      opensAt: null,
     });
+  });
+
+  it('opens the block at the time chosen, or at the start of the day without one', () => {
+    const model = { ...toBlockFormModel(BLOCK, 'es'), opensDay: new Date(2026, 10, 23, 15, 0) };
+
+    expect(toBlockDraft({ ...model, opensTime: new Date(2026, 0, 1, 9, 30) }).opensAt).toBe(
+      new Date(2026, 10, 23, 9, 30).toISOString(),
+    );
+    expect(toBlockDraft({ ...model, opensTime: null }).opensAt).toBe(
+      new Date(2026, 10, 23, 0, 0).toISOString(),
+    );
   });
 
   it('goes back to the block it came from', () => {
@@ -55,6 +83,7 @@ describe('toBlockDraft', () => {
       sourceLocale: BLOCK.sourceLocale,
       translations: BLOCK.translations,
       isHidden: BLOCK.isHidden,
+      opensAt: BLOCK.opensAt,
     });
   });
 });
@@ -92,5 +121,26 @@ describe('blockSchema', () => {
         .errors()
         .map((error) => error.kind),
     ).toEqual(['maxLength']);
+  });
+});
+
+describe('blockSchema · opening date', () => {
+  it('asks for the day when only the time is chosen', () => {
+    const blockFormTree = TestBed.runInInjectionContext(() =>
+      form(
+        signal({
+          ...toBlockFormModel(BLOCK, 'es'),
+          opensTime: new Date(2026, 0, 1, 9, 0),
+        }),
+        blockSchema,
+      ),
+    );
+
+    expect(
+      blockFormTree
+        .opensDay()
+        .errors()
+        .map((error) => error.kind),
+    ).toEqual(['required']);
   });
 });

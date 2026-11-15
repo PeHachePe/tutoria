@@ -110,6 +110,52 @@ describe('BlocksPage', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: item }));
   }
 
+  interface PlannedEntry {
+    readonly exercise: { readonly id: string; readonly title: string };
+    readonly assignment: { readonly blockId: string };
+  }
+  interface Planned {
+    readonly block: { readonly id: string; readonly title: string };
+    readonly assignments: readonly PlannedEntry[];
+  }
+  /** What the page reads of a drop of the CDK. */
+  interface Drop {
+    readonly previousContainer: { readonly data: Planned };
+    readonly container: { readonly data: Planned };
+    readonly item?: { readonly data: PlannedEntry };
+    readonly previousIndex: number;
+    readonly currentIndex: number;
+  }
+  interface Page {
+    dropAssignment: (event: Drop) => void;
+    canEnter: (drag: { data: PlannedEntry }, drop: { data: Planned }) => boolean;
+    blocks: { value: () => readonly Planned[] };
+  }
+
+  function pageOf(harness: RouterTestingHarness): Page {
+    return harness.routeDebugElement?.componentInstance as Page;
+  }
+
+  function plannedBlock(page: Page, title: string): Planned {
+    return page.blocks.value().find((entry) => entry.block.title === title) as Planned;
+  }
+
+  function entryOf(planned: Planned, title: string): PlannedEntry {
+    return planned.assignments.find((entry) => entry.exercise.title === title) as PlannedEntry;
+  }
+
+  /** Replaces the snackbar with one whose «Deshacer» the test presses. */
+  function undoable(): () => void {
+    let undo: () => void = () => undefined;
+    snack.mockImplementation(
+      () =>
+        ({
+          onAction: () => ({ subscribe: (next: () => void) => (undo = next) }),
+        }) as never,
+    );
+    return () => undo();
+  }
+
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
@@ -256,7 +302,7 @@ describe('BlocksPage', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     await closed(harness);
 
-    await menu('Acciones del bloque «Final review»', 'Editar el título');
+    await menu('Acciones del bloque «Final review»', 'Editar el bloque');
     dialog = await openDialog();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     await closed(harness);
@@ -294,7 +340,7 @@ describe('BlocksPage', () => {
     it('changes the title of a block', async () => {
       const harness = await renderBlocks(DAW);
 
-      await menu('Acciones del bloque «Repaso final»', 'Editar el título');
+      await menu('Acciones del bloque «Repaso final»', 'Editar el bloque');
       const dialog = await openDialog();
       const title = within(dialog).getByRole('textbox', { name: 'Título' });
       await userEvent.clear(title);
@@ -303,11 +349,47 @@ describe('BlocksPage', () => {
       await closed(harness);
 
       await vi.waitFor(
-        () => expect(text(blockHeadings().at(-1) ?? null)).toBe('Repaso de la evaluación'),
+        () => expect(text(blockHeadings().at(-2) ?? null)).toBe('Repaso de la evaluación'),
         // The whole suite runs at once: give the save and the dialog time
         { timeout: 3000 },
       );
       expect(snack).toHaveBeenCalledWith('Bloque guardado');
+    });
+
+    it('says when a block opens to the students, until it does', async () => {
+      await renderBlocks(DAW, (mock) =>
+        mock.update('classBlocks', (rows) =>
+          rows.map((row) =>
+            row.title === 'Tema 1: Bucles y condicionales'
+              ? { ...row, opensAt: '2026-11-01T08:00:00.000Z' }
+              : row,
+          ),
+        ),
+      );
+
+      expect(text(block('Examen de los temas 5 y 6'))).toMatch(
+        /Se abre el\s*lun 23 nov, 09:00.*en 8 días/,
+      );
+      // Open already: as any other
+      expect(text(block('Tema 1: Bucles y condicionales'))).not.toContain('Se abre');
+    });
+
+    it('schedules the opening of a block, at 0:00 without a time', async () => {
+      const harness = await renderBlocks(DAW);
+
+      await menu('Acciones del bloque «Repaso final»', 'Editar el bloque');
+      const dialog = await openDialog();
+      expect(text(dialog)).toContain('Sin hora, a las 0:00');
+      await userEvent.type(
+        within(dialog).getByRole('textbox', { name: 'Se abre a los alumnos el día' }),
+        '1/12/2026',
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+      await closed(harness);
+
+      expect(text(block('Repaso final'))).toMatch(/Se abre el\s*mar 1 dic, 00:00/);
+      const saved = db.tables().classBlocks.find((row) => row.title === 'Repaso final');
+      expect(new Date(saved?.opensAt ?? '').getHours()).toBe(0);
     });
 
     it('shows and hides a block at once, and goes back if the server says no', async () => {
@@ -340,7 +422,7 @@ describe('BlocksPage', () => {
 
       const titles = blockHeadings().map((heading) => text(heading));
       expect(titles.slice(0, 2)).toEqual(['Tema 2: Vectores', 'Tema 1: Bucles y condicionales']);
-      expect(announce).toHaveBeenCalledWith('Bloque «Tema 2: Vectores» en el lugar 1 de 8');
+      expect(announce).toHaveBeenCalledWith('Bloque «Tema 2: Vectores» en el lugar 1 de 9');
       const saved = db
         .tables()
         .classBlocks.filter((row) => row.groupId === DAW_GROUP_ID)
@@ -506,19 +588,159 @@ describe('BlocksPage', () => {
       );
     });
 
+    it('marks the archived exercises, out of the bank but still in their blocks', async () => {
+      await renderBlocks(DAW);
+
+      const archived = within(block('Tema 1: Bucles y condicionales'))
+        .getByRole('link', { name: 'Tabla de multiplicar' })
+        .closest('li');
+      expect(text(archived)).toContain('Archivado');
+      const other = screen
+        .getByRole('link', { name: 'Contar vocales en una cadena' })
+        .closest('li');
+      expect(text(other)).not.toContain('Archivado');
+    });
+
+    it('moves an exercise to another block with the menu, and back with «Deshacer»', async () => {
+      const harness = await renderBlocks(DAW);
+      const announce = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce');
+      const undo = undoable();
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Acciones de «Contar vocales en una cadena»' }),
+      );
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Mover a otro bloque' }));
+      const targets = await screen.findByRole('menu', {
+        name: 'Mover «Contar vocales en una cadena» a otro bloque',
+      });
+      // Every other block of the group
+      expect(within(targets).getAllByRole('menuitem')).toHaveLength(8);
+      await userEvent.click(within(targets).getByRole('menuitem', { name: 'Repaso final' }));
+      await settle(harness);
+
+      expect(exercisesOf('Tema 4: Cadenas y formato')).toEqual([
+        'Media de un vector con dos decimales',
+        'Buscar la primera aparición de un valor',
+      ]);
+      expect(exercisesOf('Repaso final')).toEqual([
+        'Invertir un vector',
+        'Buscar la primera aparición de un valor',
+        'Contar vocales en una cadena',
+      ]);
+      expect(announce).toHaveBeenCalledWith(
+        '«Contar vocales en una cadena» en «Repaso final», en el lugar 3 de 3',
+      );
+      expect(snack).toHaveBeenCalledWith(
+        '«Contar vocales en una cadena» movido a «Repaso final»',
+        'Deshacer',
+      );
+
+      undo();
+      await settle(harness);
+      expect(exercisesOf('Tema 4: Cadenas y formato')[0]).toBe('Contar vocales en una cadena');
+      expect(exercisesOf('Repaso final')).toHaveLength(2);
+      const saved = db
+        .tables()
+        .assignments.filter(
+          (row) => row.groupId === DAW_GROUP_ID && row.exerciseId === exerciseId(6),
+        );
+      expect(saved.map((row) => row.position)).toEqual([1]);
+    });
+
+    it('does not offer a block that has the exercise already', async () => {
+      await renderBlocks(DAW);
+
+      await menu(
+        'Acciones de «Buscar la primera aparición de un valor»',
+        'Mover a otro bloque',
+        'Tema 4: Cadenas y formato',
+      );
+      const targets = await screen.findByRole('menu', {
+        name: 'Mover «Buscar la primera aparición de un valor» a otro bloque',
+      });
+      const repaso = within(targets).getByRole('menuitem', { name: 'Repaso final' });
+      expect((repaso as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('moves an exercise somebody started by dragging it to another block', async () => {
+      const harness = await renderBlocks(DAW);
+      const page = pageOf(harness);
+      const source = plannedBlock(page, 'Tema 1: Bucles y condicionales');
+      const target = plannedBlock(page, 'Tema 3: Recorridos de vectores');
+      const entry = source.assignments[0];
+
+      // Only where it is not yet
+      expect(page.canEnter({ data: entry }, { data: target })).toBe(true);
+      expect(page.canEnter({ data: entry }, { data: source })).toBe(true);
+      expect(
+        page.canEnter(
+          { data: source.assignments[1] },
+          { data: plannedBlock(page, 'Recuperación del tema 2') },
+        ),
+      ).toBe(false);
+
+      page.dropAssignment({
+        previousContainer: { data: source },
+        container: { data: target },
+        item: { data: entry },
+        previousIndex: 0,
+        currentIndex: 0,
+      });
+      await settle(harness);
+
+      expect(exercisesOf('Tema 3: Recorridos de vectores')[0]).toBe(entry.exercise.title);
+      expect(
+        db.tables().assignments.find((row) => row.exerciseId === entry.exercise.id),
+      ).toMatchObject({ blockId: target.block.id, position: 1 });
+    });
+
+    it('puts an exercise back in its block if moving it fails, also on «Deshacer»', async () => {
+      const harness = await renderBlocks(DAW);
+      const page = pageOf(harness);
+      const undo = undoable();
+      const move = (from: string, to: string) =>
+        page.dropAssignment({
+          previousContainer: { data: plannedBlock(page, from) },
+          container: { data: plannedBlock(page, to) },
+          item: { data: entryOf(plannedBlock(page, from), 'Invertir un vector') },
+          previousIndex: 0,
+          currentIndex: 0,
+        });
+
+      TestBed.inject(MockNetwork).failNextRequest('unknown');
+      move('Repaso final', 'Tema 2: Vectores');
+      await settle(harness);
+      expect(exercisesOf('Repaso final')[0]).toBe('Invertir un vector');
+      expect(snack).toHaveBeenCalledWith('No se ha podido guardar. Inténtalo de nuevo.');
+
+      move('Repaso final', 'Tema 2: Vectores');
+      await settle(harness);
+      expect(exercisesOf('Tema 2: Vectores')[0]).toBe('Invertir un vector');
+      TestBed.inject(MockNetwork).failNextRequest('unknown');
+      undo();
+      await settle(harness);
+      expect(exercisesOf('Tema 2: Vectores')[0]).toBe('Invertir un vector');
+      expect(snack).toHaveBeenCalledTimes(3);
+    });
+
     it('puts an exercise back where it was if the new order cannot be saved', async () => {
       const harness = await renderBlocks(DAW);
-      const page = harness.routeDebugElement?.componentInstance as {
-        dropAssignment: (planned: unknown, event: Partial<CdkDragDrop<unknown>>) => void;
-        blocks: { value: () => { block: { title: string } }[] };
-      };
-      const planned = page.blocks
-        .value()
-        .find((entry) => entry.block.title === 'Tema 4: Cadenas y formato');
+      const page = pageOf(harness);
+      const container = { data: plannedBlock(page, 'Tema 4: Cadenas y formato') };
 
-      page.dropAssignment(planned, { previousIndex: 1, currentIndex: 1 });
+      page.dropAssignment({
+        previousContainer: container,
+        container,
+        previousIndex: 1,
+        currentIndex: 1,
+      });
       TestBed.inject(MockNetwork).failNextRequest('unknown');
-      page.dropAssignment(planned, { previousIndex: 0, currentIndex: 2 });
+      page.dropAssignment({
+        previousContainer: container,
+        container,
+        previousIndex: 0,
+        currentIndex: 2,
+      });
       await settle(harness);
 
       expect(exercisesOf('Tema 4: Cadenas y formato')[0]).toBe('Contar vocales en una cadena');
@@ -792,6 +1014,21 @@ describe('BlocksPage', () => {
         'No se ha podido guardar',
       );
       await settle(harness);
+      expect(screen.getByRole('dialog')).toBeTruthy();
+    });
+
+    it('asks for the day a block opens when only its time is given', async () => {
+      const harness = await renderBlocks(DAW);
+
+      await menu('Acciones del bloque «Repaso final»', 'Editar el bloque');
+      const dialog = await openDialog();
+      // Typed without a click, which would open the list of times
+      within(dialog).getByRole('combobox', { name: 'Hora' }).focus();
+      await userEvent.keyboard('9:00');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+      await settle(harness);
+
+      expect(text(dialog)).toContain('Elige el día en que se abre');
       expect(screen.getByRole('dialog')).toBeTruthy();
     });
 

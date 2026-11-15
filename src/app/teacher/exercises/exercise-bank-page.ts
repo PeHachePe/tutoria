@@ -69,7 +69,8 @@ const DIFFICULTIES: readonly { readonly value: Difficulty; readonly label: strin
 /**
  * The exercise bank (/docente/ejercicios, ficha 08, RF-14): every exercise of every teacher, to find
  * one, open it, duplicate it or write a new one. The filters live in the URL, so coming back from
- * an exercise keeps them. Only its author or the administration edits or deletes one (D-057).
+ * an exercise keeps them. Only its author or the administration edits, archives or deletes one
+ * (D-057): deletes it while nobody started it, archives it once somebody did (D-060).
  */
 @Component({
   selector: 'app-exercise-bank-page',
@@ -114,6 +115,7 @@ export class ExerciseBankPage {
   readonly asignatura = input<string>();
   readonly dificultad = input<string>();
   readonly mios = input<string>();
+  readonly archivados = input<string>();
   /** The page, from 1. */
   readonly pagina = input<string>();
 
@@ -158,7 +160,11 @@ export class ExerciseBankPage {
     search: this.buscar() ?? '',
     difficulty: DIFFICULTIES.find((option) => option.value === this.dificultad())?.value ?? null,
     mine: this.mios() !== undefined,
+    archived: this.archivados() !== undefined,
   }));
+
+  /** The archived exercises are another view of the bank, not a filter of it. */
+  protected readonly archived = computed(() => this.filters().archived);
 
   protected readonly hasFilters = computed(() => {
     const filters = this.filters();
@@ -186,8 +192,13 @@ export class ExerciseBankPage {
     return scope.kind === 'subject' ? { [TEACHER_PARAMS.subject]: scope.subjectId } : {};
   });
 
-  /** The total, once loaded. */
-  protected readonly total = computed(() => this.shown().exercises.length);
+  /** The total of the view, archived or not, once loaded. */
+  protected readonly total = computed(
+    () =>
+      this.shown().exercises.filter(
+        ({ exercise }) => (exercise.archivedAt !== null) === this.archived(),
+      ).length,
+  );
 
   /** Every exercise that passes the filters. */
   protected readonly matching = computed(() => {
@@ -273,6 +284,29 @@ export class ExerciseBankPage {
     this.bank.reload();
   }
 
+  /**
+   * Out of the bank, with «Deshacer»; its assignments and the attempts at them stay (D-060). Or back
+   * in the bank.
+   */
+  protected async setArchived(entry: BankExercise, archived: boolean): Promise<void> {
+    try {
+      this.replaceExercise(await this.exercises.setArchived(entry.exercise.id, archived));
+    } catch {
+      this.snackBar.open(
+        $localize`:@@bank.archive.failed:No se ha podido guardar. Inténtalo de nuevo.`,
+      );
+      return;
+    }
+    if (!archived) {
+      this.snackBar.open($localize`:@@bank.unarchive.done:Ejercicio devuelto al banco`);
+      return;
+    }
+    this.snackBar
+      .open($localize`:@@bank.archive.done:Ejercicio archivado`, $localize`:@@bank.undo:Deshacer`)
+      .onAction()
+      .subscribe(() => void this.setArchived(entry, false));
+  }
+
   /** Asks first: deleting cannot be undone, and its assignments go with it. */
   protected async remove(entry: BankExercise): Promise<void> {
     const title = exerciseText(entry.exercise, this.locale).title;
@@ -305,6 +339,18 @@ export class ExerciseBankPage {
     }
   }
 
+  private replaceExercise(exercise: BankExercise['exercise']): void {
+    this.bank.value.update(
+      (bank) =>
+        bank && {
+          ...bank,
+          exercises: bank.exercises.map((other) =>
+            other.exercise.id === exercise.id ? { ...other, exercise } : other,
+          ),
+        },
+    );
+  }
+
   private row(entry: BankExercise, subjectNames: ReadonlyMap<string, string>) {
     const text = exerciseText(entry.exercise, this.locale);
     return {
@@ -319,7 +365,8 @@ export class ExerciseBankPage {
       groups: entry.groups.map((group) => group.name).join(', '),
       mine: entry.exercise.createdBy === this.auth.userId(),
       editable: canEditExercise(entry.exercise, this.auth.user()),
-      // Deleting needs nobody to have started it: their attempts keep it
+      archived: entry.exercise.archivedAt !== null,
+      // Deleting needs nobody to have started it: their attempts keep it, and it is archived
       deletable: canEditExercise(entry.exercise, this.auth.user()) && entry.studentCount === 0,
     };
   }

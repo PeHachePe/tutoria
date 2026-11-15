@@ -12,12 +12,15 @@ export interface BankFilters {
   readonly difficulty: Difficulty | null;
   /** Only the exercises the user wrote. */
   readonly mine: boolean;
+  /** The archived exercises instead of the others (D-060): out of the bank, not deleted. */
+  readonly archived: boolean;
 }
 
 export const NO_FILTERS: BankFilters = {
   search: '',
   difficulty: null,
   mine: false,
+  archived: false,
 };
 
 /** Who looks at the bank: the language they read in and who they are. */
@@ -28,7 +31,7 @@ export interface BankReader {
 }
 
 /**
- * The exercises that pass every filter. The search looks in the title and topics of every language
+ * The exercises that pass every filter: the archived ones or the others, never both. The search looks in the title and topics of every language
  * (a teacher may remember the exercise by its English title) and in the function, without accents
  * nor capitals: «ano bisiesto» finds «Año bisiesto».
  */
@@ -40,6 +43,7 @@ export function filterBank(
   const words = searchable(filters.search).split(/\s+/).filter(Boolean);
   return entries.filter(
     ({ exercise }) =>
+      (exercise.archivedAt !== null) === filters.archived &&
       (filters.difficulty === null || exercise.difficulty === filters.difficulty) &&
       (!filters.mine || exercise.createdBy === reader.userId) &&
       words.every((word) => haystackOf(exercise, reader.locale).includes(word)),

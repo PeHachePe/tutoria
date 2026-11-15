@@ -32,7 +32,8 @@ function text(element: Element | null): string {
 }
 
 /** Marta's subjects: basic programming (15) and web development (15). */
-const MY_EXERCISES = 30;
+/** Of the teacher's subjects, without the archived «Tabla de multiplicar». */
+const MY_EXERCISES = 29;
 
 describe('ExerciseBankPage', () => {
   let service: MockExerciseService;
@@ -125,7 +126,7 @@ describe('ExerciseBankPage', () => {
     await settle(harness);
 
     expect(TestBed.inject(Router).url).toBe('/docente/ejercicios?buscar=bisiesto');
-    expect(screen.getByText('1 ejercicio de 30')).toBeTruthy();
+    expect(screen.getByText('1 ejercicio de 29')).toBeTruthy();
     expect(within(rows()[0]).getByRole('link', { name: 'Año bisiesto' })).toBeTruthy();
 
     await userEvent.click(screen.getByRole('switch', { name: 'Solo los míos' }));
@@ -139,7 +140,7 @@ describe('ExerciseBankPage', () => {
 
   it('brings another subject from the server, keeping the search while it loads', async () => {
     const harness = await renderBank('/docente/ejercicios?buscar=fibonacci');
-    expect(screen.getByText('Ningún ejercicio de 30')).toBeTruthy();
+    expect(screen.getByText('Ningún ejercicio de 29')).toBeTruthy();
     const listBank = vi.spyOn(service, 'listBank');
 
     await userEvent.click(screen.getByRole('button', { name: 'Buscar en todas las asignaturas' }));
@@ -147,7 +148,7 @@ describe('ExerciseBankPage', () => {
     await settle(harness);
 
     expect(listBank).toHaveBeenCalledWith({ kind: 'all' });
-    expect(screen.getByText('1 ejercicio de 42')).toBeTruthy();
+    expect(screen.getByText('1 ejercicio de 41')).toBeTruthy();
     expect(text(rows()[0])).toContain('De otro docente');
   });
 
@@ -204,7 +205,7 @@ describe('ExerciseBankPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Quitar los filtros' }));
     await settle(harness);
     expect(TestBed.inject(Router).url).toBe('/docente/ejercicios?asignatura=todas');
-    expect(screen.getByText('42 ejercicios')).toBeTruthy();
+    expect(screen.getByText('41 ejercicios')).toBeTruthy();
   });
 
   it('says so when a subject has no exercises yet', async () => {
@@ -234,7 +235,7 @@ describe('ExerciseBankPage', () => {
     expect(screen.queryByRole('menuitem', { name: /Borrar/ })).toBeNull();
   });
 
-  it('does not delete an exercise somebody started', async () => {
+  it('archives an exercise somebody started instead of deleting it', async () => {
     await renderBank('/docente/ejercicios?buscar=pares');
 
     await userEvent.click(
@@ -242,14 +243,76 @@ describe('ExerciseBankPage', () => {
     );
 
     expect(screen.getByRole('menuitem', { name: /Editar/ })).toBeTruthy();
-    expect(
-      screen
-        .getByRole('menuitem', { name: /Borrar \(ya tiene intentos\)/ })
-        .hasAttribute('disabled') ||
-        screen
-          .getByRole('menuitem', { name: /Borrar \(ya tiene intentos\)/ })
-          .getAttribute('aria-disabled') === 'true',
-    ).toBe(true);
+    expect(screen.getByRole('menuitem', { name: /Archivar/ })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: /Borrar/ })).toBeNull();
+  });
+
+  describe('archiving', () => {
+    let undo: () => void;
+
+    beforeEach(() => {
+      undo = () => undefined;
+      vi.spyOn(MatSnackBar.prototype, 'open').mockImplementation(
+        () =>
+          ({
+            onAction: () => ({ subscribe: (next: () => void) => (undo = next) }),
+          }) as never,
+      );
+    });
+
+    it('takes an exercise out of the bank, with «Deshacer»', async () => {
+      const harness = await renderBank('/docente/ejercicios?buscar=pares');
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Acciones de «Contar números pares»' }),
+      );
+      await userEvent.click(screen.getByRole('menuitem', { name: /Archivar/ }));
+      await settle(harness);
+
+      expect(screen.getByText('Ningún ejercicio de 28')).toBeTruthy();
+      expect(MatSnackBar.prototype.open).toHaveBeenCalledWith('Ejercicio archivado', 'Deshacer');
+
+      undo();
+      await settle(harness);
+      expect(screen.getByText('1 ejercicio de 29')).toBeTruthy();
+      expect(MatSnackBar.prototype.open).toHaveBeenCalledWith('Ejercicio devuelto al banco');
+    });
+
+    it('shows the archived ones apart, in the URL, without assigning them', async () => {
+      const harness = await renderBank();
+
+      await userEvent.click(screen.getByRole('switch', { name: 'Archivados' }));
+      await settle(harness);
+
+      expect(TestBed.inject(Router).url).toBe('/docente/ejercicios?archivados=1');
+      expect(screen.getByText('1 ejercicio')).toBeTruthy();
+      expect(text(rows()[0])).toContain('Archivado');
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Acciones de «Tabla de multiplicar»' }),
+      );
+      expect(screen.queryByRole('menuitem', { name: /Asignar a un bloque/ })).toBeNull();
+      await userEvent.click(screen.getByRole('menuitem', { name: /Desarchivar/ }));
+      await settle(harness);
+
+      expect(screen.getByText('Ningún ejercicio archivado')).toBeTruthy();
+      expect(MatSnackBar.prototype.open).toHaveBeenCalledWith('Ejercicio devuelto al banco');
+    });
+
+    it('says when it could not archive it', async () => {
+      const harness = await renderBank('/docente/ejercicios?buscar=pares');
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Acciones de «Contar números pares»' }),
+      );
+      TestBed.inject(MockNetwork).failNextRequest('unknown');
+      await userEvent.click(screen.getByRole('menuitem', { name: /Archivar/ }));
+      await settle(harness);
+
+      expect(screen.getByText('1 ejercicio de 29')).toBeTruthy();
+      expect(MatSnackBar.prototype.open).toHaveBeenCalledWith(
+        'No se ha podido guardar. Inténtalo de nuevo.',
+      );
+    });
   });
 
   describe('deleting', () => {
@@ -309,7 +372,7 @@ describe('ExerciseBankPage', () => {
           .tables()
           .exercises.some((e) => e.id === leapYear?.id),
       ).toBe(false);
-      await vi.waitFor(() => expect(screen.getByText('Ningún ejercicio de 29')).toBeTruthy());
+      await vi.waitFor(() => expect(screen.getByText('Ningún ejercicio de 28')).toBeTruthy());
     });
 
     it('keeps it when the teacher cancels', async () => {

@@ -19,16 +19,24 @@ function titles(filters: Partial<BankFilters>, userId = TEACHER_ID): string[] {
   );
 }
 
+const ACTIVE = SEED.exercises.filter((exercise) => exercise.archivedAt === null);
+
 describe('filterBank', () => {
-  it('keeps every exercise without filters', () => {
-    expect(titles({})).toHaveLength(SEED.exercises.length);
+  it('keeps every exercise not archived without filters', () => {
+    expect(titles({})).toHaveLength(ACTIVE.length);
+    expect(titles({})).not.toContain('multiplicationTable');
+  });
+
+  it('shows only the archived ones, filtered as the others', () => {
+    expect(titles({ archived: true })).toEqual(['multiplicationTable']);
+    expect(titles({ archived: true, difficulty: 'advanced' })).toEqual([]);
   });
 
   it('searches the title and topics in any language, without accents nor capitals', () => {
     expect(titles({ search: 'ano bisiesto' })).toEqual(['isLeapYear']);
     expect(titles({ search: 'LEAP' })).toEqual(['isLeapYear']);
     expect(titles({ search: 'traspàs' })).toEqual(['isLeapYear']);
-    expect(titles({ search: '  ' })).toHaveLength(SEED.exercises.length);
+    expect(titles({ search: '  ' })).toHaveLength(ACTIVE.length);
   });
 
   it('also finds an exercise by its function', () => {
@@ -41,9 +49,9 @@ describe('filterBank', () => {
     expect(initial).not.toContain('gcd');
 
     expect(titles({ mine: true }, OTHER_TEACHER_ID)).toEqual(
-      SEED.exercises
-        .filter((exercise) => exercise.createdBy === OTHER_TEACHER_ID)
-        .map((exercise) => exercise.functionName),
+      ACTIVE.filter((exercise) => exercise.createdBy === OTHER_TEACHER_ID).map(
+        (exercise) => exercise.functionName,
+      ),
     );
   });
 });

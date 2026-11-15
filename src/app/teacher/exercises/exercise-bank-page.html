@@ -71,6 +71,12 @@
         i18n="@@bank.mine"
         >Solo los míos</mat-slide-toggle
       >
+      <mat-slide-toggle
+        [checked]="archived()"
+        (change)="setFilter(params.archived, $event.checked ? '1' : null)"
+        i18n="@@bank.archived"
+        >Archivados</mat-slide-toggle
+      >
     </search>
 
     <!-- Another subject loads: a thin bar over what is shown, never a jump (4.8) -->
@@ -112,6 +118,13 @@
             <ng-container *ngTemplateOutlet="searchEverywhere" />
           </div>
         </app-empty-state>
+      } @else if (archived()) {
+        <app-empty-state
+          heading="Ningún ejercicio archivado"
+          i18n-heading="@@bank.empty.archived.heading"
+          text="Archiva los que ya no uses: salen del banco sin que nadie pierda sus intentos."
+          i18n-text="@@bank.empty.archived.text"
+        />
       } @else {
         <app-empty-state
           heading="Todavía no hay ejercicios aquí"
@@ -174,6 +187,12 @@
                 >
               </div>
               <p class="flex flex-wrap gap-x-3 gap-y-1 text-body-small text-on-surface-variant">
+                @if (row.archived) {
+                  <span class="flex items-center gap-1">
+                    <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">inventory_2</mat-icon>
+                    <span i18n="@@bank.archivedChip">Archivado</span>
+                  </span>
+                }
                 <span>
                   @if (row.mine) {
                     <span i18n="@@bank.author.mine">Tuyo</span>
@@ -218,24 +237,32 @@
                 <mat-icon aria-hidden="true">content_copy</mat-icon>
                 <span i18n="@@bank.duplicate">Duplicar</span>
               </a>
-              <button mat-menu-item type="button" (click)="assign(row.entry)">
-                <mat-icon aria-hidden="true">playlist_add</mat-icon>
-                <span i18n="@@bank.assign">Asignar a un bloque…</span>
-              </button>
-              @if (row.editable) {
-                <button
-                  mat-menu-item
-                  type="button"
-                  [disabled]="!row.deletable"
-                  (click)="remove(row.entry)"
-                >
-                  <mat-icon aria-hidden="true">delete</mat-icon>
-                  @if (row.deletable) {
-                    <span i18n="@@bank.delete">Borrar</span>
-                  } @else {
-                    <span i18n="@@bank.delete.blocked">Borrar (ya tiene intentos)</span>
-                  }
+              <!-- An archived exercise is not assigned again until it is back in the bank -->
+              @if (!row.archived) {
+                <button mat-menu-item type="button" (click)="assign(row.entry)">
+                  <mat-icon aria-hidden="true">playlist_add</mat-icon>
+                  <span i18n="@@bank.assign">Asignar a un bloque…</span>
                 </button>
+              }
+              @if (row.editable) {
+                @if (row.archived) {
+                  <button mat-menu-item type="button" (click)="setArchived(row.entry, false)">
+                    <mat-icon aria-hidden="true">unarchive</mat-icon>
+                    <span i18n="@@bank.unarchive">Desarchivar</span>
+                  </button>
+                } @else {
+                  <button mat-menu-item type="button" (click)="setArchived(row.entry, true)">
+                    <mat-icon aria-hidden="true">archive</mat-icon>
+                    <span i18n="@@bank.archive">Archivar</span>
+                  </button>
+                }
+                <!-- Once somebody started it, their attempts keep it: archiving is the way out -->
+                @if (row.deletable) {
+                  <button mat-menu-item type="button" (click)="remove(row.entry)">
+                    <mat-icon aria-hidden="true">delete</mat-icon>
+                    <span i18n="@@bank.delete">Borrar</span>
+                  </button>
+                }
               }
             </mat-menu>
           </li>

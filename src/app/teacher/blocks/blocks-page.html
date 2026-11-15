@@ -107,6 +107,15 @@
                         <span i18n="@@blocks.hidden">Oculto para los alumnos</span>
                       </span>
                     }
+                    @if (row.opening; as opening) {
+                      <span class="flex items-center gap-1">
+                        <mat-icon class="size-4! text-[1rem]!" aria-hidden="true"
+                          >schedule</mat-icon
+                        >
+                        <span i18n="@@blocks.opens">Se abre el</span>
+                        <app-due-label [dueAt]="opening" />
+                      </span>
+                    }
                   </p>
                 </div>
                 <mat-slide-toggle
@@ -126,7 +135,7 @@
                 <mat-menu #blockActions="matMenu" xPosition="before">
                   <button mat-menu-item type="button" (click)="editBlock(row.planned)">
                     <mat-icon aria-hidden="true">edit</mat-icon>
-                    <span i18n="@@blocks.edit">Editar el título</span>
+                    <span i18n="@@blocks.edit">Editar el bloque</span>
                   </button>
                   <button mat-menu-item type="button" (click)="addExercises(group, row.planned)">
                     <mat-icon aria-hidden="true">playlist_add</mat-icon>
@@ -175,143 +184,178 @@
                 </mat-menu>
               </div>
 
-              @if (row.assignments.length > 0) {
-                <ol
-                  class="flex flex-col divide-y divide-outline-variant border-t border-outline-variant"
-                  cdkDropList
-                  [cdkDropListLockAxis]="'y'"
-                  (cdkDropListDropped)="dropAssignment(row.planned, $event)"
-                  [attr.aria-label]="row.title"
-                >
-                  @for (item of row.assignments; track item.id) {
-                    <li
-                      cdkDrag
-                      class="flex items-start gap-2 bg-panel px-4 py-2 sm:gap-3 md:items-center"
-                    >
-                      <!-- A wrapper, as Material sets the display of its buttons (4.8) -->
-                      <span class="contents max-sm:hidden">
-                        <button
-                          matIconButton
-                          type="button"
-                          cdkDragHandle
-                          class="cursor-grab"
-                          [attr.aria-label]="item.dragLabel"
-                        >
-                          <mat-icon aria-hidden="true">drag_indicator</mat-icon>
-                        </button>
-                      </span>
-                      <span
-                        class="grid size-8 shrink-0 place-items-center rounded-full bg-surface-container text-label-large"
-                        aria-hidden="true"
-                        >{{ item.number }}</span
-                      >
-                      <!-- On a phone there is no handle: «Subir» and «Bajar» of the menu move it. The title and its controls side by side when there is room, one under
-                           the other on a phone; the handle, the number and the menu stay put -->
-                      <div
-                        class="flex min-w-0 grow flex-col gap-x-3 gap-y-1 md:flex-row md:items-center"
-                      >
-                        <div class="flex min-w-0 grow flex-col">
-                          <a
-                            class="text-title-small font-medium text-primary underline-offset-2 hover:underline"
-                            [class.text-on-surface-variant]="item.entry.assignment.isHidden"
-                            [routerLink]="paths.exercise(item.entry.exercise.id)"
-                            [attr.lang]="item.lang"
-                            >{{ item.title }}</a
-                          >
-                          <span
-                            class="flex flex-wrap items-center gap-x-3 text-body-small text-on-surface-variant"
-                          >
-                            @if (item.entry.assignment.isHidden) {
-                              <span i18n="@@blocks.exercise.hidden">Oculto</span>
-                            }
-                            @if (item.entry.studentCount > 0) {
-                              <span
-                                i18n="@@blocks.exercise.students"
-                                >{item.entry.studentCount, plural,
-                                  =1 {1 alumno lo ha empezado}
-                                  other {{{ item.entry.studentCount }} alumnos lo han empezado}
-                                }</span
-                              >
-                            }
-                          </span>
-                        </div>
-                        <div class="-ms-3 flex flex-wrap items-center gap-x-1 md:ms-0">
-                          <app-difficulty-chip
-                            class="ms-3 md:ms-0"
-                            [difficulty]="item.entry.exercise.difficulty"
-                          />
-                          <button matButton type="button" (click)="chooseDueDate(item.entry)">
-                            <mat-icon aria-hidden="true">event</mat-icon>
-                            <span class="sr-only">{{ item.dueLabel }}:</span>
-                            @if (item.due; as due) {
-                              <app-due-label [dueAt]="due" />
-                            } @else {
-                              <span i18n="@@blocks.exercise.noDue">Sin fecha de entrega</span>
-                            }
-                          </button>
-                          <button
-                            matIconButton
-                            type="button"
-                            [attr.aria-label]="item.visibilityLabel"
-                            [attr.aria-pressed]="item.entry.assignment.isHidden"
-                            [matTooltip]="item.visibilityLabel"
-                            (click)="
-                              setAssignmentHidden(item.entry, !item.entry.assignment.isHidden)
-                            "
-                          >
-                            <mat-icon aria-hidden="true">{{
-                              item.entry.assignment.isHidden ? 'visibility_off' : 'visibility'
-                            }}</mat-icon>
-                          </button>
-                        </div>
-                      </div>
+              <!-- Always there, also empty, so an exercise is dragged to it from another block; it
+                   only takes room while it can take the one dragged -->
+              <ol
+                class="flex flex-col divide-y divide-outline-variant border-outline-variant [&.cdk-drop-list-receiving]:min-h-14 [&.cdk-drop-list-receiving]:border-t"
+                [class.border-t]="row.assignments.length > 0"
+                cdkDropList
+                [id]="row.listId"
+                [cdkDropListData]="row.planned"
+                [cdkDropListConnectedTo]="listIds()"
+                [cdkDropListEnterPredicate]="canEnter"
+                [cdkDropListLockAxis]="'y'"
+                (cdkDropListDropped)="dropAssignment($event)"
+                [attr.aria-label]="row.title"
+              >
+                @for (item of row.assignments; track item.id) {
+                  <li
+                    cdkDrag
+                    [cdkDragData]="item.entry"
+                    class="flex items-start gap-2 bg-panel px-4 py-2 sm:gap-3 md:items-center"
+                  >
+                    <!-- A wrapper, as Material sets the display of its buttons (4.8) -->
+                    <span class="contents max-sm:hidden">
                       <button
                         matIconButton
                         type="button"
-                        [matMenuTriggerFor]="exerciseActions"
-                        [attr.aria-label]="item.actionsLabel"
+                        cdkDragHandle
+                        class="cursor-grab"
+                        [attr.aria-label]="item.dragLabel"
                       >
-                        <mat-icon aria-hidden="true">more_vert</mat-icon>
+                        <mat-icon aria-hidden="true">drag_indicator</mat-icon>
                       </button>
-                      <mat-menu #exerciseActions="matMenu" xPosition="before">
-                        <button
-                          mat-menu-item
-                          type="button"
-                          [disabled]="item.first"
-                          (click)="moveAssignment(row.planned, $index, $index - 1)"
+                    </span>
+                    <span
+                      class="grid size-8 shrink-0 place-items-center rounded-full bg-surface-container text-label-large"
+                      aria-hidden="true"
+                      >{{ item.number }}</span
+                    >
+                    <!-- On a phone there is no handle: «Subir» and «Bajar» of the menu move it. The title and its controls side by side when there is room, one under
+                           the other on a phone; the handle, the number and the menu stay put -->
+                    <div
+                      class="flex min-w-0 grow flex-col gap-x-3 gap-y-1 md:flex-row md:items-center"
+                    >
+                      <div class="flex min-w-0 grow flex-col">
+                        <a
+                          class="text-title-small font-medium text-primary underline-offset-2 hover:underline"
+                          [class.text-on-surface-variant]="item.entry.assignment.isHidden"
+                          [routerLink]="paths.exercise(item.entry.exercise.id)"
+                          [attr.lang]="item.lang"
+                          >{{ item.title }}</a
                         >
-                          <mat-icon aria-hidden="true">arrow_upward</mat-icon>
-                          <span i18n="@@blocks.up">Subir</span>
-                        </button>
-                        <button
-                          mat-menu-item
-                          type="button"
-                          [disabled]="item.last"
-                          (click)="moveAssignment(row.planned, $index, $index + 1)"
+                        <span
+                          class="flex flex-wrap items-center gap-x-3 text-body-small text-on-surface-variant"
                         >
-                          <mat-icon aria-hidden="true">arrow_downward</mat-icon>
-                          <span i18n="@@blocks.down">Bajar</span>
-                        </button>
-                        <button
-                          mat-menu-item
-                          type="button"
-                          [disabled]="item.entry.studentCount > 0"
-                          (click)="unassign(row.planned, item.entry)"
-                        >
-                          <mat-icon aria-hidden="true">remove_circle_outline</mat-icon>
+                          @if (item.entry.assignment.isHidden) {
+                            <span i18n="@@blocks.exercise.hidden">Oculto</span>
+                          }
+                          @if (item.archived) {
+                            <!-- Out of the bank, still here for whoever has it (D-060) -->
+                            <span class="flex items-center gap-1">
+                              <mat-icon class="size-4! text-[1rem]!" aria-hidden="true"
+                                >inventory_2</mat-icon
+                              >
+                              <span i18n="@@blocks.exercise.archived">Archivado</span>
+                            </span>
+                          }
                           @if (item.entry.studentCount > 0) {
-                            <span i18n="@@blocks.unassign.blocked"
-                              >Quitar (ya tiene intentos: ocúltalo)</span
+                            <span
+                              i18n="@@blocks.exercise.students"
+                              >{item.entry.studentCount, plural,
+                                =1 {1 alumno lo ha empezado}
+                                other {{{ item.entry.studentCount }} alumnos lo han empezado}
+                              }</span
                             >
+                          }
+                        </span>
+                      </div>
+                      <div class="-ms-3 flex flex-wrap items-center gap-x-1 md:ms-0">
+                        <app-difficulty-chip
+                          class="ms-3 md:ms-0"
+                          [difficulty]="item.entry.exercise.difficulty"
+                        />
+                        <button matButton type="button" (click)="chooseDueDate(item.entry)">
+                          <mat-icon aria-hidden="true">event</mat-icon>
+                          <span class="sr-only">{{ item.dueLabel }}:</span>
+                          @if (item.due; as due) {
+                            <app-due-label [dueAt]="due" />
                           } @else {
-                            <span i18n="@@blocks.unassign">Quitar del bloque</span>
+                            <span i18n="@@blocks.exercise.noDue">Sin fecha de entrega</span>
                           }
                         </button>
-                      </mat-menu>
-                    </li>
-                  }
-                </ol>
-              }
+                        <button
+                          matIconButton
+                          type="button"
+                          [attr.aria-label]="item.visibilityLabel"
+                          [attr.aria-pressed]="item.entry.assignment.isHidden"
+                          [matTooltip]="item.visibilityLabel"
+                          (click)="setAssignmentHidden(item.entry, !item.entry.assignment.isHidden)"
+                        >
+                          <mat-icon aria-hidden="true">{{
+                            item.entry.assignment.isHidden ? 'visibility_off' : 'visibility'
+                          }}</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      matIconButton
+                      type="button"
+                      [matMenuTriggerFor]="exerciseActions"
+                      [attr.aria-label]="item.actionsLabel"
+                    >
+                      <mat-icon aria-hidden="true">more_vert</mat-icon>
+                    </button>
+                    <mat-menu #exerciseActions="matMenu" xPosition="before">
+                      <button
+                        mat-menu-item
+                        type="button"
+                        [disabled]="item.first"
+                        (click)="moveAssignment(row.planned, $index, $index - 1)"
+                      >
+                        <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+                        <span i18n="@@blocks.up">Subir</span>
+                      </button>
+                      <button
+                        mat-menu-item
+                        type="button"
+                        [disabled]="item.last"
+                        (click)="moveAssignment(row.planned, $index, $index + 1)"
+                      >
+                        <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                        <span i18n="@@blocks.down">Bajar</span>
+                      </button>
+                      <button
+                        mat-menu-item
+                        type="button"
+                        [disabled]="row.targets.length === 0"
+                        [matMenuTriggerFor]="moveTargets"
+                      >
+                        <mat-icon aria-hidden="true">drive_file_move</mat-icon>
+                        <span i18n="@@blocks.exercise.move">Mover a otro bloque</span>
+                      </button>
+                      <button
+                        mat-menu-item
+                        type="button"
+                        [disabled]="item.entry.studentCount > 0"
+                        (click)="unassign(row.planned, item.entry)"
+                      >
+                        <mat-icon aria-hidden="true">remove_circle_outline</mat-icon>
+                        @if (item.entry.studentCount > 0) {
+                          <span i18n="@@blocks.unassign.blocked"
+                            >Quitar (ya tiene intentos: ocúltalo)</span
+                          >
+                        } @else {
+                          <span i18n="@@blocks.unassign">Quitar del bloque</span>
+                        }
+                      </button>
+                    </mat-menu>
+                    <mat-menu #moveTargets="matMenu" [aria-label]="item.moveLabel">
+                      @for (target of row.targets; track target.planned.block.id) {
+                        <!-- A block that has it already cannot take it again -->
+                        <button
+                          mat-menu-item
+                          type="button"
+                          [disabled]="target.has(item.entry.exercise.id)"
+                          (click)="moveToBlock(item.entry, row.planned, target.planned)"
+                        >
+                          <span [attr.lang]="target.lang">{{ target.title }}</span>
+                        </button>
+                      }
+                    </mat-menu>
+                  </li>
+                }
+              </ol>
 
               <div class="border-t border-outline-variant px-4 py-2">
                 <button matButton type="button" (click)="addExercises(group, row.planned)">

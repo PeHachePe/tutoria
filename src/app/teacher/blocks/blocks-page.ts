@@ -56,9 +56,10 @@ const SKELETON_BLOCKS = [1, 2, 3];
 
 /**
  * The blocks of a group (/docente/bloques?grupo=, ficha 08, D-046, 4.3b): create, title, translate,
- * reorder, hide and delete them; and in each one, the exercises of the bank assigned there, in their
- * order, with an optional due date (D-054). Only what nobody started can be deleted: their attempts
- * keep it, and hiding is the way to take it out of sight.
+ * reorder, hide, schedule (D-060) and delete them; and in each one, the exercises of the bank
+ * assigned there, in their order, with an optional due date (D-054), which move to another block
+ * even once started (4.3d). Only what nobody started can be deleted: their attempts keep it, and
+ * hiding is the way to take it out of sight.
  */
 @Component({
   selector: 'app-blocks-page',
@@ -141,11 +142,29 @@ export class BlocksPage {
   /** The blocks, ready for the template. */
   protected readonly rows = computed(() => {
     const blocks = this.blocks.value();
+    // From the moment it is drawn, as DueLabel: a screen open for days is reloaded long before
+    const now = Date.now();
     return blocks.map((planned, index) => {
       const title = blockTitle(planned.block, this.locale);
+      const { opensAt } = planned.block;
       return {
         planned,
         id: planned.block.id,
+        listId: assignmentListId(planned.block.id),
+        /** Until it opens: then the students see it as any other. */
+        opening: opensAt !== null && Date.parse(opensAt) > now ? opensAt : null,
+        /** The blocks an exercise of this one can move to: all the others of the group. */
+        targets: blocks
+          .filter((other) => other !== planned)
+          .map((other) => {
+            const otherTitle = blockTitle(other.block, this.locale);
+            return {
+              planned: other,
+              title: otherTitle.title,
+              lang: otherTitle.locale === this.locale ? null : otherTitle.locale,
+              has: (exerciseId: string) => hasExercise(other, exerciseId),
+            };
+          }),
         title: title.title,
         lang: title.locale === this.locale ? null : title.locale,
         headingId: `block-${planned.block.id}`,
@@ -160,6 +179,17 @@ export class BlocksPage {
       };
     });
   });
+
+  /** Every list of exercises, so one is dragged from a block to another. */
+  protected readonly listIds = computed(() => this.rows().map((row) => row.listId));
+
+  /** A block takes an exercise dragged from another only if it does not have it yet. */
+  protected readonly canEnter = (
+    drag: CdkDrag<PlannedAssignment>,
+    drop: CdkDropList<PlannedBlock>,
+  ): boolean =>
+    drop.data.block.id === drag.data.assignment.blockId ||
+    !hasExercise(drop.data, drag.data.exercise.id);
 
   protected selectGroup(groupId: string): void {
     void this.router.navigate([], { queryParams: { [TEACHER_PARAMS.group]: groupId } });
@@ -191,7 +221,7 @@ export class BlocksPage {
 
   /** Shown or hidden at once; back as it was if the server says no. */
   protected async setBlockHidden(planned: PlannedBlock, isHidden: boolean): Promise<void> {
-    const { title, sourceLocale, translations } = planned.block;
+    const { title, sourceLocale, translations, opensAt } = planned.block;
     this.replaceBlock({ ...planned.block, isHidden });
     try {
       await this.service.updateBlock(planned.block.id, {
@@ -199,6 +229,7 @@ export class BlocksPage {
         sourceLocale,
         translations,
         isHidden,
+        opensAt,
       });
     } catch {
       this.replaceBlock(planned.block);
@@ -323,8 +354,67 @@ export class BlocksPage {
     }
   }
 
-  protected dropAssignment(planned: PlannedBlock, event: CdkDragDrop<unknown>): void {
-    void this.moveAssignment(planned, event.previousIndex, event.currentIndex);
+  protected dropAssignment(
+    event: CdkDragDrop<PlannedBlock, PlannedBlock, PlannedAssignment>,
+  ): void {
+    if (event.previousContainer === event.container) {
+      void this.moveAssignment(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      void this.moveToBlock(
+        event.item.data,
+        event.previousContainer.data,
+        event.container.data,
+        event.currentIndex,
+      );
+    }
+  }
+
+  /**
+   * Moves an exercise to another block of the group, at `index` (the end, by default), started or
+   * not: its attempts go with it. With «Deshacer», back to where it was.
+   */
+  protected async moveToBlock(
+    entry: PlannedAssignment,
+    source: PlannedBlock,
+    target: PlannedBlock,
+    index = target.assignments.length,
+  ): Promise<void> {
+    const sourceId = source.block.id;
+    const from = source.assignments.indexOf(entry);
+    const title = exerciseText(entry.exercise, this.locale).title;
+    const blockName = blockTitle(target.block, this.locale).title;
+    const before = this.blocks.value();
+    this.updateAssignments(sourceId, (entries) => entries.filter((other) => other !== entry));
+    const moved = { ...entry, assignment: { ...entry.assignment, blockId: target.block.id } };
+    this.updateAssignments(target.block.id, (entries) => [
+      ...entries.slice(0, index),
+      moved,
+      ...entries.slice(index),
+    ]);
+    this.announcer.announce(
+      $localize`:@@blocks.exercise.movedTo:«${title}:title:» en «${blockName}:block:», en el lugar ${index + 1}:position: de ${target.assignments.length + 1}:total:`,
+    );
+    try {
+      const assignment = await this.service.moveAssignment(
+        entry.assignment.id,
+        target.block.id,
+        index + 1,
+      );
+      this.updateAssignments(target.block.id, (entries) =>
+        entries.map((other) => (other === moved ? { ...moved, assignment } : other)),
+      );
+    } catch {
+      this.blocks.set(before);
+      this.failed();
+      return;
+    }
+    this.snackBar
+      .open(
+        $localize`:@@blocks.exercise.movedSnack:«${title}:title:» movido a «${blockName}:block:»`,
+        $localize`:@@blocks.undo:Deshacer`,
+      )
+      .onAction()
+      .subscribe(() => void this.moveBack(entry.assignment.id, sourceId, from));
   }
 
   protected setAssignmentHidden(entry: PlannedAssignment, isHidden: boolean): Promise<void> {
@@ -436,6 +526,19 @@ export class BlocksPage {
     }
   }
 
+  /**
+   * «Deshacer» of a move: back to its block and place on the server, which knows where everything is
+   * by now, and the page reloads from it.
+   */
+  private async moveBack(assignmentId: string, blockId: string, index: number): Promise<void> {
+    try {
+      await this.service.moveAssignment(assignmentId, blockId, index + 1);
+    } catch {
+      this.failed();
+    }
+    this.blocks.reload();
+  }
+
   // Helpers --------------------------------------------------------------------------------------
 
   private assignmentRow(entry: PlannedAssignment, index: number, total: number) {
@@ -450,6 +553,8 @@ export class BlocksPage {
       title: text.title,
       lang: text.locale === this.locale ? null : text.locale,
       due,
+      archived: entry.exercise.archivedAt !== null,
+      moveLabel: $localize`:@@blocks.exercise.moveTo:Mover «${text.title}:title:» a otro bloque`,
       actionsLabel: $localize`:@@blocks.exercise.actions:Acciones de «${text.title}:title:»`,
       dragLabel: $localize`:@@blocks.exercise.drag:Arrastrar «${text.title}:title:»`,
       dueLabel: $localize`:@@blocks.exercise.due:Fecha de entrega de «${text.title}:title:»`,
@@ -523,4 +628,13 @@ export class BlocksPage {
   private failed(): void {
     this.snackBar.open($localize`:@@blocks.failed:No se ha podido guardar. Inténtalo de nuevo.`);
   }
+}
+
+/** The id of the list of exercises of a block, for the drop lists to connect. */
+function assignmentListId(blockId: string): string {
+  return `assignments-${blockId}`;
+}
+
+function hasExercise(planned: PlannedBlock, exerciseId: string): boolean {
+  return planned.assignments.some((entry) => entry.exercise.id === exerciseId);
 }
