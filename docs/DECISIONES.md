@@ -1753,3 +1753,41 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Queda en [PENDIENTES](PENDIENTES.md) copiar los bloques de un grupo en otro.
 
 **Aprobación:** el autor dejó duplicar un bloque para más adelante y aprobó archivar y mover («hazlo va»). El detalle técnico, por delegación del autor.
+
+## D-061 · Probar como alumno: la pantalla de trabajo en un diálogo, con servicios en memoria, y el tutor en vista previa sin guardar nada (16/11/2026)
+
+**Contexto:** el 4.3e se separó del 4.3c (D-059) porque «Probar como alumno» necesitaba dos cosas que no había. La función `tutor` construye el prompt a partir del intento guardado y registra cada respuesta. Y la pantalla de trabajo depende del intento, de la asignación y de los eventos. El plan ponía la pantalla en una ruta del docente. Pero lo que se quiere probar es el ejercicio tal como está en el formulario, guardado o no: al salir del formulario hacia otra ruta se perdían los cambios sin guardar.
+
+**Decisión:**
+
+- **Un diálogo a pantalla completa sobre el formulario, no una ruta.** El docente prueba, cierra, corrige una prueba y vuelve a probar sin perder nada. «Probar como alumno» está en la cabecera del formulario, también en un ejercicio ajeno (antes de asignarlo), y espera a que la función y las pruebas sean válidas, diciendo por qué. Lo aprobó el autor («si»).
+- **La misma pantalla de trabajo, sobre servicios en memoria.** De `WorkspacePage` sale `WorkspaceLayout`, con las zonas, las pestañas del móvil, los divisores, el tutor flotante y las reacciones. La página se queda con la ruta, la cabecera y las señales del navegador. El diálogo provee los mismos stores (`AttemptStore`, `TutorStore`, `BrowserSignals`, `EditingTab`) sobre otras versiones de los servicios de datos, en `teacher/exercises/tryout/`:
+  - `TryoutAttemptService`: los intentos, las ejecuciones y las respuestas, en memoria, con las reglas del servidor (2.4).
+  - `TryoutCodeRunner`: «Ejecutar» va a `check` (`execute` sin intento, D-059) y oculta el detalle de las pruebas ocultas, como lo ve el alumno.
+  - `TryoutTutorService`: cada turno va a `TutorService.tryOut()` con el ejercicio y la prueba hasta entonces.
+  - `TryoutEventService`: los eventos no van a ninguna parte (un `EventLogger` propio los dirige allí).
+  - `tryoutTools()`: `getExerciseStats` responde con la prueba, no con los ejercicios asignados, que el docente no tiene.
+
+  Los servicios que sustituyen llegan a los de la app con `inject(…, { skipSelf: true })`.
+
+- **El tutor en vista previa, en la misma función `tutor`:** el cuerpo lleva `preview` (ejercicio, estado, última ejecución y turnos anteriores) en lugar de `attemptId`, validado con su esquema (`preview.ts`). Responde lo mismo que a un alumno: el nivel de pista, el código probado con los ejemplos, la respuesta validada y las acciones comprobadas, con el mismo camino del manejador (`answerTurn`). Pero **no llama a `recordAnswer`**: ni `tutor_interaction` ni `process_event`. Solo para docentes y administración, con su propio límite por minuto (`claim_staff_request('tutor')`, 6 como un alumno). Los turnos anteriores los manda el navegador: es el docente probando su propio ejercicio, así que solo se comprueba su forma.
+- **Nada dice que se guarda:** en la prueba, la zona del código no muestra «Guardado» ni lleva al catálogo o al siguiente ejercicio (`preview` en `CodeZone` y `WorkspaceLayout`). Un aviso dice «No se guarda nada».
+- **«Empezar de nuevo» crea la prueba otra vez:** la pieza interior (`TryoutWorkspace`) provee todo, y el diálogo la vuelve a crear, así que no queda ningún guardado pendiente del intento anterior. El foco va al título, también al abrir.
+- **Esc no cierra el diálogo:** la pantalla de trabajo lo usa para plegar el tutor y dentro del editor, y perder la prueba por accidente sería peor. Se cierra con su botón, y el foco vuelve a «Probar como alumno».
+
+**Alternativas:**
+
+- **Una ruta del docente con el borrador en un servicio raíz:** el formulario se destruye al salir, así que habría que reconstruirlo al volver, y la guarda de cambios sin guardar preguntaría cada vez.
+- **Una pestaña nueva del navegador:** el borrador tendría que viajar por `sessionStorage` o un `BroadcastChannel`.
+- **Una Edge Function aparte (`tutor-preview`):** duplicaba la validación, el prompt y la comprobación de acciones, y el plan pedía un modo de la misma función.
+- **Un intento de prueba guardado en el servidor (`open_attempt` sin asignación, la idea del 2.5c):** ensuciaba las tablas que lee la analítica y obligaba a borrarlo.
+- **Componer las zonas de nuevo en el diálogo, sin `WorkspaceLayout`:** unas 200 líneas duplicadas que se separarían con el tiempo.
+
+**Consecuencias:**
+
+- Migración `tutor_preview` (`staff_request_kind` con `tutor`), con 4 tests de pgTAP. El de `staff_requests` cuenta ya solo las filas de su tipo.
+- `TutorService.tryOut()`, en simulado (el guion, sin registrar nada) y en Supabase. Los turnos del guion aceptan los de una prueba.
+- Probado contra Supabase local con el modelo real: una pista de nivel 1 con su acción, sin filas en `tutor_interaction`, y 403 para un alumno.
+- Queda en [PENDIENTES](PENDIENTES.md) probar desde el banco sin abrir el formulario.
+
+**Aprobación:** el plan, con el diálogo a pantalla completa en lugar de una ruta, aprobado por el autor («si»). Aclarado que en producción todo va contra el servidor real (`execute` y el modelo de IA) y que solo no se guarda nada. El detalle técnico, por delegación del autor.

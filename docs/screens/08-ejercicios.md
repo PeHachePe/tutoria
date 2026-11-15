@@ -1,16 +1,18 @@
 # 08 · Ejercicios
 
-`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3), 3 h (4.3b) y 3 h (4.3c)
+`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3), 3 h (4.3b), 3 h (4.3c), 2 h (4.3d) y 3 h (4.3e)
 
 ## Objetivo
 
-Que el docente encuentre en el banco común los ejercicios de sus asignaturas, los cree y los edite (RF-14, RF-17, CU-05): título, enunciado y contenidos en cada idioma, dificultad, asignaturas, la función con sus parámetros, la batería de pruebas y los umbrales del tutor proactivo. Puede verlo como lo leerá el alumno antes de guardar (CU-05, 5b).
+Que el docente encuentre en el banco común los ejercicios de sus asignaturas, los cree y los edite (RF-14, RF-17, CU-05): título, enunciado y contenidos en cada idioma, dificultad, asignaturas, la función con sus parámetros, la batería de pruebas y los umbrales del tutor proactivo. Puede verlo como lo leerá el alumno antes de guardar (CU-05, 5b) y probarlo como un alumno: escribir, ejecutar y pedir pistas sin que se guarde nada (4.3e).
 
 ## Datos
 
 **Bloques (4.3b, D-058):** `BlockService.listGroups()` (los grupos del docente con su asignatura; la administración, todos) y `listBlocks(groupId)` (los bloques en orden, ocultos incluidos, con sus ejercicios en orden y cuántos alumnos ha empezado cada uno). `createBlock`, `updateBlock`, `removeBlock` y `reorderBlocks`; `assign`, `updateAssignment` (oculta y fecha de entrega), `unassign` y `reorderAssignments`. Solo se borra lo que nadie empezó. Funciones puras: `moveItem()`, `toBlockFormModel()`, `toBlockDraft()`, `blockSchema` y, en `shared/`, `dueDistance()` y `withTime()`.
 
 **Probar y traducir (4.3c, D-059):** `CodeRunnerService.check({ code, functionName, tests })` ejecuta la solución del docente en `execute` sin intento, con el detalle de todas las pruebas, y no guarda nada. `ExerciseService.translate({ from, to, texts, functionName, parameters })` pide el borrador de una traducción a la Edge Function `translate`. Las dos, solo para docentes y administración y con un límite por minuto (`staff_request`). Funciones puras: `toSolutionCheck()`, `solutionSkeleton()`, `textFieldsOf()`, `toExerciseText()`, `fillFormModel()`, `subjectsByName()` y `formActionMessage()`.
+
+**Probar como alumno (4.3e, D-061):** el diálogo provee los stores de la pantalla de trabajo sobre servicios en memoria (`teacher/exercises/tryout/`): `TryoutAttemptService` (intentos, ejecuciones y respuestas), `TryoutCodeRunner` («Ejecutar» con `CodeRunnerService.check`, las ocultas sin detalle), `TryoutTutorService` (`TutorService.tryOut()` con el ejercicio y la prueba hasta entonces) y `TryoutEventService` (nada). La Edge Function `tutor` responde en vista previa sin guardar nada, solo al profesorado y con su límite (`staff_request`).
 
 **Banco y formulario (4.3):**
 
@@ -33,7 +35,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 
 **Formulario** (Figura 20 de la memoria; dos columnas desde `xl`):
 
-- Volver a los ejercicios y el título: «Nuevo ejercicio», «Nuevo ejercicio a partir de otro», «Editar el ejercicio» o «Ejercicio de otro docente».
+- Volver a los ejercicios y el título: «Nuevo ejercicio», «Nuevo ejercicio a partir de otro», «Editar el ejercicio» o «Ejercicio de otro docente». A su derecha, «Probar como alumno» (4.3e), que espera a una función y unas pruebas válidas y lo dice al pasar por encima.
 - Avisos: el de otro docente, con «Duplicar»; el de un ejercicio que ya han empezado alumnos, con «Duplicar» y «Archivar»; y el de un archivado, con «Desarchivar» (4.3d).
 - **Título y enunciado:** el idioma en que se escribe y una pestaña por idioma, con su marca de traducido o de error. Cada pestaña tiene título, enunciado (con el código entre comillas invertidas) y contenidos. Debajo, «Ver como el alumno».
 - **Dificultad y asignaturas:** dificultad con botones y asignaturas en un desplegable múltiple.
@@ -43,6 +45,12 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - **Probar mi solución** (4.3c): plegado bajo las pruebas. Un editor con el esqueleto, «Ejecutar las pruebas» y los resultados como los ve el alumno, pero con el detalle también de las ocultas. Cada prueba dice «Tu solución la supera» o «no la supera» mientras siga igual.
 - **Traducir con IA** (4.3c): en cada pestaña de traducción, «Traducir con IA» (o «Volver a traducir con IA»), que pide antes el título y el enunciado del original. El borrador llega con el aviso «Borrador de la IA: revísalo antes de guardar» y «Deshacer», que se va al cambiarlo.
 - Un panel flotante abajo a la derecha con «Hay cambios sin guardar», «Cancelar» y «Guardar los cambios» o «Crear el ejercicio».
+
+**Probar como alumno** (4.3e, diálogo a pantalla completa sobre el formulario):
+
+- Cabecera: «Cerrar la vista previa», «Probar como alumno» y el título del ejercicio, la dificultad, el estado del intento y «Empezar de nuevo».
+- Un aviso: «Vista previa del ejercicio tal como está en el formulario: escribe, ejecuta y pide pistas como un alumno. No se guarda nada» (en el móvil, «Vista previa: no se guarda nada»).
+- La pantalla de trabajo del alumno (`WorkspaceLayout`): enunciado, código y tutor, con las mismas disposiciones, sin «Guardado» y sin enlaces al catálogo o al siguiente ejercicio.
 
 **Bloques** (`/docente/bloques?grupo=`, captura `08c-bloques`):
 
@@ -71,6 +79,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - **Nuevo ejercicio:** empieza en el idioma de la interfaz, con una prueba vacía y la asignatura que mostraba el banco.
 - **Guardar:** si falta algo, marca los errores y lleva el foco al primero, abriendo su pestaña si es de otro idioma. Si va bien, «Cambios guardados» o «Ejercicio creado», y el nuevo se abre como tal.
 - **Ver como el alumno:** un diálogo con la zona del enunciado de la pantalla de trabajo, en el idioma de la pestaña abierta.
+- **Probar como alumno** (4.3e): el ejercicio tal como está, guardado o no. «Ejecutar» corre las pruebas en el servidor; el tutor responde igual que a un alumno, con las pistas subiendo de nivel; «Entregar» y «Practicar de nuevo» funcionan en memoria. Nada llega a la base de datos. «Empezar de nuevo» lo vacía todo. Se cierra con su botón (Esc no, porque la pantalla lo usa) y el foco vuelve al botón que lo abrió; el formulario sigue como estaba.
 - **Salir con cambios sin guardar:** pregunta antes; al cerrar la pestaña, avisa el navegador.
 - **Probar mi solución:** la solución vive mientras el formulario está abierto y nunca se guarda. Se ejecuta con el botón o con Ctrl + Intro; si cambian la solución o las pruebas, los resultados dicen que son de antes y las marcas de las pruebas se van. Sin función o con pruebas mal escritas, el botón espera y dice qué corregir.
 - **Traducir con IA:** el código del enunciado se queda tal cual (lo comprueba el servidor). Si la IA no responde o no respeta el código, lo dice y propone traducirlo a mano.
@@ -110,11 +119,12 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Fecha de apertura de un bloque, que la RLS hace cumplir (4.3d).
 - [x] Archivar y desarchivar un ejercicio, con «Archivados» en el banco (4.3d).
 - [x] Mover un ejercicio a otro bloque del grupo, con el menú o arrastrándolo, aunque esté empezado (4.3d).
+- [x] Probar el ejercicio como alumno, con el tutor en vista previa y sin guardar nada (4.3e).
 - [ ] Revisión visual del autor.
 
 ## Fuera de alcance
 
-- «Probar como alumno», con el tutor en vista previa (4.3e, propuesto).
+- Probar como alumno desde el banco, sin abrir el formulario ([PENDIENTES](../PENDIENTES.md)).
 - Copiar los bloques de un grupo en otro, para el curso siguiente o un grupo paralelo ([PENDIENTES](../PENDIENTES.md)).
 
 ## Pulido pendiente
