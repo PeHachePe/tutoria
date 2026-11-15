@@ -8,6 +8,8 @@ export interface ExerciseFixture {
   /** The contents column of 2.5. */
   readonly topics: readonly string[];
   readonly functionName: string;
+  /** The names of its parameters, in English like the function (D-045, D-057). */
+  readonly parameters: readonly string[];
   /** Names the function and what it returns as they are, the same in every language. */
   readonly statement: string;
   /**

@@ -15,11 +15,12 @@ const ATTEMPT: TutorAttempt = {
   currentCode: '',
   exercise: {
     title: 'Suma',
-    statement: 'Escribe una función `suma`.',
+    statement: 'Escribe una función `sum`.',
     topics: [],
     sourceLocale: 'es',
     translations: {},
-    functionName: 'suma',
+    functionName: 'sum',
+    parameters: [],
     tests: [
       { id: 't1', input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
       { id: 't2', input: [[5]], expectedOutput: 5, isHidden: false },
@@ -30,7 +31,7 @@ const ATTEMPT: TutorAttempt = {
 };
 
 const SUM = [
-  'function suma(v) {',
+  'function sum(v) {',
   '  let total = 0;',
   '  for (let i = 0; i < v.length; i++) {',
   '    total += v[i];',
@@ -71,7 +72,7 @@ Deno.test('proposeFix fixes a slip that keeps the code from loading', async () =
 
 Deno.test('proposeFix fixes a name that does not exist, even one that throws nothing', async () => {
   // A method that is not a function: TypeError
-  const floor = 'function suma(v) {\n  return Math.flor(v[0]);\n}';
+  const floor = 'function sum(v) {\n  return Math.flor(v[0]);\n}';
   assertEquals(await kept(floor, [fix(2, '  return Math.floor(v[0]);')]), ['proposeFix']);
   // A variable that does not exist: ReferenceError
   assertEquals(await kept(withLine(4, '    totla += v[i];'), [fix(4, SUM[3])]), ['proposeFix']);

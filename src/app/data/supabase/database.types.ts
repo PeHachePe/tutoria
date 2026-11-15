@@ -265,6 +265,7 @@ export type Database = {
           language: Database['public']['Enums']['exercise_language'];
           max_idle_minutes: number;
           max_repeated_failures: number;
+          parameters: string[];
           source_locale: Database['public']['Enums']['app_locale'];
           statement: string;
           title: string;
@@ -283,6 +284,7 @@ export type Database = {
           language?: Database['public']['Enums']['exercise_language'];
           max_idle_minutes?: number;
           max_repeated_failures?: number;
+          parameters?: string[];
           source_locale?: Database['public']['Enums']['app_locale'];
           statement: string;
           title: string;
@@ -300,6 +302,7 @@ export type Database = {
           language?: Database['public']['Enums']['exercise_language'];
           max_idle_minutes?: number;
           max_repeated_failures?: number;
+          parameters?: string[];
           source_locale?: Database['public']['Enums']['app_locale'];
           statement?: string;
           title?: string;
@@ -557,12 +560,21 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      are_valid_parameters: { Args: { names: string[] }; Returns: boolean };
+      can_edit_exercise: { Args: { target_exercise_id: string }; Returns: boolean };
       can_open_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       can_read_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
       can_record_event: { Args: { target_attempt_id: string }; Returns: boolean };
       current_app_role: {
         Args: Record<PropertyKey, never>;
         Returns: Database['public']['Enums']['user_role'];
+      };
+      exercise_student_counts: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          exercise_id: string;
+          student_count: number;
+        }[];
       };
       hidden_test_count: { Args: { target_exercise_id: string }; Returns: number };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -654,6 +666,33 @@ export type Database = {
         SetofOptions: {
           from: '*';
           to: 'attempt';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      save_exercise: {
+        Args: { fields: Json; subject_ids: string[]; target_exercise_id: string; tests: Json };
+        Returns: {
+          created_at: string;
+          created_by: string;
+          difficulty: Database['public']['Enums']['difficulty'];
+          function_name: string;
+          id: string;
+          kind: Database['public']['Enums']['exercise_kind'];
+          language: Database['public']['Enums']['exercise_language'];
+          max_idle_minutes: number;
+          max_repeated_failures: number;
+          parameters: string[];
+          source_locale: Database['public']['Enums']['app_locale'];
+          statement: string;
+          title: string;
+          topics: string[];
+          translations: NonNullable<Json>;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'exercise';
           isOneToOne: true;
           isSetofReturn: false;
         };

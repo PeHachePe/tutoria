@@ -11,6 +11,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'medium',
     topics: ['Cadenas', 'URL amigables'],
     functionName: 'slugify',
+    parameters: ['title'],
     statement:
       'Escribe una función `slugify` que convierta un título en la parte de una URL: en minúsculas, sin espacios al principio ni al final y con las palabras separadas por un solo guion (`-`), aunque entre ellas haya varios espacios. Un título vacío da un texto vacío.',
     translations: {
@@ -54,6 +55,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'advanced',
     topics: ['URL', 'cadenas de consulta', 'decodificación'],
     functionName: 'getQueryParam',
+    parameters: ['url', 'name'],
     statement:
       'Escribe una función `getQueryParam` que reciba una URL y el nombre de un parámetro, y devuelva su valor decodificado con `decodeURIComponent` (`hola%20mundo` es `hola mundo`). Si el parámetro aparece varias veces, cuenta el primero. Si no aparece, devuelve `null`.',
     translations: {
@@ -104,6 +106,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'initial',
     topics: ['Números', 'formato de salida'],
     functionName: 'formatPrice',
+    parameters: ['amount'],
     statement:
       'Escribe una función `formatPrice` que reciba un importe y lo devuelva como texto con dos decimales, coma decimal y el símbolo del euro detrás, separado por un espacio: `12.5` es `"12,50 €"`. Sin separador de miles.',
     translations: {
@@ -143,6 +146,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'medium',
     topics: ['Validación de formularios', 'expresiones regulares'],
     functionName: 'isStrongPassword',
+    parameters: ['password'],
     statement:
       'Escribe una función `isStrongPassword` que reciba una contraseña y devuelva `true` si es segura: al menos 8 caracteres, al menos una cifra y al menos una letra mayúscula. Si no, devuelve `false`.',
     translations: {
@@ -187,6 +191,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'initial',
     topics: ['Cadenas', 'casos límite'],
     functionName: 'countWords',
+    parameters: ['text'],
     statement:
       'Escribe una función `countWords` que reciba un texto y devuelva cuántas palabras tiene. Las palabras están separadas por uno o varios espacios, y puede haber espacios al principio y al final. Un texto vacío o solo con espacios tiene 0 palabras.',
     translations: {
@@ -226,6 +231,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'initial',
     topics: ['Cadenas', 'vectores'],
     functionName: 'getInitials',
+    parameters: ['fullName'],
     statement:
       'Escribe una función `getInitials` que reciba un nombre completo y devuelva sus iniciales en mayúscula, juntas: `"Lucía Martín Gómez"` es `"LMG"`. Puede haber varios espacios entre las palabras o en los extremos. Un nombre vacío da un texto vacío.',
     translations: {
@@ -274,6 +280,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'medium',
     topics: ['Cadenas', 'condicionales'],
     functionName: 'truncate',
+    parameters: ['text', 'max'],
     statement:
       'Escribe una función `truncate` que reciba un texto y una longitud máxima. Si el texto es más largo, devuelve sus primeros caracteres hasta esa longitud seguidos de `…`; si no, lo devuelve tal cual.',
     translations: {
@@ -313,6 +320,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'initial',
     topics: ['Cadenas', 'fechas'],
     functionName: 'formatDate',
+    parameters: ['isoDate'],
     statement:
       'Escribe una función `formatDate` que reciba una fecha como `"2026-11-11"` (año, mes y día) y la devuelva como `"11/11/2026"` (día, mes y año), con los ceros a la izquierda que ya trae.',
     translations: {
@@ -356,6 +364,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'advanced',
     topics: ['Validación de formularios', 'expresiones regulares'],
     functionName: 'isValidPostalCode',
+    parameters: ['code'],
     statement:
       'Escribe una función `isValidPostalCode` que reciba un texto y devuelva `true` si es un código postal español válido: exactamente cinco cifras, y las dos primeras (la provincia) entre 01 y 52. Si no, devuelve `false`.',
     translations: {
@@ -398,6 +407,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'medium',
     topics: ['Números', 'bases', 'formato de salida'],
     functionName: 'rgbToHex',
+    parameters: ['red', 'green', 'blue'],
     statement:
       'Escribe una función `rgbToHex` que reciba los tres componentes de un color (rojo, verde y azul, de 0 a 255) y devuelva el color en hexadecimal para CSS: `#` y dos cifras en minúscula por componente, con un cero delante si hace falta. `(255, 0, 0)` es `"#ff0000"`.',
     translations: {
@@ -443,6 +453,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'medium',
     topics: ['URL', 'cadenas'],
     functionName: 'buildUrl',
+    parameters: ['base', 'path'],
     statement:
       'Escribe una función `buildUrl` que reciba la dirección base de una web y una ruta, y devuelva la URL completa con una sola barra (`/`) entre las dos, aunque la base acabe en barra o la ruta empiece por ella.',
     translations: {
@@ -482,6 +493,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'medium',
     topics: ['Objetos', 'filtrar vectores'],
     functionName: 'namesInCategory',
+    parameters: ['products', 'category'],
     statement:
       'Escribe una función `namesInCategory` que reciba un vector de productos, cada uno con `name` y `category`, y una categoría, y devuelva los nombres de los productos de esa categoría, en su orden. Si no hay ninguno, devuelve un vector vacío.',
     translations: {
@@ -547,6 +559,7 @@ export const WEB_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly code:
     difficulty: 'advanced',
     topics: ['Objetos', 'acumulador', 'redondeo'],
     functionName: 'cartTotal',
+    parameters: ['lines'],
     statement:
       'Escribe una función `cartTotal` que reciba el carrito de una tienda, un vector de líneas con `price` y `quantity`, y devuelva el total (precio por cantidad de cada línea) redondeado a dos decimales como número. Un carrito vacío vale 0.',
     translations: {

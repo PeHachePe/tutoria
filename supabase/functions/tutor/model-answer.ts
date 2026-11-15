@@ -146,17 +146,29 @@ export interface FunctionSignature {
   readonly functionName: string;
   /** Unknown without tests: then any number will do. */
   readonly parameters: number | undefined;
+  /**
+   * The names of its parameters, when the exercise has them (D-057): the skeleton always uses
+   * them, in English like the function, so the model never makes up others (`count(palabra)`).
+   */
+  readonly names?: readonly string[];
 }
 
-/** The signature of the function of an exercise, with as many parameters as its tests pass. */
+/**
+ * The signature of the function of an exercise: with the names of its parameters if it has them,
+ * otherwise with as many as its tests pass.
+ */
 export function signatureOf({
   functionName,
+  parameters = [],
   tests,
 }: {
   readonly functionName: string;
+  readonly parameters?: readonly string[];
   readonly tests: readonly { readonly input: readonly unknown[] }[];
 }): FunctionSignature {
-  return { functionName, parameters: tests[0]?.input.length };
+  return parameters.length > 0
+    ? { functionName, parameters: parameters.length, names: parameters }
+    : { functionName, parameters: tests[0]?.input.length };
 }
 
 /** A fenced block, with or without its language: ```js … ```. */
@@ -185,11 +197,18 @@ function looksLikeCode(line: string): boolean {
   return CODE_LINES.some((pattern) => pattern.test(line));
 }
 
-/** The function of the exercise with its name, plain parameters (no defaults) and an empty body. */
-function isEmptySkeleton(block: string, { functionName, parameters }: FunctionSignature): boolean {
+/**
+ * The function of the exercise with its name, plain parameters (no defaults) and an empty body;
+ * with the names of the exercise, if it has them.
+ */
+function isEmptySkeleton(
+  block: string,
+  { functionName, parameters, names: expected }: FunctionSignature,
+): boolean {
   const match = EMPTY_FUNCTION.exec(block.trim());
   if (match?.[1] !== functionName) return false;
   const names = match[2].trim() ? match[2].split(',').map((name) => name.trim()) : [];
+  if (expected) return names.join(',') === expected.join(',');
   return (
     names.every((name) => IDENTIFIER.test(name)) &&
     (parameters === undefined || names.length === parameters)
@@ -235,10 +254,11 @@ export function checkAnswer(
   const text = message.trim();
   if (!text && !mayKeepQuiet) return { ok: false, problem: 'invalid' };
   if (containsCode(text, skeleton)) return { ok: false, problem: 'code', elusion };
-  // The skeleton the model asks for, which the server writes, if it did not write one itself (2.5d)
+  // The skeleton the model asks for, which the server writes, if it did not write one itself (2.5d):
+  // with the names of the exercise if it has them, whatever the model suggested (D-057)
   const parameters =
     text && skeleton && names?.length && !text.includes('```')
-      ? skeletonParameters(skeleton.parameters ?? names.length, names)
+      ? (skeleton.names ?? skeletonParameters(skeleton.parameters ?? names.length, names))
       : undefined;
   const blocks = text ? serverBlocks(skeleton, parameters, examples ? syntax : undefined) : [];
   return {

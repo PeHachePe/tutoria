@@ -41,6 +41,8 @@ export interface TutorAttempt {
   /** Its texts in every language it has: the prompt takes those of the request (D-045). */
   readonly exercise: TranslatableExercise & {
     readonly functionName: string;
+    /** The names of its parameters, in English; empty if the exercise does not have them (D-057). */
+    readonly parameters: readonly string[];
     /** All of them, in their order: the prompt only shows the values of the visible ones. */
     readonly tests: readonly RunTest[];
   };

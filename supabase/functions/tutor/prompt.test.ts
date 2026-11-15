@@ -13,7 +13,7 @@ import {
   userPrompt,
 } from './prompt.ts';
 
-const CODE = 'function suma(v) {\n  return 0;\n}';
+const CODE = 'function sum(v) {\n  return 0;\n}';
 
 const ATTEMPT: TutorAttempt = {
   userId: 'hugo',
@@ -22,17 +22,18 @@ const ATTEMPT: TutorAttempt = {
   currentCode: CODE,
   exercise: {
     title: 'Suma de los elementos de un vector',
-    statement: 'Escribe una función `suma` que reciba un vector y devuelva la suma.',
+    statement: 'Escribe una función `sum` que reciba un vector y devuelva la suma.',
     topics: ['Vectores'],
     sourceLocale: 'es',
     translations: {
       en: {
         title: 'Sum of the elements of an array',
-        statement: 'Write a function `suma` that takes an array and returns its sum.',
+        statement: 'Write a function `sum` that takes an array and returns its sum.',
         topics: ['Arrays'],
       },
     },
-    functionName: 'suma',
+    functionName: 'sum',
+    parameters: [],
     tests: [
       { id: 't1', input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
       { id: 't2', input: [[]], expectedOutput: 0, isHidden: false },
@@ -67,11 +68,11 @@ function input(overrides: Partial<PromptInput> = {}): PromptInput {
 Deno.test('the request carries the statement in the language of the answer', () => {
   const english = userPrompt(input({ language: 'en' }));
   assertStringIncludes(english, 'Ejercicio: Sum of the elements of an array');
-  assertStringIncludes(english, 'Enunciado: Write a function `suma` that takes an array');
+  assertStringIncludes(english, 'Enunciado: Write a function `sum` that takes an array');
   // Without a translation, the source statement: never a gap
   const catalan = userPrompt(input({ language: 'ca' }));
   assertStringIncludes(catalan, 'Ejercicio: Suma de los elementos de un vector');
-  assertStringIncludes(catalan, 'Enunciado: Escribe una función `suma`');
+  assertStringIncludes(catalan, 'Enunciado: Escribe una función `sum`');
 });
 
 Deno.test('the system prompt answers in the language of the request', () => {
@@ -138,11 +139,11 @@ Deno.test('the request carries the level, the exercise and the visible examples'
   const prompt = userPrompt(input());
   assertStringIncludes(prompt, 'el alumno pide una pista. Usa el nivel 2.');
   assertStringIncludes(prompt, 'Ejercicio: Suma de los elementos de un vector');
-  assertStringIncludes(prompt, 'Función que se pide: suma (1 parámetro)');
-  assertStringIncludes(prompt, '- suma([1,2,3]) → 6\n- suma([]) → 0\n- y 1 comprobaciones ocultas');
+  assertStringIncludes(prompt, 'Función que se pide: sum (1 parámetro)');
+  assertStringIncludes(prompt, '- sum([1,2,3]) → 6\n- sum([]) → 0\n- y 1 comprobaciones ocultas');
   assertStringIncludes(
     prompt,
-    '<codigo_alumno>\n1| function suma(v) {\n2|   return 0;\n3| }\n</codigo_alumno>',
+    '<codigo_alumno>\n1| function sum(v) {\n2|   return 0;\n3| }\n</codigo_alumno>',
   );
 });
 
@@ -161,10 +162,16 @@ Deno.test('the request numbers each line of the code and says how many parameter
   };
   assertStringIncludes(
     userPrompt(input({ attempt: twoParameters })),
-    'Función que se pide: suma (2 parámetros)',
+    'Función que se pide: sum (2 parámetros)',
   );
   const noTests = { ...ATTEMPT, exercise: { ...ATTEMPT.exercise, tests: [] } };
-  assertStringIncludes(userPrompt(input({ attempt: noTests })), 'Función que se pide: suma\n');
+  assertStringIncludes(userPrompt(input({ attempt: noTests })), 'Función que se pide: sum\n');
+  // With the names of the exercise, the model gets them instead of making up others (D-057)
+  const named = { ...ATTEMPT, exercise: { ...ATTEMPT.exercise, parameters: ['numbers'] } };
+  assertStringIncludes(
+    userPrompt(input({ attempt: named })),
+    'Función que se pide: sum (parámetros: numbers)',
+  );
 });
 
 Deno.test('the request never shows the values of a hidden test', () => {
@@ -176,7 +183,7 @@ Deno.test('the request never shows the values of a hidden test', () => {
 Deno.test('the request says what the code does now with each example', () => {
   assertStringIncludes(
     userPrompt(input()),
-    '<resultado_codigo>\n- ✘ suma([1,2,3]) devuelve 0; se esperaba 6\n- ✔ suma([]) devuelve 0, como se espera\n</resultado_codigo>',
+    '<resultado_codigo>\n- ✘ sum([1,2,3]) devuelve 0; se esperaba 6\n- ✔ sum([]) devuelve 0, como se espera\n</resultado_codigo>',
   );
   const odd: RunResult = {
     status: 'tests_failed',
@@ -195,16 +202,16 @@ Deno.test('the request says what the code does now with each example', () => {
   const prompt = userPrompt(input({ tried: odd }));
   assertStringIncludes(
     prompt,
-    "- ✘ suma([1,2,3]) lanza un error en la línea 2 (return 0;): ReferenceError: 'total' is not defined (se esperaba 6)",
+    "- ✘ sum([1,2,3]) lanza un error en la línea 2 (return 0;): ReferenceError: 'total' is not defined (se esperaba 6)",
   );
   // A line the code does not have is left out
   const away: RunResult = { ...odd, results: [{ ...odd.results[0], line: 99 }] };
   assertStringIncludes(
     userPrompt(input({ tried: away })),
-    "- ✘ suma([1,2,3]) lanza un error: ReferenceError: 'total' is not defined",
+    "- ✘ sum([1,2,3]) lanza un error: ReferenceError: 'total' is not defined",
   );
-  assertStringIncludes(prompt, '- ✘ suma([]) no termina a tiempo (¿un bucle que no acaba?)');
-  assertStringIncludes(prompt, '- ✘ suma() devuelve NaN; se esperaba undefined');
+  assertStringIncludes(prompt, '- ✘ sum([]) no termina a tiempo (¿un bucle que no acaba?)');
+  assertStringIncludes(prompt, '- ✘ sum() devuelve NaN; se esperaba undefined');
 });
 
 Deno.test('the request says when the code does not load or lacks the function', () => {
@@ -219,14 +226,14 @@ Deno.test('the request says when the code does not load or lacks the function', 
   };
   assertStringIncludes(
     userPrompt(input({ tried: invalid })),
-    "El código no se puede cargar en la línea 1 (function suma(v) {), así que no se ha probado ningún ejemplo: SyntaxError: expecting ';'",
+    "El código no se puede cargar en la línea 1 (function sum(v) {), así que no se ha probado ningún ejemplo: SyntaxError: expecting ';'",
   );
   const noMessage: RunResult = { ...invalid, loadError: { kind: 'invalid_code' } };
   assertStringIncludes(userPrompt(input({ tried: noMessage })), 'ejemplo: error de sintaxis');
   const missing: RunResult = { ...invalid, loadError: { kind: 'missing_function' } };
   assertStringIncludes(
     userPrompt(input({ tried: missing })),
-    'El código carga, pero no define ninguna función llamada suma.',
+    'El código carga, pero no define ninguna función llamada sum.',
   );
   assertStringIncludes(
     userPrompt(input({ tried: null })),
@@ -256,7 +263,7 @@ Deno.test('the last run tells how the hidden tests went when it is about this co
 });
 
 Deno.test('the last run is of an earlier version when the code changed since', () => {
-  const changed = 'function suma(v) {\n  let total = 0;\n}';
+  const changed = 'function sum(v) {\n  let total = 0;\n}';
   assertStringIncludes(
     userPrompt(input({ code: changed })),
     'fue con una versión anterior del código, que ha cambiado desde entonces (superó 1 de 3 pruebas).',
@@ -368,7 +375,7 @@ Deno.test('a stuck student gets the next step, never the same question', () => {
   for (const tried of [null, missing]) {
     assertStringIncludes(
       userPrompt(input({ kind: 'question', message: 'No me acuerdo', tried })),
-      'Todavía no tiene la función suma: dale su esqueleto vacío poniendo en "skeleton" los nombres de sus parámetros (1 parámetro)',
+      'Todavía no tiene la función sum: dale su esqueleto vacío poniendo en "skeleton" los nombres de sus parámetros (1 parámetro)',
     );
   }
   assert(

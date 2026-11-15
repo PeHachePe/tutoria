@@ -26,6 +26,11 @@ export interface Exercise extends StuckThresholds, TranslatableExercise {
   readonly language: Language;
   /** Name of the function the student must write, the same in every language; each test calls it. */
   readonly functionName: string;
+  /**
+   * The names of its parameters, in English like the function (D-057): the tutor's skeleton uses
+   * them, so it never makes up others. Empty in exercises without them, and then the tutor picks.
+   */
+  readonly parameters: readonly string[];
   readonly createdBy: string;
   readonly createdAt: string;
   readonly updatedAt: string;

@@ -35,7 +35,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       this.admin
         .from('attempt')
         .select(
-          'user_id, status, current_code, app_user(status), exercise(title, statement, topics, source_locale, translations, function_name, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, emotion, intensity, elusion, actions, created_at)',
+          'user_id, status, current_code, app_user(status), exercise(title, statement, topics, source_locale, translations, function_name, parameters, test(id, input, expected_output, is_hidden, position)), tutor_interaction(trigger, hint_level, student_message, transcript, emotion, intensity, elusion, actions, created_at)',
         )
         .eq('id', attemptId)
         .maybeSingle(),
@@ -65,6 +65,7 @@ export class SupabaseAnswerStore implements AnswerStore {
         // A check of the table gives it this shape (is_valid_exercise_translations)
         translations: data.exercise.translations as ExerciseTranslations,
         functionName: data.exercise.function_name,
+        parameters: data.exercise.parameters,
         tests: data.exercise.test
           .toSorted((a, b) => a.position - b.position)
           .map((test) => ({

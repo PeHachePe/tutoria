@@ -50,6 +50,7 @@ export function toExercise(row: Row<'exercise'>): Exercise {
     translations: row.translations as ExerciseTranslations,
     language: row.language,
     functionName: row.function_name,
+    parameters: row.parameters,
     maxRepeatedFailures: row.max_repeated_failures,
     maxIdleMinutes: row.max_idle_minutes,
     createdBy: row.created_by,

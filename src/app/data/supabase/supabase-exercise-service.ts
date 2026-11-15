@@ -9,8 +9,19 @@ import type {
   ExerciseAssignment,
   ExerciseDetail,
 } from '../exercise';
-import { ExerciseService, ExerciseWithTests } from '../exercise-service';
+import {
+  type BankExercise,
+  type BankScope,
+  type ExerciseBank,
+  type ExerciseDraft,
+  ExerciseService,
+  type ExerciseUsage,
+  type ExerciseWithTests,
+  scopeSubjectIds,
+} from '../exercise-service';
+import type { Subject } from '../subject';
 import type { HintLevel } from '../tutor';
+import type { Json } from './database.types';
 import { SUPABASE_CLIENT } from './supabase-client';
 import { unwrap } from './supabase-error';
 import {
@@ -107,35 +118,119 @@ export class SupabaseExerciseService extends ExerciseService {
     };
   }
 
-  async list(): Promise<Exercise[]> {
-    return unwrap(await this.supabase.from('exercise').select().order('created_at')).map(
-      toExercise,
-    );
-  }
-
-  async getWithTests(exerciseId: string): Promise<ExerciseWithTests> {
-    const row = unwrap(
-      await this.supabase
-        .from('exercise')
-        .select('*, test(*)')
-        .eq('id', exerciseId)
-        .order('position', { referencedTable: 'test' })
-        .single(),
-    );
-    const { test, ...exercise } = row;
-    return { exercise: toExercise(exercise), tests: test.map(toTest) };
+  async listSubjects(): Promise<Subject[]> {
+    return unwrap(await this.supabase.from('subject').select().order('name')).map(toSubject);
   }
 
   /**
-   * Saving an exercise writes it and replaces its tests, which must happen at once: it arrives with
-   * the teacher's screen, as a function of the database (step 4.3).
+   * First the subjects of the user's groups (the RLS gives a teacher only theirs), then, at once,
+   * the exercises of the scope with how many tests they have, all their subjects and the groups of
+   * the user where they are assigned; every subject; and how many students started each one.
    */
-  create(): Promise<Exercise> {
-    return savingNotYet();
+  async listBank(scope: BankScope): Promise<ExerciseBank> {
+    const mySubjectIds = await this.mySubjectIds();
+    const wanted = scopeSubjectIds(scope, mySubjectIds);
+    let query = this.supabase
+      .from('exercise')
+      .select(
+        // `subjects` keeps them all for the chips; `scope`, inner, only filters
+        `*, test(count), subjects:exercise_subject(subject_id), exercise_assignment(class_group(id, name))${wanted ? ', scope:exercise_subject!inner(subject_id)' : ''}`,
+      )
+      .order('created_at', { ascending: false });
+    if (wanted) query = query.in('scope.subject_id', [...wanted]);
+    const [exercises, subjects, counts] = await Promise.all([
+      query,
+      this.listSubjects(),
+      this.studentCounts(),
+    ]);
+    const entries = (unwrap(exercises) as unknown as BankRow[]).map(
+      // `scope` only filters: `toExercise` takes the columns it knows
+      ({ test, subjects: rows, exercise_assignment, ...row }): BankExercise => ({
+        exercise: toExercise(row),
+        subjectIds: rows.map((subject) => subject.subject_id),
+        testCount: test[0]?.count ?? 0,
+        studentCount: counts.get(row.id) ?? 0,
+        groups: groupsOf(exercise_assignment),
+      }),
+    );
+    return { exercises: entries, subjects, mySubjectIds };
   }
 
-  update(): Promise<Exercise> {
-    return savingNotYet();
+  /** The subjects of the groups the user teaches, once each; the session is read without a request. */
+  private async mySubjectIds(): Promise<string[]> {
+    const { data } = await this.supabase.auth.getSession();
+    const rows = unwrap(
+      await this.supabase
+        .from('class_group')
+        .select('subject_id')
+        .eq('teacher_id', data.session?.user.id ?? ''),
+    );
+    return [...new Set(rows.map((row) => row.subject_id))];
+  }
+
+  async getWithTests(exerciseId: string): Promise<ExerciseWithTests> {
+    const [row, counts] = await Promise.all([
+      this.supabase
+        .from('exercise')
+        .select(
+          '*, test(*), exercise_subject(subject_id), exercise_assignment(class_group(id, name))',
+        )
+        .eq('id', exerciseId)
+        .order('position', { referencedTable: 'test' })
+        .single(),
+      this.studentCounts(),
+    ]);
+    const { test, exercise_subject, exercise_assignment, ...exercise } = unwrap(row);
+    return {
+      exercise: toExercise(exercise),
+      tests: test.map(toTest),
+      subjectIds: exercise_subject.map((subject) => subject.subject_id),
+      ...usage(exerciseId, counts, exercise_assignment),
+    };
+  }
+
+  /** `save_exercise` writes the exercise, its tests and its subjects at once (D-057). */
+  create(draft: ExerciseDraft): Promise<Exercise> {
+    return this.save(null, draft);
+  }
+
+  update(exerciseId: string, draft: ExerciseDraft): Promise<Exercise> {
+    return this.save(exerciseId, draft);
+  }
+
+  private async save(exerciseId: string | null, draft: ExerciseDraft): Promise<Exercise> {
+    const row = unwrap(
+      await this.supabase.rpc('save_exercise', {
+        // A null id creates the exercise; the generated types only know the string
+        target_exercise_id: exerciseId as string,
+        fields: {
+          title: draft.title,
+          statement: draft.statement,
+          difficulty: draft.difficulty,
+          topics: [...draft.topics],
+          source_locale: draft.sourceLocale,
+          // Texts and JSON values: what the checks of the tables accept
+          translations: draft.translations as Json,
+          function_name: draft.functionName,
+          parameters: [...draft.parameters],
+          max_repeated_failures: draft.maxRepeatedFailures,
+          max_idle_minutes: draft.maxIdleMinutes,
+        },
+        tests: draft.tests.map((test) => ({
+          input: test.input as Json,
+          expected_output: test.expectedOutput as Json,
+          is_hidden: test.isHidden,
+        })),
+        subject_ids: [...draft.subjectIds],
+      }),
+    );
+    return toExercise(row);
+  }
+
+  /** How many students started each exercise, in any group (`exercise_student_counts`). */
+  private async studentCounts(): Promise<ReadonlyMap<string, number>> {
+    const rows = unwrap(await this.supabase.rpc('exercise_student_counts'));
+    return new Map(rows.map((row) => [row.exercise_id, row.student_count]));
   }
 
   /** An exercise with attempts cannot be deleted (`on delete restrict`): `invalid`. */
@@ -187,6 +282,28 @@ function toAssignedGroup(row: {
   return { id: row.id, name: row.name, subject: toSubject(row.subject) };
 }
 
-function savingNotYet(): Promise<Exercise> {
-  return Promise.reject(new DataError('unavailable', 'Saving exercises arrives in step 4.3'));
+/** A row of the bank as the query of `listBank` brings it. */
+type BankRow = Row<'exercise'> & {
+  test: { count: number }[];
+  subjects: { subject_id: string }[];
+  exercise_assignment: { class_group: { id: string; name: string } }[];
+  scope?: unknown;
+};
+
+/** The groups of the assignments the user reads, once each, by name. */
+function groupsOf(
+  assignments: readonly { class_group: { id: string; name: string } }[],
+): ExerciseUsage['groups'] {
+  const groups = new Map(assignments.map(({ class_group }) => [class_group.id, class_group]));
+  return [...groups.values()]
+    .map(({ id, name }) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function usage(
+  exerciseId: string,
+  counts: ReadonlyMap<string, number>,
+  assignments: readonly { class_group: { id: string; name: string } }[],
+): ExerciseUsage {
+  return { studentCount: counts.get(exerciseId) ?? 0, groups: groupsOf(assignments) };
 }

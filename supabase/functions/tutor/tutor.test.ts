@@ -24,7 +24,7 @@ import { PROMPT_VERSION } from './prompt.ts';
 const NOW = Date.parse('2026-11-10T10:00:00Z');
 const ATTEMPT_ID = '70000000-0000-4000-8000-000000000012';
 const REQUEST_ID = 'a0000000-0000-4000-8000-000000000001';
-const CODE = 'function suma(v) { return 0; }';
+const CODE = 'function sum(v) { return 0; }';
 const FLASH: ModelEndpoint = {
   baseUrl: 'https://llm.test/v1',
   model: 'flash',
@@ -39,11 +39,12 @@ const ATTEMPT: TutorAttempt = {
   currentCode: CODE,
   exercise: {
     title: 'Suma',
-    statement: 'Escribe una función `suma`.',
+    statement: 'Escribe una función `sum`.',
     topics: [],
     sourceLocale: 'es',
     translations: {},
-    functionName: 'suma',
+    functionName: 'sum',
+    parameters: [],
     tests: [{ id: 't1', input: [[1, 2, 3]], expectedOutput: 6, isHidden: false }],
   },
   lastRun: null,
@@ -241,8 +242,8 @@ Deno.test(
 
 Deno.test('the empty skeleton of the exercise gets through; anything in it does not', async () => {
   const skeleton =
-    'Así empieza:\n```js\nfunction suma(vector) {\n}\n```\nDentro, recorre el vector.';
-  const filled = '```js\nfunction suma(vector) {\n  return 0;\n}\n```';
+    'Así empieza:\n```js\nfunction sum(numbers) {\n}\n```\nDentro, recorre el numbers.';
+  const filled = '```js\nfunction sum(numbers) {\n  return 0;\n}\n```';
   const reply = (message: string) => JSON.stringify({ ...JSON.parse(GOOD), message });
   const { handle, store } = setup([reply(skeleton), reply(filled), reply(filled)]);
 
@@ -528,14 +529,14 @@ Deno.test(
       outcomes: [{ ok: false, error: 'ReferenceError: PIKACHU is not defined' }],
     };
 
-    await handle(post({ code: 'function suma(v) { PIKACHU }' }));
+    await handle(post({ code: 'function sum(v) { PIKACHU }' }));
 
     assertEquals(sandbox.requests, [
-      { code: 'function suma(v) { PIKACHU }', functionName: 'suma', inputs: [[[1, 2, 3]]] },
+      { code: 'function sum(v) { PIKACHU }', functionName: 'sum', inputs: [[[1, 2, 3]]] },
     ]);
     assertStringIncludes(
       llm.requests[0].at(-1)!.content,
-      'suma([1,2,3]) lanza un error: ReferenceError: PIKACHU is not defined (se esperaba 6)',
+      'sum([1,2,3]) lanza un error: ReferenceError: PIKACHU is not defined (se esperaba 6)',
     );
   },
 );
@@ -646,10 +647,10 @@ Deno.test(
     // The code runs: no fix, nor a submission of an attempt that did not pass (2.5f)
     const { store, handle, sandbox } = setup([
       fixing({
-        proposeFix: { line: 1, code: 'function suma(v) { return 0;; }' },
+        proposeFix: { line: 1, code: 'function sum(v) { return 0;; }' },
         submitAttempt: {},
       }),
-      fixing({ proposeFix: { line: 1, code: 'function suma(v) { return 0; }' }, runTests: {} }),
+      fixing({ proposeFix: { line: 1, code: 'function sum(v) { return 0; }' }, runTests: {} }),
     ]);
     const first = await (await handle(post())).json();
     assertEquals(first.events[0].actions, undefined);
@@ -664,7 +665,7 @@ Deno.test(
     };
     const second = await (
       await handle(
-        post({ requestId: REQUEST_ID.replace('1', '2'), code: 'function suma(v) { retrun 0; }' }),
+        post({ requestId: REQUEST_ID.replace('1', '2'), code: 'function sum(v) { retrun 0; }' }),
       )
     ).json();
     assertEquals(

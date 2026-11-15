@@ -64,7 +64,7 @@ Deno.test('checkAnswer only lets an intervention of the tutor keep quiet', () =>
 });
 
 Deno.test('checkAnswer rejects a message with code', () => {
-  const code = 'Prueba esto:\n```js\nfunction suma(v) { return 0; }\n```';
+  const code = 'Prueba esto:\n```js\nfunction sum(v) { return 0; }\n```';
   assertEquals(checkAnswer(answer({ message: code })), {
     ok: false,
     problem: 'code',
@@ -85,7 +85,7 @@ Deno.test('containsCode finds fenced blocks and lines that look like code', () =
     'Escribe:\ntotal += v[i];',
     'Así:\nlet total = 0',
     'const doble = (n) => n * 2',
-    'function suma(v) {',
+    'function sum(v) {',
     'Cierra la llave:\n}',
     'return total;',
   ]) {
@@ -105,15 +105,15 @@ Deno.test('containsCode lets words about the code through', () => {
   }
 });
 
-const SUMA: FunctionSignature = { functionName: 'suma', parameters: 1 };
+const SUM: FunctionSignature = { functionName: 'sum', parameters: 1 };
 
 Deno.test('containsCode lets through only the empty skeleton of the function asked for', () => {
   for (const message of [
-    'Empieza así:\n```js\nfunction suma(vector) {\n}\n```\nDentro irá el recorrido del vector.',
-    '```javascript\nfunction suma( numeros ) {}\n```',
-    '```\nfunction suma(v) {\n\n}\n```',
+    'Empieza así:\n```js\nfunction sum(numbers) {\n}\n```\nDentro irá el recorrido del vector.',
+    '```javascript\nfunction sum( items ) {}\n```',
+    '```\nfunction sum(v) {\n\n}\n```',
   ]) {
-    assertEquals(containsCode(message, SUMA), false, message);
+    assertEquals(containsCode(message, SUM), false, message);
   }
   assertEquals(
     containsCode('```js\nfunction media(a, b) {\n}\n```', { functionName: 'media', parameters: 2 }),
@@ -124,47 +124,47 @@ Deno.test('containsCode lets through only the empty skeleton of the function ask
 Deno.test('containsCode still finds any other code beside or inside the skeleton', () => {
   for (const message of [
     // Something in its body, however little
-    '```js\nfunction suma(vector) {\n  return 0;\n}\n```',
-    '```js\nfunction suma(vector) {\n  // recorre el vector\n}\n```',
+    '```js\nfunction sum(numbers) {\n  return 0;\n}\n```',
+    '```js\nfunction sum(numbers) {\n  // recorre el vector\n}\n```',
     // Another name, another number of parameters, a default value or an arrow function
-    '```js\nfunction sumar(vector) {\n}\n```',
-    '```js\nfunction suma(vector, n) {\n}\n```',
-    '```js\nfunction suma() {\n}\n```',
-    '```js\nfunction suma(vector = []) {\n}\n```',
-    '```js\nconst suma = (vector) => {\n};\n```',
+    '```js\nfunction addUp(numbers) {\n}\n```',
+    '```js\nfunction sum(numbers, n) {\n}\n```',
+    '```js\nfunction sum() {\n}\n```',
+    '```js\nfunction sum(numbers = []) {\n}\n```',
+    '```js\nconst sum = (numbers) => {\n};\n```',
     // The skeleton without its block is a line of code, and code beside it is code
-    'function suma(vector) {\n}',
-    '```js\nfunction suma(vector) {\n}\n```\nY luego:\nlet total = 0',
-    '```js\nfunction suma(vector) {\n}\n```\n```js\nreturn total;\n```',
+    'function sum(numbers) {\n}',
+    '```js\nfunction sum(numbers) {\n}\n```\nY luego:\nlet total = 0',
+    '```js\nfunction sum(numbers) {\n}\n```\n```js\nreturn total;\n```',
   ]) {
-    assertEquals(containsCode(message, SUMA), true, message);
+    assertEquals(containsCode(message, SUM), true, message);
   }
   // Without the signature of the exercise, no skeleton is allowed
-  assertEquals(containsCode('```js\nfunction suma(vector) {\n}\n```'), true);
+  assertEquals(containsCode('```js\nfunction sum(numbers) {\n}\n```'), true);
 });
 
 Deno.test('checkAnswer accepts the skeleton of the exercise and nothing else', () => {
-  const skeleton = 'Así se empieza:\n```js\nfunction suma(vector) {\n}\n```';
-  const check = checkAnswer(answer({ message: skeleton }), { skeleton: SUMA });
+  const skeleton = 'Así se empieza:\n```js\nfunction sum(numbers) {\n}\n```';
+  const check = checkAnswer(answer({ message: skeleton }), { skeleton: SUM });
   assertEquals(check.ok && check.answer.message, skeleton);
   assertEquals(checkAnswer(answer({ message: skeleton })).ok, false);
 });
 
 Deno.test('checkAnswer writes the skeleton the model asks for under its message', () => {
-  const asked = (fields: Record<string, unknown>, signature = SUMA) => {
+  const asked = (fields: Record<string, unknown>, signature = SUM) => {
     const check = checkAnswer(answer({ message: 'Así empieza:', ...fields }), {
       skeleton: signature,
     });
     return check.ok && check.answer.message;
   };
   assertEquals(
-    asked({ skeleton: ['vector'] }),
-    'Así empieza:\n```js\nfunction suma(vector) {\n}\n```',
+    asked({ skeleton: ['numbers'] }),
+    'Así empieza:\n```js\nfunction sum(numbers) {\n}\n```',
   );
   // Names that are not plain are replaced, and the number of parameters is the exercise's
   assertEquals(
     asked({ skeleton: ['v = []', 'otro'] }),
-    'Así empieza:\n```js\nfunction suma(otro) {\n}\n```',
+    'Así empieza:\n```js\nfunction sum(otro) {\n}\n```',
   );
   assertEquals(
     asked({ skeleton: ['a', 'b'] }, { functionName: 'pow', parameters: undefined }),
@@ -174,19 +174,41 @@ Deno.test('checkAnswer writes the skeleton the model asks for under its message'
   assertEquals(asked({ skeleton: [] }), 'Así empieza:');
   const check = checkAnswer(answer({ message: 'Hola', skeleton: ['v'] }));
   assertEquals(check.ok && check.answer.message, 'Hola');
-  assertEquals(asked({ skeleton: 'vector' }), 'Así empieza:');
-  const written = 'Así:\n```js\nfunction suma(vector) {\n}\n```';
-  assertEquals(asked({ message: written, skeleton: ['vector'] }), written);
+  assertEquals(asked({ skeleton: 'numbers' }), 'Así empieza:');
+  const written = 'Así:\n```js\nfunction sum(numbers) {\n}\n```';
+  assertEquals(asked({ message: written, skeleton: ['numbers'] }), written);
   // A tutor that keeps quiet adds nothing
   const quiet = checkAnswer(answer({ message: '', skeleton: ['v'] }), {
     mayKeepQuiet: true,
-    skeleton: SUMA,
+    skeleton: SUM,
   });
   assertEquals(quiet.ok && quiet.answer.message, '');
 });
 
+Deno.test(
+  'the skeleton always has the parameters of the exercise, if it names them (D-057)',
+  () => {
+    const named = signatureOf({ functionName: 'countWords', parameters: ['text'], tests: [] });
+    assertEquals(named, { functionName: 'countWords', parameters: 1, names: ['text'] });
+    // Whatever the model suggests, never Spanglish such as countWords(palabra)
+    const check = checkAnswer(answer({ message: 'Así empieza:', skeleton: ['palabra'] }), {
+      skeleton: named,
+    });
+    assertEquals(
+      check.ok && check.answer.message,
+      'Así empieza:\n```js\nfunction countWords(text) {\n}\n```',
+    );
+    assertEquals(check.ok && check.answer.actions, [
+      { name: 'insertSkeleton', arguments: { parameters: ['text'] } },
+    ]);
+    // A skeleton the model writes itself needs those names too
+    assertEquals(containsCode('```js\nfunction countWords(text) {\n}\n```', named), false);
+    assertEquals(containsCode('```js\nfunction countWords(palabra) {\n}\n```', named), true);
+  },
+);
+
 Deno.test('signatureOf takes the number of parameters from the tests', () => {
-  assertEquals(signatureOf({ functionName: 'suma', tests: [{ input: [[1]] }] }), SUMA);
+  assertEquals(signatureOf({ functionName: 'sum', tests: [{ input: [[1]] }] }), SUM);
   assertEquals(signatureOf({ functionName: 'nada', tests: [] }), {
     functionName: 'nada',
     parameters: undefined,
@@ -196,7 +218,7 @@ Deno.test('signatureOf takes the number of parameters from the tests', () => {
 Deno.test('checkAnswer writes the examples of syntax of the catalog the model asks for', () => {
   const asked = (fields: Record<string, unknown>) => {
     const check = checkAnswer(answer({ message: 'Así se escribe:', ...fields }), {
-      skeleton: SUMA,
+      skeleton: SUM,
       examples: true,
     });
     return check.ok && check.answer.message;
@@ -204,20 +226,20 @@ Deno.test('checkAnswer writes the examples of syntax of the catalog the model as
   assertEquals(asked({ syntax: ['for'] }), `Así se escribe:\n${syntaxBlocks(['for'])}`);
   // After the skeleton, and only topics of the catalog
   assertEquals(
-    asked({ skeleton: ['vector'], syntax: ['stone', 'math'] }),
-    `Así se escribe:\n\`\`\`js\nfunction suma(vector) {\n}\n\`\`\`\n${syntaxBlocks(['math'])}`,
+    asked({ skeleton: ['numbers'], syntax: ['stone', 'math'] }),
+    `Así se escribe:\n\`\`\`js\nfunction sum(numbers) {\n}\n\`\`\`\n${syntaxBlocks(['math'])}`,
   );
   assertEquals(asked({ syntax: ['stone'] }), 'Así se escribe:');
   assertEquals(asked({ syntax: 'for' }), 'Así se escribe:');
   // Not in a hint: it is about the student's code
   const hint = checkAnswer(answer({ message: 'Mira la línea 3.', syntax: ['for'] }), {
-    skeleton: SUMA,
+    skeleton: SUM,
   });
   assertEquals(hint.ok && hint.answer.message, 'Mira la línea 3.');
   // Never as the only thing an intervention says
   const quiet = checkAnswer(answer({ message: '', syntax: ['for'] }), {
     mayKeepQuiet: true,
-    skeleton: SUMA,
+    skeleton: SUM,
     examples: true,
   });
   assertEquals(quiet.ok && quiet.answer.message, '');
@@ -243,16 +265,16 @@ Deno.test('the actions of the contract are kept, checked', () => {
 // Tools only our tutor has (2.5f)
 
 Deno.test('the skeleton comes with «Insertar», which only the server adds', () => {
-  const asked = checkAnswer(answer({ message: 'Así empieza:', skeleton: ['v = []', 'vector'] }), {
-    skeleton: SUMA,
+  const asked = checkAnswer(answer({ message: 'Así empieza:', skeleton: ['v = []', 'numbers'] }), {
+    skeleton: SUM,
   });
   assertEquals(asked.ok && asked.answer.actions, [
-    { name: 'insertSkeleton', arguments: { parameters: ['vector'] } },
+    { name: 'insertSkeleton', arguments: { parameters: ['numbers'] } },
   ]);
   // The model cannot ask for it on its own, nor sees it among its tools
   const own = checkAnswer(
     answer({ actions: { insertSkeleton: { parameters: ['x'] }, runTests: {} } }),
-    { skeleton: SUMA },
+    { skeleton: SUM },
   );
   assertEquals(own.ok && own.answer.actions, [{ name: 'runTests', arguments: {} }]);
   const actions = ANSWER_FORMAT.schema.properties as Record<string, { properties: object }>;

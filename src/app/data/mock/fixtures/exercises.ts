@@ -11,6 +11,7 @@ import {
   DAM_GROUP_ID,
   DAW_GROUP_ID,
   DAW_WEB_GROUP_ID,
+  OTHER_TEACHER_ID,
   TEACHER_ID,
 } from './users';
 
@@ -30,6 +31,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'initial',
     topics: ['Bucles', 'rangos', 'condicionales'],
     functionName: 'countEvens',
+    parameters: ['n'],
     statement:
       'Escribe una función `countEvens` que reciba un número entero `n` y devuelva cuántos números pares hay entre 1 y `n`, ambos incluidos. Si `n` es menor que 2, la función debe devolver 0.',
     translations: {
@@ -61,6 +63,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'initial',
     topics: ['Bucles', 'salida formateada'],
     functionName: 'multiplicationTable',
+    parameters: ['n'],
     statement:
       'Escribe una función `multiplicationTable` que reciba un número entero `n` y devuelva su tabla de multiplicar del 1 al 10 como un único texto. Cada línea sigue el formato `n x i = resultado` y las líneas se separan con un salto de línea (`\\n`), sin salto al final. Si `n` es 0, todas las líneas dan 0.',
     translations: {
@@ -92,6 +95,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'medium',
     topics: ['Vectores', 'acumulador', 'vector vacío'],
     functionName: 'sum',
+    parameters: ['numbers'],
     statement:
       'Escribe una función `sum` que reciba un vector de números enteros y devuelva la suma de todos sus elementos. Si el vector está vacío, la función debe devolver 0.',
     translations: {
@@ -124,6 +128,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'medium',
     topics: ['Vectores', 'comparación', 'casos límite'],
     functionName: 'maximum',
+    parameters: ['numbers'],
     statement:
       'Escribe una función `maximum` que reciba un vector de números y devuelva el mayor de sus elementos. Ten en cuenta que todos pueden ser negativos. Si el vector está vacío, la función debe devolver `null`.',
     translations: {
@@ -156,6 +161,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'advanced',
     topics: ['Vectores', 'índices', 'intercambio'],
     functionName: 'reverseArray',
+    parameters: ['items'],
     statement:
       'Escribe una función `reverseArray` que reciba un vector y devuelva un vector nuevo con los mismos elementos en orden inverso. Resuélvelo recorriendo el vector con índices, sin usar `reverse()`. Si el vector está vacío, devuelve un vector vacío.',
     translations: {
@@ -188,6 +194,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'extension',
     topics: ['Cadenas', 'recorrido y conteo'],
     functionName: 'countVowels',
+    parameters: ['text'],
     statement:
       'Escribe una función `countVowels` que reciba un texto y devuelva cuántas vocales contiene, sin distinguir mayúsculas de minúsculas. Las vocales con tilde (á, é, í, ó, ú) también cuentan. Si el texto está vacío, la función debe devolver 0.',
     translations: {
@@ -220,6 +227,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'extension',
     topics: ['Acumuladores', 'formato de salida'],
     functionName: 'average',
+    parameters: ['numbers'],
     statement:
       'Escribe una función `average` que reciba un vector de números y devuelva su media como texto con exactamente dos decimales, por ejemplo `"2.50"`. Si el vector está vacío, la función debe devolver `"0.00"`.',
     translations: {
@@ -252,6 +260,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'extension',
     topics: ['Búsqueda secuencial', 'condición compuesta'],
     functionName: 'firstIndexOf',
+    parameters: ['items', 'value'],
     statement:
       'Escribe una función `firstIndexOf` que reciba un vector y un valor, y devuelva la posición de la primera vez que aparece ese valor, contando desde 0. Si el valor aparece varias veces, cuenta solo la primera. Si no aparece, la función debe devolver -1.',
     translations: {
@@ -284,6 +293,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'initial',
     topics: ['Cadenas', 'validación de formularios'],
     functionName: 'isValidEmail',
+    parameters: ['text'],
     statement:
       'Escribe una función `isValidEmail` que reciba un texto y devuelva `true` si parece una dirección de correo válida y `false` si no. Para este ejercicio, es válida si no tiene espacios, tiene exactamente una `@` con al menos un carácter antes y, después de la `@`, un dominio con un punto que no esté ni al principio ni al final.',
     translations: {
@@ -316,6 +326,7 @@ const BASE_EXERCISE_FIXTURES: readonly ExerciseFixture[] = [
     difficulty: 'medium',
     topics: ['Objetos', 'URL'],
     functionName: 'toQueryString',
+    parameters: ['params'],
     statement:
       'Escribe una función `toQueryString` que reciba un objeto con los parámetros de una búsqueda y devuelva la cadena de consulta de una URL, sin el `?` del principio: cada parámetro como `clave=valor`, en el orden del objeto y separados por `&`. Codifica claves y valores con `encodeURIComponent`, de modo que un espacio sea `%20`. Con un objeto vacío, devuelve una cadena vacía.',
     translations: {
@@ -385,9 +396,13 @@ export const EXERCISES: readonly Exercise[] = EXERCISE_FIXTURES.map((fixture, in
   translations: fixture.translations,
   language: 'javascript',
   functionName: fixture.functionName,
+  parameters: fixture.parameters,
   maxRepeatedFailures: 3,
   maxIdleMinutes: 4,
-  createdBy: TEACHER_ID,
+  // The other teacher wrote those of advanced programming: a bank with exercises of others (4.3)
+  createdBy: (ADVANCED_EXERCISE_FIXTURES as readonly ExerciseFixture[]).includes(fixture)
+    ? OTHER_TEACHER_ID
+    : TEACHER_ID,
   createdAt: CREATED_AT,
   updatedAt: CREATED_AT,
 }));

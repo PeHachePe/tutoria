@@ -8,7 +8,17 @@ import type {
   ExerciseDetail,
   Test,
 } from '../exercise';
-import { ExerciseDraft, ExerciseService, ExerciseWithTests } from '../exercise-service';
+import {
+  type BankScope,
+  type ExerciseBank,
+  scopeSubjectIds,
+  type ExerciseDraft,
+  ExerciseService,
+  type ExerciseUsage,
+  type ExerciseWithTests,
+} from '../exercise-service';
+import type { Subject } from '../subject';
+import type { AppUser } from '../user';
 import { type AssignmentCard, assignedExercise, summarizeAttempt } from '../attempt-progress';
 import {
   canManageGroup,
@@ -20,6 +30,7 @@ import {
 } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
+import { isIdentifier } from '../exercise-names';
 
 /** Exercises, tests and assignments in MockDb. The bank is shared by every teacher (2.3). */
 @Service({ autoProvided: false })
@@ -68,19 +79,50 @@ export class MockExerciseService extends ExerciseService {
     });
   }
 
-  list(): Promise<Exercise[]> {
+  listSubjects(): Promise<Subject[]> {
     return this.network.request(() => {
       this.db.requireUser('teacher', 'admin');
-      return [...this.db.tables().exercises];
+      return [...this.db.tables().subjects];
+    });
+  }
+
+  listBank(scope: BankScope): Promise<ExerciseBank> {
+    return this.network.request(() => {
+      const user = this.db.requireUser('teacher', 'admin');
+      const tables = this.db.tables();
+      const mySubjectIds = [
+        ...new Set(
+          tables.groups.filter((group) => group.teacherId === user.id).map((g) => g.subjectId),
+        ),
+      ];
+      const wanted = scopeSubjectIds(scope, mySubjectIds);
+      const exercises = tables.exercises
+        .filter(
+          (exercise) =>
+            wanted === null ||
+            tables.exerciseSubjects.some(
+              (row) => row.exerciseId === exercise.id && wanted.includes(row.subjectId),
+            ),
+        )
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map((exercise) => ({
+          exercise,
+          subjectIds: this.subjectsOf(exercise.id),
+          testCount: tables.tests.filter((test) => test.exerciseId === exercise.id).length,
+          ...this.usageOf(user, exercise.id),
+        }));
+      return { exercises, subjects: [...tables.subjects], mySubjectIds };
     });
   }
 
   getWithTests(exerciseId: string): Promise<ExerciseWithTests> {
     return this.network.request(() => {
-      this.db.requireUser('teacher', 'admin');
+      const user = this.db.requireUser('teacher', 'admin');
       return {
         exercise: findRow(this.db.tables().exercises, exerciseId),
         tests: this.testsOf(exerciseId),
+        subjectIds: this.subjectsOf(exerciseId),
+        ...this.usageOf(user, exerciseId),
       };
     });
   }
@@ -88,6 +130,7 @@ export class MockExerciseService extends ExerciseService {
   create(draft: ExerciseDraft): Promise<Exercise> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
+      checkNames(draft);
       const createdAt = now();
       const fields = exerciseFields(draft);
       const exercise: Exercise = {
@@ -100,16 +143,18 @@ export class MockExerciseService extends ExerciseService {
       };
       this.db.update('exercises', (rows) => [...rows, exercise]);
       this.replaceTests(exercise.id, draft);
+      this.replaceSubjects(exercise.id, draft);
       return exercise;
     });
   }
 
   update(exerciseId: string, draft: ExerciseDraft): Promise<Exercise> {
     return this.network.request(() => {
-      this.db.requireUser('teacher', 'admin');
+      const current = this.findEditable(exerciseId);
+      checkNames(draft);
       const fields = exerciseFields(draft);
       const exercise: Exercise = {
-        ...findRow(this.db.tables().exercises, exerciseId),
+        ...current,
         ...fields,
         updatedAt: now(),
       };
@@ -117,20 +162,23 @@ export class MockExerciseService extends ExerciseService {
         rows.map((row) => (row.id === exerciseId ? exercise : row)),
       );
       this.replaceTests(exerciseId, draft);
+      this.replaceSubjects(exerciseId, draft);
       return exercise;
     });
   }
 
   remove(exerciseId: string): Promise<void> {
     return this.network.request(() => {
-      this.db.requireUser('teacher', 'admin');
+      this.findEditable(exerciseId);
       const tables = this.db.tables();
-      findRow(tables.exercises, exerciseId);
       if (tables.attempts.some((attempt) => attempt.exerciseId === exerciseId)) {
         throw new DataError('invalid', 'An exercise with attempts keeps their history');
       }
       this.db.update('exercises', (rows) => rows.filter((row) => row.id !== exerciseId));
       this.db.update('tests', (rows) => rows.filter((row) => row.exerciseId !== exerciseId));
+      this.db.update('exerciseSubjects', (rows) =>
+        rows.filter((row) => row.exerciseId !== exerciseId),
+      );
       this.db.update('assignments', (rows) => rows.filter((row) => row.exerciseId !== exerciseId));
     });
   }
@@ -198,6 +246,46 @@ export class MockExerciseService extends ExerciseService {
       .sort((a, b) => a.position - b.position);
   }
 
+  private subjectsOf(exerciseId: string): string[] {
+    return this.db
+      .tables()
+      .exerciseSubjects.filter((row) => row.exerciseId === exerciseId)
+      .map((row) => row.subjectId);
+  }
+
+  /** Like the RLS: the students of every group count, but only the user's groups are named. */
+  private usageOf(user: AppUser, exerciseId: string): ExerciseUsage {
+    const tables = this.db.tables();
+    const students = tables.attempts
+      .filter((attempt) => attempt.exerciseId === exerciseId)
+      .map((attempt) => attempt.userId);
+    const groupIds = new Set(
+      tables.assignments.filter((a) => a.exerciseId === exerciseId).map((a) => a.groupId),
+    );
+    const groups = tables.groups
+      .filter((group) => groupIds.has(group.id) && canManageGroup(user, group))
+      .map(({ id, name }) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { studentCount: new Set(students).size, groups };
+  }
+
+  /** Only its author or the administration changes or deletes an exercise (D-057). */
+  private findEditable(exerciseId: string): Exercise {
+    const user = this.db.requireUser('teacher', 'admin');
+    const exercise = findRow(this.db.tables().exercises, exerciseId);
+    if (user.role !== 'admin' && exercise.createdBy !== user.id) {
+      throw new DataError('forbidden');
+    }
+    return exercise;
+  }
+
+  private replaceSubjects(exerciseId: string, draft: ExerciseDraft): void {
+    this.db.update('exerciseSubjects', (rows) => [
+      ...rows.filter((row) => row.exerciseId !== exerciseId),
+      ...draft.subjectIds.map((subjectId) => ({ exerciseId, subjectId })),
+    ]);
+  }
+
   private replaceTests(exerciseId: string, draft: ExerciseDraft): void {
     const tests: Test[] = draft.tests.map((test) => ({
       ...test,
@@ -228,6 +316,7 @@ function exerciseFields(draft: ExerciseDraft) {
     sourceLocale,
     translations,
     functionName,
+    parameters,
     maxRepeatedFailures,
     maxIdleMinutes,
   } = draft;
@@ -239,7 +328,16 @@ function exerciseFields(draft: ExerciseDraft) {
     sourceLocale,
     translations,
     functionName,
+    parameters,
     maxRepeatedFailures,
     maxIdleMinutes,
   };
+}
+
+/** The checks of `exercise`: the function and its parameters are distinct identifiers. */
+function checkNames(draft: ExerciseDraft): void {
+  const names = [draft.functionName, ...draft.parameters];
+  if (!names.every(isIdentifier) || new Set(draft.parameters).size < draft.parameters.length) {
+    throw new DataError('invalid', 'The function and its parameters need distinct identifiers');
+  }
 }

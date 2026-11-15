@@ -13,6 +13,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'medium',
     topics: ['Vectores', 'conjuntos'],
     functionName: 'removeDuplicates',
+    parameters: ['items'],
     statement:
       'Escribe una función `removeDuplicates` que reciba un vector y devuelva otro sin elementos repetidos, en el orden en que aparece cada uno por primera vez.',
     translations: {
@@ -52,6 +53,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'medium',
     topics: ['Cadenas', 'recorrido inverso'],
     functionName: 'isPalindrome',
+    parameters: ['text'],
     statement:
       'Escribe una función `isPalindrome` que reciba un texto y devuelva `true` si se lee igual al derecho que al revés, sin tener en cuenta los espacios ni las mayúsculas: `"Yo hago yoga hoy"` lo es. Un texto vacío también lo es.',
     translations: {
@@ -96,6 +98,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'advanced',
     topics: ['Vectores', 'conteo', 'casos límite'],
     functionName: 'mostFrequent',
+    parameters: ['items'],
     statement:
       'Escribe una función `mostFrequent` que reciba un vector y devuelva el elemento que más se repite. Si empatan varios, el que aparece antes. Con un vector vacío, devuelve `null`.',
     translations: {
@@ -144,6 +147,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'medium',
     topics: ['Vectores anidados'],
     functionName: 'flattenOnce',
+    parameters: ['nested'],
     statement:
       'Escribe una función `flattenOnce` que reciba un vector de vectores y devuelva un solo vector con sus elementos, en orden. Solo se aplana un nivel: un vector que esté más adentro se queda como está.',
     translations: {
@@ -183,6 +187,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'advanced',
     topics: ['Vectores', 'índices'],
     functionName: 'chunk',
+    parameters: ['items', 'size'],
     statement:
       'Escribe una función `chunk` que reciba un vector y un tamaño, y devuelva el vector partido en trozos de ese tamaño, en orden; el último puede ser más corto. `chunk([1, 2, 3, 4, 5], 2)` es `[[1, 2], [3, 4], [5]]`.',
     translations: {
@@ -236,6 +241,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'advanced',
     topics: ['Búsqueda binaria', 'vectores ordenados'],
     functionName: 'binarySearch',
+    parameters: ['sorted', 'value'],
     statement:
       'Escribe una función `binarySearch` que reciba un vector de números ordenado de menor a mayor y un valor, y devuelva su posición con una búsqueda binaria: mira el elemento del medio y sigue solo por la mitad donde puede estar. Si no está, devuelve -1.',
     translations: {
@@ -296,6 +302,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'medium',
     topics: ['Ordenación', 'funciones de comparación'],
     functionName: 'sortNumbers',
+    parameters: ['numbers'],
     statement:
       'Escribe una función `sortNumbers` que reciba un vector de números y devuelva otro con los mismos números ordenados de menor a mayor, sin cambiar el original. Ojo: sin función de comparación, `sort` ordena como si fueran textos.',
     translations: {
@@ -335,6 +342,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'medium',
     topics: ['Algoritmo de Euclides', 'bucles'],
     functionName: 'gcd',
+    parameters: ['a', 'b'],
     statement:
       'Escribe una función `gcd` que reciba dos números enteros, mayores o iguales que 0 y no los dos 0, y devuelva su máximo común divisor. El algoritmo de Euclides lo calcula rápido: el mcd de `a` y `b` es el de `b` y el resto de dividir `a` entre `b`, hasta que `b` es 0.',
     translations: {
@@ -383,6 +391,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'extension',
     topics: ['Cadenas', 'objetos como tablas', 'casos especiales'],
     functionName: 'romanToInt',
+    parameters: ['roman'],
     statement:
       'Escribe una función `romanToInt` que reciba un número romano (`I` = 1, `V` = 5, `X` = 10, `L` = 50, `C` = 100, `D` = 500, `M` = 1000) y devuelva su valor. Una letra que va delante de otra de más valor resta en lugar de sumar: `IX` es 9 y `XL`, 40.',
     translations: {
@@ -437,6 +446,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'advanced',
     topics: ['Matrices', 'bucles anidados'],
     functionName: 'transpose',
+    parameters: ['matrix'],
     statement:
       'Escribe una función `transpose` que reciba una matriz (un vector de filas, todas de la misma longitud) y devuelva su traspuesta: las filas pasan a ser columnas. Una matriz vacía da una matriz vacía.',
     translations: {
@@ -493,6 +503,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'advanced',
     topics: ['Vectores ordenados', 'dos índices'],
     functionName: 'mergeSorted',
+    parameters: ['first', 'second'],
     statement:
       'Escribe una función `mergeSorted` que reciba dos vectores de números, cada uno ordenado de menor a mayor, y devuelva uno solo con todos sus números, también ordenado. Recórrelos a la vez con un índice para cada uno, sin volver a ordenar.',
     translations: {
@@ -557,6 +568,7 @@ export const ADVANCED_EXERCISE_FIXTURES: readonly (ExerciseFixture & {
     difficulty: 'medium',
     topics: ['Bucles', 'vectores', 'sucesiones'],
     functionName: 'fibonacci',
+    parameters: ['n'],
     statement:
       'Escribe una función `fibonacci` que reciba un número `n` y devuelva un vector con los `n` primeros términos de la sucesión de Fibonacci, que empieza por 0 y 1 y en la que cada término es la suma de los dos anteriores. Si `n` es 0, el vector está vacío.',
     translations: {

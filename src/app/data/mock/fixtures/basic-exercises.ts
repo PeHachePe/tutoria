@@ -11,6 +11,7 @@ export const BASIC_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly cod
       difficulty: 'initial',
       topics: ['Condicionales', 'operadores lógicos'],
       functionName: 'isLeapYear',
+      parameters: ['year'],
       statement:
         'Escribe una función `isLeapYear` que reciba un año y devuelva `true` si es bisiesto y `false` si no. Un año es bisiesto si es divisible entre 4, salvo los divisibles entre 100, que solo lo son si además son divisibles entre 400.',
       translations: {
@@ -51,6 +52,7 @@ export const BASIC_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly cod
       difficulty: 'medium',
       topics: ['Bucles', 'acumulador'],
       functionName: 'factorial',
+      parameters: ['n'],
       statement:
         'Escribe una función `factorial` que reciba un número entero `n`, mayor o igual que 0, y devuelva su factorial: el producto de todos los enteros de 1 a `n`. El factorial de 0 es 1.',
       translations: {
@@ -99,6 +101,7 @@ export const BASIC_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly cod
       difficulty: 'medium',
       topics: ['Bucles', 'condicionales', 'vectores'],
       functionName: 'fizzBuzz',
+      parameters: ['n'],
       statement:
         'Escribe una función `fizzBuzz` que reciba un número `n` y devuelva un vector con los textos de 1 a `n`: cada número como texto, salvo los múltiplos de 3, que son `"Fizz"`, los de 5, `"Buzz"`, y los de 3 y 5 a la vez, `"FizzBuzz"`. Si `n` es 0, el vector está vacío.',
       translations: {
@@ -175,6 +178,7 @@ export const BASIC_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly cod
       difficulty: 'initial',
       topics: ['Expresiones', 'operadores aritméticos'],
       functionName: 'celsiusToFahrenheit',
+      parameters: ['celsius'],
       statement:
         'Escribe una función `celsiusToFahrenheit` que reciba una temperatura en grados Celsius y devuelva su valor en grados Fahrenheit, con la fórmula F = C × 9 / 5 + 32.',
       translations: {
@@ -219,6 +223,7 @@ export const BASIC_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly cod
       difficulty: 'medium',
       topics: ['Números', 'casos límite'],
       functionName: 'countDigits',
+      parameters: ['n'],
       statement:
         'Escribe una función `countDigits` que reciba un número entero y devuelva cuántas cifras tiene, sin contar el signo. El 0 tiene una cifra.',
       translations: {
@@ -255,6 +260,7 @@ export const BASIC_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly cod
       difficulty: 'initial',
       topics: ['Cadenas', 'mayúsculas y minúsculas'],
       functionName: 'capitalize',
+      parameters: ['word'],
       statement:
         'Escribe una función `capitalize` que reciba una palabra y la devuelva con la primera letra en mayúscula y el resto en minúscula. Con un texto vacío, devuelve un texto vacío.',
       translations: {
@@ -298,6 +304,7 @@ export const BASIC_EXERCISE_FIXTURES: readonly (ExerciseFixture & { readonly cod
       difficulty: 'advanced',
       topics: ['Bucles', 'divisibilidad', 'casos límite'],
       functionName: 'isPrime',
+      parameters: ['n'],
       statement:
         'Escribe una función `isPrime` que reciba un número entero y devuelva `true` si es primo y `false` si no. Un número es primo si es mayor que 1 y solo es divisible entre 1 y entre sí mismo.',
       translations: {

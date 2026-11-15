@@ -13,6 +13,7 @@ import {
 } from './fixtures/exercises';
 import { fixtureId } from './fixtures/fixture-id';
 import { SEED } from './fixtures/seed';
+import { ADVANCED_PROGRAMMING_ID, BASIC_PROGRAMMING_ID, WEB_CLIENT_ID } from './fixtures/subjects';
 import {
   ADMIN_ID,
   DAM_GROUP_ID,
@@ -43,8 +44,10 @@ const DRAFT: ExerciseDraft = {
     },
   },
   functionName: 'product',
+  parameters: ['numbers'],
   maxRepeatedFailures: 2,
   maxIdleMinutes: 5,
+  subjectIds: [BASIC_PROGRAMMING_ID],
   tests: [
     { input: [[2, 3]], expectedOutput: 6, isHidden: false, position: 0 },
     { input: [[]], expectedOutput: 1, isHidden: true, position: 1 },
@@ -249,25 +252,113 @@ describe('MockExerciseService', () => {
   describe("the teacher's bank", () => {
     beforeEach(() => db.setSession(TEACHER_ID));
 
-    it('lists every exercise and one with all its tests, hidden ones included', async () => {
-      await expect(service.list()).resolves.toEqual(SEED.exercises);
+    /** The students with an attempt at exercise `n`, in any group. */
+    function studentsOf(n: number): number {
+      return new Set(
+        SEED.attempts.filter((a) => a.exerciseId === exerciseId(n)).map((a) => a.userId),
+      ).size;
+    }
 
-      const { exercise, tests } = await service.getWithTests(exerciseId(1));
-      expect(exercise).toEqual(SEED.exercises[0]);
-      expect(tests.map((test) => test.isHidden)).toEqual([false, false, false, true, true]);
+    /** The exercises of the seed meant for any of the subjects. */
+    function exercisesOf(...subjectIds: string[]) {
+      return SEED.exercises.filter((exercise) =>
+        SEED.exerciseSubjects.some(
+          (row) => row.exerciseId === exercise.id && subjectIds.includes(row.subjectId),
+        ),
+      );
+    }
+
+    it("brings by default the exercises of the teacher's subjects, with their tests and use", async () => {
+      const bank = await service.listBank({ kind: 'mine' });
+
+      expect(bank.subjects).toEqual(SEED.subjects);
+      // Marta teaches basic programming and web development: not advanced programming
+      expect(bank.mySubjectIds).toEqual([BASIC_PROGRAMMING_ID, WEB_CLIENT_ID]);
+      expect(bank.exercises.map((entry) => entry.exercise)).toEqual(
+        exercisesOf(BASIC_PROGRAMMING_ID, WEB_CLIENT_ID),
+      );
+      expect(bank.exercises.length).toBeLessThan(SEED.exercises.length);
+      expect(bank.exercises[0]).toEqual({
+        exercise: SEED.exercises[0],
+        subjectIds: [BASIC_PROGRAMMING_ID],
+        testCount: 5,
+        studentCount: studentsOf(1),
+        // Only the groups of the teacher: the other teacher's DAM B is not hers
+        groups: [{ id: DAW_GROUP_ID, name: '1.º DAW A' }],
+      });
+      expect(studentsOf(1)).toBeGreaterThan(0);
+    });
+
+    it('brings a subject, or every exercise', async () => {
+      const advanced = await service.listBank({
+        kind: 'subject',
+        subjectId: ADVANCED_PROGRAMMING_ID,
+      });
+      expect(advanced.exercises.map((entry) => entry.exercise)).toEqual(
+        exercisesOf(ADVANCED_PROGRAMMING_ID),
+      );
+      // Its other subjects come too, for its chips
+      expect(advanced.exercises[0].subjectIds).toContain(BASIC_PROGRAMMING_ID);
+
+      const all = await service.listBank({ kind: 'all' });
+      expect(all.exercises.map((entry) => entry.exercise)).toEqual(SEED.exercises);
+    });
+
+    it('brings every exercise as «mine» to a user who teaches no group', async () => {
+      db.setSession(ADMIN_ID);
+
+      const bank = await service.listBank({ kind: 'mine' });
+
+      expect(bank.mySubjectIds).toEqual([]);
+      expect(bank.exercises).toHaveLength(SEED.exercises.length);
+    });
+
+    it('lists the subjects', async () => {
+      await expect(service.listSubjects()).resolves.toEqual(SEED.subjects);
+    });
+
+    it('lists the newest exercises first', async () => {
+      const exercise = await service.create(DRAFT);
+
+      const bank = await service.listBank({ kind: 'mine' });
+
+      expect(bank.exercises[0].exercise).toEqual(exercise);
+      expect(bank.exercises[0]).toMatchObject({ testCount: 2, studentCount: 0, groups: [] });
+    });
+
+    it('shows the administrator every group where an exercise is assigned', async () => {
+      db.setSession(ADMIN_ID);
+
+      const bank = await service.listBank({ kind: 'all' });
+
+      expect(bank.exercises[0].groups).toEqual([
+        { id: DAM_GROUP_ID, name: '1.º DAM B' },
+        { id: DAW_GROUP_ID, name: '1.º DAW A' },
+      ]);
+    });
+
+    it('gets an exercise with all its tests, hidden ones included, its subjects and use', async () => {
+      const entry = await service.getWithTests(exerciseId(1));
+
+      expect(entry.exercise).toEqual(SEED.exercises[0]);
+      expect(entry.tests.map((test) => test.isHidden)).toEqual([false, false, false, true, true]);
+      expect(entry.subjectIds).toEqual([BASIC_PROGRAMMING_ID]);
+      expect(entry.studentCount).toBe(studentsOf(1));
+      expect(entry.groups).toEqual([{ id: DAW_GROUP_ID, name: '1.º DAW A' }]);
     });
 
     it('is not available to students', async () => {
       db.setSession(DAW_STUDENT_IDS[0]);
 
-      await expect(service.list()).rejects.toMatchObject({ kind: 'forbidden' });
+      await expect(service.listBank({ kind: 'mine' })).rejects.toMatchObject({ kind: 'forbidden' });
+      await expect(service.listSubjects()).rejects.toMatchObject({ kind: 'forbidden' });
       await expect(service.getWithTests(exerciseId(1))).rejects.toMatchObject({
         kind: 'forbidden',
       });
       await expect(service.create(DRAFT)).rejects.toMatchObject({ kind: 'forbidden' });
     });
 
-    it('creates an exercise with its tests', async () => {
+    it('creates an exercise with its tests and subjects', async () => {
       const exercise = await service.create(DRAFT);
 
       expect(exercise).toEqual({
@@ -280,37 +371,74 @@ describe('MockExerciseService', () => {
         translations: DRAFT.translations,
         language: 'javascript',
         functionName: 'product',
+        parameters: ['numbers'],
         maxRepeatedFailures: 2,
         maxIdleMinutes: 5,
         createdBy: TEACHER_ID,
         createdAt: NOW,
         updatedAt: NOW,
       });
-      const { tests } = await service.getWithTests(exercise.id);
+      const { tests, subjectIds } = await service.getWithTests(exercise.id);
       expect(tests).toEqual(
         DRAFT.tests.map((test) => ({ ...test, id: expect.any(String), exerciseId: exercise.id })),
       );
+      expect(subjectIds).toEqual([BASIC_PROGRAMMING_ID]);
     });
 
-    it('updates an exercise and replaces its tests', async () => {
-      const draft = { ...DRAFT, tests: [DRAFT.tests[0]] };
+    it('rejects names that are not identifiers, as the checks of the table do', async () => {
+      for (const draft of [
+        { ...DRAFT, functionName: 'año' },
+        { ...DRAFT, parameters: ['first number'] },
+        { ...DRAFT, parameters: ['a', 'a'] },
+      ]) {
+        await expect(service.create(draft)).rejects.toMatchObject({ kind: 'invalid' });
+      }
+      expect(db.tables().exercises).toHaveLength(SEED.exercises.length);
+    });
+
+    it('updates an exercise and replaces its tests and subjects', async () => {
+      const draft = {
+        ...DRAFT,
+        tests: [DRAFT.tests[0]],
+        subjectIds: [BASIC_PROGRAMMING_ID, ADVANCED_PROGRAMMING_ID],
+      };
 
       const exercise = await service.update(exerciseId(1), draft);
 
       expect(exercise).toMatchObject({
         id: exerciseId(1),
         title: DRAFT.title,
+        parameters: ['numbers'],
+        createdBy: TEACHER_ID,
         createdAt: SEED.exercises[0].createdAt,
         updatedAt: NOW,
       });
-      const { tests } = await service.getWithTests(exerciseId(1));
+      const { tests, subjectIds } = await service.getWithTests(exerciseId(1));
       expect(tests).toEqual([
         { ...DRAFT.tests[0], id: expect.any(String), exerciseId: exerciseId(1) },
       ]);
+      expect(subjectIds).toEqual([BASIC_PROGRAMMING_ID, ADVANCED_PROGRAMMING_ID]);
       expect(db.tables().exercises).toHaveLength(SEED.exercises.length);
     });
 
-    it('removes an exercise nobody has attempted, with its tests and assignments', async () => {
+    it("does not let a teacher change or delete another teacher's exercise", async () => {
+      const others = SEED.exercises.find((exercise) => exercise.createdBy === OTHER_TEACHER_ID);
+      expect(others).toBeDefined();
+      const id = others?.id ?? '';
+
+      await expect(service.update(id, DRAFT)).rejects.toMatchObject({ kind: 'forbidden' });
+      await expect(service.remove(id)).rejects.toMatchObject({ kind: 'forbidden' });
+    });
+
+    it('lets the administrator change any exercise', async () => {
+      db.setSession(ADMIN_ID);
+
+      await expect(service.update(exerciseId(1), DRAFT)).resolves.toMatchObject({
+        createdBy: TEACHER_ID,
+      });
+    });
+
+    it('removes an exercise nobody has attempted, with its tests, subjects and assignments', async () => {
       db.update('attempts', (rows) => rows.filter((a) => a.exerciseId !== exerciseId(8)));
 
       await service.remove(exerciseId(8));
@@ -318,6 +446,7 @@ describe('MockExerciseService', () => {
       const tables = db.tables();
       expect(tables.exercises.some((e) => e.id === exerciseId(8))).toBe(false);
       expect(tables.tests.some((t) => t.exerciseId === exerciseId(8))).toBe(false);
+      expect(tables.exerciseSubjects.some((t) => t.exerciseId === exerciseId(8))).toBe(false);
       expect(tables.assignments.some((a) => a.exerciseId === exerciseId(8))).toBe(false);
     });
 

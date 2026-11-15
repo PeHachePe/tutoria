@@ -535,9 +535,13 @@ function numbered(code: string): string {
     .join('\n');
 }
 
-/** How many parameters the function takes, from its tests: the skeleton needs as many (2.5d). */
+/**
+ * The parameters of the function: their names, if the exercise has them (D-057); otherwise how many
+ * its tests pass. The skeleton needs as many (2.5d).
+ */
 function arity(exercise: TutorAttempt['exercise']): string {
-  const count = signatureOf(exercise).parameters;
+  const { parameters: count, names } = signatureOf(exercise);
+  if (names) return ` (parámetros: ${names.join(', ')})`;
   if (count === undefined) return '';
   return ` (${count} ${count === 1 ? 'parámetro' : 'parámetros'})`;
 }
