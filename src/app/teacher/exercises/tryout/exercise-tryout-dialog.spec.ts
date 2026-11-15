@@ -102,16 +102,22 @@ describe('ExerciseTryoutDialog', () => {
     await waitFor(() => expect(closed).toHaveBeenCalled());
   });
 
-  it('says the language of a title that has no translation', async () => {
+  it('reads the exercise in the language of the tab open in the form', async () => {
     const exercise = TRYOUT_SUM.content.exercise;
+    const english = { title: 'Sum', statement: 'Write `sum`.', topics: ['Loops'] };
     const { dialog } = await openDialog({
       ...TRYOUT_SUM,
-      content: {
-        ...TRYOUT_SUM.content,
-        exercise: { ...exercise, sourceLocale: 'ca', title: 'Suma' },
-      },
+      content: { ...TRYOUT_SUM.content, exercise: { ...exercise, translations: { en: english } } },
+      locale: 'en',
     });
 
-    expect(within(dialog).getByRole('heading', { name: 'Suma' }).getAttribute('lang')).toBe('ca');
+    expect(within(dialog).getByRole('heading', { name: 'Sum' }).getAttribute('lang')).toBe('en');
+    expect(within(dialog).getByText(/Write/).closest('[lang]')?.getAttribute('lang')).toBe('en');
+  });
+
+  it('marks nothing when it is the language of the interface', async () => {
+    const { dialog } = await openDialog();
+
+    expect(within(dialog).getByRole('heading', { name: 'Suma' }).hasAttribute('lang')).toBe(false);
   });
 });

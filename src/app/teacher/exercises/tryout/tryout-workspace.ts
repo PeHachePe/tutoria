@@ -113,6 +113,7 @@ export const TRYOUT_HEADING_ID = 'tryout-heading';
       </p>
       <app-workspace-layout
         [detail]="exercise.content"
+        [contentLocale]="exercise.locale"
         [exercise]="exercise.content.exercise"
         [preview]="true"
       />
@@ -129,7 +130,7 @@ export class TryoutWorkspace {
   protected readonly store = inject(AttemptStore);
   protected readonly headingId = TRYOUT_HEADING_ID;
   private readonly locale = inject(LanguageService).locale;
-  /** The title in the language of the interface, or in the source one with its `lang` (D-045). */
+  /** The title in the language of the try, with its `lang` if it is not that of the interface. */
   protected readonly heading = titleIn(this.exercise, this.locale);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
 
@@ -144,9 +145,9 @@ export class TryoutWorkspace {
 }
 
 function titleIn(
-  { content }: TryoutExercise,
-  locale: ContentLocale,
+  { content, locale }: TryoutExercise,
+  interfaceLocale: ContentLocale,
 ): { readonly title: string; readonly lang: ContentLocale | null } {
   const text = exerciseText(content.exercise, locale);
-  return { title: text.title, lang: text.locale === locale ? null : text.locale };
+  return { title: text.title, lang: text.locale === interfaceLocale ? null : text.locale };
 }

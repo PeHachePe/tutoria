@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, model, signal } from '@angular/core';
 import { type FieldTree, FormField } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
@@ -60,8 +60,11 @@ export class ExerciseTexts {
   /** The code the texts cite, which a translation never changes. */
   readonly functionName = input.required<string>();
   readonly parameters = input.required<string>();
-  /** Shows the exercise as the student reads it, in that language. */
-  readonly preview = output<ContentLocale>();
+  /**
+   * The language of the open tab; null is the original. The form tries the exercise in it (4.3e),
+   * so each translation can be checked as the student will read it.
+   */
+  readonly openLocale = model<ContentLocale | null>(null);
 
   private readonly exercises = inject(ExerciseService);
 
@@ -81,9 +84,8 @@ export class ExerciseTexts {
   });
 
   /** The open tab; it starts at the original. */
-  protected readonly selected = signal<number | null>(null);
-  protected readonly selectedIndex = computed(
-    () => this.selected() ?? CONTENT_LOCALES.indexOf(this.sourceLocale()().value()),
+  protected readonly selectedIndex = computed(() =>
+    CONTENT_LOCALES.indexOf(this.openLocale() ?? this.sourceLocale()().value()),
   );
 
   protected readonly tabs = computed(() => {
@@ -107,11 +109,11 @@ export class ExerciseTexts {
 
   /** Opens the tab of a language, to show one of its fields. */
   reveal(locale: ContentLocale): void {
-    this.selected.set(CONTENT_LOCALES.indexOf(locale));
+    this.openLocale.set(locale);
   }
 
-  protected previewSelected(): void {
-    this.preview.emit(CONTENT_LOCALES[this.selectedIndex()]);
+  protected selectTab(index: number): void {
+    this.openLocale.set(CONTENT_LOCALES[index]);
   }
 
   /** Fills the tab of `locale` with the draft of the AI, keeping what it had for «Deshacer». */

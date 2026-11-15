@@ -265,20 +265,6 @@ describe('ExerciseFormPage', () => {
       ).toBeTruthy();
     });
 
-    it('shows the exercise as the student will read it', async () => {
-      await renderForm(`/docente/ejercicios/${SUM.id}`);
-
-      await userEvent.click(screen.getByRole('tab', { name: /English/ }));
-      await userEvent.click(screen.getByRole('button', { name: 'Ver como el alumno' }));
-
-      const dialog = await screen.findByRole('dialog');
-      expect(
-        within(dialog).getByRole('heading', { name: SUM.translations.en?.title }),
-      ).toBeTruthy();
-      expect(text(dialog)).toContain('sum([1, 2, 3])');
-      await userEvent.click(within(dialog).getByRole('button', { name: 'Cerrar' }));
-    });
-
     it.each([
       ['forbidden', 'Solo quien escribió el ejercicio puede cambiarlo. Duplícalo para adaptarlo.'],
       ['network', 'Sin conexión: no se ha guardado. Inténtalo de nuevo.'],
@@ -432,7 +418,18 @@ describe('ExerciseFormPage', () => {
         tests: SEED.tests
           .filter((test) => test.exerciseId === SUM.id)
           .map(({ input, expectedOutput, isHidden }) => ({ input, expectedOutput, isHidden })),
+        locale: 'es',
       });
+    });
+
+    it('opens it in the language of the open tab, to check a translation', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`);
+      const open = vi.spyOn(TestBed.inject(MatDialog), 'open').mockReturnValue({} as never);
+
+      await userEvent.click(screen.getByRole('tab', { name: /English/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Probar como alumno' }));
+
+      expect(open.mock.calls[0][1]?.data).toEqual(expect.objectContaining({ locale: 'en' }));
     });
 
     it('waits for a valid function and tests, and says so', async () => {

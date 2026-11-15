@@ -34,6 +34,7 @@ export const TRYOUT_SUM: TryoutExercise = {
     { input: [[1, 2]], expectedOutput: 3, isHidden: false },
     { input: [[]], expectedOutput: 0, isHidden: true },
   ],
+  locale: 'es',
 };
 
 /**

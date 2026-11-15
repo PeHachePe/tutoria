@@ -52,7 +52,7 @@
             {{ untranslated.note }}
           </p>
         }
-        <p class="text-body-large" [attr.lang]="current.untranslated?.lang">
+        <p class="text-body-large" [attr.lang]="current.lang">
           @for (part of splitInlineCode(current.statement); track $index) {
             @if (part.code) {
               <code class="rounded bg-surface-container px-1 font-mono text-[0.9em]">{{

@@ -51,7 +51,6 @@ import {
 } from './exercise-form-model';
 import { EXERCISE_LIMITS, exerciseSchema } from './exercise-form-schema';
 import { FILL_EXERCISE_FORM, fillFormModel, subjectsByName } from './exercise-form-tool';
-import { type ExercisePreviewData, ExercisePreviewDialog } from './exercise-preview-dialog';
 import { openTryout } from './tryout/exercise-tryout-dialog';
 import { ExerciseTestList } from './exercise-test-list';
 import { ExerciseTexts } from './exercise-texts';
@@ -73,9 +72,6 @@ const HEADINGS: Readonly<Record<FormMode, string>> = {
   edit: $localize`:@@exerciseForm.heading.edit:Editar el ejercicio`,
   view: $localize`:@@exerciseForm.heading.view:Ejercicio de otro docente`,
 };
-
-/** As wide as the statement zone of the workspace on a laptop. */
-const PREVIEW_WIDTH = '40rem';
 
 /** Skeleton blocks while the exercise loads: the two columns of the form. */
 const SKELETON_BLOCKS = [1, 2];
@@ -289,13 +285,8 @@ export class ExerciseFormPage implements WithUnsavedChanges {
     afterNextRender(() => first().focusBoundControl(), { injector: this.injector });
   }
 
-  /** The exercise as it is now in the form, as the student will read it in `locale`. */
-  protected preview(locale: ContentLocale): void {
-    this.dialog.open<ExercisePreviewDialog, ExercisePreviewData>(ExercisePreviewDialog, {
-      data: { content: previewContent(this.model()), locale },
-      width: PREVIEW_WIDTH,
-    });
-  }
+  /** The language of the open tab of the texts, which the try is read in; null is the original. */
+  protected readonly textsLocale = signal<ContentLocale | null>(null);
 
   /** Why «Probar como alumno» waits: the workspace needs the function and the tests. */
   protected readonly tryoutWaits = $localize`:@@exerciseForm.tryoutWaits:Escribe la función y pruebas válidas para probarlo`;
@@ -307,7 +298,11 @@ export class ExerciseFormPage implements WithUnsavedChanges {
   protected tryOut(): void {
     const target = this.checkTarget();
     if (!target) return;
-    openTryout(this.dialog, { content: previewContent(this.model()), tests: target.tests });
+    openTryout(this.dialog, {
+      content: previewContent(this.model()),
+      tests: target.tests,
+      locale: this.textsLocale() ?? this.model().sourceLocale,
+    });
   }
 
   hasUnsavedChanges(): boolean {

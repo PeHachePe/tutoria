@@ -12,7 +12,7 @@
 <mat-tab-group
   mat-stretch-tabs="false"
   [selectedIndex]="selectedIndex()"
-  (selectedIndexChange)="selected.set($event)"
+  (selectedIndexChange)="selectTab($event)"
   animationDuration="0"
 >
   @for (tab of tabs(); track tab.locale) {
@@ -139,10 +139,3 @@
     </mat-tab>
   }
 </mat-tab-group>
-
-<div>
-  <button matButton="tonal" type="button" (click)="previewSelected()">
-    <mat-icon aria-hidden="true">visibility</mat-icon>
-    <span i18n="@@exerciseTexts.preview">Ver como el alumno</span>
-  </button>
-</div>

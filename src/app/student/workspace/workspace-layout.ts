@@ -20,6 +20,7 @@ import { map } from 'rxjs';
 import { AuthStore } from '../../auth/auth-store';
 import { appTool, declareAppTool } from '../../core/tools/app-tool';
 import type { Exercise } from '../../data/exercise';
+import type { ContentLocale } from '../../data/localized-text';
 import { TUTOR_TOOL } from '../../data/tutor/tutor-tools';
 import type { LineMark } from '../../shared/code-editor/line-mark';
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
@@ -92,6 +93,8 @@ const TUTOR_TAB = TABS.indexOf('tutor');
 export class WorkspaceLayout {
   /** What the statement shows, once it is there. */
   readonly detail = input<StatementContent>();
+  /** The language to read it in; by default, that of the interface (a teacher's try, 4.3e). */
+  readonly contentLocale = input<ContentLocale>();
   readonly loading = input(false);
   /** The exercise, once it is there, for the editor. */
   readonly exercise = input<Exercise>();

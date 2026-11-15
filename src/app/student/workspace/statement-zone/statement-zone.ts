@@ -94,10 +94,11 @@ export class StatementZone {
       locale === wanted
         ? null
         : {
-            lang: locale,
             note: $localize`:@@workspace.untranslated:Este enunciado solo está en ${LOCALE_NAMES[locale]}:language:.`,
           };
-    return { statement, untranslated, examples, hiddenTestCount };
+    // Read in another language than the interface's, the text says which (WCAG 3.1.2)
+    const lang = locale === this.locale ? null : locale;
+    return { statement, lang, untranslated, examples, hiddenTestCount };
   });
 
   /** The example the tutor points at, by its position from 1. */

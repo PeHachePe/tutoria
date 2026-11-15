@@ -4,7 +4,7 @@
 
 ## Objetivo
 
-Que el docente encuentre en el banco común los ejercicios de sus asignaturas, los cree y los edite (RF-14, RF-17, CU-05): título, enunciado y contenidos en cada idioma, dificultad, asignaturas, la función con sus parámetros, la batería de pruebas y los umbrales del tutor proactivo. Puede verlo como lo leerá el alumno antes de guardar (CU-05, 5b) y probarlo como un alumno: escribir, ejecutar y pedir pistas sin que se guarde nada (4.3e).
+Que el docente encuentre en el banco común los ejercicios de sus asignaturas, los cree y los edite (RF-14, RF-17, CU-05): título, enunciado y contenidos en cada idioma, dificultad, asignaturas, la función con sus parámetros, la batería de pruebas y los umbrales del tutor proactivo. Puede probarlo como un alumno antes de guardar (CU-05, 5b): leerlo en cada idioma, escribir, ejecutar y pedir pistas sin que se guarde nada (4.3e).
 
 ## Datos
 
@@ -37,7 +37,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 
 - Volver a los ejercicios y el título: «Nuevo ejercicio», «Nuevo ejercicio a partir de otro», «Editar el ejercicio» o «Ejercicio de otro docente». A su derecha, «Probar como alumno» (4.3e), que espera a una función y unas pruebas válidas y lo dice al pasar por encima.
 - Avisos: el de otro docente, con «Duplicar»; el de un ejercicio que ya han empezado alumnos, con «Duplicar» y «Archivar»; y el de un archivado, con «Desarchivar» (4.3d).
-- **Título y enunciado:** el idioma en que se escribe y una pestaña por idioma, con su marca de traducido o de error. Cada pestaña tiene título, enunciado (con el código entre comillas invertidas) y contenidos. Debajo, «Ver como el alumno».
+- **Título y enunciado:** el idioma en que se escribe y una pestaña por idioma, con su marca de traducido o de error. Cada pestaña tiene título, enunciado (con el código entre comillas invertidas) y contenidos. La pestaña abierta es el idioma en que se abre «Probar como alumno».
 - **Dificultad y asignaturas:** dificultad con botones y asignaturas en un desplegable múltiple.
 - **Umbrales del tutor proactivo:** dos deslizadores con su valor (fallos seguidos de la misma prueba, de 1 a 10; minutos sin actividad, de 1 a 30).
 - **La función:** su nombre y sus parámetros, recomendando el inglés y sin mezclar idiomas, con el esqueleto que dará el tutor.
@@ -78,8 +78,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - **Archivar** (4.3d): sin preguntar, con «Deshacer». Sale del banco, de «Añadir ejercicios» y de «Asignar a un bloque…», pero sigue en los bloques donde ya estaba, con sus intentos. «Desarchivar» lo devuelve.
 - **Nuevo ejercicio:** empieza en el idioma de la interfaz, con una prueba vacía y la asignatura que mostraba el banco.
 - **Guardar:** si falta algo, marca los errores y lleva el foco al primero, abriendo su pestaña si es de otro idioma. Si va bien, «Cambios guardados» o «Ejercicio creado», y el nuevo se abre como tal.
-- **Ver como el alumno:** un diálogo con la zona del enunciado de la pantalla de trabajo, en el idioma de la pestaña abierta.
-- **Probar como alumno** (4.3e): el ejercicio tal como está, guardado o no. «Ejecutar» corre las pruebas en el servidor; el tutor responde igual que a un alumno, con las pistas subiendo de nivel; «Entregar» y «Practicar de nuevo» funcionan en memoria. Nada llega a la base de datos. «Empezar de nuevo» lo vacía todo. Se cierra con su botón (Esc no, porque la pantalla lo usa) y el foco vuelve al botón que lo abrió; el formulario sigue como estaba.
+- **Probar como alumno** (4.3e): el ejercicio tal como está, guardado o no, en el idioma de la pestaña abierta de los textos (así se revisa cada traducción; el tutor responde en el de la interfaz). Sustituye a «Ver como el alumno» del 4.3. «Ejecutar» corre las pruebas en el servidor; el tutor responde igual que a un alumno, con las pistas subiendo de nivel; «Entregar» y «Practicar de nuevo» funcionan en memoria. Nada llega a la base de datos. «Empezar de nuevo» lo vacía todo. Se cierra con su botón (Esc no, porque la pantalla lo usa) y el foco vuelve al botón que lo abrió; el formulario sigue como estaba.
 - **Salir con cambios sin guardar:** pregunta antes; al cerrar la pestaña, avisa el navegador.
 - **Probar mi solución:** la solución vive mientras el formulario está abierto y nunca se guarda. Se ejecuta con el botón o con Ctrl + Intro; si cambian la solución o las pruebas, los resultados dicen que son de antes y las marcas de las pruebas se van. Sin función o con pruebas mal escritas, el botón espera y dice qué corregir.
 - **Traducir con IA:** el código del enunciado se queda tal cual (lo comprueba el servidor). Si la IA no responde o no respeta el código, lo dice y propone traducirlo a mano.
@@ -110,7 +109,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Un idioma original y pestañas de traducción, que se completan o se dejan vacías.
 - [x] Parámetros con nombre, en inglés, que el tutor usa en el esqueleto.
 - [x] Aviso al editar un ejercicio ya empezado y antes de salir sin guardar.
-- [x] Vista previa como la verá el alumno.
+- [x] Vista previa como la verá el alumno (desde el 4.3e, «Probar como alumno» en el idioma de la pestaña abierta).
 - [x] Bloques: crear, titular y traducir, ordenar, ocultar y borrar lo que nadie empezó (4.3b).
 - [x] Asignar ejercicios del banco a un bloque, desde Bloques y desde el banco, con orden y fecha de entrega opcional que el alumno ve en el catálogo (4.3b).
 - [x] Probar la solución del docente contra las pruebas del formulario, en el servidor y sin guardarla (4.3c).

@@ -9,6 +9,7 @@
     <mat-tab label="Ejercicio" i18n-label="@@workspace.tab.exercise">
       <app-statement-zone
         [detail]="detail()"
+        [contentLocale]="contentLocale()"
         [pointer]="pointer()"
         [loading]="loading()"
         [compact]="true"
@@ -59,6 +60,7 @@
       @if (!codeExpanded()) {
         <app-statement-zone
           [detail]="detail()"
+          [contentLocale]="contentLocale()"
           [pointer]="pointer()"
           [loading]="loading()"
           [share]="statementShare()"
