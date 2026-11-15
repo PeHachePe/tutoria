@@ -6,7 +6,7 @@ import { FakeWorker, RUN_IN_THREAD, type WorkerScript } from './code-runner/code
 import { CODE_RUNNER_WORKER } from './code-runner/code-runner-worker';
 import { SAMPLE_CODE } from './fixtures/activity';
 import { assignmentId, exerciseId } from './fixtures/exercises';
-import { DAW_GROUP_ID, DAW_STUDENT_IDS } from './fixtures/users';
+import { DAW_GROUP_ID, DAW_STUDENT_IDS, TEACHER_ID } from './fixtures/users';
 import { MockCodeRunnerService, RUN_TIME_LIMIT_MS } from './mock-code-runner-service';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -73,6 +73,51 @@ describe('MockCodeRunnerService', () => {
   function storedAttempt(): Attempt | undefined {
     return db.tables().attempts.find((attempt) => attempt.id === ATTEMPT_ID);
   }
+
+  describe('check', () => {
+    const CHECK = {
+      code: SAMPLE_CODE[3].solved,
+      functionName: 'sum',
+      tests: [
+        { input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
+        { input: [[7, -3, 1]], expectedOutput: 6, isHidden: true },
+      ],
+    };
+
+    it("runs the teacher's solution against the tests of the form, hidden ones in detail", async () => {
+      db.setSession(TEACHER_ID);
+
+      const result = await service.check(CHECK);
+
+      expect(result.status).toBe('tests_failed');
+      expect(result.results).toEqual([
+        {
+          testId: 'test-1',
+          passed: true,
+          timeout: false,
+          input: [[1, 2, 3]],
+          expected: 6,
+          actual: 6,
+        },
+        {
+          testId: 'test-2',
+          passed: false,
+          timeout: false,
+          input: [[7, -3, 1]],
+          expected: 6,
+          actual: 5,
+        },
+      ]);
+      // Nothing is kept
+      expect(db.tables().events).toEqual([]);
+      expect(storedAttempt()?.currentCode).toBe('');
+    });
+
+    it('is only for the staff', async () => {
+      await expect(service.check(CHECK)).rejects.toMatchObject({ kind: 'forbidden' });
+      expect(workers).toEqual([]);
+    });
+  });
 
   it('passes exercise 3 with its solution, saving the code and recording the run', async () => {
     const result = await service.run(ATTEMPT_ID, SAMPLE_CODE[3].solved);

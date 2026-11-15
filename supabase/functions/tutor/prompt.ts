@@ -16,7 +16,7 @@ import {
 } from '../../../src/app/data/tutor/syntax-examples.ts';
 import type { PreviousTurn, TutorAttempt } from './answer-store.ts';
 import { type BlockingError, blockingError } from './code-actions.ts';
-import type { ChatMessage } from './llm-provider.ts';
+import type { ChatMessage } from '../_shared/llm-provider.ts';
 import { type AnswerProblem, signatureOf } from './model-answer.ts';
 
 /** Kept with every answer; each version is in docs/prompt-history.md. */

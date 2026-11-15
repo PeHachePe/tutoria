@@ -1,7 +1,11 @@
 import { inject, Service } from '@angular/core';
 
 import type { RunResult } from '../attempt';
-import { decodeRunResult, type EncodedRunResult } from '../code-runner/run-result';
+import {
+  decodeRunResult,
+  type EncodedRunResult,
+  type SolutionCheck,
+} from '../code-runner/run-result';
 import { CodeRunnerService } from '../code-runner-service';
 import { DataError } from '../data-error';
 import { SUPABASE_CLIENT } from './supabase-client';
@@ -19,10 +23,19 @@ export const EXECUTE_FUNCTION = 'execute';
 export class SupabaseCodeRunnerService extends CodeRunnerService {
   private readonly supabase = inject(SUPABASE_CLIENT);
 
-  async run(attemptId: string, code: string): Promise<RunResult> {
+  run(attemptId: string, code: string): Promise<RunResult> {
+    return this.execute({ attemptId, code });
+  }
+
+  /** The same function, without an attempt: it keeps nothing (4.3c, D-059). */
+  check(check: SolutionCheck): Promise<RunResult> {
+    return this.execute(check);
+  }
+
+  private async execute(body: object): Promise<RunResult> {
     const { data, error } = await this.supabase.functions.invoke<EncodedRunResult>(
       EXECUTE_FUNCTION,
-      { body: { attemptId, code } },
+      { body },
     );
     if (error) throw toFunctionDataError(error);
     if (!data) throw new DataError('unknown', 'The run came back empty');

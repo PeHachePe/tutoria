@@ -422,4 +422,31 @@ describe('SupabaseExerciseService', () => {
       await expect(service.remove('sum')).rejects.toMatchObject({ kind: 'invalid' });
     });
   });
+
+  describe('translate', () => {
+    const TRANSLATE = '/functions/v1/translate';
+    const request = {
+      from: 'es' as const,
+      to: 'en' as const,
+      texts: { title: 'Suma', statement: 'Escribe `sum`.', topics: ['Bucles'] },
+      functionName: 'sum',
+      parameters: ['values'],
+    };
+
+    it('asks the Edge Function translate for the draft', async () => {
+      const draft = { title: 'Sum', statement: 'Write `sum`.', topics: ['Loops'] };
+      server.on('POST', TRANSLATE, { body: draft });
+
+      await expect(service.translate(request)).resolves.toEqual(draft);
+      expect(server.sentTo('POST', TRANSLATE)[0].body).toEqual(request);
+    });
+
+    it('turns the failures of the function into data errors', async () => {
+      server.on('POST', TRANSLATE, { status: 502, body: { message: 'No' } });
+      await expect(service.translate(request)).rejects.toMatchObject({ kind: 'unavailable' });
+
+      server.on('POST', TRANSLATE, { body: null });
+      await expect(service.translate(request)).rejects.toMatchObject({ kind: 'unknown' });
+    });
+  });
 });

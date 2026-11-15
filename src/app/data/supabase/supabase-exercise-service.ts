@@ -12,12 +12,14 @@ import {
   type ExerciseUsage,
   type ExerciseWithTests,
   scopeSubjectIds,
+  type TranslationRequest,
 } from '../exercise-service';
+import type { ExerciseText } from '../localized-text';
 import type { Subject } from '../subject';
 import type { HintLevel } from '../tutor';
 import type { Json } from './database.types';
 import { SUPABASE_CLIENT } from './supabase-client';
-import { unwrap } from './supabase-error';
+import { toFunctionDataError, unwrap } from './supabase-error';
 import {
   type Row,
   toClassBlock,
@@ -27,6 +29,9 @@ import {
   toSubject,
   toTest,
 } from './supabase-rows';
+
+/** The Edge Function that drafts a translation (`supabase/functions/translate`). */
+export const TRANSLATE_FUNCTION = 'translate';
 
 /**
  * Exercises, tests and assignments in Supabase. The RLS decides what each user reads (2.1): a
@@ -237,6 +242,15 @@ export class SupabaseExerciseService extends ExerciseService {
       await this.supabase.from('exercise').delete().eq('id', exerciseId).select('id'),
     );
     if (deleted.length === 0) throw new DataError('not_found');
+  }
+  /** The Edge Function `translate`, with the models of the tutor (4.3c, D-059). */
+  async translate(request: TranslationRequest): Promise<ExerciseText> {
+    const { data, error } = await this.supabase.functions.invoke<ExerciseText>(TRANSLATE_FUNCTION, {
+      body: request,
+    });
+    if (error) throw toFunctionDataError(error);
+    if (!data) throw new DataError('unknown', 'The translation came back empty');
+    return data;
   }
 }
 

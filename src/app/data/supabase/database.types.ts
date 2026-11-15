@@ -440,6 +440,36 @@ export type Database = {
           },
         ];
       };
+      staff_request: {
+        Row: {
+          id: number;
+          kind: Database['public']['Enums']['staff_request_kind'];
+          received_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: never;
+          kind: Database['public']['Enums']['staff_request_kind'];
+          received_at?: string;
+          user_id: string;
+        };
+        Update: {
+          id?: never;
+          kind?: Database['public']['Enums']['staff_request_kind'];
+          received_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'staff_request_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       subject: {
         Row: {
           id: string;
@@ -596,6 +626,14 @@ export type Database = {
       can_open_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       can_read_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
       can_record_event: { Args: { target_attempt_id: string }; Returns: boolean };
+      claim_staff_request: {
+        Args: {
+          per_minute: number;
+          request_kind: Database['public']['Enums']['staff_request_kind'];
+          target_user_id: string;
+        };
+        Returns: number;
+      };
       create_block: {
         Args: {
           block_is_hidden: boolean;
@@ -802,6 +840,7 @@ export type Database = {
         | 'paste'
         | 'focus_lost'
         | 'focus_gained';
+      staff_request_kind: 'check' | 'translate';
       tutor_trigger: 'question' | 'hint' | 'proactive';
       user_role: 'student' | 'teacher' | 'admin';
       user_status: 'active' | 'disabled';
@@ -934,6 +973,7 @@ export const Constants = {
         'focus_lost',
         'focus_gained',
       ],
+      staff_request_kind: ['check', 'translate'],
       tutor_trigger: ['question', 'hint', 'proactive'],
       user_role: ['student', 'teacher', 'admin'],
       user_status: ['active', 'disabled'],

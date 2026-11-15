@@ -18,7 +18,7 @@ import {
   TUTOR_TOOLS,
 } from '../../../src/app/data/tutor/tutor-tools.ts';
 import { SYNTAX_TOPICS, syntaxBlocks } from '../../../src/app/data/tutor/syntax-examples.ts';
-import type { AnswerFormat, FormatTool } from './llm-provider.ts';
+import type { AnswerFormat, FormatTool } from '../_shared/llm-provider.ts';
 
 /** What the model answers (2.6), once checked. */
 export interface ModelAnswer {

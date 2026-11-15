@@ -16,7 +16,9 @@ import {
   ExerciseService,
   type ExerciseUsage,
   type ExerciseWithTests,
+  type TranslationRequest,
 } from '../exercise-service';
+import type { ContentLocale, ExerciseText } from '../localized-text';
 import type { Subject } from '../subject';
 import type { AppUser } from '../user';
 import { type AssignmentCard, assignedExercise, summarizeAttempt } from '../attempt-progress';
@@ -192,6 +194,22 @@ export class MockExerciseService extends ExerciseService {
     });
   }
 
+  /**
+   * Without a model, a draft from the data: the translation of an exercise with the same texts, as
+   * those of the seed, or the original marked with the language, to review as the real one.
+   */
+  translate({ from, to, texts }: TranslationRequest): Promise<ExerciseText> {
+    return this.network.request(() => {
+      this.db.requireUser('teacher', 'admin');
+      for (const exercise of this.db.tables().exercises) {
+        const original = textIn(exercise, from);
+        const translation = textIn(exercise, to);
+        if (translation && original && sameText(original, texts)) return translation;
+      }
+      return { ...texts, title: `[${to}] ${texts.title}` };
+    });
+  }
+
   /** The exercise of the assignment, with its group, subject and block. */
   private card(assignment: ExerciseAssignment): AssignmentCard {
     const tables = this.db.tables();
@@ -299,4 +317,15 @@ function checkNames(draft: ExerciseDraft): void {
   if (!names.every(isIdentifier) || new Set(draft.parameters).size < draft.parameters.length) {
     throw new DataError('invalid', 'The function and its parameters need distinct identifiers');
   }
+}
+
+/** The texts of an exercise in `locale`, if it has them. */
+function textIn(exercise: Exercise, locale: ContentLocale): ExerciseText | undefined {
+  if (exercise.sourceLocale !== locale) return exercise.translations[locale];
+  const { title, statement, topics } = exercise;
+  return { title, statement, topics };
+}
+
+function sameText(a: ExerciseText, b: ExerciseText): boolean {
+  return a.title.trim() === b.title.trim() && a.statement.trim() === b.statement.trim();
 }

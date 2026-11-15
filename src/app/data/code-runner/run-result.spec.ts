@@ -1,13 +1,16 @@
 import type { Test } from '../exercise';
 import {
   buildRunResult,
+  checkRunTests,
   decodeRunResult,
   decodeRunValue,
   encodeRunResult,
   encodeRunValue,
   outputsEqual,
+  MAX_CHECK_TESTS,
   runEventDetail,
   type RunResult,
+  solutionCheckOf,
 } from './run-result';
 
 function test(id: string, input: unknown[], expectedOutput: unknown, isHidden = false): Test {
@@ -117,6 +120,29 @@ describe('buildRunResult', () => {
     });
   });
 
+  it('gives the details of the hidden tests too to the teacher who checks a solution', () => {
+    const result = buildRunResult(
+      TESTS,
+      {
+        outcomes: [
+          { ok: true, value: 6 },
+          { ok: true, value: 0 },
+          { ok: false, error: 'boom' },
+        ],
+      },
+      { revealHidden: true },
+    );
+
+    expect(result.results[2]).toEqual({
+      testId: 't3',
+      passed: false,
+      timeout: false,
+      input: [[7, -3, 1]],
+      expected: 5,
+      error: 'boom',
+    });
+  });
+
   it('never passes an exercise without tests', () => {
     expect(buildRunResult([], { outcomes: [] }).status).toBe('tests_failed');
   });
@@ -217,5 +243,47 @@ describe('encodeRunResult and decodeRunResult', () => {
     const result = buildRunResult(TESTS, { outcomes: [], loadError: { kind: 'missing_function' } });
 
     expect(decodeRunResult(encodeRunResult(result))).toEqual(result);
+  });
+});
+
+describe('solutionCheckOf', () => {
+  const check = {
+    code: 'function sum(v) {}',
+    functionName: 'sum',
+    tests: [{ input: [[1, 2]], expectedOutput: 3, isHidden: false }],
+  };
+
+  it('takes a check of the form as it is', () => {
+    expect(solutionCheckOf(check)).toEqual(check);
+    expect(
+      solutionCheckOf({ ...check, tests: [{ ...check.tests[0], expectedOutput: null }] }),
+    ).not.toBeNull();
+  });
+
+  it('turns down whatever is not one', () => {
+    const invalid: unknown[] = [
+      null,
+      [],
+      'check',
+      { ...check, code: 3 },
+      { ...check, functionName: undefined },
+      { ...check, functionName: ' ' },
+      { ...check, functionName: 'f'.repeat(101) },
+      { ...check, tests: 'tests' },
+      { ...check, tests: [] },
+      { ...check, tests: Array.from({ length: MAX_CHECK_TESTS + 1 }, () => check.tests[0]) },
+      { ...check, tests: [null] },
+      { ...check, tests: [{ ...check.tests[0], input: 'x' }] },
+      { ...check, tests: [{ ...check.tests[0], isHidden: 'no' }] },
+      { ...check, tests: [{ input: [], isHidden: false }] },
+    ];
+
+    for (const body of invalid) expect(solutionCheckOf(body)).toBeNull();
+  });
+
+  it('names each test by its place in the form', () => {
+    const tests = checkRunTests({ ...check, tests: [check.tests[0], check.tests[0]] });
+
+    expect(tests.map((test) => test.id)).toEqual(['test-1', 'test-2']);
   });
 });

@@ -1,16 +1,27 @@
-import { buildRunResult, encodeRunResult } from '../../../src/app/data/code-runner/run-result.ts';
+import {
+  buildRunResult,
+  checkRunTests,
+  encodeRunResult,
+  type SolutionCheck,
+  solutionCheckOf,
+} from '../../../src/app/data/code-runner/run-result.ts';
 import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
 import { MAX_CODE_LENGTH, minuteBefore, secondsToWait } from '../_shared/limits.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
+import type { StaffRequests } from '../_shared/staff-requests.ts';
 import type { RunStore } from './run-store.ts';
 
 /** Runs a user may start in a minute (2.3). */
 export const RUNS_PER_MINUTE = 10;
 
+/** Checks of a solution a teacher may make in a minute (4.3c): as many as runs of a student. */
+export const CHECKS_PER_MINUTE = 10;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface ExecuteDependencies {
   readonly store: RunStore;
+  readonly staff: StaffRequests;
   readonly sandbox: CodeSandbox;
   readonly now?: () => number;
 }
@@ -20,9 +31,13 @@ export interface ExecuteDependencies {
  * every test in the sandbox, compares outside it, keeps the code with the status it earned and the
  * `run` event, and answers with the `RunResult` (hidden tests, without details), encoded so that
  * `undefined`, `NaN` and `±Infinity` survive JSON (`encodeRunResult()`).
+ *
+ * Without an attempt, a teacher checks their solution against the tests of the form (4.3c, D-059):
+ * the same sandbox and comparison, with the details of the hidden tests, and nothing kept.
  */
 export function createExecuteHandler({
   store,
+  staff,
   sandbox,
   now = Date.now,
 }: ExecuteDependencies): (request: Request) => Promise<Response> {
@@ -33,7 +48,10 @@ export function createExecuteHandler({
       const token = bearerToken(request);
       const userId = token ? await store.userOf(token) : null;
       if (!userId) return failure(401, 'Sign in to run the code');
-      const body = await readBody(request);
+      const raw = await readJson(request);
+      const check = solutionCheckOf(raw);
+      if (check) return await checkSolution(userId, check);
+      const body = attemptRunOf(raw);
       if (!body) return failure(400, 'Expected { attemptId, code }');
       if (body.code.length > MAX_CODE_LENGTH) return failure(400, 'The code is too long');
 
@@ -69,24 +87,44 @@ export function createExecuteHandler({
       return failure(500, 'The run failed');
     }
   };
+
+  /** Runs the teacher's solution against the tests they sent, without keeping anything. */
+  async function checkSolution(userId: string, check: SolutionCheck): Promise<Response> {
+    if (check.code.length > MAX_CODE_LENGTH) return failure(400, 'The code is too long');
+    const wait = await staff.claim(userId, 'check', CHECKS_PER_MINUTE);
+    if (wait === null) return failure(403, 'Only a teacher checks a solution');
+    if (wait > 0) return failure(429, 'Too many checks', { 'Retry-After': String(wait) });
+    const tests = checkRunTests(check);
+    const outcome = await sandbox.run({
+      code: check.code,
+      functionName: check.functionName,
+      inputs: tests.map((test) => test.input),
+    });
+    // The teacher wrote the hidden tests: they see them as the visible ones
+    return json(200, encodeRunResult(buildRunResult(tests, outcome, { revealHidden: true })));
+  }
 }
 
-/** The body the app sends, or `null` if it is not one. */
-async function readBody(request: Request): Promise<{ attemptId: string; code: string } | null> {
+/** The body as JSON, or `undefined` if it is not JSON. */
+async function readJson(request: Request): Promise<unknown> {
   try {
-    const body: unknown = await request.json();
-    if (
-      typeof body === 'object' &&
-      body !== null &&
-      'attemptId' in body &&
-      typeof body.attemptId === 'string' &&
-      'code' in body &&
-      typeof body.code === 'string'
-    ) {
-      return { attemptId: body.attemptId, code: body.code };
-    }
+    return await request.json();
   } catch {
-    // Not JSON: below
+    return undefined;
+  }
+}
+
+/** The run of an attempt the app sends, or `null` if the body is not one. */
+function attemptRunOf(body: unknown): { attemptId: string; code: string } | null {
+  if (
+    typeof body === 'object' &&
+    body !== null &&
+    'attemptId' in body &&
+    typeof body.attemptId === 'string' &&
+    'code' in body &&
+    typeof body.code === 'string'
+  ) {
+    return { attemptId: body.attemptId, code: body.code };
   }
   return null;
 }

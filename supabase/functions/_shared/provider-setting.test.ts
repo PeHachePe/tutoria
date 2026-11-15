@@ -1,7 +1,6 @@
 import { assertEquals } from '@std/assert';
 
-import type { ModelEndpoint } from './answer-store.ts';
-import { providerSettingOf } from './provider-setting.ts';
+import { type ModelEndpoint, providerSettingOf } from './provider-setting.ts';
 
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai';
 const GROQ = 'https://api.groq.com/openai/v1';

@@ -1,4 +1,28 @@
-import type { ModelEndpoint, ProviderSetting, ResponseFormatMode } from './answer-store.ts';
+/**
+ * How a provider wants the format of the answer asked: the JSON schema, plain JSON, nothing, or as
+ * calls to tools (the answer is the tool `respond`, 2.5e, D-051).
+ */
+export type ResponseFormatMode = 'json_schema' | 'json_object' | 'none' | 'tools';
+
+/** One model a function can ask: where, which, with which key and how (D-044). */
+export interface ModelEndpoint {
+  /** Up to the version, without `/chat/completions`. */
+  readonly baseUrl: string;
+  readonly model: string;
+  /** Name of the secret with its key (`AI_API_KEY`…), never the key; null for none (Ollama). */
+  readonly keySecret: string | null;
+  readonly responseFormat: ResponseFormatMode;
+  /** How long it may take to answer; 15 s if the setting says nothing (MODEL_TIMEOUT_MS). */
+  readonly timeoutMs?: number;
+}
+
+/**
+ * The models the administrator chose (`app_setting.ai_provider`): the main one and its fallbacks,
+ * in order, of the same provider or of others with the chat API of OpenAI (D-044).
+ */
+export interface ProviderSetting {
+  readonly models: readonly [ModelEndpoint, ...ModelEndpoint[]];
+}
 
 /** The secret with the key of the main provider, when the setting names none. */
 export const DEFAULT_KEY_SECRET = 'AI_API_KEY';

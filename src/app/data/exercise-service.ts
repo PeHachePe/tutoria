@@ -1,5 +1,5 @@
 import type { AssignedExercise, Difficulty, Exercise, ExerciseDetail, Test } from './exercise';
-import type { ContentLocale, ExerciseTranslations } from './localized-text';
+import type { ContentLocale, ExerciseText, ExerciseTranslations } from './localized-text';
 import type { Subject } from './subject';
 
 /** Test as the teacher edits it: the database assigns its id and its exercise. */
@@ -21,6 +21,18 @@ export interface ExerciseDraft {
   /** The subjects the exercise is meant for, to filter the bank (`exercise_subject`). */
   readonly subjectIds: readonly string[];
   readonly tests: readonly TestDraft[];
+}
+
+/**
+ * What «Traducir con IA» asks (4.3c, D-059): the texts of the original as the form has them, and the
+ * code they cite, which the translation keeps as it is (D-045).
+ */
+export interface TranslationRequest {
+  readonly from: ContentLocale;
+  readonly to: ContentLocale;
+  readonly texts: ExerciseText;
+  readonly functionName: string;
+  readonly parameters: readonly string[];
 }
 
 /** How an exercise is used: what warns before changing or deleting it. */
@@ -119,4 +131,10 @@ export abstract class ExerciseService {
 
   /** `invalid` if someone has started it: their attempts keep it. `forbidden` as `update`. */
   abstract remove(exerciseId: string): Promise<void>;
+
+  /**
+   * The draft of a translation (4.3c, D-059), for the teacher to review: nothing is saved.
+   * `forbidden` for a student, `unavailable` without the AI and `rate_limited` past its limit.
+   */
+  abstract translate(request: TranslationRequest): Promise<ExerciseText>;
 }

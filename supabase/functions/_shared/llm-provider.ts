@@ -1,4 +1,4 @@
-import type { ResponseFormatMode } from './answer-store.ts';
+import type { ModelEndpoint, ProviderSetting, ResponseFormatMode } from './provider-setting.ts';
 
 /** One message of a conversation with the model, as the OpenAI chat API has them. */
 export interface ChatMessage {
@@ -301,4 +301,23 @@ function contentOf(body: unknown): string | null {
   if (!Array.isArray(choices)) return null;
   const content: unknown = choices[0]?.message?.content;
   return typeof content === 'string' ? content : null;
+}
+
+/**
+ * The provider of the setting (D-044): its main model and, with fallbacks, the chain of them in
+ * order, each with the key of its own secret, which `secretOf` reads (in local,
+ * supabase/functions/.env). A model without `keySecret`, such as a local Ollama, goes without one.
+ */
+export function providerForSetting(
+  { models: [first, ...rest] }: ProviderSetting,
+  secretOf: (name: string) => string | undefined,
+): LlmProvider {
+  const providerOf = ({ keySecret, ...endpoint }: ModelEndpoint) =>
+    new OpenAICompatibleProvider({
+      ...endpoint,
+      apiKey: (keySecret && secretOf(keySecret)) || undefined,
+    });
+  return rest.length > 0
+    ? new FallbackProvider([providerOf(first), ...rest.map(providerOf)])
+    : providerOf(first);
 }

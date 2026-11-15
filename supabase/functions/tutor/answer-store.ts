@@ -7,6 +7,7 @@ import type {
   ToolRequest,
   TutorTrigger,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
+import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import type { ModelAnswer } from './model-answer.ts';
 
 /** An earlier turn of the conversation, oldest first. */
@@ -60,32 +61,6 @@ export interface RecordedAnswer {
   readonly transcript: string;
   readonly elusion: boolean;
   readonly actions: readonly ToolRequest[];
-}
-
-/**
- * How a provider wants the format of the answer asked: the JSON schema, plain JSON, nothing, or as
- * calls to tools (the answer is the tool `respond`, 2.5e, D-051).
- */
-export type ResponseFormatMode = 'json_schema' | 'json_object' | 'none' | 'tools';
-
-/** One model the tutor can ask: where, which, with which key and how (D-044). */
-export interface ModelEndpoint {
-  /** Up to the version, without `/chat/completions`. */
-  readonly baseUrl: string;
-  readonly model: string;
-  /** Name of the secret with its key (`AI_API_KEY`…), never the key; null for none (Ollama). */
-  readonly keySecret: string | null;
-  readonly responseFormat: ResponseFormatMode;
-  /** How long it may take to answer; 15 s if the setting says nothing (MODEL_TIMEOUT_MS). */
-  readonly timeoutMs?: number;
-}
-
-/**
- * The models the administrator chose (`app_setting.ai_provider`): the main one and its fallbacks,
- * in order, of the same provider or of others with the chat API of OpenAI (D-044).
- */
-export interface ProviderSetting {
-  readonly models: readonly [ModelEndpoint, ...ModelEndpoint[]];
 }
 
 /** What is kept of an answer: `answer` is null when the tutor chose to keep quiet. */

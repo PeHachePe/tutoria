@@ -460,4 +460,49 @@ describe('MockExerciseService', () => {
       await expect(service.remove('missing')).rejects.toMatchObject({ kind: 'not_found' });
     });
   });
+
+  describe('translate', () => {
+    function request(from: 'es' | 'en' | 'ca', to: 'es' | 'en' | 'ca') {
+      const exercise = db.tables().exercises.find((row) => row.id === exerciseId(3));
+      if (!exercise) throw new Error('No exercise 3');
+      const { title, statement, topics } = exercise;
+      const texts =
+        from === exercise.sourceLocale ? { title, statement, topics } : exercise.translations[from];
+      if (!texts) throw new Error(`No ${from} texts`);
+      return {
+        exercise,
+        request: { from, to, texts, functionName: 'sum', parameters: ['values'] },
+      };
+    }
+
+    it('gives the translation of an exercise with the same texts, from any of its languages', async () => {
+      db.setSession(TEACHER_ID);
+      const fromSource = request('es', 'en');
+      await expect(service.translate(fromSource.request)).resolves.toEqual(
+        fromSource.exercise.translations.en,
+      );
+      const between = request('en', 'ca');
+      await expect(service.translate(between.request)).resolves.toEqual(
+        between.exercise.translations.ca,
+      );
+    });
+
+    it('without one, the original marked with the language', async () => {
+      db.setSession(ADMIN_ID);
+      const texts = { title: 'Nuevo', statement: 'Algo nuevo.', topics: ['Bucles'] };
+
+      await expect(
+        service.translate({ from: 'es', to: 'en', texts, functionName: 'f', parameters: [] }),
+      ).resolves.toEqual({ ...texts, title: '[en] Nuevo' });
+    });
+
+    it('is only for the staff', async () => {
+      db.setSession(DAW_STUDENT_IDS[0]);
+      const texts = { title: 'Nuevo', statement: 'Algo nuevo.', topics: [] };
+
+      await expect(
+        service.translate({ from: 'es', to: 'en', texts, functionName: 'f', parameters: [] }),
+      ).rejects.toMatchObject({ kind: 'forbidden' });
+    });
+  });
 });

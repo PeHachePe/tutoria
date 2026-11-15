@@ -20,9 +20,10 @@ import {
   minuteBefore,
   secondsToWait,
 } from '../_shared/limits.ts';
-import type { AnswerStore, ProviderSetting, RecordedAnswer } from './answer-store.ts';
+import type { AnswerStore, RecordedAnswer } from './answer-store.ts';
+import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import { checkCodeActions, tryExamples } from './code-actions.ts';
-import { type LlmProvider, ProviderError } from './llm-provider.ts';
+import { type LlmProvider, ProviderError } from '../_shared/llm-provider.ts';
 import {
   ANSWER_FORMAT,
   checkAnswer,

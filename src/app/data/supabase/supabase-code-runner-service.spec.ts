@@ -29,6 +29,20 @@ describe('SupabaseCodeRunnerService', () => {
     expect(result).toEqual({ status: 'passed', results: [] });
   });
 
+  it('sends a solution to check, with the tests of the form, to the same function', async () => {
+    server.on('POST', EXECUTE, { body: { status: 'passed', results: [] } });
+    const check = {
+      code: 'function sum() {}',
+      functionName: 'sum',
+      tests: [{ input: [[1]], expectedOutput: 1, isHidden: true }],
+    };
+
+    const result = await service.check(check);
+
+    expect(server.sentTo('POST', EXECUTE)[0].body).toEqual(check);
+    expect(result).toEqual({ status: 'passed', results: [] });
+  });
+
   it('returns the values JSON lacks as they are', async () => {
     server.on('POST', EXECUTE, {
       body: {

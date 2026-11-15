@@ -7,19 +7,16 @@ import type {
   Intensity,
   ToolRequest,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
-import { providerSettingOf } from './provider-setting.ts';
+import type { ProviderSetting } from '../_shared/provider-setting.ts';
+import { readProviderSetting } from '../_shared/supabase-provider-setting.ts';
 import type {
   AnswerStore,
   LastRun,
   NewAnswer,
-  ProviderSetting,
   RecordedAnswer,
   RecordOutcome,
   TutorAttempt,
 } from './answer-store.ts';
-
-/** The row of `app_setting` with the active provider (2.3). */
-const AI_PROVIDER_KEY = 'ai_provider';
 
 /** The tables and the functions of step 2.4, with `service_role`, which skips the RLS. */
 export class SupabaseAnswerStore implements AnswerStore {
@@ -123,14 +120,8 @@ export class SupabaseAnswerStore implements AnswerStore {
     return data.map((calledAt) => new Date(calledAt));
   }
 
-  async providerSetting(): Promise<ProviderSetting | null> {
-    const { data, error } = await this.admin
-      .from('app_setting')
-      .select('value')
-      .eq('key', AI_PROVIDER_KEY)
-      .maybeSingle();
-    if (error) throw new Error(`Reading the AI provider failed: ${error.message}`);
-    return providerSettingOf(data?.value);
+  providerSetting(): Promise<ProviderSetting | null> {
+    return readProviderSetting(this.admin);
   }
 
   async recordAnswer(answer: NewAnswer): Promise<RecordOutcome> {

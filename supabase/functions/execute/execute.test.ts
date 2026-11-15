@@ -3,7 +3,8 @@ import { assertEquals } from '@std/assert';
 import type { RunOutcome, RunResult } from '../../../src/app/data/code-runner/run-result.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import { MAX_CODE_LENGTH, secondsToWait } from '../_shared/limits.ts';
-import { createExecuteHandler, RUNS_PER_MINUTE } from './execute.ts';
+import type { StaffRequestKind, StaffRequests } from '../_shared/staff-requests.ts';
+import { CHECKS_PER_MINUTE, createExecuteHandler, RUNS_PER_MINUTE } from './execute.ts';
 import type { RecordOutcome, RunAttempt, RunStore } from './run-store.ts';
 
 const NOW = Date.parse('2026-11-10T10:00:00Z');
@@ -43,6 +44,18 @@ class FakeStore implements RunStore {
   }
 }
 
+/** The limit of the staff: Hugo is a teacher here, unless `teacher` says otherwise. */
+class FakeStaff implements StaffRequests {
+  teacher = true;
+  wait = 0;
+  readonly claims: [string, StaffRequestKind, number][] = [];
+
+  claim(userId: string, kind: StaffRequestKind, perMinute: number) {
+    this.claims.push([userId, kind, perMinute]);
+    return Promise.resolve(this.teacher ? this.wait : null);
+  }
+}
+
 /** A sandbox that answers what the test says, and remembers what it got. */
 class FakeSandbox implements CodeSandbox {
   readonly requests: unknown[] = [];
@@ -62,9 +75,10 @@ function setup(
   },
 ) {
   const store = new FakeStore();
+  const staff = new FakeStaff();
   const sandbox = new FakeSandbox(outcome);
-  const handle = createExecuteHandler({ store, sandbox, now: () => NOW });
-  return { store, sandbox, handle };
+  const handle = createExecuteHandler({ store, staff, sandbox, now: () => NOW });
+  return { store, staff, sandbox, handle };
 }
 
 function post(body: unknown, token: string | null = 'token-hugo'): Request {
@@ -206,6 +220,91 @@ Deno.test('a failure of the server is an unknown error, never a crash', async ()
   } finally {
     console.error = quiet;
   }
+});
+
+// The teacher's check of a solution (4.3c, D-059)
+
+const CHECK = {
+  code: CODE,
+  functionName: 'sum',
+  tests: [
+    { input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
+    { input: [[7, -3, 1]], expectedOutput: 5, isHidden: true },
+  ],
+};
+
+Deno.test(
+  'a teacher checks a solution against the tests of the form, hidden ones too',
+  async () => {
+    const { store, staff, sandbox, handle } = setup({
+      outcomes: [
+        { ok: true, value: 6 },
+        { ok: true, value: Number.NaN },
+      ],
+    });
+
+    const response = await handle(post(CHECK));
+
+    assertEquals(response.status, 200);
+    assertEquals(await response.json(), {
+      status: 'tests_failed',
+      results: [
+        {
+          testId: 'test-1',
+          passed: true,
+          timeout: false,
+          input: [[1, 2, 3]],
+          expected: 6,
+          actual: 6,
+        },
+        {
+          testId: 'test-2',
+          passed: false,
+          timeout: false,
+          input: [[7, -3, 1]],
+          expected: 5,
+          actual: { t: 'number', v: 'NaN' },
+        },
+      ],
+    });
+    // The sandbox gets the inputs, never the expected values, and nothing of it is kept
+    assertEquals(sandbox.requests, [
+      { code: CODE, functionName: 'sum', inputs: [[[1, 2, 3]], [[7, -3, 1]]] },
+    ]);
+    assertEquals(store.recorded, []);
+    assertEquals(staff.claims, [['hugo', 'check', CHECKS_PER_MINUTE]]);
+  },
+);
+
+Deno.test('only a teacher checks a solution, and without a session nobody', async () => {
+  const { staff, sandbox, handle } = setup();
+  staff.teacher = false;
+
+  assertEquals((await handle(post(CHECK))).status, 403);
+  assertEquals((await handle(post(CHECK, null))).status, 401);
+  assertEquals(sandbox.requests, []);
+});
+
+Deno.test('a check past the limit waits, and says how long', async () => {
+  const { staff, sandbox, handle } = setup();
+  staff.wait = 12;
+
+  const response = await handle(post(CHECK));
+
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get('Retry-After'), '12');
+  assertEquals(sandbox.requests, []);
+});
+
+Deno.test('a check with code longer than any solution is invalid, before counting it', async () => {
+  const { staff, handle } = setup();
+
+  assertEquals(
+    (await handle(post({ ...CHECK, code: 'x'.repeat(MAX_CODE_LENGTH + 1) }))).status,
+    400,
+  );
+  assertEquals((await handle(post({ ...CHECK, tests: [] }))).status, 400);
+  assertEquals(staff.claims, []);
 });
 
 Deno.test('secondsToWait lets run below the limit and waits at least a second at it', () => {

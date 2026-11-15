@@ -6,9 +6,11 @@ import {
   type LlmProvider,
   OpenAICompatibleProvider,
   ProviderError,
+  providerForSetting,
 } from './llm-provider.ts';
-import type { ResponseFormatMode } from './answer-store.ts';
-import { ANSWER_FORMAT } from './model-answer.ts';
+import type { ResponseFormatMode } from './provider-setting.ts';
+// The tutor's format, the one with tools: the richest the provider has to send
+import { ANSWER_FORMAT } from '../tutor/model-answer.ts';
 
 const MESSAGES: ChatMessage[] = [{ role: 'user', content: 'Hola' }];
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai/';
@@ -319,3 +321,30 @@ Deno.test(
     assertEquals(await text.llm.complete(MESSAGES, ANSWER_FORMAT), '{"message":"hola"}');
   },
 );
+
+Deno.test('the provider of a setting is its model, or the chain with each key', () => {
+  const secrets: string[] = [];
+  const secretOf = (name: string) => {
+    secrets.push(name);
+    return name === 'AI_API_KEY' ? 'key' : undefined;
+  };
+  const flash = {
+    baseUrl: GEMINI,
+    model: 'flash',
+    keySecret: 'AI_API_KEY',
+    responseFormat: 'json_schema' as const,
+  };
+
+  const single = providerForSetting({ models: [flash] }, secretOf);
+  assertEquals(single instanceof OpenAICompatibleProvider, true);
+  assertEquals(single.model, 'flash');
+
+  const chain = providerForSetting(
+    { models: [flash, { ...flash, model: 'local', keySecret: null }] },
+    secretOf,
+  );
+  assertEquals(chain instanceof FallbackProvider, true);
+  assertEquals(chain.model, 'flash');
+  // The local model has no secret to read
+  assertEquals(secrets, ['AI_API_KEY', 'AI_API_KEY']);
+});

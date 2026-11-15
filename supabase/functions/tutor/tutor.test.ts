@@ -1,17 +1,16 @@
 import { assertEquals, assertStringIncludes } from '@std/assert';
 
+import type { ModelEndpoint, ProviderSetting } from '../_shared/provider-setting.ts';
 import type {
   AnswerStore,
-  ModelEndpoint,
   NewAnswer,
-  ProviderSetting,
   RecordedAnswer,
   RecordOutcome,
   TutorAttempt,
 } from './answer-store.ts';
 import type { RunOutcome, RunRequest } from '../../../src/app/data/code-runner/run-result.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
-import { type ChatMessage, type LlmProvider, ProviderError } from './llm-provider.ts';
+import { type ChatMessage, type LlmProvider, ProviderError } from '../_shared/llm-provider.ts';
 import {
   DEFAULT_ANSWERS,
   MAX_MESSAGE_LENGTH,

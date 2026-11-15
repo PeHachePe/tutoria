@@ -78,12 +78,25 @@ export interface RunOutcome {
   readonly loadError?: RunLoadError;
 }
 
+/** How a result is built. */
+export interface RunResultOptions {
+  /**
+   * The details of the hidden tests too: for the teacher who wrote them, checking their solution
+   * (4.3c). A student never gets them.
+   */
+  readonly revealHidden?: boolean;
+}
+
 /**
  * The result of a run, compared outside the student's code (2.5): visible tests carry their input,
  * the expected value and what the code returned or the error it threw; hidden ones, only whether
  * they passed. The attempt passes only if every test passes.
  */
-export function buildRunResult(tests: readonly RunTest[], outcome: RunOutcome): RunResult {
+export function buildRunResult(
+  tests: readonly RunTest[],
+  outcome: RunOutcome,
+  { revealHidden = false }: RunResultOptions = {},
+): RunResult {
   const { loadError } = outcome;
   if (loadError) {
     return {
@@ -92,23 +105,89 @@ export function buildRunResult(tests: readonly RunTest[], outcome: RunOutcome): 
       loadError,
     };
   }
-  const results = tests.map((test, index) => testResult(test, outcome.outcomes.at(index)));
+  const results = tests.map((test, index) =>
+    testResult(test, outcome.outcomes.at(index), revealHidden),
+  );
   const passed = results.length > 0 && results.every((result) => result.passed);
   return { status: passed ? 'passed' : 'tests_failed', results };
 }
 
-function testResult(test: RunTest, outcome: TestOutcome | undefined): TestResult {
+function testResult(
+  test: RunTest,
+  outcome: TestOutcome | undefined,
+  revealHidden: boolean,
+): TestResult {
   const result = {
     testId: test.id,
     passed: outcome?.ok === true && outputsEqual(outcome.value, test.expectedOutput),
     timeout: outcome === undefined,
   };
-  if (test.isHidden) return result;
+  if (test.isHidden && !revealHidden) return result;
   const details = { ...result, input: test.input, expected: test.expectedOutput };
   if (!outcome) return details;
   if (outcome.ok) return { ...details, actual: outcome.value };
   const { error, line } = outcome;
   return line === undefined ? { ...details, error } : { ...details, error, line };
+}
+
+// The teacher's check of a solution (4.3c, D-059) ---------------------------------------------------
+
+/** A test of the form, as the teacher wrote it: it has no id until the exercise is saved. */
+export interface CheckTest {
+  readonly input: readonly unknown[];
+  readonly expectedOutput: unknown;
+  readonly isHidden: boolean;
+}
+
+/**
+ * The teacher's solution and the tests of the form as they are now, saved or not: what `execute`
+ * runs without an attempt. Nothing of it is kept, so the solution never reaches a student or the
+ * tutor.
+ */
+export interface SolutionCheck {
+  readonly code: string;
+  readonly functionName: string;
+  readonly tests: readonly CheckTest[];
+}
+
+/** Far more tests than an exercise needs: a larger check is not a check. */
+export const MAX_CHECK_TESTS = 50;
+
+/** Longer than any name of a function. */
+const MAX_FUNCTION_NAME_LENGTH = 100;
+
+/** The id of the test in `position` of the form (from 0), so each result names its test. */
+export function checkTestId(position: number): string {
+  return `test-${position + 1}`;
+}
+
+/** The tests of a check as a run takes them. */
+export function checkRunTests(check: SolutionCheck): RunTest[] {
+  return check.tests.map((test, position) => ({ ...test, id: checkTestId(position) }));
+}
+
+/** The check in a body, or `null` if it is not one: whoever calls may send anything. */
+export function solutionCheckOf(body: unknown): SolutionCheck | null {
+  if (!isRecord(body)) return null;
+  const { code, functionName, tests } = body as Partial<Record<keyof SolutionCheck, unknown>>;
+  if (typeof code !== 'string' || typeof functionName !== 'string') return null;
+  if (functionName.trim() === '' || functionName.length > MAX_FUNCTION_NAME_LENGTH) return null;
+  if (!Array.isArray(tests) || tests.length === 0 || tests.length > MAX_CHECK_TESTS) return null;
+  const checked = tests.map(checkTestOf);
+  return checked.every((test) => test !== null) ? { code, functionName, tests: checked } : null;
+}
+
+function checkTestOf(test: unknown): CheckTest | null {
+  if (!isRecord(test)) return null;
+  const { input, expectedOutput, isHidden } = test as Partial<Record<keyof CheckTest, unknown>>;
+  if (!Array.isArray(input) || typeof isHidden !== 'boolean') return null;
+  // A test of the form always has its expected value, as JSON: `null` at least
+  if (expectedOutput === undefined) return null;
+  return { input, expectedOutput, isHidden };
+}
+
+function isRecord(value: unknown): value is object {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** The `detail` of the `run` event (2.8): how many tests passed and failed, and which failed. */

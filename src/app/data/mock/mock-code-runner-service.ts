@@ -3,9 +3,11 @@ import { inject, Service } from '@angular/core';
 import type { RunResult } from '../attempt';
 import {
   buildRunResult,
+  checkRunTests,
   runEventDetail,
   type RunOutcome,
   type RunRequest,
+  type SolutionCheck,
   type TestOutcome,
 } from '../code-runner/run-result';
 import { CodeRunnerService } from '../code-runner-service';
@@ -52,6 +54,18 @@ export class MockCodeRunnerService extends CodeRunnerService {
     const result = buildRunResult(tests, outcome);
     this.record(attemptId, code, result);
     return result;
+  }
+
+  /** As `execute` does without an attempt (4.3c): only for the staff, and nothing is kept. */
+  async check(check: SolutionCheck): Promise<RunResult> {
+    await this.network.request(() => this.db.requireUser('teacher', 'admin'));
+    const tests = checkRunTests(check);
+    const outcome = await this.execute({
+      code: check.code,
+      functionName: check.functionName,
+      inputs: tests.map((test) => test.input),
+    });
+    return buildRunResult(tests, outcome, { revealHidden: true });
   }
 
   /** Runs the request in a new Worker and gathers what it reports until it ends or runs out of time. */

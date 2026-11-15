@@ -353,6 +353,13 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/deno.json"
 
+# Step 4.3c · «Traducir con IA» (D-059): the draft of a translation of an exercise, with the same
+# models and keys as the tutor. Only for teachers and the administration.
+[functions.translate]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deno.json"
+
 [analytics]
 enabled = true
 port = 55327
