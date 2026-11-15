@@ -11,7 +11,10 @@
   </h2>
   <div class="ms-auto flex items-center gap-1">
     @if (store.editable()) {
-      <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
+      @if (!preview()) {
+        <!-- A teacher's try keeps nothing (4.3e): «Guardado» would say otherwise -->
+        <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
+      }
       <!-- Indentation and spaces in order, as «Format document» does in VS Code (2.5d) -->
       <button
         matIconButton
@@ -152,7 +155,9 @@
             <span i18n="@@workspace.practiseAgain">Practicar de nuevo</span>
           </button>
         }
-        @if (nextPath(); as path) {
+        @if (preview()) {
+          <!-- A teacher's try (4.3e): there is nowhere to go but the dialog's own «Cerrar» -->
+        } @else if (nextPath(); as path) {
           <a matButton="filled" [routerLink]="path">
             <span i18n="@@workspace.nextExercise">Siguiente ejercicio</span>
             <mat-icon iconPositionEnd>arrow_forward</mat-icon>

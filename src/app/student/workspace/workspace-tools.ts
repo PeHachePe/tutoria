@@ -6,6 +6,7 @@ import { type AppTool, appTool, ToolError } from '../../core/tools/app-tool';
 import { AttemptService } from '../../data/attempt-service';
 import { ExerciseService } from '../../data/exercise-service';
 import { exerciseText } from '../../data/localized-text';
+import type { Attempt, AttemptHistory, AttemptStatus } from '../../data/attempt';
 import type { RunDetail } from '../../data/process-event';
 import { reachedHintLevel } from '../../data/tutor';
 import { TUTOR_TOOL } from '../../data/tutor/tutor-tools';
@@ -40,20 +41,7 @@ export function workspaceTools(): AppTool[] {
       const list = await attempts.list(entry.assignmentId);
       const latest = list.at(-1);
       const history = latest ? await attempts.history(latest.id) : null;
-      const runs = (history?.events ?? [])
-        .filter((event) => event.type === 'run')
-        .map((event) => event.detail as RunDetail);
-      const interactions = history?.interactions ?? [];
-      return {
-        exercise: exerciseText(entry.exercise, locale).title,
-        status: entry.status,
-        attempts: list.map(({ number, status }) => ({ number, status })),
-        runs: runs.length,
-        failedRuns: runs.filter((run) => run.failed > 0).length,
-        lastRun: runs.at(-1) ? { passed: runs.at(-1)!.passed, failed: runs.at(-1)!.failed } : null,
-        hints: interactions.filter((interaction) => interaction.trigger === 'hint').length,
-        hintLevel: reachedHintLevel(interactions),
-      };
+      return exerciseStats(exerciseText(entry.exercise, locale).title, entry.status, list, history);
     }),
     appTool(TUTOR_TOOL.highlightLines, ({ lines }) => {
       tutor.mark(lines);
@@ -85,4 +73,31 @@ export function workspaceTools(): AppTool[] {
       };
     }),
   ];
+}
+
+/**
+ * What `getExerciseStats` answers of an exercise: its attempts and, from the history of the latest,
+ * its runs and the hints asked for. Also the try of a teacher (4.3e), whose attempts are in memory.
+ */
+export function exerciseStats(
+  exercise: string,
+  status: AttemptStatus,
+  attempts: readonly Attempt[],
+  history: AttemptHistory | null,
+): object {
+  const runs = (history?.events ?? [])
+    .filter((event) => event.type === 'run')
+    .map((event) => event.detail as RunDetail);
+  const interactions = history?.interactions ?? [];
+  const lastRun = runs.at(-1);
+  return {
+    exercise,
+    status,
+    attempts: attempts.map(({ number, status }) => ({ number, status })),
+    runs: runs.length,
+    failedRuns: runs.filter((run) => run.failed > 0).length,
+    lastRun: lastRun ? { passed: lastRun.passed, failed: lastRun.failed } : null,
+    hints: interactions.filter((interaction) => interaction.trigger === 'hint').length,
+    hintLevel: reachedHintLevel(interactions),
+  };
 }

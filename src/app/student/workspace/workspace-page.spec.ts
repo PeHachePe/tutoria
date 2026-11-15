@@ -29,7 +29,8 @@ import { FakeTabChannel, provideTestEditingTab, takenByOtherTab } from './editin
 import { CODE_SHARE, paneShareKey, STATEMENT_SHARE, tutorFloatingKey } from './pane-share';
 import { SettingsStore } from '../settings/settings-store';
 import { TutorStore } from './tutor-store';
-import { COMPACT_WORKSPACE_QUERY, WorkspacePage } from './workspace-page';
+import { COMPACT_WORKSPACE_QUERY } from './workspace-layout';
+import { WorkspacePage } from './workspace-page';
 
 /** The detail of a seed exercise (0-based index), as the exercise service returns it. */
 function detailOf(index: number): ExerciseDetail {

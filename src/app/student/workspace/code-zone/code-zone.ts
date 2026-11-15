@@ -102,6 +102,11 @@ export class CodeZone {
   readonly expanded = model(false);
   /** Where «Siguiente ejercicio» goes once submitted, or null to go back to the catalog (2.5c). */
   readonly nextPath = input<string | null>(null);
+  /**
+   * A teacher's try (4.3e): nothing is saved, so no save indicator, and no link out to the catalog
+   * or the next exercise.
+   */
+  readonly preview = input(false);
   /** «Practicar de nuevo» opened a new attempt here: the page drops the number from the URL. */
   readonly practised = output<void>();
 
