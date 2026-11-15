@@ -2,7 +2,7 @@ import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
 import type { ProcessEvent } from '../process-event';
-import type { TutorEvent, TutorInteraction, TutorRequest } from '../tutor';
+import type { TutorEvent, TutorInteraction, TutorPreviewRequest, TutorRequest } from '../tutor';
 import { TutorService } from '../tutor-service';
 import { findOwnAttempt, findRow, now } from './mock-access';
 import { MockDb } from './mock-db';
@@ -26,11 +26,18 @@ export class MockTutorService extends TutorService {
   private readonly typingMs = inject(TUTOR_TYPING_MS);
 
   ask(request: TutorRequest): AsyncIterable<TutorEvent> {
-    return this.answer(request);
+    return this.answer(() => this.record(request));
   }
 
-  private async *answer(request: TutorRequest): AsyncGenerator<TutorEvent> {
-    const { answer, interactionId } = await this.network.request(() => this.record(request));
+  /** The same script for a teacher trying an exercise, keeping nothing (4.3e, D-061). */
+  tryOut(request: TutorPreviewRequest): AsyncIterable<TutorEvent> {
+    return this.answer(() => ({ answer: this.preview(request), interactionId: null }));
+  }
+
+  private async *answer(
+    pick: () => { answer: ScriptedAnswer; interactionId: string | null },
+  ): AsyncGenerator<TutorEvent> {
+    const { answer, interactionId } = await this.network.request(pick);
     const { emotion, intensity, reaction, hintLevel, text, silent, elusion, queries, actions } =
       answer;
     // It needs data of the student first: the app sends them back with the same request (2.5e)
@@ -112,6 +119,26 @@ export class MockTutorService extends TutorService {
     };
     this.db.update('interactions', (rows) => [...rows, interaction]);
     return { answer, interactionId: interaction.id };
+  }
+
+  /** The answer to a try, from the exercise and the turns the app sends: only for the staff. */
+  private preview(request: TutorPreviewRequest): ScriptedAnswer {
+    const { kind, message, code, language, results, preview } = request;
+    this.db.requireUser('teacher', 'admin');
+    if (kind === 'question' && !message?.trim()) {
+      throw new DataError('invalid', 'A question needs its message');
+    }
+    const { exercise } = preview;
+    return scriptedAnswer({
+      kind,
+      message,
+      code,
+      status: preview.status,
+      previous: preview.previous,
+      language,
+      exerciseFunction: { name: exercise.functionName, parameters: exercise.tests[0].input.length },
+      results,
+    });
   }
 
   /** The process event the server records for a hint or a proactive intervention (2.8). */

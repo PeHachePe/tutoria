@@ -2,7 +2,7 @@ import { MediaMatcher } from '@angular/cdk/layout';
 import { TestBed } from '@angular/core/testing';
 
 import { DataError } from '../data-error';
-import type { TutorEvent, TutorRequest } from '../tutor';
+import type { TutorEvent, TutorPreviewRequest, TutorRequest } from '../tutor';
 import { TUTOR_TYPING_MS } from '../tutor/typing';
 import { FakeSupabaseServer, provideFakeSupabase } from './supabase-testing';
 import { SupabaseTutorService } from './supabase-tutor-service';
@@ -65,6 +65,35 @@ describe('SupabaseTutorService', () => {
       { type: 'delta', text: 'cuatro' },
       ANSWER[2],
     ]);
+  });
+
+  it('sends a try of the teacher to the same function, with the exercise (4.3e)', async () => {
+    reducedMotion = true;
+    server.on('POST', TUTOR, { body: { events: ANSWER } });
+    const request: TutorPreviewRequest = {
+      requestId: 'request-1',
+      kind: 'hint',
+      code: 'function sum(v) {}',
+      language: 'es',
+      preview: {
+        exercise: {
+          title: 'Suma',
+          statement: 'Escribe `sum`.',
+          topics: [],
+          sourceLocale: 'es',
+          translations: {},
+          functionName: 'sum',
+          parameters: [],
+          tests: [{ input: [1], expectedOutput: 1, isHidden: false }],
+        },
+        status: 'in_progress',
+        lastRun: null,
+        previous: [],
+      },
+    };
+
+    expect(await collect(service().tryOut(request))).toEqual(ANSWER);
+    expect(server.sentTo('POST', TUTOR)[0].body).toEqual(request);
   });
 
   it('shows the answer at once with reduced motion', async () => {

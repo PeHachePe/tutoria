@@ -2,10 +2,10 @@ import { TestBed } from '@angular/core/testing';
 
 import type { Attempt } from '../attempt';
 import { DataError } from '../data-error';
-import type { TutorEvent, TutorRequest } from '../tutor';
+import type { TutorEvent, TutorPreviewRequest, TutorRequest } from '../tutor';
 import { exerciseId } from './fixtures/exercises';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
-import { DAW_STUDENT_IDS } from './fixtures/users';
+import { DAW_STUDENT_IDS, TEACHER_ID } from './fixtures/users';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 import { TUTOR_TYPING_MS, typingChunks } from '../tutor/typing';
@@ -42,6 +42,43 @@ function request(overrides: Partial<TutorRequest> = {}): TutorRequest {
     kind: 'hint',
     code: CODE,
     language: 'es',
+    ...overrides,
+  };
+}
+
+/** A teacher trying «Suma» as a student (4.3e), after a first hint. */
+function preview(overrides: Partial<TutorPreviewRequest> = {}): TutorPreviewRequest {
+  return {
+    requestId: crypto.randomUUID(),
+    kind: 'hint',
+    code: CODE,
+    language: 'es',
+    preview: {
+      exercise: {
+        title: 'Suma',
+        statement: 'Escribe `sum`.',
+        topics: [],
+        sourceLocale: 'es',
+        translations: {},
+        functionName: 'sum',
+        parameters: ['values'],
+        tests: [{ input: [[1, 2]], expectedOutput: 3, isHidden: false }],
+      },
+      status: 'in_progress',
+      lastRun: null,
+      previous: [
+        {
+          trigger: 'hint',
+          hintLevel: 1,
+          studentMessage: null,
+          transcript: 'Mira el bucle.',
+          emotion: 'encouragement',
+          intensity: 2,
+          elusion: false,
+          actions: [],
+        },
+      ],
+    },
     ...overrides,
   };
 }
@@ -233,5 +270,29 @@ describe('MockTutorService', () => {
     const actions = [{ name: 'updateSettings', arguments: { theme: 'dark' } }];
     expect(events[0]).toEqual(expect.objectContaining({ type: 'meta', actions }));
     expect(db.tables().interactions[0].actions).toEqual(actions);
+  });
+
+  describe('trying an exercise as a student (4.3e)', () => {
+    it('answers a teacher from the turns of the try, and keeps nothing', async () => {
+      setUp();
+      db.setSession(TEACHER_ID);
+
+      const events = await collect(service.tryOut(preview()));
+
+      expect(events[0]).toEqual(expect.objectContaining({ type: 'meta', hintLevel: 2 }));
+      expect(events.at(-1)).toEqual({ type: 'done', interactionId: null, silent: false });
+      expect(db.tables().interactions).toEqual([]);
+      expect(db.tables().events).toEqual([]);
+    });
+
+    it('turns down a student and a question without its message', async () => {
+      setUp();
+
+      await expect(collect(service.tryOut(preview()))).rejects.toEqual(new DataError('forbidden'));
+      db.setSession(TEACHER_ID);
+      await expect(
+        collect(service.tryOut(preview({ kind: 'question', message: ' ' }))),
+      ).rejects.toEqual(new DataError('invalid', 'A question needs its message'));
+    });
   });
 });

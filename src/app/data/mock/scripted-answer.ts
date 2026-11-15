@@ -10,7 +10,7 @@ import {
   skeletonParameters,
   type ToolRequest,
   type ToolResult,
-  type TutorInteraction,
+  type PreviewTurn,
   type TutorTrigger,
 } from '../tutor';
 import type { ContentLocale } from '../localized-text';
@@ -18,14 +18,20 @@ import { syntaxBlocks, syntaxTopicsIn } from '../tutor/syntax-examples';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
 import { scriptedTools } from './scripted-tools';
 
+/** What the script reads of an earlier turn: an interaction kept, or a turn of a try (4.3e). */
+type ScriptTurn = Pick<
+  PreviewTurn,
+  'trigger' | 'hintLevel' | 'studentMessage' | 'transcript' | 'elusion'
+>;
+
 /** What the scripted tutor looks at: the request, the attempt and the conversation so far. */
 export interface ScriptInput {
   readonly kind: TutorTrigger;
   readonly message?: string;
   readonly code: string;
   readonly status: StoredAttemptStatus;
-  /** The earlier interactions of the attempt, oldest first. */
-  readonly previous: readonly TutorInteraction[];
+  /** The earlier interactions of the attempt (or turns of a try, 4.3e), oldest first. */
+  readonly previous: readonly ScriptTurn[];
   /** The language of the interface, which the tutor answers in (D-033). */
   readonly language: ContentLocale;
   /** The function the exercise asks for, whose empty skeleton a stuck student gets (2.5d). */
@@ -176,7 +182,7 @@ function withoutAccents(text: string): string {
 }
 
 /** The proactive tutor takes turns: it looks in, then shows it understands. */
-function proactiveReaction(previous: readonly TutorInteraction[]): ReactionKind {
+function proactiveReaction(previous: readonly ScriptTurn[]): ReactionKind {
   const before = previous.filter((interaction) => interaction.trigger === 'proactive').length;
   return PROACTIVE_REACTIONS[before % PROACTIVE_REACTIONS.length];
 }

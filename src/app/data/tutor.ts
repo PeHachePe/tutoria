@@ -1,4 +1,6 @@
 import type { AppLocale } from '../core/i18n/locale';
+import type { CheckTest } from './code-runner/run-result';
+import type { TranslatableExercise } from './localized-text';
 import type {
   Emotion,
   HintLevel,
@@ -54,6 +56,44 @@ export interface TutorRequest {
    * them, and the tutor answers with the data (2.5e).
    */
   readonly results?: readonly ToolResult[];
+}
+
+/**
+ * A turn of a teacher trying an exercise as a student (4.3e, D-061): the exercise as it is in the
+ * form, saved or not, and the try so far, which lives only in the browser. Nothing of it is kept.
+ */
+export interface TutorPreviewRequest extends Omit<TutorRequest, 'attemptId'> {
+  readonly preview: TutorPreview;
+}
+
+/** What the tutor knows of an attempt, sent by the app because no attempt exists. */
+export interface TutorPreview {
+  readonly exercise: TranslatableExercise & {
+    readonly functionName: string;
+    readonly parameters: readonly string[];
+    readonly tests: readonly CheckTest[];
+  };
+  readonly status: 'in_progress' | 'tests_failed' | 'passed';
+  /** What the last run gave, with the ids of a check (`test-1`…); null before running. */
+  readonly lastRun: {
+    readonly passed: number;
+    readonly failed: number;
+    readonly failedTestIds: readonly string[];
+  } | null;
+  /** The earlier turns of the try, oldest first, so the hint level goes up as with a student. */
+  readonly previous: readonly PreviewTurn[];
+}
+
+/** An earlier turn of a try, as the server needs it. */
+export interface PreviewTurn {
+  readonly trigger: TutorTrigger;
+  readonly hintLevel: HintLevel;
+  readonly studentMessage: string | null;
+  readonly transcript: string;
+  readonly emotion: Emotion;
+  readonly intensity: Intensity;
+  readonly elusion: boolean;
+  readonly actions: readonly ToolRequest[];
 }
 
 /** Table `tutor_interaction`, written only by the server. */

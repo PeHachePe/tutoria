@@ -2,7 +2,7 @@ import { MediaMatcher } from '@angular/cdk/layout';
 import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
-import type { TutorEvent, TutorRequest } from '../tutor';
+import type { TutorEvent, TutorPreviewRequest, TutorRequest } from '../tutor';
 import { TutorService } from '../tutor-service';
 import { TUTOR_TYPING_MS, typeOut } from '../tutor/typing';
 import { SUPABASE_CLIENT } from './supabase-client';
@@ -34,7 +34,12 @@ export class SupabaseTutorService extends TutorService {
     return this.answer(request);
   }
 
-  private async *answer(request: TutorRequest): AsyncGenerator<TutorEvent> {
+  /** The same function, with the exercise instead of the attempt (4.3e, D-061). */
+  tryOut(request: TutorPreviewRequest): AsyncIterable<TutorEvent> {
+    return this.answer(request);
+  }
+
+  private async *answer(request: TutorRequest | TutorPreviewRequest): AsyncGenerator<TutorEvent> {
     const { data, error } = await this.supabase.functions.invoke<TutorAnswer>(TUTOR_FUNCTION, {
       body: request,
     });
