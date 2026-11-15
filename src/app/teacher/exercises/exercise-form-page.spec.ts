@@ -6,7 +6,10 @@ import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
+import { ToolRegistry } from '../../core/tools/app-tool';
 import { unsavedChangesGuard } from '../../core/unsaved-changes-guard';
+import type { RunResult } from '../../data/attempt';
+import { CodeRunnerService } from '../../data/code-runner-service';
 import { DataError } from '../../data/data-error';
 import { ExerciseService } from '../../data/exercise-service';
 import { SEED } from '../../data/mock/fixtures/seed';
@@ -27,9 +30,11 @@ const OTHERS = SEED.exercises.find((exercise) => exercise.createdBy === OTHER_TE
 describe('ExerciseFormPage', () => {
   let harness: RouterTestingHarness;
   let snackBar: ReturnType<typeof vi.spyOn>;
+  let check: ReturnType<typeof vi.fn<CodeRunnerService['check']>>;
 
   async function renderForm(url: string, prepare: (db: MockDb) => void = () => undefined) {
     localStorage.clear();
+    check = vi.fn<CodeRunnerService['check']>();
     TestBed.configureTestingModule({
       providers: [
         provideRouter(
@@ -51,6 +56,7 @@ describe('ExerciseFormPage', () => {
         provideSessionOf('teacher', { id: TEACHER_ID }),
         MockExerciseService,
         { provide: ExerciseService, useExisting: MockExerciseService },
+        { provide: CodeRunnerService, useValue: { check } },
       ],
     });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
@@ -322,5 +328,204 @@ describe('ExerciseFormPage', () => {
     await settle();
 
     expect(field('Título').value).toBe(SUM.title);
+  });
+
+  describe("checking the teacher's solution (4.3c)", () => {
+    const SUM_TESTS = SEED.tests.filter((test) => test.exerciseId === SUM.id);
+
+    function passing(count: number, failing: number[] = []): RunResult {
+      return {
+        status: failing.length > 0 ? 'tests_failed' : 'passed',
+        results: Array.from({ length: count }, (_, index) => ({
+          testId: `test-${index + 1}`,
+          passed: !failing.includes(index),
+          timeout: false,
+        })),
+      };
+    }
+
+    it('runs it against the tests of the form and marks how each one did', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`);
+      check.mockResolvedValue(passing(SUM_TESTS.length, [0]));
+
+      await userEvent.click(screen.getByRole('button', { name: 'Probar mi solución' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Ejecutar las pruebas' }));
+      await settle();
+
+      expect(check).toHaveBeenCalledExactlyOnceWith({
+        code: 'function sum(numbers) {\n}',
+        functionName: 'sum',
+        tests: SUM_TESTS.map(({ input, expectedOutput, isHidden }) => ({
+          input,
+          expectedOutput,
+          isHidden,
+        })),
+      });
+      const [first, second] = screen.getAllByRole('group', { name: /^Prueba / });
+      expect(text(first)).toContain('Tu solución no la supera');
+      expect(text(second)).toContain('Tu solución la supera');
+
+      // A test changed: the marks were of the tests before
+      await userEvent.type(within(first).getByRole('textbox', { name: 'Resultado esperado' }), '0');
+      await settle();
+      expect(screen.queryByText(/Tu solución (no )?la supera/)).toBeNull();
+    });
+
+    it('cannot run while the function or the tests have errors', async () => {
+      await renderForm('/docente/ejercicios/nuevo');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Probar mi solución' }));
+
+      expect(
+        screen.getByRole('button', { name: 'Ejecutar las pruebas' }).hasAttribute('disabled'),
+      ).toBe(true);
+    });
+  });
+
+  describe('«Traducir con IA» (4.3c)', () => {
+    /** Exercise 3 without its English translation, to draft it. */
+    function withoutEnglish(db: MockDb): void {
+      db.update('exercises', (rows) =>
+        rows.map((row) =>
+          row.id === SUM.id ? { ...row, translations: { ca: row.translations.ca } } : row,
+        ),
+      );
+    }
+
+    it('fills the tab with a draft to review, and undoes it', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`, withoutEnglish);
+      const translate = vi.spyOn(MockExerciseService.prototype, 'translate');
+
+      await userEvent.click(screen.getByRole('tab', { name: /English/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Traducir con IA' }));
+      await settle();
+
+      expect(translate).toHaveBeenCalledExactlyOnceWith({
+        from: 'es',
+        to: 'en',
+        texts: { title: SUM.title, statement: SUM.statement, topics: SUM.topics },
+        functionName: 'sum',
+        parameters: ['numbers'],
+      });
+      expect(field('Título').value).toBe(`[en] ${SUM.title}`);
+      expect(field('Título').getAttribute('lang')).toBe('en');
+      const notice = screen.getByText(/Borrador de la IA: revísalo/);
+      expect(notice.closest('[role="status"]')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Volver a traducir con IA' })).toBeTruthy();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Deshacer' }));
+      await settle();
+      expect(field('Título').value).toBe('');
+      expect(screen.queryByText(/Borrador de la IA/)).toBeNull();
+    });
+
+    it('takes the draft as reviewed once the teacher changes it', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`, withoutEnglish);
+
+      await userEvent.click(screen.getByRole('tab', { name: /English/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Traducir con IA' }));
+      await settle();
+      await userEvent.clear(field('Título'));
+      await userEvent.type(field('Título'), 'Sum');
+      await settle();
+
+      expect(screen.queryByText(/Borrador de la IA/)).toBeNull();
+    });
+
+    it('says why it could not translate', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`, withoutEnglish);
+      vi.spyOn(MockExerciseService.prototype, 'translate').mockRejectedValueOnce(
+        new DataError('unavailable'),
+      );
+
+      await userEvent.click(screen.getByRole('tab', { name: /English/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Traducir con IA' }));
+      await settle();
+
+      expect(text(screen.getByRole('alert'))).toContain('tradúcelo a mano');
+      expect(field('Título').value).toBe('');
+    });
+
+    it('needs the title and the statement of the original first', async () => {
+      await renderForm('/docente/ejercicios/nuevo');
+
+      await userEvent.click(screen.getByRole('tab', { name: /English/ }));
+
+      expect(screen.getByRole('button', { name: 'Traducir con IA' }).hasAttribute('disabled')).toBe(
+        true,
+      );
+      expect(screen.getByText('Escribe primero el título y el enunciado en Español.')).toBeTruthy();
+    });
+
+    it("is not offered in another teacher's exercise", async () => {
+      await renderForm(`/docente/ejercicios/${OTHERS.id}`);
+
+      await userEvent.click(screen.getByRole('tab', { name: /Català/ }));
+
+      expect(screen.queryByRole('button', { name: /traducir con IA/i })).toBeNull();
+    });
+  });
+
+  describe('the form as a tool of WebMCP (4.3c)', () => {
+    const run = (args: unknown) => TestBed.inject(ToolRegistry).run('fillExerciseForm', args);
+
+    it('fills the form for the teacher to review, without saving it', async () => {
+      await renderForm('/docente/ejercicios/nuevo');
+      const create = vi.spyOn(MockExerciseService.prototype, 'create');
+
+      const outcome = await run({
+        language: 'en',
+        title: 'Count words',
+        statement: 'Write `countWords(text)`.',
+        subjects: ['programación básica', 'Física'],
+        functionName: 'countWords',
+        parameters: ['text'],
+        tests: [{ arguments: '"a b"', expected: '2' }],
+      });
+      await settle();
+
+      expect(outcome).toEqual({
+        ok: true,
+        result: expect.objectContaining({
+          saved: false,
+          errors: [],
+          unknownSubjects: ['Física'],
+          subjects: expect.arrayContaining(['Programación básica']),
+        }),
+      });
+      expect(create).not.toHaveBeenCalled();
+      expect(field('Nombre de la función').value).toBe('countWords');
+      expect(text(screen.getByRole('combobox', { name: 'Asignaturas' }))).toBe(
+        'Programación básica',
+      );
+      expect(screen.getByRole('button', { name: 'Crear el ejercicio' })).toBeTruthy();
+    });
+
+    it('answers with the errors left, shown next to their fields', async () => {
+      await renderForm('/docente/ejercicios/nuevo');
+
+      const outcome = await run({ title: 'Suma' });
+      await settle();
+
+      expect(outcome.ok && (outcome.result as { errors: string[] }).errors).toContain(
+        'Escribe el nombre de la función',
+      );
+      expect(screen.getByText('Escribe el nombre de la función')).toBeTruthy();
+    });
+
+    it("does not touch another teacher's exercise, nor a form still loading", async () => {
+      await renderForm(`/docente/ejercicios/${OTHERS.id}`);
+      expect(await run({ title: 'Mío' })).toEqual({
+        ok: false,
+        error: "This exercise is another teacher's: duplicate it to adapt it",
+      });
+
+      TestBed.inject(MockNetwork).setLatency({ min: 60_000, max: 60_000 });
+      await harness.navigateByUrl(`/docente/ejercicios/${SUM.id}`);
+      expect(await run({ title: 'Mío' })).toEqual({
+        ok: false,
+        error: 'The form is still loading',
+      });
+    });
   });
 });

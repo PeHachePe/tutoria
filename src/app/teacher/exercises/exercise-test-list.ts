@@ -7,6 +7,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 
 import { formatCall, formatValue } from '../../shared/format-value';
+import type { TestState } from '../../student/workspace/code-zone/run-results';
 import { emptyTest, parseArguments, parseValue, type TestRow } from './exercise-form-model';
 
 /**
@@ -36,6 +37,8 @@ export class ExerciseTestList {
   readonly tests = input.required<FieldTree<readonly TestRow[]>>();
   /** The function each test calls, to show the call. */
   readonly functionName = input.required<string>();
+  /** How each test did with the teacher's solution, while it describes these tests (4.3c). */
+  readonly results = input<readonly TestState[]>([]);
 
   protected readonly disabled = computed(() => this.tests()().disabled());
   protected readonly count = computed(() => this.tests()().value().length);

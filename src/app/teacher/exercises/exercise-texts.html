@@ -43,7 +43,8 @@
         </span>
       </ng-template>
 
-      <div class="flex flex-col gap-1 pt-4" [attr.lang]="tab.locale">
+      <!-- Only what is written is in the language of the tab: the labels are of the interface -->
+      <div class="flex flex-col gap-1 pt-4">
         @if (!tab.source) {
           <p
             class="mb-3 rounded-xl bg-info-container p-3 text-body-medium text-on-info-container"
@@ -52,17 +53,74 @@
             Opcional. Sin traducción, el alumno lo lee en el original con un aviso. Cita el código
             tal cual, en inglés: el nombre de la función y lo que devuelve no se traducen.
           </p>
+          @if (!tab.field().disabled()) {
+            <div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                matButton="tonal"
+                type="button"
+                [disabled]="!canTranslate() || translating() !== null"
+                (click)="translate(tab.locale)"
+              >
+                <mat-icon aria-hidden="true">{{
+                  translating() === tab.locale ? 'hourglass_top' : 'translate'
+                }}</mat-icon>
+                @if (translating() === tab.locale) {
+                  <span i18n="@@exerciseTexts.translating">Traduciendo…</span>
+                } @else if (tab.written) {
+                  <span i18n="@@exerciseTexts.translateAgain">Volver a traducir con IA</span>
+                } @else {
+                  <span i18n="@@exerciseTexts.translate">Traducir con IA</span>
+                }
+              </button>
+              @if (!canTranslate()) {
+                <span
+                  class="text-body-small text-on-surface-variant"
+                  i18n="@@exerciseTexts.translateNeedsSource"
+                  >Escribe primero el título y el enunciado en {{ sourceName() }}.</span
+                >
+              }
+            </div>
+          }
+          @if (tab.translateError; as message) {
+            <p class="mb-3 text-body-medium text-error" role="alert">
+              {{ message }}
+            </p>
+          }
+          <div role="status">
+            @if (tab.aiDraft; as draft) {
+              <div
+                class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-warning-container p-3 text-on-warning-container"
+              >
+                <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+                <p class="flex-1 text-body-medium" i18n="@@exerciseTexts.aiDraft">
+                  Borrador de la IA: revísalo antes de guardar. El código se ha conservado tal cual.
+                </p>
+                <button
+                  matButton
+                  type="button"
+                  (click)="undoTranslation(tab.locale, draft.previous)"
+                >
+                  <span i18n="@@exerciseTexts.undoTranslation">Deshacer</span>
+                </button>
+              </div>
+            }
+          </div>
         }
         <mat-form-field>
           <mat-label i18n="@@exerciseTexts.title">Título</mat-label>
-          <input matInput [formField]="tab.field.title" />
+          <input matInput [formField]="tab.field.title" [attr.lang]="tab.locale" />
           @if (tab.field.title().errors()[0]; as error) {
             <mat-error>{{ error.message }}</mat-error>
           }
         </mat-form-field>
         <mat-form-field subscriptSizing="dynamic" class="mb-4">
           <mat-label i18n="@@exerciseTexts.statement">Enunciado</mat-label>
-          <textarea matInput rows="6" [formField]="tab.field.statement"></textarea>
+          <textarea
+            matInput
+            rows="6"
+            [formField]="tab.field.statement"
+            [attr.lang]="tab.locale"
+          ></textarea>
           <mat-hint i18n="@@exerciseTexts.statement.hint"
             >Escribe el código entre comillas invertidas: `countWords`, `"hola"`.</mat-hint
           >
@@ -72,7 +130,7 @@
         </mat-form-field>
         <mat-form-field subscriptSizing="dynamic">
           <mat-label i18n="@@exerciseTexts.topics">Contenidos</mat-label>
-          <input matInput [formField]="tab.field.topics" />
+          <input matInput [formField]="tab.field.topics" [attr.lang]="tab.locale" />
           <mat-hint i18n="@@exerciseTexts.topics.hint"
             >Lo que practica, separado por comas: Bucles, acumulador.</mat-hint
           >

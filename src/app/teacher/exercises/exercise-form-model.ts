@@ -1,6 +1,8 @@
+import type { SolutionCheck } from '../../data/code-runner/run-result';
 import type { Difficulty, Exercise } from '../../data/exercise';
 import type { ExerciseDraft, ExerciseWithTests } from '../../data/exercise-service';
 import type { ContentLocale, ExerciseText, ExerciseTranslations } from '../../data/localized-text';
+import { skeletonCode } from '../../data/tutor/tutor-contract';
 import type { StatementContent } from '../../student/workspace/statement-zone/statement-zone';
 
 /** The languages an exercise can be written in, in the order of the tabs of the form. */
@@ -117,7 +119,7 @@ export function toFormModel({ exercise, tests, subjectIds }: ExerciseWithTests):
   const texts = Object.fromEntries(
     CONTENT_LOCALES.map((locale) => {
       const text = locale === exercise.sourceLocale ? exercise : exercise.translations[locale];
-      return [locale, text ? toTextFields(text) : EMPTY_TEXTS];
+      return [locale, text ? textFieldsOf(text) : EMPTY_TEXTS];
     }),
   ) as Record<ContentLocale, TextFields>;
   return {
@@ -212,16 +214,40 @@ export function previewContent(model: ExerciseFormModel): StatementContent {
   };
 }
 
+/**
+ * «Probar mi solución» (4.3c): the teacher's code against the tests of the form as they are now,
+ * saved or not. Only call it with a valid function and valid tests (the schema of the form).
+ */
+export function toSolutionCheck(model: ExerciseFormModel, code: string): SolutionCheck {
+  const { functionName, tests } = toDraft(model);
+  return {
+    code,
+    functionName,
+    tests: tests.map(({ input, expectedOutput, isHidden }) => ({
+      input,
+      expectedOutput,
+      isHidden,
+    })),
+  };
+}
+
+/** The empty function the teacher's solution starts from: the skeleton the tutor gives (2.5d). */
+export function solutionSkeleton(model: ExerciseFormModel): string {
+  return skeletonCode(model.functionName.trim(), splitList(model.parameters));
+}
+
 /** Whether the teacher wrote anything in the tab of a language. */
 export function hasText(texts: TextFields): boolean {
   return [texts.title, texts.statement, texts.topics].some((text) => text.trim() !== '');
 }
 
-function toTextFields(text: ExerciseText): TextFields {
+/** The texts of a language as the fields of its tab edit them. */
+export function textFieldsOf(text: ExerciseText): TextFields {
   return { title: text.title, statement: text.statement, topics: text.topics.join(', ') };
 }
 
-function toExerciseText(fields: TextFields): ExerciseText {
+/** The texts of a tab, trimmed and with the topics as a list. */
+export function toExerciseText(fields: TextFields): ExerciseText {
   return {
     title: fields.title.trim(),
     statement: fields.statement.trim(),

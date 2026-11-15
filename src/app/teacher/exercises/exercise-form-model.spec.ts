@@ -11,9 +11,13 @@ import {
   parseArguments,
   parseValue,
   previewContent,
+  solutionSkeleton,
   splitList,
+  textFieldsOf,
   toDraft,
+  toExerciseText,
   toFormModel,
+  toSolutionCheck,
 } from './exercise-form-model';
 
 const SUM_EXERCISE = SEED.exercises.find((exercise) => exercise.functionName === 'sum');
@@ -202,6 +206,41 @@ describe('exercise form model', () => {
       functionName: 'product',
       parameters: ['numbers', 'factor'],
       tests: [{ input: [[2, 3], 2], expectedOutput: 12, isHidden: false, position: 0 }],
+    });
+  });
+
+  describe('the solution of the teacher (4.3c)', () => {
+    it('is checked against the tests of the form as they are, without saving them', () => {
+      const model = toFormModel(SUM);
+
+      expect(toSolutionCheck({ ...model, functionName: ' sum ' }, 'function sum() {}')).toEqual({
+        code: 'function sum() {}',
+        functionName: 'sum',
+        tests: SUM.tests.map(({ input, expectedOutput, isHidden }) => ({
+          input,
+          expectedOutput,
+          isHidden,
+        })),
+      });
+    });
+
+    it('starts from the skeleton the tutor gives', () => {
+      expect(
+        solutionSkeleton({ ...emptyFormModel('es'), functionName: 'add', parameters: 'a, b' }),
+      ).toBe('function add(a, b) {\n}');
+    });
+  });
+
+  describe('the texts of a language', () => {
+    it('go to and from the fields of a tab', () => {
+      const text = { title: ' Suma ', statement: 'Suma `values`.', topics: ['Bucles', 'arrays'] };
+
+      expect(textFieldsOf(text)).toEqual({
+        title: ' Suma ',
+        statement: 'Suma `values`.',
+        topics: 'Bucles, arrays',
+      });
+      expect(toExerciseText(textFieldsOf(text))).toEqual({ ...text, title: 'Suma' });
     });
   });
 });

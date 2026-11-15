@@ -7,6 +7,7 @@ import {
   input,
   linkedSignal,
   resource,
+  signal,
   viewChild,
 } from '@angular/core';
 import { disabled, form, FormField, FormRoot } from '@angular/forms/signals';
@@ -24,6 +25,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
+import { appTool, declareAppTool, ToolError } from '../../core/tools/app-tool';
 import type { WithUnsavedChanges } from '../../core/unsaved-changes-guard';
 import { DataError } from '../../data/data-error';
 import type { Difficulty } from '../../data/exercise';
@@ -32,6 +34,7 @@ import { type ContentLocale, subjectName } from '../../data/localized-text';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
+import { testStates } from '../../student/workspace/code-zone/run-results';
 import { canEditExercise } from './can-edit-exercise';
 import {
   CONTENT_LOCALES,
@@ -39,14 +42,18 @@ import {
   emptyFormModel,
   type ExerciseFormModel,
   previewContent,
+  solutionSkeleton,
   splitList,
   toDraft,
   toFormModel,
+  toSolutionCheck,
 } from './exercise-form-model';
 import { EXERCISE_LIMITS, exerciseSchema } from './exercise-form-schema';
+import { FILL_EXERCISE_FORM, fillFormModel, subjectsByName } from './exercise-form-tool';
 import { type ExercisePreviewData, ExercisePreviewDialog } from './exercise-preview-dialog';
 import { ExerciseTestList } from './exercise-test-list';
 import { ExerciseTexts } from './exercise-texts';
+import { type CheckRun, type CheckTarget, SolutionCheck } from './solution-check';
 
 /** What the form does with the exercise it shows. */
 export type FormMode = 'new' | 'copy' | 'edit' | 'view';
@@ -102,6 +109,7 @@ const SKELETON_BLOCKS = [1, 2];
     Skeleton,
     ExerciseTexts,
     ExerciseTestList,
+    SolutionCheck,
   ],
   templateUrl: './exercise-form-page.html',
   host: {
@@ -210,6 +218,57 @@ export class ExerciseFormPage implements WithUnsavedChanges {
   });
 
   protected readonly copyQuery = computed(() => ({ [TEACHER_PARAMS.copy]: this.exerciseId() }));
+
+  /** The function and the tests «Probar mi solución» runs against, once both are valid (4.3c). */
+  protected readonly checkTarget = computed<CheckTarget | null>(() => {
+    if (!this.exerciseForm.functionName().valid() || !this.exerciseForm.tests().valid()) {
+      return null;
+    }
+    const { functionName, tests } = toSolutionCheck(this.model(), '');
+    return { functionName, tests };
+  });
+  protected readonly solutionSkeleton = computed(() => solutionSkeleton(this.model()));
+  protected readonly lastCheck = signal<CheckRun | null>(null);
+
+  /** How each test did in the last check, while the tests are the ones it ran. */
+  protected readonly testResults = computed(() => {
+    const run = this.lastCheck();
+    const target = this.checkTarget();
+    if (!run || !target || JSON.stringify(run.check.tests) !== JSON.stringify(target.tests)) {
+      return [];
+    }
+    return testStates(run.result.results);
+  });
+
+  /**
+   * The form as a tool for the agents of the browser (4.3c, D-059): it fills the form and the
+   * teacher saves it. Declared by the page, which is only once on the screen at a time.
+   */
+  protected readonly fillTool = declareAppTool(
+    appTool(FILL_EXERCISE_FORM, ({ subjects, ...fill }) => {
+      if (!this.data.hasValue()) throw new ToolError('The form is still loading');
+      if (this.mode() === 'view') {
+        throw new ToolError("This exercise is another teacher's: duplicate it to adapt it");
+      }
+      const options = this.subjectOptions();
+      const found = subjectsByName(subjects ?? [], options);
+      this.model.update((model) =>
+        fillFormModel(model, { ...fill, ...(subjects ? { subjectIds: found.ids } : {}) }),
+      );
+      // The errors show next to their fields, as after trying to save
+      this.exerciseForm().markAsTouched();
+      return {
+        saved: false,
+        note: 'Nothing is saved: the teacher reviews the form and saves it.',
+        // Every rule of the schema says its message (exercise-form-schema.ts)
+        errors: this.exerciseForm()
+          .errorSummary()
+          .map((error) => error.message),
+        unknownSubjects: found.unknown,
+        subjects: options.map((subject) => subject.name),
+      };
+    }),
+  );
 
   /**
    * Takes the focus to the first field with an error (4.6). A text of a language in another tab

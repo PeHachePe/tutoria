@@ -13,9 +13,24 @@
         <!-- The legend has to be the first child; the visible number goes with the actions -->
         <legend class="sr-only" i18n="@@exerciseTests.number">Prueba {{ index + 1 }}</legend>
         <div class="flex items-center justify-between gap-2">
-          <span class="text-title-small" aria-hidden="true" i18n="@@exerciseTests.number"
-            >Prueba {{ index + 1 }}</span
-          >
+          <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="text-title-small" aria-hidden="true" i18n="@@exerciseTests.number"
+              >Prueba {{ index + 1 }}</span
+            >
+            @if (results()[index]; as state) {
+              @if (state === 'passed') {
+                <span class="flex items-center gap-1 text-body-small text-success">
+                  <mat-icon class="shrink-0" aria-hidden="true">check_circle</mat-icon>
+                  <span i18n="@@exerciseTests.solutionPasses">Tu solución la supera</span>
+                </span>
+              } @else {
+                <span class="flex items-center gap-1 text-body-small text-error">
+                  <mat-icon class="shrink-0" aria-hidden="true">cancel</mat-icon>
+                  <span i18n="@@exerciseTests.solutionFails">Tu solución no la supera</span>
+                </span>
+              }
+            }
+          </span>
           <div class="flex items-center gap-1">
             <mat-checkbox [formField]="test.isHidden" i18n="@@exerciseTests.hidden"
               >Oculta</mat-checkbox

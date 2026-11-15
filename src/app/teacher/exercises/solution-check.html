@@ -1,0 +1,66 @@
+<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+  <button
+    matButton="tonal"
+    type="button"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="panelId"
+    (click)="toggle()"
+  >
+    <mat-icon aria-hidden="true">{{ open() ? 'expand_less' : 'science' }}</mat-icon>
+    <span i18n="@@solutionCheck.toggle">Probar mi solución</span>
+  </button>
+  <span class="text-body-small text-on-surface-variant" i18n="@@solutionCheck.hint"
+    >Para comprobar que las pruebas están bien escritas. No se guarda.</span
+  >
+</div>
+
+<p class="sr-only" role="status">{{ announcement() }}</p>
+
+<div [id]="panelId" class="flex flex-col gap-3" [hidden]="!open()">
+  @if (open()) {
+    <p class="text-body-medium text-on-surface-variant" i18n="@@solutionCheck.explanation">
+      Escribe una solución y ejecútala contra estas pruebas tal como están, también las ocultas,
+      antes de guardar. No se guarda en ningún sitio: ni los alumnos ni el tutor la verán.
+    </p>
+    @defer (on immediate) {
+      <app-code-editor
+        class="min-h-48 rounded-xl border border-outline-variant"
+        [initialCode]="code()"
+        [label]="editorLabel"
+        (codeChange)="code.set($event)"
+        (runShortcut)="run()"
+      />
+    } @placeholder {
+      <app-skeleton class="h-48 w-full rounded-xl" />
+    }
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <button matButton="filled" type="button" [disabled]="!target() || checking()" (click)="run()">
+        <mat-icon aria-hidden="true">{{ checking() ? 'hourglass_top' : 'play_arrow' }}</mat-icon>
+        @if (checking()) {
+          <span i18n="@@solutionCheck.running">Ejecutando…</span>
+        } @else {
+          <span i18n="@@solutionCheck.run">Ejecutar las pruebas</span>
+        }
+      </button>
+      @if (!target()) {
+        <span class="text-body-small text-on-surface-variant" i18n="@@solutionCheck.needsTests"
+          >Corrige el nombre de la función y las pruebas para ejecutarlas.</span
+        >
+      }
+    </div>
+    @if (error(); as message) {
+      <p class="text-body-medium text-error" role="alert">{{ message }}</p>
+    }
+    @if (lastRun(); as run) {
+      @if (outdated()) {
+        <p class="flex items-center gap-2 text-body-small text-on-surface-variant">
+          <mat-icon class="shrink-0" aria-hidden="true">history</mat-icon>
+          <span i18n="@@solutionCheck.outdated"
+            >Has cambiado la solución o las pruebas: estos resultados son de antes.</span
+          >
+        </p>
+      }
+      <app-run-results [result]="run.result" [functionName]="run.check.functionName" />
+    }
+  }
+</div>

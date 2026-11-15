@@ -87,6 +87,8 @@
               #texts
               [texts]="exerciseForm.texts"
               [sourceLocale]="exerciseForm.sourceLocale"
+              [functionName]="model().functionName"
+              [parameters]="model().parameters"
               (preview)="preview($event)"
             />
           </section>
@@ -267,6 +269,13 @@
             <app-exercise-test-list
               [tests]="exerciseForm.tests"
               [functionName]="model().functionName"
+              [results]="testResults()"
+            />
+            <app-solution-check
+              class="border-t border-outline-variant pt-3"
+              [target]="checkTarget()"
+              [skeleton]="solutionSkeleton()"
+              [(lastRun)]="lastCheck"
             />
           </section>
         </div>
