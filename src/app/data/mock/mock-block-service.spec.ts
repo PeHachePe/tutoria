@@ -26,6 +26,7 @@ const DRAFT: BlockDraft = {
   sourceLocale: 'es',
   translations: { en: { title: 'First term exam' } },
   isHidden: true,
+  opensAt: '2026-12-14T08:00:00.000Z',
 };
 
 /** «Tema 1» of 1.º DAW A, with attempts. */
@@ -103,7 +104,7 @@ describe('MockBlockService', () => {
       expect(block).toEqual({
         id: expect.any(String),
         groupId: DAW_GROUP_ID,
-        position: 9,
+        position: 10,
         ...DRAFT,
       });
       const blocks = await service.listBlocks(DAW_GROUP_ID);
@@ -153,7 +154,7 @@ describe('MockBlockService', () => {
 
       const blocks = await service.listBlocks(DAW_GROUP_ID);
       expect(blocks.map((entry) => entry.block.id)).toEqual(reversed);
-      expect(blocks.map((entry) => entry.block.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+      expect(blocks.map((entry) => entry.block.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
 
     it('rejects an order without every block of the group once', async () => {
@@ -256,6 +257,55 @@ describe('MockBlockService', () => {
       });
     });
 
+    it('moves an exercise somebody started to a place of another block of the group', async () => {
+      const started = assignmentId(DAW_GROUP_ID, 1);
+
+      const moved = await service.moveAssignment(started, FREE_BLOCK, 2);
+
+      expect(moved).toMatchObject({ id: started, blockId: FREE_BLOCK, position: 2 });
+      const blocks = await service.listBlocks(DAW_GROUP_ID);
+      const target = blocks.find((entry) => entry.block.id === FREE_BLOCK);
+      expect(target?.assignments.map((entry) => entry.exercise.id)).toEqual(
+        [5, 1, 8].map(exerciseId),
+      );
+      expect(target?.assignments.map((entry) => entry.assignment.position)).toEqual([1, 2, 3]);
+      expect(target?.assignments[1].studentCount).toBeGreaterThan(0);
+      const source = blocks.find((entry) => entry.block.id === STARTED_BLOCK);
+      expect(source?.assignments.map((entry) => entry.assignment.position)).toEqual([1]);
+    });
+
+    it('moves an exercise after the last of the block', async () => {
+      await expect(
+        service.moveAssignment(assignmentId(DAW_GROUP_ID, 2), FREE_BLOCK, 3),
+      ).resolves.toMatchObject({ position: 3 });
+    });
+
+    it('rejects a move within the block, to a block that has it or past its last place', async () => {
+      const id = blockAssignmentId(DAW_HIDDEN_BLOCK, 5);
+
+      await expect(service.moveAssignment(id, FREE_BLOCK, 1)).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      // Exercise 5 is also in «Tema 3»
+      await expect(service.moveAssignment(id, fixtureId('block', 3), 1)).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      await expect(
+        service.moveAssignment(assignmentId(DAW_GROUP_ID, 1), FREE_BLOCK, 4),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+      await expect(
+        service.moveAssignment(assignmentId(DAW_GROUP_ID, 1), FREE_BLOCK, 0),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+    });
+
+    it('does not move an exercise to a block of another group', async () => {
+      db.setSession(ADMIN_ID);
+
+      await expect(
+        service.moveAssignment(assignmentId(DAW_GROUP_ID, 1), fixtureId('block', 7), 1),
+      ).rejects.toMatchObject({ kind: 'not_found' });
+    });
+
     it("does not touch the assignments of another teacher's group", async () => {
       db.setSession(OTHER_TEACHER_ID);
       const id = blockAssignmentId(DAW_HIDDEN_BLOCK, 5);
@@ -268,6 +318,9 @@ describe('MockBlockService', () => {
       });
       await expect(service.unassign(id)).rejects.toMatchObject({ kind: 'not_found' });
       await expect(service.reorderAssignments(FREE_BLOCK, [id])).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+      await expect(service.moveAssignment(id, STARTED_BLOCK, 1)).rejects.toMatchObject({
         kind: 'not_found',
       });
     });

@@ -1,4 +1,4 @@
-import { DEFAULT_DUE_TIME, dueDistance, withTime } from './due-date';
+import { DEFAULT_DUE_TIME, DEFAULT_OPENING_TIME, dueDistance, withTime } from './due-date';
 
 describe('dueDistance', () => {
   // Local time: the tests run with TZ=Europe/Madrid or any other, so they build local dates
@@ -54,6 +54,12 @@ describe('withTime', () => {
   it('gives the end of the day without a time', () => {
     expect(withTime(new Date(2026, 10, 20, 9, 0), null)).toEqual(
       new Date(2026, 10, 20, DEFAULT_DUE_TIME.hours, DEFAULT_DUE_TIME.minutes),
+    );
+  });
+
+  it('takes another time for the day without one, as the start of an opening day', () => {
+    expect(withTime(new Date(2026, 10, 20, 9, 0), null, DEFAULT_OPENING_TIME)).toEqual(
+      new Date(2026, 10, 20, DEFAULT_OPENING_TIME.hours, DEFAULT_OPENING_TIME.minutes),
     );
   });
 });

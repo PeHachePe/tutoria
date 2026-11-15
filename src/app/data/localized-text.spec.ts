@@ -72,6 +72,7 @@ describe('subjectName and blockTitle', () => {
     sourceLocale: 'en',
     translations: { es: { title: 'Tema 1: Bucles' } },
     isHidden: false,
+    opensAt: null,
   };
 
   it('give the name of a subject in the language asked for, or the source one', () => {

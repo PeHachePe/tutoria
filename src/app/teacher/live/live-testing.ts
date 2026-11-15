@@ -140,6 +140,7 @@ const block = (id: string, position: number): ClassBlock => ({
   sourceLocale: 'es',
   translations: {},
   isHidden: false,
+  opensAt: null,
 });
 
 export const GROUPS: LiveGroup[] = [

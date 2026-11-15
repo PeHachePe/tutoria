@@ -33,10 +33,18 @@ export function canManageGroup(user: AppUser, group: ClassGroup): boolean {
   return user.role === 'admin' || (user.role === 'teacher' && group.teacherId === user.id);
 }
 
-/** The assignment is shown to its students: neither it nor its block is hidden (2.5c). */
+/**
+ * The assignment is shown to its students: neither it nor its block is hidden (2.5c), and the block
+ * has reached its opening date (4.3d), as `is_visible_assignment`.
+ */
 export function isVisibleAssignment(tables: MockTables, assignment: ExerciseAssignment): boolean {
   const block = tables.classBlocks.find((candidate) => candidate.id === assignment.blockId);
-  return !assignment.isHidden && block !== undefined && !block.isHidden;
+  return (
+    !assignment.isHidden &&
+    block !== undefined &&
+    !block.isHidden &&
+    (block.opensAt === null || block.opensAt <= now())
+  );
 }
 
 /**

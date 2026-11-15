@@ -25,6 +25,7 @@ function block(position: number, title: string, group = DAW): ClassBlock {
     sourceLocale: 'es',
     translations: { en: { title: `Topic ${position}` } },
     isHidden: false,
+    opensAt: null,
   };
 }
 

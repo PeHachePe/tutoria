@@ -201,6 +201,7 @@ export function previewContent(model: ExerciseFormModel): StatementContent {
     createdBy: '',
     createdAt: '',
     updatedAt: '',
+    archivedAt: null,
   };
   const all = draft.tests.map((test) => ({
     ...test,

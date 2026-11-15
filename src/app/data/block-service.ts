@@ -7,6 +7,8 @@ export interface BlockDraft {
   readonly sourceLocale: ContentLocale;
   readonly translations: ClassBlock['translations'];
   readonly isHidden: boolean;
+  /** ISO date when its students start to see it, or null (4.3d). */
+  readonly opensAt: string | null;
 }
 
 /** What the teacher changes of an assignment besides its order. */
@@ -66,4 +68,15 @@ export abstract class BlockService {
 
   /** `assignmentIds` are every assignment of the block in the new order. */
   abstract reorderAssignments(blockId: string, assignmentIds: readonly string[]): Promise<void>;
+
+  /**
+   * Moves the assignment to `position` (1-based, up to one after the last) of another block of its
+   * group (4.3d), started or not: the attempts keep pointing to it. `invalid` if the exercise is
+   * already in that block.
+   */
+  abstract moveAssignment(
+    assignmentId: string,
+    blockId: string,
+    position: number,
+  ): Promise<ExerciseAssignment>;
 }

@@ -146,6 +146,7 @@ export type Database = {
           group_id: string;
           id: string;
           is_hidden: boolean;
+          opens_at: string | null;
           position: number;
           source_locale: Database['public']['Enums']['app_locale'];
           title: string;
@@ -156,6 +157,7 @@ export type Database = {
           group_id: string;
           id?: string;
           is_hidden?: boolean;
+          opens_at?: string | null;
           position: number;
           source_locale?: Database['public']['Enums']['app_locale'];
           title: string;
@@ -165,6 +167,7 @@ export type Database = {
           group_id?: string;
           id?: string;
           is_hidden?: boolean;
+          opens_at?: string | null;
           position?: number;
           source_locale?: Database['public']['Enums']['app_locale'];
           title?: string;
@@ -256,6 +259,7 @@ export type Database = {
       };
       exercise: {
         Row: {
+          archived_at: string | null;
           created_at: string;
           created_by: string;
           difficulty: Database['public']['Enums']['difficulty'];
@@ -275,6 +279,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          archived_at?: string | null;
           created_at?: string;
           created_by: string;
           difficulty: Database['public']['Enums']['difficulty'];
@@ -293,6 +298,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          archived_at?: string | null;
           created_at?: string;
           created_by?: string;
           difficulty?: Database['public']['Enums']['difficulty'];
@@ -637,6 +643,7 @@ export type Database = {
       create_block: {
         Args: {
           block_is_hidden: boolean;
+          block_opens_at?: string;
           block_source_locale: Database['public']['Enums']['app_locale'];
           block_title: string;
           block_translations: Json;
@@ -646,6 +653,7 @@ export type Database = {
           group_id: string;
           id: string;
           is_hidden: boolean;
+          opens_at: string | null;
           position: number;
           source_locale: Database['public']['Enums']['app_locale'];
           title: string;
@@ -692,6 +700,24 @@ export type Database = {
       latest_tutor_calls: {
         Args: { max_count: number; since: string; target_user_id: string };
         Returns: string[];
+      };
+      move_assignment: {
+        Args: { target_assignment_id: string; target_block_id: string; target_position: number };
+        Returns: {
+          block_id: string;
+          due_at: string | null;
+          exercise_id: string;
+          group_id: string;
+          id: string;
+          is_hidden: boolean;
+          position: number;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'exercise_assignment';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       open_attempt: {
         Args: { attempt_number?: number; target_assignment_id: string };
@@ -776,6 +802,7 @@ export type Database = {
       save_exercise: {
         Args: { fields: Json; subject_ids: string[]; target_exercise_id: string; tests: Json };
         Returns: {
+          archived_at: string | null;
           created_at: string;
           created_by: string;
           difficulty: Database['public']['Enums']['difficulty'];

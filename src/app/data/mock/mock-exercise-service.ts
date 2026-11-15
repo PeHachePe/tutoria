@@ -151,6 +151,7 @@ export class MockExerciseService extends ExerciseService {
         createdBy: user.id,
         createdAt,
         updatedAt: createdAt,
+        archivedAt: null,
       };
       this.db.update('exercises', (rows) => [...rows, exercise]);
       this.replaceTests(exercise.id, draft);
@@ -191,6 +192,19 @@ export class MockExerciseService extends ExerciseService {
         rows.filter((row) => row.exerciseId !== exerciseId),
       );
       this.db.update('assignments', (rows) => rows.filter((row) => row.exerciseId !== exerciseId));
+    });
+  }
+
+  setArchived(exerciseId: string, archived: boolean): Promise<Exercise> {
+    return this.network.request(() => {
+      const exercise: Exercise = {
+        ...this.findEditable(exerciseId),
+        archivedAt: archived ? now() : null,
+      };
+      this.db.update('exercises', (rows) =>
+        rows.map((row) => (row.id === exerciseId ? exercise : row)),
+      );
+      return exercise;
     });
   }
 

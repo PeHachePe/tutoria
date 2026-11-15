@@ -4,6 +4,7 @@ import type { ExerciseDraft } from '../exercise-service';
 import {
   assignmentId,
   blockAssignmentId,
+  DAW_EXAM_BLOCK,
   DAW_HIDDEN_BLOCK,
   DAW_RESIT_BLOCK,
   DAW_WEB_FIRST_BLOCK,
@@ -81,6 +82,7 @@ describe('MockExerciseService', () => {
       const visible = SEED.assignments
         .filter((a) => [DAW_GROUP_ID, DAW_WEB_GROUP_ID].includes(a.groupId) && !a.isHidden)
         .filter((a) => a.blockId !== fixtureId('block', DAW_HIDDEN_BLOCK))
+        .filter((a) => a.blockId !== fixtureId('block', DAW_EXAM_BLOCK)) // Not open yet
         .map((a) => a.id)
         .sort();
       // By group, block and place: compared without the order here
@@ -157,6 +159,28 @@ describe('MockExerciseService', () => {
       expect(hidden).toHaveLength(3);
       expect(seen.some((id) => hidden.includes(id))).toBe(false);
       expect(all.filter((id) => hidden.includes(id))).toHaveLength(3);
+    });
+
+    it('leaves out a block until it opens, but not for the teacher', async () => {
+      const block = fixtureId('block', DAW_RESIT_BLOCK);
+      const inBlock = SEED.assignments.filter((a) => a.blockId === block).map((a) => a.id);
+      const opensAt = (offset: number) => new Date(Date.now() + offset).toISOString();
+      const schedule = (offset: number) =>
+        db.update('classBlocks', (rows) =>
+          rows.map((row) => (row.id === block ? { ...row, opensAt: opensAt(offset) } : row)),
+        );
+      const seenBy = async (userId: string) => {
+        db.setSession(userId);
+        const assigned = await service.listAssigned(DAW_STUDENT_IDS[0]);
+        return assigned.filter((entry) => inBlock.includes(entry.assignmentId));
+      };
+
+      schedule(60_000);
+      expect(await seenBy(DAW_STUDENT_IDS[0])).toHaveLength(0);
+      expect(await seenBy(TEACHER_ID)).toHaveLength(inBlock.length);
+
+      schedule(-60_000);
+      expect((await seenBy(DAW_STUDENT_IDS[0])).length).toBeGreaterThan(0);
     });
 
     it('counts the hints asked in the attempt that counts and the highest level reached', async () => {
@@ -377,6 +401,7 @@ describe('MockExerciseService', () => {
         createdBy: TEACHER_ID,
         createdAt: NOW,
         updatedAt: NOW,
+        archivedAt: null,
       });
       const { tests, subjectIds } = await service.getWithTests(exercise.id);
       expect(tests).toEqual(
@@ -453,6 +478,31 @@ describe('MockExerciseService', () => {
     it('does not remove an exercise with attempts, to keep their history', async () => {
       await expect(service.remove(exerciseId(1))).rejects.toMatchObject({ kind: 'invalid' });
       expect(db.tables().exercises).toHaveLength(SEED.exercises.length);
+    });
+
+    it('archives an exercise with attempts and brings it back, keeping its assignments', async () => {
+      const archived = await service.setArchived(exerciseId(1), true);
+
+      expect(archived.archivedAt).toEqual(expect.any(String));
+      const bank = await service.listBank({ kind: 'all' });
+      expect(bank.exercises.find((e) => e.exercise.id === exerciseId(1))?.exercise).toEqual(
+        archived,
+      );
+      expect(db.tables().assignments.some((a) => a.exerciseId === exerciseId(1))).toBe(true);
+      await expect(service.setArchived(exerciseId(1), false)).resolves.toMatchObject({
+        archivedAt: null,
+      });
+    });
+
+    it('archives only the exercises the user may edit', async () => {
+      db.setSession(OTHER_TEACHER_ID);
+
+      await expect(service.setArchived(exerciseId(1), true)).rejects.toMatchObject({
+        kind: 'forbidden',
+      });
+      await expect(service.setArchived('missing', true)).rejects.toMatchObject({
+        kind: 'not_found',
+      });
     });
 
     it('fails to update or remove an unknown exercise', async () => {

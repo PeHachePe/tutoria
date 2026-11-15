@@ -50,6 +50,7 @@ function entry(
       sourceLocale: 'es',
       translations: {},
       isHidden: false,
+      opensAt: null,
     },
     dueAt: null,
     updatedAt,

@@ -40,7 +40,7 @@ select is((select count(*) from app_user), 25::bigint, 'a teacher reads themselv
 select is((select count(*) from test where is_hidden), 84::bigint, 'a teacher reads the hidden tests');
 select is((select count(*) from exercise), 42::bigint, 'teachers share the whole exercise bank');
 select lives_ok(
-  $$ insert into class_block (group_id, position, title) values ('20000000-0000-4000-8000-000000000001', 9, 'Examen') $$,
+  $$ insert into class_block (group_id, position, title) values ('20000000-0000-4000-8000-000000000001', 10, 'Examen') $$,
   'a teacher adds blocks to their groups'
 );
 select throws_ok(

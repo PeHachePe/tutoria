@@ -1,5 +1,5 @@
 -- Step 4.3b · Blocks and assignments of a group (docs/PLAN.md §2.3, D-058).
--- Seed: Marta (...002) teaches 1.º DAW A (group ...001), with eight blocks: «Tema 1» (...001, with
+-- Seed: Marta (...002) teaches 1.º DAW A (group ...001), with nine blocks: «Tema 1» (...001, with
 -- attempts), «Tema 5» (...013) and «Repaso final» (...006, hidden), nobody has started the last two.
 -- Javier (...003) teaches 1.º DAM B (group ...002). Lucía (...011) is a student of 1.º DAW A.
 begin;
@@ -28,8 +28,8 @@ $$;
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000002');
 
 select is(
-  (select position from create_block('20000000-0000-4000-8000-000000000001', 'Examen', 'es', '{}', true)),
-  9,
+  (select position from create_block('20000000-0000-4000-8000-000000000001', 'Examen', 'es', '{}', true, null)),
+  10,
   'a new block goes after the others of the group'
 );
 select is(
@@ -126,7 +126,7 @@ reset role;
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000003');
 
 select throws_ok(
-  $$ select create_block('20000000-0000-4000-8000-000000000001', 'Examen', 'es', '{}', false) $$,
+  $$ select create_block('20000000-0000-4000-8000-000000000001', 'Examen', 'es', '{}', false, null) $$,
   '42501', null,
   'a teacher cannot add blocks to the groups of another'
 );

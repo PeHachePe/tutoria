@@ -39,6 +39,7 @@ function entry(id: string, title: string): AssignedExercise {
       sourceLocale: 'es',
       translations: {},
       isHidden: false,
+      opensAt: null,
     },
     dueAt: null,
     updatedAt: null,

@@ -386,6 +386,12 @@ export function testId(n: number, position: number): string {
   return fixtureId('test', n * 10 + position + 1);
 }
 
+/**
+ * Number of the exercise its author archived (4.3d): «Tabla de multiplicar», which students of both
+ * classes did, so it stays in their blocks while it leaves the bank.
+ */
+export const ARCHIVED_EXERCISE = 2;
+
 export const EXERCISES: readonly Exercise[] = EXERCISE_FIXTURES.map((fixture, index) => ({
   id: exerciseId(index + 1),
   title: fixture.title,
@@ -405,6 +411,7 @@ export const EXERCISES: readonly Exercise[] = EXERCISE_FIXTURES.map((fixture, in
     : TEACHER_ID,
   createdAt: CREATED_AT,
   updatedAt: CREATED_AT,
+  archivedAt: index + 1 === ARCHIVED_EXERCISE ? '2026-11-10T09:00:00.000Z' : null,
 }));
 
 export const TESTS: readonly Test[] = EXERCISE_FIXTURES.flatMap((fixture, index) =>
@@ -453,6 +460,8 @@ interface BlockFixture {
   readonly isHidden?: boolean;
   /** Due date of every exercise of the block (4.3b), if it has one. */
   readonly dueAt?: string;
+  /** When its students start to see it (4.3d), if it waits for a date. */
+  readonly opensAt?: string;
 }
 
 function titles(en: string, ca: string): BlockFixture['translations'] {
@@ -620,6 +629,16 @@ const BLOCK_FIXTURES: readonly BlockFixture[] = [
     translations: titles('Topic 4: Classic algorithms', 'Tema 4: Algorismes clàssics'),
     exercises: [37, 38, 39, 42],
   },
+  // The exam of 1.º DAW A, which opens by itself on its day (4.3d)
+  {
+    groupId: DAW_GROUP_ID,
+    position: 9,
+    title: 'Examen de los temas 5 y 6',
+    translations: titles('Topics 5 and 6 exam', 'Examen dels temes 5 i 6'),
+    exercises: [12, 16],
+    opensAt: '2026-11-23T08:00:00.000Z',
+    dueAt: '2026-11-23T10:00:00.000Z',
+  },
 ];
 
 /** Number (1-based) in BLOCK_FIXTURES of the resit block of 1.º DAW A. */
@@ -632,6 +651,8 @@ export const DAM_FIRST_BLOCK = 7;
 export const DAM_ADVANCED_FIRST_BLOCK = 11;
 /** Number (1-based) of the first block of the web client subject of 1.º DAW A. */
 export const DAW_WEB_FIRST_BLOCK = 9;
+/** Number (1-based) in BLOCK_FIXTURES of the exam of 1.º DAW A, which opens on a later day. */
+export const DAW_EXAM_BLOCK = 22;
 
 export const CLASS_BLOCKS: readonly ClassBlock[] = BLOCK_FIXTURES.map((block, index) => ({
   id: fixtureId('block', index + 1),
@@ -641,6 +662,7 @@ export const CLASS_BLOCKS: readonly ClassBlock[] = BLOCK_FIXTURES.map((block, in
   sourceLocale: SOURCE_LOCALE,
   translations: block.translations,
   isHidden: block.isHidden ?? false,
+  opensAt: block.opensAt ?? null,
 }));
 
 /**

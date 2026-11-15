@@ -174,6 +174,7 @@ export function exerciseRow(overrides: Partial<Row<'exercise'>> = {}): Row<'exer
     created_by: 'teacher-1',
     created_at: '2026-09-01T08:00:00+00:00',
     updated_at: '2026-09-01T08:00:00+00:00',
+    archived_at: null,
     ...overrides,
   };
 }
@@ -197,6 +198,7 @@ export function blockRow(overrides: Partial<Row<'class_block'>> = {}): Row<'clas
     source_locale: 'es',
     translations: {},
     is_hidden: false,
+    opens_at: null,
     ...overrides,
   };
 }

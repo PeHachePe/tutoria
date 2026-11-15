@@ -133,6 +133,12 @@ export abstract class ExerciseService {
   abstract remove(exerciseId: string): Promise<void>;
 
   /**
+   * Archives the exercise, or brings it back to the bank (4.3d, D-060). Its assignments and their
+   * attempts stay. `forbidden` as `update`.
+   */
+  abstract setArchived(exerciseId: string, archived: boolean): Promise<Exercise>;
+
+  /**
    * The draft of a translation (4.3c, D-059), for the teacher to review: nothing is saved.
    * `forbidden` for a student, `unavailable` without the AI and `rate_limited` past its limit.
    */

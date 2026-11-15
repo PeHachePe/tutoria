@@ -16,6 +16,7 @@ const DRAFT: BlockDraft = {
   sourceLocale: 'es',
   translations: { en: { title: 'Exam' } },
   isHidden: true,
+  opensAt: '2026-12-14T08:00:00.000Z',
 };
 
 describe('SupabaseBlockService', () => {
@@ -117,7 +118,16 @@ describe('SupabaseBlockService', () => {
       block_source_locale: 'es',
       block_translations: { en: { title: 'Exam' } },
       block_is_hidden: true,
+      block_opens_at: '2026-12-14T08:00:00.000Z',
     });
+  });
+
+  it('creates a block that opens at once without the date', async () => {
+    server.on('POST', '/rest/v1/rpc/create_block', { body: blockRow({ id: 'block-9' }) });
+
+    await service.createBlock('daw', { ...DRAFT, opensAt: null });
+
+    expect(server.requests[0].body).not.toHaveProperty('block_opens_at');
   });
 
   it('changes a block', async () => {
@@ -130,6 +140,17 @@ describe('SupabaseBlockService', () => {
       source_locale: 'es',
       translations: { en: { title: 'Exam' } },
       is_hidden: true,
+      opens_at: '2026-12-14T08:00:00.000Z',
+    });
+  });
+
+  it('reads when a block opens', async () => {
+    server.on('PATCH', '/rest/v1/class_block', {
+      body: blockRow({ opens_at: '2026-12-14 08:00:00+00' }),
+    });
+
+    await expect(service.updateBlock('block-1', DRAFT)).resolves.toMatchObject({
+      opensAt: '2026-12-14T08:00:00.000Z',
     });
   });
 
@@ -206,6 +227,33 @@ describe('SupabaseBlockService', () => {
     expect(server.requests[0].body).toEqual({
       target_block_id: 'block-1',
       assignment_ids: ['a-2', 'a-1'],
+    });
+  });
+
+  it('moves an exercise to a place of another block', async () => {
+    server.on('POST', '/rest/v1/rpc/move_assignment', {
+      body: assignmentRow({ block_id: 'block-2', position: 2 }),
+    });
+
+    await expect(service.moveAssignment('a-1', 'block-2', 2)).resolves.toMatchObject({
+      blockId: 'block-2',
+      position: 2,
+    });
+    expect(server.requests[0].body).toEqual({
+      target_assignment_id: 'a-1',
+      target_block_id: 'block-2',
+      target_position: 2,
+    });
+  });
+
+  it('rejects moving an exercise to a block that has it', async () => {
+    server.on('POST', '/rest/v1/rpc/move_assignment', {
+      status: 409,
+      body: { code: '23505', message: 'duplicate key value' },
+    });
+
+    await expect(service.moveAssignment('a-1', 'block-2', 1)).rejects.toMatchObject({
+      kind: 'invalid',
     });
   });
 });

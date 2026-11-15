@@ -56,6 +56,7 @@ export function toExercise(row: Row<'exercise'>): Exercise {
     createdBy: row.created_by,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
+    archivedAt: toIsoOrNull(row.archived_at),
   };
 }
 
@@ -79,6 +80,7 @@ export function toClassBlock(row: Row<'class_block'>): ClassBlock {
     // A check of the table gives it this shape (is_valid_text_translations)
     translations: row.translations as ClassBlock['translations'],
     isHidden: row.is_hidden,
+    opensAt: toIsoOrNull(row.opens_at),
   };
 }
 

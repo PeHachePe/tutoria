@@ -3,8 +3,17 @@
  * catalog. They describe how far the date is, never whether somebody is late.
  */
 
+/** The hour and minute of a day. */
+export interface DayTime {
+  readonly hours: number;
+  readonly minutes: number;
+}
+
 /** The time a due date gets when the teacher only chooses the day: the end of it. */
-export const DEFAULT_DUE_TIME = { hours: 23, minutes: 59 } as const;
+export const DEFAULT_DUE_TIME: DayTime = { hours: 23, minutes: 59 };
+
+/** The time a block opens when the teacher only chooses the day (4.3d): the start of it. */
+export const DEFAULT_OPENING_TIME: DayTime = { hours: 0, minutes: 0 };
 
 /** How far a due date is, in calendar days of the user's time zone. */
 export interface DueDistance {
@@ -23,15 +32,13 @@ export function dueDistance(dueAt: string, now: number): DueDistance {
   return days > 0 ? { kind: 'upcoming', days } : { kind: 'past', days: -days };
 }
 
-/** The day of `day` at the hour and minute of `time`, or at the end of the day without one. */
-export function withTime(day: Date, time: Date | null): Date {
+/**
+ * The day of `day` at the hour and minute of `time` or, without one, at `fallback`: by default the
+ * end of the day, as a due date.
+ */
+export function withTime(day: Date, time: Date | null, fallback = DEFAULT_DUE_TIME): Date {
   const result = new Date(day);
-  result.setHours(
-    time?.getHours() ?? DEFAULT_DUE_TIME.hours,
-    time?.getMinutes() ?? DEFAULT_DUE_TIME.minutes,
-    0,
-    0,
-  );
+  result.setHours(time?.getHours() ?? fallback.hours, time?.getMinutes() ?? fallback.minutes, 0, 0);
   return result;
 }
 

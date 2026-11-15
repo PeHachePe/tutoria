@@ -243,6 +243,20 @@ export class SupabaseExerciseService extends ExerciseService {
     );
     if (deleted.length === 0) throw new DataError('not_found');
   }
+
+  /** The RLS lets only its author or the administration change it; others get `not_found`. */
+  async setArchived(exerciseId: string, archived: boolean): Promise<Exercise> {
+    const row = unwrap(
+      await this.supabase
+        .from('exercise')
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq('id', exerciseId)
+        .select()
+        .single(),
+    );
+    return toExercise(row);
+  }
+
   /** The Edge Function `translate`, with the models of the tutor (4.3c, D-059). */
   async translate(request: TranslationRequest): Promise<ExerciseText> {
     const { data, error } = await this.supabase.functions.invoke<ExerciseText>(TRANSLATE_FUNCTION, {

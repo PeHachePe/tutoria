@@ -34,6 +34,11 @@ export interface Exercise extends StuckThresholds, TranslatableExercise {
   readonly createdBy: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /**
+   * When its author retired it from the bank (4.3d, D-060), as an ISO date, or null. Its
+   * assignments and the attempts at them stay; it is only left out of the bank and of «Añadir».
+   */
+  readonly archivedAt: string | null;
 }
 
 /** Table `test`: calls the exercise function with `input` and compares the result with `expectedOutput` as JSON. */
@@ -61,6 +66,11 @@ export interface ClassBlock extends Translatable<{ readonly title: string }> {
   readonly title: string;
   /** Hidden from the students, with all its exercises, while the teacher prepares it. */
   readonly isHidden: boolean;
+  /**
+   * When its students start to see it (4.3d, D-060), as an ISO date, or null to see it as soon as
+   * it is visible: a resit that appears by itself on the day of the exam.
+   */
+  readonly opensAt: string | null;
 }
 
 /** Table `exercise_assignment`: an exercise in a block of a group. */

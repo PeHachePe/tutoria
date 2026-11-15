@@ -32,6 +32,7 @@ function block(position: number, group = DAW): ClassBlock {
     sourceLocale: 'es',
     translations: {},
     isHidden: false,
+    opensAt: null,
   };
 }
 

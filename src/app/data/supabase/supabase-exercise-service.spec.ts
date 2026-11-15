@@ -137,6 +137,7 @@ describe('SupabaseExerciseService', () => {
           sourceLocale: 'es',
           translations: {},
           isHidden: false,
+          opensAt: null,
         },
         dueAt: '2026-11-20T22:59:00.000Z',
         updatedAt: '2026-10-01T09:30:00.000Z',
@@ -420,6 +421,24 @@ describe('SupabaseExerciseService', () => {
       });
 
       await expect(service.remove('sum')).rejects.toMatchObject({ kind: 'invalid' });
+    });
+  });
+
+  describe('setArchived', () => {
+    it('archives the exercise now, or brings it back', async () => {
+      server.on('PATCH', '/rest/v1/exercise', {
+        body: exerciseRow({ archived_at: '2026-11-15 10:00:00+00' }),
+      });
+
+      await expect(service.setArchived('sum', true)).resolves.toMatchObject({
+        archivedAt: '2026-11-15T10:00:00.000Z',
+      });
+      expect(server.requests[0].params.get('id')).toBe('eq.sum');
+      expect(server.requests[0].body).toEqual({ archived_at: expect.any(String) });
+
+      server.on('PATCH', '/rest/v1/exercise', { body: exerciseRow() });
+      await expect(service.setArchived('sum', false)).resolves.toMatchObject({ archivedAt: null });
+      expect(server.requests[1].body).toEqual({ archived_at: null });
     });
   });
 

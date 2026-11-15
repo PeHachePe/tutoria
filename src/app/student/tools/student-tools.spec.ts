@@ -38,6 +38,7 @@ function entry(id: string, title: string, status: AssignedExercise['status']): A
       sourceLocale: 'es',
       translations: {},
       isHidden: false,
+      opensAt: null,
     },
     dueAt: null,
     updatedAt: null,

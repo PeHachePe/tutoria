@@ -170,6 +170,45 @@ export class MockBlockService extends BlockService {
     });
   }
 
+  moveAssignment(
+    assignmentId: string,
+    blockId: string,
+    position: number,
+  ): Promise<ExerciseAssignment> {
+    return this.network.request(() => {
+      const source = this.findAssignment(assignmentId);
+      if (source.blockId === blockId) {
+        throw new DataError('invalid', 'The assignment is already in the block: reorder it');
+      }
+      const target = findRow(this.db.tables().classBlocks, blockId);
+      if (target.groupId !== source.groupId) {
+        throw new DataError('not_found');
+      }
+      const inTarget = this.db.tables().assignments.filter((row) => row.blockId === blockId);
+      if (inTarget.some((row) => row.exerciseId === source.exerciseId)) {
+        throw new DataError('invalid', 'An exercise is only once in a block');
+      }
+      if (position < 1 || position > inTarget.length + 1) {
+        throw new DataError('invalid', 'No such position in the block');
+      }
+      const moved: ExerciseAssignment = { ...source, blockId, position };
+      this.db.update('assignments', (rows) =>
+        rows.map((row) => {
+          if (row.id === assignmentId) return moved;
+          // Closes the gap in the block it leaves and makes room in the other
+          if (row.blockId === source.blockId && row.position > source.position) {
+            return { ...row, position: row.position - 1 };
+          }
+          if (row.blockId === blockId && row.position >= position) {
+            return { ...row, position: row.position + 1 };
+          }
+          return row;
+        }),
+      );
+      return moved;
+    });
+  }
+
   /** The group, if the user manages it; any other is `not_found`, as the RLS hides its blocks. */
   private findGroup(groupId: string): ClassGroup {
     const user = this.db.requireUser('teacher', 'admin');

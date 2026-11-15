@@ -67,6 +67,8 @@ export class SupabaseBlockService extends BlockService {
           // A check of the table accepts only titles (is_valid_text_translations)
           block_translations: draft.translations as Json,
           block_is_hidden: draft.isHidden,
+          // Left out, it is null (the default of the function)
+          block_opens_at: draft.opensAt ?? undefined,
         })
         .single(),
     );
@@ -82,6 +84,7 @@ export class SupabaseBlockService extends BlockService {
           source_locale: draft.sourceLocale,
           translations: draft.translations as Record<string, Json>,
           is_hidden: draft.isHidden,
+          opens_at: draft.opensAt,
         })
         .eq('id', blockId)
         .select()
@@ -147,5 +150,23 @@ export class SupabaseBlockService extends BlockService {
         assignment_ids: [...assignmentIds],
       }),
     );
+  }
+
+  /** On the server, which closes the gap and makes room in one transaction (`move_assignment`). */
+  async moveAssignment(
+    assignmentId: string,
+    blockId: string,
+    position: number,
+  ): Promise<ExerciseAssignment> {
+    const row = unwrap(
+      await this.supabase
+        .rpc('move_assignment', {
+          target_assignment_id: assignmentId,
+          target_block_id: blockId,
+          target_position: position,
+        })
+        .single(),
+    );
+    return toAssignment(row);
   }
 }
