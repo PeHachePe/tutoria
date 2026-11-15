@@ -10,7 +10,24 @@
       <mat-icon aria-hidden="true">arrow_back</mat-icon>
       <span i18n="@@exerciseForm.backShort">Ejercicios</span>
     </a>
-    <h1 class="text-headline-medium">{{ heading() }}</h1>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-headline-medium">{{ heading() }}</h1>
+      @if (data.hasValue()) {
+        <!-- The whole workspace with the exercise as it is (4.3e); it waits for a valid function
+             and tests, and says so: disabledInteractive keeps the reason reachable -->
+        <button
+          matButton="tonal"
+          type="button"
+          disabledInteractive
+          [disabled]="!checkTarget()"
+          [matTooltip]="checkTarget() ? '' : tryoutWaits"
+          (click)="tryOut()"
+        >
+          <mat-icon aria-hidden="true">play_lesson</mat-icon>
+          <span i18n="@@exerciseForm.tryout">Probar como alumno</span>
+        </button>
+      }
+    </div>
   </header>
 
   @if (data.error(); as error) {

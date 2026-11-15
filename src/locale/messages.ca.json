@@ -853,6 +853,14 @@
     "exerciseForm.archive": "Arxivar",
     "exerciseForm.archived": "Exercici arxivat",
     "exerciseForm.unarchived": "Exercici tornat al banc",
-    "exerciseForm.archive.failed": "No s’ha pogut desar. Torna-ho a provar."
+    "exerciseForm.archive.failed": "No s’ha pogut desar. Torna-ho a provar.",
+    "exerciseForm.tryout": "Provar com a alumne",
+    "exerciseForm.tryoutWaits": "Escriu la funció i proves vàlides per provar-lo",
+    "tryout.close": "Tancar la vista prèvia",
+    "tryout.closeTooltip": "Tancar la vista prèvia",
+    "tryout.eyebrow": "Provar com a alumne",
+    "tryout.startAgain": "Començar de nou",
+    "tryout.note": "Vista prèvia de l’exercici tal com és al formulari: escriu, executa i demana pistes com un alumne. No es desa res.",
+    "tryout.noteShort": "Vista prèvia: no es desa res."
   }
 }

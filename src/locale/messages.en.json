@@ -853,6 +853,14 @@
     "exerciseForm.archive": "Archive",
     "exerciseForm.archived": "Exercise archived",
     "exerciseForm.unarchived": "Exercise back in the bank",
-    "exerciseForm.archive.failed": "It could not be saved. Try again."
+    "exerciseForm.archive.failed": "It could not be saved. Try again.",
+    "exerciseForm.tryout": "Try as a student",
+    "exerciseForm.tryoutWaits": "Write the function and valid tests to try it",
+    "tryout.close": "Close the preview",
+    "tryout.closeTooltip": "Close the preview",
+    "tryout.eyebrow": "Try as a student",
+    "tryout.startAgain": "Start again",
+    "tryout.note": "Preview of the exercise as it is in the form: write, run and ask for hints as a student. Nothing is saved.",
+    "tryout.noteShort": "Preview: nothing is saved."
   }
 }

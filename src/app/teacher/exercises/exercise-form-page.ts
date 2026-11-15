@@ -14,6 +14,7 @@ import { disabled, form, FormField, FormRoot } from '@angular/forms/signals';
 import { MatAnchor, MatButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
+import { MatTooltip } from '@angular/material/tooltip';
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { MatOption, MatSelect } from '@angular/material/select';
@@ -51,6 +52,7 @@ import {
 import { EXERCISE_LIMITS, exerciseSchema } from './exercise-form-schema';
 import { FILL_EXERCISE_FORM, fillFormModel, subjectsByName } from './exercise-form-tool';
 import { type ExercisePreviewData, ExercisePreviewDialog } from './exercise-preview-dialog';
+import { openTryout } from './tryout/exercise-tryout-dialog';
 import { ExerciseTestList } from './exercise-test-list';
 import { ExerciseTexts } from './exercise-texts';
 import { type CheckRun, type CheckTarget, SolutionCheck } from './solution-check';
@@ -104,6 +106,7 @@ const SKELETON_BLOCKS = [1, 2];
     MatSlider,
     MatSliderThumb,
     MatIcon,
+    MatTooltip,
     LoadError,
     LoadingSkeleton,
     Skeleton,
@@ -292,6 +295,19 @@ export class ExerciseFormPage implements WithUnsavedChanges {
       data: { content: previewContent(this.model()), locale },
       width: PREVIEW_WIDTH,
     });
+  }
+
+  /** Why «Probar como alumno» waits: the workspace needs the function and the tests. */
+  protected readonly tryoutWaits = $localize`:@@exerciseForm.tryoutWaits:Escribe la función y pruebas válidas para probarlo`;
+
+  /**
+   * «Probar como alumno» (4.3e, D-061): the workspace with the exercise as it is now in the form,
+   * saved or not, in a try that keeps nothing.
+   */
+  protected tryOut(): void {
+    const target = this.checkTarget();
+    if (!target) return;
+    openTryout(this.dialog, { content: previewContent(this.model()), tests: target.tests });
   }
 
   hasUnsavedChanges(): boolean {

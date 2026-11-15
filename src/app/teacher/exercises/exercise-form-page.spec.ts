@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -19,6 +20,7 @@ import { MockDb } from '../../data/mock/mock-db';
 import { MockExerciseService } from '../../data/mock/mock-exercise-service';
 import { MockNetwork } from '../../data/mock/mock-network';
 import { ExerciseFormPage } from './exercise-form-page';
+import { ExerciseTryoutDialog } from './tryout/exercise-tryout-dialog';
 
 function text(element: Element | null): string {
   return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -411,6 +413,37 @@ describe('ExerciseFormPage', () => {
       expect(
         screen.getByRole('button', { name: 'Ejecutar las pruebas' }).hasAttribute('disabled'),
       ).toBe(true);
+    });
+  });
+
+  describe('«Probar como alumno» (4.3e)', () => {
+    it('opens the try over the screen with the exercise as it is in the form', async () => {
+      await renderForm(`/docente/ejercicios/${SUM.id}`);
+      const open = vi.spyOn(TestBed.inject(MatDialog), 'open').mockReturnValue({} as never);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Probar como alumno' }));
+
+      const [component, config] = open.mock.calls[0];
+      expect(component).toBe(ExerciseTryoutDialog);
+      expect(config?.data).toEqual({
+        content: expect.objectContaining({
+          exercise: expect.objectContaining({ functionName: 'sum', title: SUM.title }),
+        }),
+        tests: SEED.tests
+          .filter((test) => test.exerciseId === SUM.id)
+          .map(({ input, expectedOutput, isHidden }) => ({ input, expectedOutput, isHidden })),
+      });
+    });
+
+    it('waits for a valid function and tests, and says so', async () => {
+      await renderForm('/docente/ejercicios/nuevo');
+      const open = vi.spyOn(TestBed.inject(MatDialog), 'open');
+
+      const button = screen.getByRole('button', { name: 'Probar como alumno' });
+      await userEvent.click(button);
+
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(open).not.toHaveBeenCalled();
     });
   });
 
