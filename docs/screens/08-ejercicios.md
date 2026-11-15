@@ -1,6 +1,6 @@
 # 08 · Ejercicios
 
-`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3) y 3 h (4.3b)
+`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3), 3 h (4.3b) y 3 h (4.3c)
 
 ## Objetivo
 
@@ -9,6 +9,8 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 ## Datos
 
 **Bloques (4.3b, D-058):** `BlockService.listGroups()` (los grupos del docente con su asignatura; la administración, todos) y `listBlocks(groupId)` (los bloques en orden, ocultos incluidos, con sus ejercicios en orden y cuántos alumnos ha empezado cada uno). `createBlock`, `updateBlock`, `removeBlock` y `reorderBlocks`; `assign`, `updateAssignment` (oculta y fecha de entrega), `unassign` y `reorderAssignments`. Solo se borra lo que nadie empezó. Funciones puras: `moveItem()`, `toBlockFormModel()`, `toBlockDraft()`, `blockSchema` y, en `shared/`, `dueDistance()` y `withTime()`.
+
+**Probar y traducir (4.3c, D-059):** `CodeRunnerService.check({ code, functionName, tests })` ejecuta la solución del docente en `execute` sin intento, con el detalle de todas las pruebas, y no guarda nada. `ExerciseService.translate({ from, to, texts, functionName, parameters })` pide el borrador de una traducción a la Edge Function `translate`. Las dos, solo para docentes y administración y con un límite por minuto (`staff_request`). Funciones puras: `toSolutionCheck()`, `solutionSkeleton()`, `textFieldsOf()`, `toExerciseText()`, `fillFormModel()`, `subjectsByName()` y `formActionMessage()`.
 
 **Banco y formulario (4.3):**
 
@@ -38,6 +40,8 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - **Umbrales del tutor proactivo:** dos deslizadores con su valor (fallos seguidos de la misma prueba, de 1 a 10; minutos sin actividad, de 1 a 30).
 - **La función:** su nombre y sus parámetros, recomendando el inglés y sin mezclar idiomas, con el esqueleto que dará el tutor.
 - **Pruebas automáticas:** cada prueba en su grupo, con los argumentos como en la llamada y el resultado esperado en JSON, «Oculta», «Quitar» y la llamada tal como la verá el alumno. «Añadir prueba».
+- **Probar mi solución** (4.3c): plegado bajo las pruebas. Un editor con el esqueleto, «Ejecutar las pruebas» y los resultados como los ve el alumno, pero con el detalle también de las ocultas. Cada prueba dice «Tu solución la supera» o «no la supera» mientras siga igual.
+- **Traducir con IA** (4.3c): en cada pestaña de traducción, «Traducir con IA» (o «Volver a traducir con IA»), que pide antes el título y el enunciado del original. El borrador llega con el aviso «Borrador de la IA: revísalo antes de guardar» y «Deshacer», que se va al cambiarlo.
 - Un panel flotante abajo a la derecha con «Hay cambios sin guardar», «Cancelar» y «Guardar los cambios» o «Crear el ejercicio».
 
 **Bloques** (`/docente/bloques?grupo=`, captura `08c-bloques`):
@@ -65,6 +69,9 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - **Guardar:** si falta algo, marca los errores y lleva el foco al primero, abriendo su pestaña si es de otro idioma. Si va bien, «Cambios guardados» o «Ejercicio creado», y el nuevo se abre como tal.
 - **Ver como el alumno:** un diálogo con la zona del enunciado de la pantalla de trabajo, en el idioma de la pestaña abierta.
 - **Salir con cambios sin guardar:** pregunta antes; al cerrar la pestaña, avisa el navegador.
+- **Probar mi solución:** la solución vive mientras el formulario está abierto y nunca se guarda. Se ejecuta con el botón o con Ctrl + Intro; si cambian la solución o las pruebas, los resultados dicen que son de antes y las marcas de las pruebas se van. Sin función o con pruebas mal escritas, el botón espera y dice qué corregir.
+- **Traducir con IA:** el código del enunciado se queda tal cual (lo comprueba el servidor). Si la IA no responde o no respeta el código, lo dice y propone traducirlo a mano.
+- **WebMCP** (`fillExerciseForm`): un agente del navegador rellena el formulario (textos en un idioma, dificultad, asignaturas por su nombre, función, parámetros, pruebas y umbrales) y recibe los errores que quedan. Nunca guarda: el docente revisa y pulsa el botón.
 
 ## Estados
 
@@ -80,6 +87,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - La pestaña con errores lo dice también en texto («con errores»).
 - La barra de carga solo aparece pasados 300 ms y se anuncia («Cargando los ejercicios…»).
 - Al cambiar de página, el foco va a la lista.
+- El resultado de «Probar mi solución» se anuncia («6 de 6 pruebas superadas»), y el aviso del borrador de la IA es un `role="status"`. Solo lo escrito en cada pestaña lleva su `lang`, no las etiquetas de la interfaz.
 
 ## Criterios de aceptación
 
@@ -93,12 +101,15 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Vista previa como la verá el alumno.
 - [x] Bloques: crear, titular y traducir, ordenar, ocultar y borrar lo que nadie empezó (4.3b).
 - [x] Asignar ejercicios del banco a un bloque, desde Bloques y desde el banco, con orden y fecha de entrega opcional que el alumno ve en el catálogo (4.3b).
+- [x] Probar la solución del docente contra las pruebas del formulario, en el servidor y sin guardarla (4.3c).
+- [x] Borrador de la traducción con la IA, que conserva el código del enunciado (4.3c).
+- [x] El formulario como herramienta de WebMCP, que rellena sin guardar (4.3c).
 - [ ] Revisión visual del autor.
 
 ## Fuera de alcance
 
 - Fecha de apertura de un bloque, duplicar un bloque en otro grupo y archivar ejercicios (4.3d, propuesto).
-- «Traducir con IA», «Probar mi solución», «Probar como alumno» y el formulario como herramienta de WebMCP (4.3c).
+- «Probar como alumno», con el tutor en vista previa (4.3e, propuesto).
 - Archivar un ejercicio con intentos para que deje de salir en el banco ([PENDIENTES](../PENDIENTES.md)).
 
 ## Pulido pendiente

@@ -1695,3 +1695,32 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Quedan para un paso posterior (propuestos, en [PENDIENTES](PENDIENTES.md)): fecha de apertura de un bloque y duplicar un bloque en otro grupo.
 
 **Aprobación:** el plan, aprobado por el autor («Sí, empieza»); el detalle técnico y las mejoras (asignar desde el banco, fecha para todo el bloque, «También en», «Deshacer»), por delegación del autor.
+
+## D-059 · Probar y traducir ejercicios: en el servidor, sin guardar nada, y el formulario como herramienta explícita de WebMCP (15/11/2026)
+
+**Contexto:** el paso 4.3c tenía cuatro piezas para unas 3 h: «Traducir con IA», «Probar mi solución», «Probar como alumno» y el formulario como herramienta de WebMCP con la opción `experimentalWebMcpTool` de Signal Forms (D-051). Al leer el código salieron tres cosas. «Probar como alumno» necesita un modo de vista previa en la función `tutor`, que construye el prompt a partir del intento guardado y registra cada respuesta, y una pantalla de trabajo que hoy depende del intento, de la asignación y de los eventos. La herramienta implícita de Signal Forms deduce su esquema del valor inicial del modelo y falla con una lista vacía (`subjectIds: []` en un ejercicio nuevo), no describe los campos ni cierra sus valores (`difficulty` sería un texto cualquiera) y, al llamarla, reemplaza el modelo y **guarda**. Y la traducción la hace un modelo, que puede traducir el código del enunciado (`` `countWords("hola mundo")` `` → `` `contarPalabras("hello world")` ``).
+
+**Decisión:**
+
+- **«Probar como alumno» pasa a un paso propio, el 4.3e (propuesto),** con el tutor en vista previa. Lo aprobó el autor («Sí, con el 4.3e aparte»).
+- **«Probar mi solución», en `execute` y sin intento:** el cuerpo `{ code, functionName, tests }` (`SolutionCheck`, en el contrato compartido `run-result.ts`) se ejecuta en el mismo sandbox y se compara igual que el de un alumno, pero el resultado trae también el detalle de las pruebas ocultas (`buildRunResult(…, { revealHidden: true })`), porque las escribió el docente. No se guarda nada: ni el código, ni un evento, ni el estado. En producción la CSP no deja ejecutar código en el navegador (D-057), así que va al servidor; con los datos simulados, al Web Worker. Cada prueba del formulario dice «Tu solución la supera» mientras la prueba siga igual.
+- **«Traducir con IA», una Edge Function propia, `translate`,** con la cadena de modelos del tutor (D-044). El proveedor (`llm-provider.ts`, `provider-setting.ts` y `providerForSetting()`) pasa a `_shared/`. El prompt pide no tocar el código, y **el servidor lo comprueba** (`keepsCode()`): cada texto entre comillas invertidas del original sigue en la traducción, al menos tantas veces, y también los nombres que solo pueden ser identificadores (`countWords`, `max_value`); un nombre que también es palabra (`sum`, `text`) se puede traducir donde es palabra. Los contenidos tienen que ser los mismos, en el mismo orden. Una traducción que no cumple se pide otra vez diciendo qué falló; si vuelve a fallar, 502 y ningún borrador. El borrador llega con un aviso y «Deshacer», y se da por revisado cuando el docente lo cambia.
+- **Solo para el profesorado, con límite por minuto:** `claim_staff_request()` comprueba que quien llama es docente o administración con la cuenta activa y cuenta la petición en `staff_request` (10 comprobaciones o 5 traducciones por minuto), con un candado por usuario y tipo para que dos peticiones a la vez no se cuelen. La tabla guarda cuándo y de qué tipo, nunca el código ni los textos.
+- **El formulario como herramienta explícita, `fillExerciseForm`,** en nuestro registro (`declareAppTool`) y abierta a WebMCP. Tiene un esquema con descripciones y valores cerrados, que se valida con `checkToolArguments()`. Las asignaturas van por su nombre, sin mirar mayúsculas ni tildes. Rellena el formulario **sin guardar** y devuelve los errores que quedan, marcados junto a cada campo. El docente revisa y guarda. Es lo que pedía el pendiente del 2.5e y lo mismo que separa la anotación `consequentialHint` (D-051). La excepción del lint sigue solo en `app-tool.ts`.
+- **Accesibilidad:** el resultado de la comprobación se anuncia («6 de 6 pruebas superadas») y el aviso del borrador es un `role="status"`. El `lang` de cada pestaña pasa a los campos: antes estaba en toda la pestaña, y las etiquetas y avisos de la interfaz se leían con la pronunciación del otro idioma.
+
+**Alternativas:**
+
+- **La herramienta implícita de Signal Forms:** no puede inferir el esquema de un ejercicio nuevo y guarda sin que el docente lo revise. Se puede volver a ella cuando Angular permita describir el esquema y separar rellenar de enviar.
+- **Ejecutar la solución en el navegador:** con los datos simulados sí, pero en producción la CSP no deja evaluar código (D-057).
+- **Traducir en la función `tutor`:** mezclaba dos responsabilidades y su límite por alumno.
+- **Confiar en el prompt para conservar el código:** un modelo barato lo traduce a veces, y el error lo vería el alumno.
+- **Limitar por minuto en memoria:** cada instancia de la función tiene la suya, así que no limita nada.
+
+**Consecuencias:**
+
+- Migración `staff_requests` (tabla, tipo y `claim_staff_request`), con 9 tests de pgTAP. `config.toml` sirve la función `translate`; con Supabase ya arrancado, hay que reiniciarlo.
+- Las traducciones usan la misma clave y cuota que el tutor (`AI_API_KEY` y respaldos).
+- Probado con `gemini-3.5-flash-lite` en cuatro casos, todos a la primera y con el código intacto. Queda en [PENDIENTES](PENDIENTES.md) medir cuántas traducciones rechaza `keepsCode()` con más ejercicios. «Probar como alumno» es el 4.3e.
+
+**Aprobación:** el plan, con «Probar como alumno» en el 4.3e, aprobado por el autor («Sí, con el 4.3e aparte»). El autor recordó que la traducción no puede tocar los nombres de las funciones ni de las variables: la comprobación del servidor responde a eso. El detalle técnico, por delegación del autor.
