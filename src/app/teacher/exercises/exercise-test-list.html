@@ -1,0 +1,76 @@
+<p class="text-body-small text-on-surface-variant" i18n="@@exerciseTests.format">
+  Todo en JSON: los argumentos, separados por comas como en la llamada (<code class="font-mono"
+    >[1, 2], 3</code
+  >), y el resultado esperado (<code class="font-mono">6</code>,
+  <code class="font-mono">"hola"</code>, <code class="font-mono">[1, 2]</code>).
+</p>
+
+<ol class="flex flex-col gap-3">
+  @for (test of tests(); track test; let index = $index) {
+    <!-- A fieldset per test: its fields read «Prueba 2, Argumentos» to a screen reader -->
+    <li>
+      <fieldset class="flex flex-col gap-1 rounded-xl bg-surface-container-low p-3">
+        <!-- The legend has to be the first child; the visible number goes with the actions -->
+        <legend class="sr-only" i18n="@@exerciseTests.number">Prueba {{ index + 1 }}</legend>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-title-small" aria-hidden="true" i18n="@@exerciseTests.number"
+            >Prueba {{ index + 1 }}</span
+          >
+          <div class="flex items-center gap-1">
+            <mat-checkbox [formField]="test.isHidden" i18n="@@exerciseTests.hidden"
+              >Oculta</mat-checkbox
+            >
+            <button
+              matIconButton
+              type="button"
+              [disabled]="disabled() || count() === 1"
+              (click)="remove(index)"
+              [attr.aria-label]="removeLabel(index)"
+            >
+              <mat-icon aria-hidden="true">delete</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <mat-form-field subscriptSizing="dynamic">
+            <mat-label i18n="@@exerciseTests.input">Argumentos</mat-label>
+            <input matInput class="font-mono" [formField]="test.input" spellcheck="false" />
+            @if (test.input().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field subscriptSizing="dynamic">
+            <mat-label i18n="@@exerciseTests.expected">Resultado esperado</mat-label>
+            <input matInput class="font-mono" [formField]="test.expected" spellcheck="false" />
+            @if (test.expected().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+        @if (callOf(test().value()); as call) {
+          <p class="pt-1 text-body-small text-on-surface-variant">
+            <code class="font-mono text-on-surface">{{ call }}</code>
+            @if (test().value().isHidden) {
+              <span class="ms-1" i18n="@@exerciseTests.hiddenNote"
+                >· El alumno no la ve: solo sabrá si pasa.</span
+              >
+            }
+          </p>
+        }
+      </fieldset>
+    </li>
+  }
+</ol>
+
+@if (error(); as error) {
+  <p class="text-body-medium text-error" role="alert">{{ error }}</p>
+}
+
+@if (!disabled()) {
+  <div>
+    <button matButton type="button" (click)="add()">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      <span i18n="@@exerciseTests.add">Añadir prueba</span>
+    </button>
+  </div>
+}

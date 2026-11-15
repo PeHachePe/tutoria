@@ -1,0 +1,255 @@
+<div class="flex flex-col gap-6" [attr.aria-busy]="bank.isLoading()">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-headline-medium" i18n="@@bank.heading">Ejercicios</h1>
+      <p class="text-body-large text-on-surface-variant" i18n="@@bank.subheading">
+        El banco común de todo el profesorado: busca uno, duplícalo para adaptarlo o escribe uno
+        nuevo.
+      </p>
+    </div>
+  </header>
+
+  <!-- The main action of the screen, floating where the tutor floats in the workspace: at hand at
+       any point of a long bank. The list leaves room under its last row for it -->
+  <div class="fixed end-6 bottom-6 z-20">
+    <a matFab extended [routerLink]="paths.newExercise" [queryParams]="newQuery()">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      <span i18n="@@bank.new">Nuevo ejercicio</span>
+    </a>
+  </div>
+
+  @if (bank.error(); as error) {
+    <app-load-error [error]="error" (retry)="bank.reload()" />
+  } @else if (firstLoad()) {
+    <app-loading-skeleton label="Cargando los ejercicios…" i18n-label="@@bank.loading">
+      <div class="flex flex-col gap-3">
+        <app-skeleton class="h-14 w-full max-w-3xl rounded-xl" />
+        @for (row of skeletonRows; track row) {
+          <app-skeleton class="h-24 w-full rounded-2xl" />
+        }
+      </div>
+    </app-loading-skeleton>
+  } @else {
+    <search class="flex flex-wrap items-center gap-3">
+      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-80">
+        <mat-label i18n="@@bank.search">Buscar</mat-label>
+        <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        <input
+          matInput
+          type="search"
+          placeholder="Título, contenido o función"
+          i18n-placeholder="@@bank.search.placeholder"
+          [value]="filters().search"
+          (input)="onSearch($event)"
+        />
+      </mat-form-field>
+      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-64">
+        <mat-label i18n="@@bank.subject">Asignatura</mat-label>
+        <mat-select [value]="subjectValue()" (selectionChange)="selectSubjects($event.value)">
+          <mat-option [value]="mySubjects" i18n="@@bank.subject.mine">Mis asignaturas</mat-option>
+          @for (subject of subjectOptions(); track subject.id) {
+            <mat-option [value]="subject.id">{{ subject.name }}</mat-option>
+          }
+          <mat-option [value]="allSubjects" i18n="@@bank.subject.all">Todas</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-44">
+        <mat-label i18n="@@bank.difficulty">Dificultad</mat-label>
+        <mat-select
+          [value]="filters().difficulty"
+          (selectionChange)="setFilter(params.difficulty, $event.value)"
+        >
+          <mat-option [value]="null" i18n="@@bank.difficulty.all">Todas</mat-option>
+          @for (difficulty of difficulties; track difficulty.value) {
+            <mat-option [value]="difficulty.value">{{ difficulty.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-slide-toggle
+        [checked]="filters().mine"
+        (change)="setFilter(params.mine, $event.checked ? '1' : null)"
+        i18n="@@bank.mine"
+        >Solo los míos</mat-slide-toggle
+      >
+    </search>
+
+    <!-- Another subject loads: a thin bar over what is shown, never a jump (4.8) -->
+    <div class="-mt-3 h-1">
+      @if (bank.isLoading()) {
+        <app-loading-skeleton label="Cargando los ejercicios…" i18n-label="@@bank.loading">
+          <mat-progress-bar mode="indeterminate" class="rounded-full" />
+        </app-loading-skeleton>
+      }
+    </div>
+
+    <p class="text-body-medium text-on-surface-variant" aria-live="polite">
+      @if (hasFilters()) {
+        <span i18n="@@bank.count.filtered">{matching().length, plural,
+          =0 {Ningún ejercicio de {{ total() }}}
+          =1 {1 ejercicio de {{ total() }}}
+          other {{{ matching().length }} ejercicios de {{ total() }}}
+        }</span>
+      } @else {
+        <span i18n="@@bank.count">{total(), plural,
+          =1 {1 ejercicio}
+          other {{{ total() }} ejercicios}
+        }</span>
+      }
+    </p>
+
+    @if (matching().length === 0) {
+      @if (hasFilters()) {
+        <app-empty-state
+          heading="Ningún ejercicio con estos filtros"
+          i18n-heading="@@bank.empty.filtered.heading"
+          text="Prueba con otras palabras o quita los filtros."
+          i18n-text="@@bank.empty.filtered.text"
+        >
+          <div class="mt-2 flex flex-wrap justify-center gap-2" emptyStateAction>
+            <button matButton="tonal" type="button" (click)="clearFilters()" i18n="@@bank.clear">
+              Quitar los filtros
+            </button>
+            <ng-container *ngTemplateOutlet="searchEverywhere" />
+          </div>
+        </app-empty-state>
+      } @else {
+        <app-empty-state
+          heading="Todavía no hay ejercicios aquí"
+          i18n-heading="@@bank.empty.heading"
+          text="Escribe el primero con «Nuevo ejercicio» o mira los de otras asignaturas."
+          i18n-text="@@bank.empty.text"
+        >
+          <div class="mt-2 flex justify-center" emptyStateAction>
+            <ng-container *ngTemplateOutlet="searchEverywhere" />
+          </div>
+        </app-empty-state>
+      }
+      <ng-template #searchEverywhere>
+        @if (subjectValue() !== allSubjects) {
+          <button
+            matButton
+            type="button"
+            (click)="setFilter(params.subject, allSubjects)"
+            i18n="@@bank.searchAll"
+          >
+            Buscar en todas las asignaturas
+          </button>
+        }
+      </ng-template>
+    } @else {
+      <!-- Focusable, so changing the page takes the focus back to the top of the list -->
+      <ul
+        #list
+        tabindex="-1"
+        class="grid gap-3 rounded-2xl outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary 2xl:grid-cols-2"
+        aria-label="Ejercicios del banco"
+        i18n-aria-label="@@bank.list"
+      >
+        @for (row of rows(); track row.id) {
+          <li class="flex items-start gap-3 rounded-2xl bg-panel p-4">
+            <div class="flex min-w-0 grow flex-col gap-2">
+              <div class="flex flex-col gap-0.5">
+                <a
+                  class="text-title-medium font-medium text-primary underline-offset-2 hover:underline"
+                  [routerLink]="paths.exercise(row.id)"
+                  [attr.lang]="row.lang"
+                  >{{ row.title }}</a
+                >
+                @if (row.topics) {
+                  <span class="text-body-medium text-on-surface-variant" [attr.lang]="row.lang">{{
+                    row.topics
+                  }}</span>
+                }
+              </div>
+              <div class="flex flex-wrap items-center gap-2 text-label-medium">
+                <app-difficulty-chip [difficulty]="row.entry.exercise.difficulty" />
+                @for (subject of row.subjects; track subject) {
+                  <span
+                    class="rounded-full bg-secondary-container px-2.5 py-0.5 text-on-secondary-container"
+                    >{{ subject }}</span
+                  >
+                }
+                <code class="rounded-md bg-surface-container px-1.5 py-0.5 font-mono"
+                  >{{ row.entry.exercise.functionName }}()</code
+                >
+              </div>
+              <p class="flex flex-wrap gap-x-3 gap-y-1 text-body-small text-on-surface-variant">
+                <span>
+                  @if (row.mine) {
+                    <span i18n="@@bank.author.mine">Tuyo</span>
+                  } @else {
+                    <span i18n="@@bank.author.other">De otro docente</span>
+                  }
+                </span>
+                <span i18n="@@bank.tests">{row.entry.testCount, plural,
+                  =1 {1 prueba}
+                  other {{{ row.entry.testCount }} pruebas}
+                }</span>
+                @if (row.groups) {
+                  <span i18n="@@bank.assigned">Asignado en {{ row.groups }}</span>
+                }
+                @if (row.entry.studentCount > 0) {
+                  <span i18n="@@bank.students">{row.entry.studentCount, plural,
+                    =1 {1 alumno lo ha empezado}
+                    other {{{ row.entry.studentCount }} alumnos lo han empezado}
+                  }</span>
+                }
+              </p>
+            </div>
+
+            <button
+              matIconButton
+              type="button"
+              [matMenuTriggerFor]="actions"
+              [attr.aria-label]="row.actionsLabel"
+            >
+              <mat-icon aria-hidden="true">more_vert</mat-icon>
+            </button>
+            <mat-menu #actions="matMenu" xPosition="before">
+              <a mat-menu-item [routerLink]="paths.exercise(row.id)">
+                <mat-icon aria-hidden="true">{{ row.editable ? 'edit' : 'visibility' }}</mat-icon>
+                @if (row.editable) {
+                  <span i18n="@@bank.edit">Editar</span>
+                } @else {
+                  <span i18n="@@bank.view">Ver</span>
+                }
+              </a>
+              <a mat-menu-item [routerLink]="paths.newExercise" [queryParams]="copyQuery(row.id)">
+                <mat-icon aria-hidden="true">content_copy</mat-icon>
+                <span i18n="@@bank.duplicate">Duplicar</span>
+              </a>
+              @if (row.editable) {
+                <button
+                  mat-menu-item
+                  type="button"
+                  [disabled]="!row.deletable"
+                  (click)="remove(row.entry)"
+                >
+                  <mat-icon aria-hidden="true">delete</mat-icon>
+                  @if (row.deletable) {
+                    <span i18n="@@bank.delete">Borrar</span>
+                  } @else {
+                    <span i18n="@@bank.delete.blocked">Borrar (ya tiene intentos)</span>
+                  }
+                </button>
+              }
+            </mat-menu>
+          </li>
+        }
+      </ul>
+      @if (matching().length > pageSize) {
+        <mat-paginator
+          class="rounded-2xl"
+          [length]="matching().length"
+          [pageSize]="pageSize"
+          [pageIndex]="page().pageIndex"
+          [hidePageSize]="true"
+          [showFirstLastButtons]="true"
+          (page)="goToPage($event)"
+        />
+      }
+      <!-- Room under the list for the floating «Nuevo ejercicio» -->
+      <div class="h-14" aria-hidden="true"></div>
+    }
+  }
+</div>

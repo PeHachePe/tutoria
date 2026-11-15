@@ -3,9 +3,13 @@ import { Routes } from '@angular/router';
 import { SEGMENTS } from '../core/app-paths';
 import { provideFormFieldDefaults } from '../core/form-field-defaults';
 import { provideLocalizedPaginator } from '../core/i18n/localized-paginator-intl';
+import { provideSnackBarDefaults } from '../core/snack-bar-defaults';
+import { unsavedChangesGuard } from '../core/unsaved-changes-guard';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
 import { AttemptDetailPage } from './attempt-detail/attempt-detail-page';
+import { ExerciseBankPage } from './exercises/exercise-bank-page';
+import { ExerciseFormPage } from './exercises/exercise-form-page';
 import { LivePage } from './live/live-page';
 import { LiveStore } from './live/live-store';
 
@@ -15,7 +19,7 @@ export const teacherRoutes: Routes = [
     path: '',
     component: StaffLayout,
     // Material defaults of the area, not in app.config.ts (D-021)
-    providers: [provideFormFieldDefaults(), provideLocalizedPaginator()],
+    providers: [provideFormFieldDefaults(), provideLocalizedPaginator(), provideSnackBarDefaults()],
     children: [
       { path: '', pathMatch: 'full', redirectTo: SEGMENTS.teacher.live },
       {
@@ -43,12 +47,25 @@ export const teacherRoutes: Routes = [
       },
       {
         path: SEGMENTS.teacher.exercises,
-        title: $localize`:@@route.exercises.title:Ejercicios`,
-        component: PlaceholderPage,
-        data: {
-          heading: $localize`:@@route.exercises.heading:Ejercicios y asignaciones`,
-          step: '4.3',
-        },
+        children: [
+          {
+            path: '',
+            title: $localize`:@@route.exercises.title:Ejercicios`,
+            component: ExerciseBankPage,
+          },
+          {
+            path: SEGMENTS.teacher.newExercise,
+            title: $localize`:@@route.newExercise.title:Nuevo ejercicio`,
+            component: ExerciseFormPage,
+            canDeactivate: [unsavedChangesGuard],
+          },
+          {
+            path: ':exerciseId',
+            title: $localize`:@@route.exercise.title:Ejercicio`,
+            component: ExerciseFormPage,
+            canDeactivate: [unsavedChangesGuard],
+          },
+        ],
       },
       {
         path: SEGMENTS.teacher.groups,

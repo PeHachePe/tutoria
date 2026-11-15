@@ -180,6 +180,19 @@ describe('ShowcasePage', () => {
     await vi.waitFor(() => expect(text()).toContain('Ejercicio entregado'));
   });
 
+  it('asks before deleting, and cancels with «Cancelar» (4.3)', async () => {
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Borrar…' }))).click();
+    let dialog = await overlays.getHarness(MatDialogHarness);
+    expect(await dialog.getTitleText()).toBe('¿Borrar «Año bisiesto»?');
+    await (await dialog.getHarness(MatButtonHarness.with({ text: 'Cancelar' }))).click();
+    await vi.waitFor(() => expect(text()).toContain('Borrado cancelado'));
+
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Borrar…' }))).click();
+    dialog = await overlays.getHarness(MatDialogHarness);
+    await (await dialog.getHarness(MatButtonHarness.with({ text: 'Borrar' }))).click();
+    await vi.waitFor(() => expect(text()).toContain('Ejercicio borrado'));
+  });
+
   it('reports a cancelled submission', async () => {
     await (await loader.getHarness(MatButtonHarness.with({ text: 'Entregar…' }))).click();
     const dialog = await overlays.getHarness(MatDialogHarness);

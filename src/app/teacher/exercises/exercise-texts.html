@@ -1,0 +1,90 @@
+<mat-form-field class="w-full sm:w-72" subscriptSizing="dynamic">
+  <mat-label i18n="@@exerciseTexts.source">Idioma en que lo escribes</mat-label>
+  <mat-select [formField]="sourceLocale()">
+    @for (language of languages; track language.locale) {
+      <mat-option [value]="language.locale" [attr.lang]="language.locale">{{
+        language.label
+      }}</mat-option>
+    }
+  </mat-select>
+</mat-form-field>
+
+<mat-tab-group
+  mat-stretch-tabs="false"
+  [selectedIndex]="selectedIndex()"
+  (selectedIndexChange)="selected.set($event)"
+  animationDuration="0"
+>
+  @for (tab of tabs(); track tab.locale) {
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="flex items-center gap-1.5">
+          <span [attr.lang]="tab.locale">{{ tab.name }}</span>
+          @if (tab.source) {
+            <span class="text-on-surface-variant" i18n="@@exerciseTexts.original">(original)</span>
+          }
+          @if (tab.invalid) {
+            <mat-icon
+              class="text-error"
+              aria-hidden="false"
+              aria-label="con errores"
+              i18n-aria-label="@@exerciseTexts.tabError"
+              >error</mat-icon
+            >
+          } @else if (!tab.source && tab.written) {
+            <mat-icon
+              class="text-success"
+              aria-hidden="false"
+              aria-label="traducido"
+              i18n-aria-label="@@exerciseTexts.tabDone"
+              >check</mat-icon
+            >
+          }
+        </span>
+      </ng-template>
+
+      <div class="flex flex-col gap-1 pt-4" [attr.lang]="tab.locale">
+        @if (!tab.source) {
+          <p
+            class="mb-3 rounded-xl bg-info-container p-3 text-body-medium text-on-info-container"
+            i18n="@@exerciseTexts.translationHint"
+          >
+            Opcional. Sin traducción, el alumno lo lee en el original con un aviso. Cita el código
+            tal cual, en inglés: el nombre de la función y lo que devuelve no se traducen.
+          </p>
+        }
+        <mat-form-field>
+          <mat-label i18n="@@exerciseTexts.title">Título</mat-label>
+          <input matInput [formField]="tab.field.title" />
+          @if (tab.field.title().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field subscriptSizing="dynamic" class="mb-4">
+          <mat-label i18n="@@exerciseTexts.statement">Enunciado</mat-label>
+          <textarea matInput rows="6" [formField]="tab.field.statement"></textarea>
+          <mat-hint i18n="@@exerciseTexts.statement.hint"
+            >Escribe el código entre comillas invertidas: `countWords`, `"hola"`.</mat-hint
+          >
+          @if (tab.field.statement().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field subscriptSizing="dynamic">
+          <mat-label i18n="@@exerciseTexts.topics">Contenidos</mat-label>
+          <input matInput [formField]="tab.field.topics" />
+          <mat-hint i18n="@@exerciseTexts.topics.hint"
+            >Lo que practica, separado por comas: Bucles, acumulador.</mat-hint
+          >
+        </mat-form-field>
+      </div>
+    </mat-tab>
+  }
+</mat-tab-group>
+
+<div>
+  <button matButton="tonal" type="button" (click)="previewSelected()">
+    <mat-icon aria-hidden="true">visibility</mat-icon>
+    <span i18n="@@exerciseTexts.preview">Ver como el alumno</span>
+  </button>
+</div>

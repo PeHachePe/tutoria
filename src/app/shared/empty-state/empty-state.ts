@@ -2,7 +2,8 @@ import { Component, input } from '@angular/core';
 
 /**
  * Empty state of a screen or a zone (5.4): a short title and what the user can expect, with an
- * optional illustration projected inside, such as the mascot.
+ * optional illustration projected inside, such as the mascot, and an optional way out under the
+ * text, marked `emptyStateAction` («Quitar los filtros», 4.3).
  */
 @Component({
   selector: 'app-empty-state',
@@ -12,6 +13,7 @@ import { Component, input } from '@angular/core';
     @if (text(); as text) {
       <p class="max-w-prose text-body-medium text-on-surface-variant">{{ text }}</p>
     }
+    <ng-content select="[emptyStateAction]" />
   `,
   host: {
     class: 'flex flex-col items-center gap-2 rounded-xl bg-panel px-6 py-10 text-center',

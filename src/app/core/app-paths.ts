@@ -11,6 +11,8 @@ export const SEGMENTS = {
     live: 'en-vivo',
     history: 'historico',
     exercises: 'ejercicios',
+    /** The form of a new exercise, under the bank. */
+    newExercise: 'nuevo',
     groups: 'grupos',
   },
   admin: { area: 'admin', users: 'usuarios', system: 'sistema' },
@@ -35,6 +37,9 @@ export const APP_PATHS = {
     attempt: (attemptId: string) => `/${teacher.area}/${teacher.live}/${attemptId}`,
     history: `/${teacher.area}/${teacher.history}`,
     exercises: `/${teacher.area}/${teacher.exercises}`,
+    newExercise: `/${teacher.area}/${teacher.exercises}/${teacher.newExercise}`,
+    /** The form of an exercise of the bank (4.3). */
+    exercise: (exerciseId: string) => `/${teacher.area}/${teacher.exercises}/${exerciseId}`,
     groups: `/${teacher.area}/${teacher.groups}`,
   },
   admin: {
@@ -54,10 +59,25 @@ export const STUDENT_PARAMS = {
   attempt: 'intento',
 } as const;
 
+/** The value of `?asignatura=` that shows the whole bank (4.3). */
+export const ALL_SUBJECTS = 'todas';
+
 /** Query parameters of the teacher's screens (D-046), part of the URLs like the segments. */
 export const TEACHER_PARAMS = {
   /** The group followed live: its id. */
   group: 'grupo',
   /** The block of that group: its id. */
   block: 'bloque',
+  /** The exercise a new one copies («Duplicar», 4.3): its id. */
+  copy: 'copia',
+  /** Filters of the exercise bank (4.3): the text searched for. */
+  search: 'buscar',
+  /** The subjects of the bank: the id of one, or `todas`; without it, those of the user. */
+  subject: 'asignatura',
+  /** The difficulty of the bank. */
+  difficulty: 'dificultad',
+  /** Only the exercises the user wrote: any value. */
+  mine: 'mios',
+  /** The page of the bank, from 1. */
+  page: 'pagina',
 } as const;

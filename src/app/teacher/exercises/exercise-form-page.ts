@@ -1,0 +1,289 @@
+import {
+  afterNextRender,
+  Component,
+  computed,
+  inject,
+  Injector,
+  input,
+  linkedSignal,
+  resource,
+  viewChild,
+} from '@angular/core';
+import { disabled, form, FormField, FormRoot } from '@angular/forms/signals';
+import { MatAnchor, MatButton } from '@angular/material/button';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
+import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatInput } from '@angular/material/input';
+import { MatOption, MatSelect } from '@angular/material/select';
+import { MatSlider, MatSliderThumb } from '@angular/material/slider';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router, RouterLink } from '@angular/router';
+
+import { AuthStore } from '../../auth/auth-store';
+import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
+import { LanguageService } from '../../core/i18n/language-service';
+import type { WithUnsavedChanges } from '../../core/unsaved-changes-guard';
+import { DataError } from '../../data/data-error';
+import type { Difficulty } from '../../data/exercise';
+import { ExerciseService, type ExerciseWithTests } from '../../data/exercise-service';
+import { type ContentLocale, subjectName } from '../../data/localized-text';
+import { LoadError } from '../../shared/load-error/load-error';
+import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { canEditExercise } from './can-edit-exercise';
+import {
+  CONTENT_LOCALES,
+  copyFormModel,
+  emptyFormModel,
+  type ExerciseFormModel,
+  previewContent,
+  splitList,
+  toDraft,
+  toFormModel,
+} from './exercise-form-model';
+import { EXERCISE_LIMITS, exerciseSchema } from './exercise-form-schema';
+import { type ExercisePreviewData, ExercisePreviewDialog } from './exercise-preview-dialog';
+import { ExerciseTestList } from './exercise-test-list';
+import { ExerciseTexts } from './exercise-texts';
+
+/** What the form does with the exercise it shows. */
+export type FormMode = 'new' | 'copy' | 'edit' | 'view';
+
+const DIFFICULTIES: readonly { readonly value: Difficulty; readonly label: string }[] = [
+  { value: 'initial', label: $localize`:@@difficulty.initial:Inicial` },
+  { value: 'medium', label: $localize`:@@difficulty.medium:Media` },
+  { value: 'advanced', label: $localize`:@@difficulty.advanced:Avanzada` },
+  { value: 'extension', label: $localize`:@@difficulty.extension:Ampliación` },
+];
+
+const HEADINGS: Readonly<Record<FormMode, string>> = {
+  new: $localize`:@@exerciseForm.heading.new:Nuevo ejercicio`,
+  copy: $localize`:@@exerciseForm.heading.copy:Nuevo ejercicio a partir de otro`,
+  edit: $localize`:@@exerciseForm.heading.edit:Editar el ejercicio`,
+  view: $localize`:@@exerciseForm.heading.view:Ejercicio de otro docente`,
+};
+
+/** As wide as the statement zone of the workspace on a laptop. */
+const PREVIEW_WIDTH = '40rem';
+
+/** Skeleton blocks while the exercise loads: the two columns of the form. */
+const SKELETON_BLOCKS = [1, 2];
+
+/**
+ * The exercise form (/docente/ejercicios/nuevo and /docente/ejercicios/:id, ficha 08, RF-14,
+ * RF-17, CU-05): the texts in each language, its function, its tests and the thresholds of the
+ * proactive tutor, as in Figure 20 of the report. The form lives here, with Signal Forms; its long
+ * parts (the texts and the tests) are components that edit their branch of it (4.6).
+ */
+@Component({
+  selector: 'app-exercise-form-page',
+  imports: [
+    RouterLink,
+    FormRoot,
+    FormField,
+    MatAnchor,
+    MatButton,
+    MatButtonToggleGroup,
+    MatButtonToggle,
+    MatFormField,
+    MatLabel,
+    MatHint,
+    MatError,
+    MatInput,
+    MatSelect,
+    MatOption,
+    MatSlider,
+    MatSliderThumb,
+    MatIcon,
+    LoadError,
+    LoadingSkeleton,
+    Skeleton,
+    ExerciseTexts,
+    ExerciseTestList,
+  ],
+  templateUrl: './exercise-form-page.html',
+  host: {
+    // Closing or reloading the tab is not a navigation: only the browser can ask then
+    '(window:beforeunload)': 'warnBeforeUnload($event)',
+  },
+})
+export class ExerciseFormPage implements WithUnsavedChanges {
+  private readonly exercises = inject(ExerciseService);
+  private readonly auth = inject(AuthStore);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+  private readonly locale = inject(LanguageService).locale;
+  private readonly injector = inject(Injector);
+  private readonly texts = viewChild<ExerciseTexts>('texts');
+
+  /** The exercise to edit (route parameter); without it, a new one. */
+  readonly exerciseId = input<string>();
+  /** The exercise a new one copies («Duplicar»), from `?copia=`. */
+  readonly copia = input<string>();
+  /** The subject the bank showed, chosen beforehand for a new exercise (`?asignatura=`). */
+  readonly asignatura = input<string>();
+
+  protected readonly paths = APP_PATHS.teacher;
+  protected readonly difficulties = DIFFICULTIES;
+  protected readonly limits = EXERCISE_LIMITS;
+  protected readonly skeletonBlocks = SKELETON_BLOCKS;
+
+  protected readonly data = resource({
+    params: () => ({ id: this.exerciseId() ?? this.copia() }),
+    loader: async ({ params }) => {
+      const [subjects, entry] = await Promise.all([
+        this.exercises.listSubjects(),
+        params.id ? this.exercises.getWithTests(params.id) : Promise.resolve(null),
+      ]);
+      return { subjects, entry };
+    },
+  });
+
+  /** What loaded, or nothing: in an error state `value()` throws, and the heading reads this first. */
+  private readonly loadedData = computed(() =>
+    this.data.hasValue() ? this.data.value() : undefined,
+  );
+
+  protected readonly mode = computed<FormMode>(() => {
+    const entry = this.loadedData()?.entry;
+    if (this.exerciseId() === undefined) return entry ? 'copy' : 'new';
+    return entry && !canEditExercise(entry.exercise, this.auth.user()) ? 'view' : 'edit';
+  });
+
+  protected readonly heading = computed(() => HEADINGS[this.mode()]);
+
+  /** The exercise as loaded: what «Restablecer» and the unsaved changes compare with. */
+  private readonly loaded = computed(() =>
+    initialModel(this.mode(), this.loadedData()?.entry, this.locale, this.knownSubject()),
+  );
+
+  /** Every subject, once loaded. */
+  private readonly subjects = computed(() => this.loadedData()?.subjects ?? []);
+
+  /** The subject of `?asignatura=`, if it is one. */
+  private readonly knownSubject = computed(() => {
+    const id = this.asignatura();
+    return this.subjects().some((subject) => subject.id === id) ? id : undefined;
+  });
+
+  /** The model as last saved; it starts as loaded. */
+  private readonly saved = linkedSignal(() => this.loaded());
+  protected readonly model = linkedSignal<ExerciseFormModel>(() => this.loaded());
+
+  protected readonly exerciseForm = form(
+    this.model,
+    (path) => {
+      exerciseSchema(path);
+      // Another teacher's exercise is only read: duplicating it is how to adapt it (D-057)
+      disabled(path, () => this.mode() === 'view');
+    },
+    {
+      submission: {
+        action: () => this.save(),
+        // Invalid means at least one error
+        onInvalid: (field) => this.focusFirstError(field().errorSummary()[0].fieldTree),
+      },
+    },
+  );
+
+  protected readonly subjectOptions = computed(() =>
+    this.subjects().map((subject) => ({
+      id: subject.id,
+      name: subjectName(subject, this.locale).name,
+    })),
+  );
+
+  /** Who already worked on it: changing its tests changes what they did. */
+  protected readonly usage = computed(() => {
+    const entry = this.loadedData()?.entry;
+    return this.mode() === 'edit' && entry ? entry : null;
+  });
+
+  /** The signature the student will start from: `function countWords(text) {}`. */
+  protected readonly signature = computed(() => {
+    const { functionName, parameters } = this.model();
+    const name = functionName.trim() || '…';
+    return `function ${name}(${splitList(parameters).join(', ')}) {}`;
+  });
+
+  protected readonly copyQuery = computed(() => ({ [TEACHER_PARAMS.copy]: this.exerciseId() }));
+
+  /**
+   * Takes the focus to the first field with an error (4.6). A text of a language in another tab
+   * opens that tab first: a field of a hidden tab is not on the page.
+   */
+  private focusFirstError(first: () => { focusBoundControl(): void }): void {
+    const locale = CONTENT_LOCALES.find((candidate) => {
+      const texts = this.exerciseForm.texts[candidate];
+      return [texts.title, texts.statement, texts.topics].some((field) => Object.is(field, first));
+    });
+    if (locale) this.texts()?.reveal(locale);
+    afterNextRender(() => first().focusBoundControl(), { injector: this.injector });
+  }
+
+  /** The exercise as it is now in the form, as the student will read it in `locale`. */
+  protected preview(locale: ContentLocale): void {
+    this.dialog.open<ExercisePreviewDialog, ExercisePreviewData>(ExercisePreviewDialog, {
+      data: { content: previewContent(this.model()), locale },
+      width: PREVIEW_WIDTH,
+    });
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.mode() !== 'view' && !sameModel(this.model(), this.saved());
+  }
+
+  protected warnBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) event.preventDefault();
+  }
+
+  /** Creates it or saves its changes; a new one opens as itself, so saving again updates it. */
+  private async save() {
+    const model = this.model();
+    const exerciseId = this.exerciseId();
+    try {
+      if (this.mode() === 'edit' && exerciseId) {
+        await this.exercises.update(exerciseId, toDraft(model));
+        this.saved.set(model);
+        this.snackBar.open($localize`:@@exerciseForm.saved:Cambios guardados`);
+        return undefined;
+      }
+      const exercise = await this.exercises.create(toDraft(model));
+      this.saved.set(model);
+      this.snackBar.open($localize`:@@exerciseForm.created:Ejercicio creado`);
+      await this.router.navigateByUrl(this.paths.exercise(exercise.id), { replaceUrl: true });
+      return undefined;
+    } catch (error) {
+      return { kind: 'serverError', message: saveErrorMessage(error) };
+    }
+  }
+}
+
+/** The model the form starts from, for each mode. */
+function initialModel(
+  mode: FormMode,
+  entry: ExerciseWithTests | null | undefined,
+  locale: ExerciseFormModel['sourceLocale'],
+  subjectId: string | undefined,
+): ExerciseFormModel {
+  if (!entry) return { ...emptyFormModel(locale), subjectIds: subjectId ? [subjectId] : [] };
+  return mode === 'copy' ? copyFormModel(entry) : toFormModel(entry);
+}
+
+/** Two models are the same if every field has the same value: they are plain data. */
+function sameModel(a: ExerciseFormModel, b: ExerciseFormModel): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function saveErrorMessage(error: unknown): string {
+  if (error instanceof DataError && error.kind === 'forbidden') {
+    return $localize`:@@exerciseForm.error.forbidden:Solo quien escribió el ejercicio puede cambiarlo. Duplícalo para adaptarlo.`;
+  }
+  if (error instanceof DataError && error.kind === 'network') {
+    return $localize`:@@exerciseForm.error.network:Sin conexión: no se ha guardado. Inténtalo de nuevo.`;
+  }
+  return $localize`:@@exerciseForm.error.save:No se ha podido guardar. Inténtalo de nuevo.`;
+}

@@ -10,6 +10,7 @@ import { LanguageService } from '../../core/i18n/language-service';
 import { blockTitle, subjectName } from '../../data/localized-text';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
+import { searchable } from '../../shared/searchable';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LiveActivity } from './live-activity';
@@ -18,14 +19,6 @@ import { LiveFeedList } from './live-feed-list';
 import { LiveQueue } from './live-queue';
 import { LiveStore } from './live-store';
 import { LiveTable } from './live-table';
-
-/** A name without accents nor capitals, so «alvaro» finds «Álvaro». */
-function searchable(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
-}
 
 /**
  * The live session (/docente/en-vivo, ficha 06): how a group works now in a block (RF-11, CU-04).

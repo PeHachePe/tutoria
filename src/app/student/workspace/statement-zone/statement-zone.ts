@@ -21,6 +21,12 @@ import type { Pointer } from '../tutor-store';
 /** Id of the zone, which the splitter under it controls. */
 export const STATEMENT_ZONE_ID = 'statement-zone';
 
+/** What the zone shows of an exercise: also a preview of one not saved yet (4.3). */
+export type StatementContent = Pick<
+  ExerciseDetail,
+  'exercise' | 'visibleTests' | 'hiddenTestCount'
+>;
+
 /** Example rows drawn while the exercise loads. */
 const SKELETON_EXAMPLES = [1, 2, 3];
 
@@ -53,7 +59,9 @@ const LOCALE_NAMES: Record<ContentLocale, string> = {
 })
 export class StatementZone {
   /** The exercise, once it is there. */
-  readonly detail = input<ExerciseDetail>();
+  readonly detail = input<StatementContent>();
+  /** The language to read it in; by default, the one of the interface. */
+  readonly contentLocale = input<ContentLocale>();
   readonly loading = input(false);
   /** Phones: a tab of its own, which never folds. */
   readonly compact = input(false);
@@ -85,10 +93,11 @@ export class StatementZone {
         multiline,
       };
     });
-    const { statement, locale } = exerciseText(exercise, this.locale);
+    const wanted = this.contentLocale() ?? this.locale;
+    const { statement, locale } = exerciseText(exercise, wanted);
     // Without a translation, the source statement, never a gap, with a note that says why (D-045)
     const untranslated =
-      locale === this.locale
+      locale === wanted
         ? null
         : {
             lang: locale,

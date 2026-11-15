@@ -1,0 +1,306 @@
+<div class="flex flex-col gap-6" [attr.aria-busy]="data.isLoading()">
+  <header class="flex flex-col gap-2">
+    <a
+      matButton
+      class="self-start"
+      [routerLink]="paths.exercises"
+      i18n-aria-label="@@exerciseForm.back"
+      aria-label="Volver a los ejercicios"
+    >
+      <mat-icon aria-hidden="true">arrow_back</mat-icon>
+      <span i18n="@@exerciseForm.backShort">Ejercicios</span>
+    </a>
+    <h1 class="text-headline-medium">{{ heading() }}</h1>
+  </header>
+
+  @if (data.error(); as error) {
+    <!-- Without access there is no retry: the link of the header is the way back -->
+    <app-load-error [error]="error" (retry)="data.reload()" />
+  } @else if (data.isLoading()) {
+    <app-loading-skeleton label="Cargando el ejercicio…" i18n-label="@@exerciseForm.loading">
+      <div class="grid gap-6 xl:grid-cols-2">
+        @for (block of skeletonBlocks; track block) {
+          <app-skeleton class="h-96 w-full rounded-2xl" />
+        }
+      </div>
+    </app-loading-skeleton>
+  } @else {
+    @if (mode() === 'view') {
+      <div
+        class="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 rounded-2xl bg-info-container p-4 text-on-info-container md:grid-cols-[auto_1fr_auto] md:items-center"
+      >
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <p i18n="@@exerciseForm.view.notice">
+          Lo escribió otro docente: puedes leerlo y usarlo. Para adaptarlo, duplícalo y será tuyo.
+        </p>
+        <a
+          matButton="filled"
+          class="col-start-2 justify-self-start md:col-start-3"
+          [routerLink]="paths.newExercise"
+          [queryParams]="copyQuery()"
+        >
+          <mat-icon aria-hidden="true">content_copy</mat-icon>
+          <span i18n="@@exerciseForm.duplicate">Duplicar</span>
+        </a>
+      </div>
+    } @else if (usage(); as usage) {
+      @if (usage.studentCount > 0) {
+        <div
+          class="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 rounded-2xl bg-warning-container p-4 text-on-warning-container md:grid-cols-[auto_1fr_auto] md:items-center"
+        >
+          <mat-icon aria-hidden="true">warning</mat-icon>
+          <p>
+            <span i18n="@@exerciseForm.used.count">{usage.studentCount, plural,
+              =1 {1 alumno ya lo ha empezado.}
+              other {{{ usage.studentCount }} alumnos ya lo han empezado.}
+            }</span>
+            {{ ' ' }}
+            <span i18n="@@exerciseForm.used.notice"
+              >Corregir una errata no afecta a nadie, pero si cambias las pruebas, sus intentos se
+              comprobaron con las de antes. Para un cambio grande, mejor duplícalo.</span
+            >
+          </p>
+          <a
+            matButton
+            class="col-start-2 justify-self-start md:col-start-3"
+            [routerLink]="paths.newExercise"
+            [queryParams]="copyQuery()"
+          >
+            <mat-icon aria-hidden="true">content_copy</mat-icon>
+            <span i18n="@@exerciseForm.duplicate">Duplicar</span>
+          </a>
+        </div>
+      }
+    }
+
+    <form [formRoot]="exerciseForm" class="flex flex-col gap-6">
+      <div class="grid items-start gap-6 xl:grid-cols-2">
+        <div class="flex flex-col gap-6">
+          <section
+            class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
+            aria-labelledby="statement-heading"
+          >
+            <h2 id="statement-heading" class="text-title-large" i18n="@@exerciseForm.statement">
+              Título y enunciado
+            </h2>
+            <app-exercise-texts
+              #texts
+              [texts]="exerciseForm.texts"
+              [sourceLocale]="exerciseForm.sourceLocale"
+              (preview)="preview($event)"
+            />
+          </section>
+
+          <section
+            class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+            aria-labelledby="classification-heading"
+          >
+            <h2
+              id="classification-heading"
+              class="text-title-large"
+              i18n="@@exerciseForm.classification"
+            >
+              Dificultad y asignaturas
+            </h2>
+            <div class="flex flex-col gap-2">
+              <span id="difficulty-label" class="text-label-large" i18n="@@exerciseForm.difficulty"
+                >Dificultad</span
+              >
+              <mat-button-toggle-group
+                class="self-start"
+                aria-labelledby="difficulty-label"
+                [formField]="exerciseForm.difficulty"
+              >
+                @for (difficulty of difficulties; track difficulty.value) {
+                  <mat-button-toggle [value]="difficulty.value">{{
+                    difficulty.label
+                  }}</mat-button-toggle>
+                }
+              </mat-button-toggle-group>
+            </div>
+            <mat-form-field class="w-full sm:w-96">
+              <mat-label i18n="@@exerciseForm.subjects">Asignaturas</mat-label>
+              <mat-select multiple [formField]="exerciseForm.subjectIds">
+                @for (subject of subjectOptions(); track subject.id) {
+                  <mat-option [value]="subject.id">{{ subject.name }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint i18n="@@exerciseForm.subjects.hint"
+                >Lo verán en el banco quienes las impartan.</mat-hint
+              >
+              @if (exerciseForm.subjectIds().errors()[0]; as error) {
+                <mat-error>{{ error.message }}</mat-error>
+              }
+            </mat-form-field>
+          </section>
+
+          <section
+            class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+            aria-labelledby="thresholds-heading"
+          >
+            <div class="flex flex-col gap-1">
+              <h2 id="thresholds-heading" class="text-title-large" i18n="@@exerciseForm.thresholds">
+                Umbrales del tutor proactivo
+              </h2>
+              <p
+                class="text-body-medium text-on-surface-variant"
+                i18n="@@exerciseForm.thresholds.hint"
+              >
+                Cuándo se ofrece el tutor por su cuenta a un alumno que parece atascado.
+              </p>
+            </div>
+            <div class="grid items-center gap-x-4 sm:grid-cols-[minmax(0,14rem)_1fr_auto]">
+              <label for="max-failures" class="text-body-large" i18n="@@exerciseForm.failures"
+                >Fallos seguidos de la misma prueba</label
+              >
+              <mat-slider
+                [min]="limits.minRepeatedFailures"
+                [max]="limits.maxRepeatedFailures"
+                step="1"
+                discrete
+              >
+                <input
+                  id="max-failures"
+                  matSliderThumb
+                  [formField]="exerciseForm.maxRepeatedFailures"
+                />
+              </mat-slider>
+              <span
+                class="justify-self-start rounded-full bg-secondary-container px-3 py-1 text-label-large text-on-secondary-container"
+                aria-hidden="true"
+                i18n="@@exerciseForm.failures.value"
+                >{model().maxRepeatedFailures, plural,
+                  =1 {1 fallo}
+                  other {{{ model().maxRepeatedFailures }} fallos}
+                }</span
+              >
+              <label for="max-idle" class="text-body-large" i18n="@@exerciseForm.idle"
+                >Minutos sin actividad</label
+              >
+              <mat-slider
+                [min]="limits.minIdleMinutes"
+                [max]="limits.maxIdleMinutes"
+                step="1"
+                discrete
+              >
+                <input id="max-idle" matSliderThumb [formField]="exerciseForm.maxIdleMinutes" />
+              </mat-slider>
+              <span
+                class="justify-self-start rounded-full bg-secondary-container px-3 py-1 text-label-large text-on-secondary-container"
+                aria-hidden="true"
+                i18n="@@exerciseForm.idle.value"
+                >{{ model().maxIdleMinutes }} min</span
+              >
+            </div>
+          </section>
+        </div>
+
+        <div class="flex flex-col gap-6">
+          <section
+            class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
+            aria-labelledby="function-heading"
+          >
+            <div class="flex flex-col gap-1">
+              <h2 id="function-heading" class="text-title-large" i18n="@@exerciseForm.function">
+                La función
+              </h2>
+              <p
+                class="text-body-medium text-on-surface-variant"
+                i18n="@@exerciseForm.function.hint"
+              >
+                Igual en todos los idiomas: escríbela en inglés, como el código de verdad. Mejor
+                <code class="font-mono">countWords(text)</code> que
+                <code class="font-mono">contarPalabras(texto)</code>, y nunca mezclados.
+              </p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <mat-form-field subscriptSizing="dynamic">
+                <mat-label i18n="@@exerciseForm.functionName">Nombre de la función</mat-label>
+                <input
+                  matInput
+                  class="font-mono"
+                  spellcheck="false"
+                  [attr.autocapitalize]="'off'"
+                  [formField]="exerciseForm.functionName"
+                />
+                @if (exerciseForm.functionName().errors()[0]; as error) {
+                  <mat-error>{{ error.message }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field subscriptSizing="dynamic">
+                <mat-label i18n="@@exerciseForm.parameters">Parámetros</mat-label>
+                <input
+                  matInput
+                  class="font-mono"
+                  spellcheck="false"
+                  [attr.autocapitalize]="'off'"
+                  [formField]="exerciseForm.parameters"
+                />
+                <mat-hint i18n="@@exerciseForm.parameters.hint">Separados por comas</mat-hint>
+                @if (exerciseForm.parameters().errors()[0]; as error) {
+                  <mat-error>{{ error.message }}</mat-error>
+                }
+              </mat-form-field>
+            </div>
+            <p class="text-body-small text-on-surface-variant">
+              <span i18n="@@exerciseForm.signature">El esqueleto que da el tutor:</span>
+              <code
+                class="ms-1 rounded-md bg-surface-container px-1.5 py-0.5 font-mono text-on-surface"
+                >{{ signature() }}</code
+              >
+            </p>
+          </section>
+
+          <section
+            class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
+            aria-labelledby="tests-heading"
+          >
+            <div class="flex flex-col gap-1">
+              <h2 id="tests-heading" class="text-title-large" i18n="@@exerciseForm.tests">
+                Pruebas automáticas
+              </h2>
+              <p class="text-body-medium text-on-surface-variant" i18n="@@exerciseForm.tests.hint">
+                Las visibles son los ejemplos del enunciado; las ocultas comprueban los casos límite
+                sin revelarlos.
+              </p>
+            </div>
+            <app-exercise-test-list
+              [tests]="exerciseForm.tests"
+              [functionName]="model().functionName"
+            />
+          </section>
+        </div>
+      </div>
+
+      @if (mode() !== 'view') {
+        <!-- A panel that floats, like the tutor of the workspace: always at hand on a form this long -->
+        <div class="pointer-events-none sticky bottom-4 z-10 flex justify-end">
+          <div
+            class="pointer-events-auto flex max-w-full flex-wrap items-center justify-end gap-2 rounded-2xl border border-outline-variant bg-panel p-2 ps-4 shadow-lg"
+          >
+            @if (exerciseForm().errors()[0]; as error) {
+              <p class="text-body-medium text-error" role="alert">{{ error.message }}</p>
+            } @else if (hasUnsavedChanges()) {
+              <p class="text-body-medium text-on-surface-variant" i18n="@@exerciseForm.unsaved">
+                Hay cambios sin guardar
+              </p>
+            }
+            <a matButton [routerLink]="paths.exercises" i18n="@@exerciseForm.cancel">Cancelar</a>
+            <button matButton="filled" type="submit" [disabled]="exerciseForm().submitting()">
+              <mat-icon aria-hidden="true">{{
+                exerciseForm().submitting() ? 'hourglass_top' : 'save'
+              }}</mat-icon>
+              @if (exerciseForm().submitting()) {
+                <span i18n="@@exerciseForm.saving">Guardando…</span>
+              } @else if (mode() === 'edit') {
+                <span i18n="@@exerciseForm.save">Guardar los cambios</span>
+              } @else {
+                <span i18n="@@exerciseForm.create">Crear el ejercicio</span>
+              }
+            </button>
+          </div>
+        </div>
+      }
+    </form>
+  }
+</div>

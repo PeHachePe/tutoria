@@ -59,6 +59,17 @@ describe('StatementZone', () => {
     expect(statement.closest('[lang]')?.getAttribute('lang')).toBe('es');
   });
 
+  it('shows the statement in the language it is asked for, as the teacher previews it (4.3)', async () => {
+    await render('<app-statement-zone [detail]="detail" contentLocale="ca" [compact]="true" />', {
+      imports: [StatementZone],
+      componentProperties: { detail: DETAIL },
+    });
+
+    expect(text(screen.getByRole('region', { name: 'Enunciado' }))).toContain(
+      'Escriu una funció sum',
+    );
+  });
+
   it('makes the example or the hidden checks the tutor points at stand out, and shows them (2.5e)', async () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;

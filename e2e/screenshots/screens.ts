@@ -31,4 +31,11 @@ export const SCREENS: readonly Screen[] = [
     path: '/docente/en-vivo/70000000-0000-4000-8000-000000000011',
     user: 'teacher',
   },
+  { code: '08-ejercicios', path: '/docente/ejercicios', user: 'teacher' },
+  // The form of exercise 3 (Suma de los elementos de un vector), started by the students (4.3)
+  {
+    code: '08b-ejercicio',
+    path: '/docente/ejercicios/40000000-0000-4000-8000-000000000003',
+    user: 'teacher',
+  },
 ];

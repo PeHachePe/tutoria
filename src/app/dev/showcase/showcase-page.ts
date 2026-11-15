@@ -51,6 +51,7 @@ import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { SettingsStore } from '../../student/settings/settings-store';
+import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
 import { ShowcaseTable } from './showcase-table';
@@ -306,6 +307,16 @@ export class ShowcasePage {
   }
 
   protected readonly dialogResult = signal<string | undefined>(undefined);
+
+  /** The question before what cannot be undone (4.3), as the exercise bank asks it. */
+  protected async openConfirm(): Promise<void> {
+    const confirmed = await confirmAction(this.dialog, {
+      title: '¿Borrar «Año bisiesto»?',
+      text: 'Nadie lo ha empezado todavía. No se puede deshacer.',
+      confirm: 'Borrar',
+    });
+    this.dialogResult.set(confirmed ? 'Ejercicio borrado' : 'Borrado cancelado');
+  }
 
   protected async openDialog(): Promise<void> {
     const confirmed = await firstValueFrom(this.dialog.open(ShowcaseDialog).afterClosed());
