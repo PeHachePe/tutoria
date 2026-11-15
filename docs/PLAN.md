@@ -148,7 +148,7 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - **`exercise_subject`** (exercise_id → exercise, subject_id → subject; clave por pareja): las asignaturas para las que sirve cada ejercicio del banco, para filtrarlo (4.3).
 - `test` (id, exercise_id → exercise, input `jsonb` (**lista de argumentos**), expected_output `jsonb`, **is_hidden** (por defecto false), **position**)
 - **`class_block`** (id, group_id → class_group, position, title, source_locale, translations, is_hidden; única por grupo y posición, D-034, D-046): los bloques de ejercicios de cada grupo, con el título libre que les da el docente («Tema 1: Bucles», «Recuperación del tema 2»), traducible. La posición solo ordena y no se muestra. Un bloque oculto no lo ve el alumno, ni sus ejercicios.
-- `exercise_assignment` (id, group_id → class_group, **block_id**, exercise_id → exercise, **is_hidden**, **due_at** (fecha de entrega opcional, paso 4.3, D-054); única por bloque y ejercicio; `(group_id, block_id)` → `class_block (group_id, id)`): un ejercicio puede estar en varios bloques del mismo grupo. Oculta, el alumno no la ve.
+- `exercise_assignment` (id, group_id → class_group, **block_id**, exercise_id → exercise, **position** (orden dentro del bloque, 4.3b), **is_hidden**, **due_at** (fecha de entrega opcional, 4.3b, D-054); única por bloque y ejercicio y por bloque y posición; `(group_id, block_id)` → `class_block (group_id, id)`, que borra con el bloque): un ejercicio puede estar en varios bloques del mismo grupo. Oculta, el alumno no la ve. Solo se borra (ella o su bloque) si nadie la ha empezado (D-058).
 - `attempt` (id, exercise_id → exercise, user_id → app_user, **assignment_id** → exercise_assignment (opcional), **number** (1 cuenta para la clase; los siguientes son práctica), current_code, final_code, status, started_at, finished_at, **updated_at**; única por alumno, asignación y número, D-046)
 - `tutor_interaction` (id, attempt_id → attempt, **request_id** (única: la petición que respondió, D-043), trigger `question`/`hint`/`proactive`, hint_level 1–3, **student_message**, transcript, emotion, intensity, **elusion**, **prompt_version**, **model**, **rejected_answers** (0–2: respuestas del modelo que el validador rechazó antes de esta, D-044), **created_at**)
 - `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`, **received_at**: la hora de llegada, que el cliente no puede falsear, D-040)
@@ -505,17 +505,18 @@ Son clases abstractas con los métodos de acceso a datos. Las pantallas y los st
 - Cada versión lleva `@Service({ autoProvided: false })` y se llama como su clase: `MockExerciseService` en `data/mock/mock-exercise-service.ts` y `SupabaseExerciseService` en `data/supabase/supabase-exercise-service.ts`.
 - `provideMockData()` y `provideSupabaseData()` las registran con `{ provide: ExerciseService, useClass: MockExerciseService }` (4.4).
 
-| Servicio            | Operaciones principales                                                                                                 | Versión simulada                                              | Versión con Supabase                                               |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `AuthService`       | iniciar y cerrar sesión, usuario actual, restaurar sesión                                                               | Usuarios del seed; cambio de rol desde la barra de desarrollo | Supabase Auth                                                      |
-| `ExerciseService`   | ejercicios asignados con su último intento y sus pistas, detalle con pruebas visibles, alta, edición, baja y asignación | MockDb                                                        | Tablas `exercise`, `test`, `exercise_assignment` y `class_session` |
-| `AttemptService`    | abrir o crear, guardar código, entregar, historial de un intento                                                        | MockDb, que aplica las transiciones de 2.4                    | Tablas y RPC `submit_attempt`                                      |
-| `CodeRunnerService` | ejecutar (intento y código) y devolver estado y resultados                                                              | Web Worker                                                    | Edge Function `execute`                                            |
-| `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`                                                                     | Respuestas guionizadas por nivel                              | Edge Function `tutor`                                              |
-| `EventService`      | enviar un lote de eventos                                                                                               | MockDb                                                        | Inserción en `process_event`                                       |
-| `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                                          | Simulador de alumnos                                          | Supabase Realtime                                                  |
-| `StatsService`      | estadísticas del grupo por bloque                                                                                       | Cálculo sobre MockDb                                          | RPC `group_block_stats`                                            |
-| `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                                      | MockDb                                                        | Edge Function `admin-users` y tablas                               |
+| Servicio            | Operaciones principales                                                                                              | Versión simulada                                              | Versión con Supabase                                                |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `AuthService`       | iniciar y cerrar sesión, usuario actual, restaurar sesión                                                            | Usuarios del seed; cambio de rol desde la barra de desarrollo | Supabase Auth                                                       |
+| `ExerciseService`   | ejercicios asignados con su último intento y sus pistas, detalle con pruebas visibles, banco, alta, edición y baja   | MockDb                                                        | Tablas `exercise`, `test` y `exercise_subject`; RPC `save_exercise` |
+| `BlockService`      | grupos del docente, bloques con sus ejercicios, crear, editar, ordenar y borrar bloques y asignaciones (4.3b, D-058) | MockDb                                                        | Tablas `class_block` y `exercise_assignment`; RPC de orden          |
+| `AttemptService`    | abrir o crear, guardar código, entregar, historial de un intento                                                     | MockDb, que aplica las transiciones de 2.4                    | Tablas y RPC `submit_attempt`                                       |
+| `CodeRunnerService` | ejecutar (intento y código) y devolver estado y resultados                                                           | Web Worker                                                    | Edge Function `execute`                                             |
+| `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`                                                                  | Respuestas guionizadas por nivel                              | Edge Function `tutor`                                               |
+| `EventService`      | enviar un lote de eventos                                                                                            | MockDb                                                        | Inserción en `process_event`                                        |
+| `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                                       | Simulador de alumnos                                          | Supabase Realtime                                                   |
+| `StatsService`      | estadísticas del grupo por bloque                                                                                    | Cálculo sobre MockDb                                          | RPC `group_block_stats`                                             |
+| `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                                   | MockDb                                                        | Edge Function `admin-users` y tablas                                |
 
 Resultado de una ejecución:
 
@@ -1485,6 +1486,8 @@ El paso original se partió en tres (D-057): con sus pendientes, no cabía en un
 
 🧪 Orden y validaciones de bloques y asignaciones.
 
+- **Hecho así (D-058):** pantalla propia **Bloques** (`/docente/bloques?grupo=`, en el menú del docente) con un `BlockService` nuevo (simulado y Supabase) que sustituye a las asignaciones de `ExerciseService`. Bloques: crear (al final, foco en él), editar título y traducciones, mostrar u ocultar, ordenar (arrastrando o con «Subir» y «Bajar», anunciado al lector de pantalla) y borrar si nadie ha empezado sus ejercicios. Ejercicios del bloque: «Añadir ejercicios» con el banco de la asignatura del grupo (o todas), buscador, los que ya están marcados y en qué otros bloques están; orden, ocultar, fecha de entrega (día y hora, con «Fecha de entrega para todo el bloque») y «Quitar del bloque» con «Deshacer» si nadie lo ha empezado. Desde el banco, «Asignar a un bloque…». El catálogo del alumno muestra la fecha de entrega («Entrega: vie 20 nov, 23:59 · en 5 días») hasta que entrega. Migración `blocks_and_assignments` (`position`, `due_at`, `create_block`, `assign_exercises`, `reorder_blocks`, `reorder_assignments`, `assignment_student_counts` y las políticas de borrado), pgTAP, seed v10 con fechas de entrega y un adaptador de fechas que lee «25/11/2026» según el idioma.
+
 **4.3c · Probar y traducir ejercicios (≈3 h)** · ficha `08-ejercicios`
 
 - «Traducir con IA»: un borrador de la traducción para revisar, con la misma cadena de modelos del tutor (D-044).
@@ -1493,6 +1496,16 @@ El paso original se partió en tres (D-057): con sus pendientes, no cabía en un
 - El formulario como herramienta de WebMCP (`experimentalWebMcpTool`, D-051).
 
 🧪 Comprobación de la solución en el servidor y borrador de la traducción.
+
+**4.3d · Más sobre bloques (≈2 h, propuesto)** · ficha `08-ejercicios`
+
+Propuesto al cerrar el 4.3b (D-058), pendiente de que el autor lo confirme o lo deje para trabajo futuro.
+
+- Fecha de apertura de un bloque (`class_block.opens_at`): una recuperación que aparece sola el día del examen. La hace cumplir la RLS, como `is_hidden`.
+- Duplicar un bloque en otro grupo del docente, con sus ejercicios, su orden y sus fechas.
+- Archivar un ejercicio con intentos (`exercise.archived_at`), que deja de salir en el banco y en «Añadir ejercicios».
+
+🧪 La RLS de la fecha de apertura en pgTAP y la copia de un bloque.
 
 **4.4 · Histórico, con datos simulados (≈3 h)** · ficha `09-historico` · Figuras 13–14 del TFM
 

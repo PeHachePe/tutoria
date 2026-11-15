@@ -1664,3 +1664,34 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - La pantalla de trabajo y el formulario comparten `StatementZone`, que admite un contenido sin asignación y un idioma.
 
 **Aprobación:** el plan y la partición, aprobados por el autor («Sí, empieza»); los parámetros en inglés, a petición suya; los botones flotantes y el banco por asignaturas, a partir de sus preguntas; el resto, por delegación del autor.
+
+## D-058 · Bloques y asignaciones: una pantalla propia, el orden en el servidor y solo se borra lo que nadie empezó (15/11/2026)
+
+**Contexto:** el paso 4.3b da al docente la gestión de los bloques de cada grupo y de los ejercicios asignados en ellos (D-046), con su orden y una fecha de entrega opcional (D-054). Hasta ahora las asignaciones solo existían en el seed: `ExerciseService` tenía `assign` y `unassign`, que ninguna pantalla usaba, la asignación no tenía orden (iba por su id) y borrarla dejaba los intentos de los alumnos sin asignación, fuera del catálogo y de la analítica. El formulario de grupos (`/docente/grupos`) es del 5.2 y trata de la matrícula.
+
+**Decisión:**
+
+- **Una pantalla propia, «Bloques»** (`/docente/bloques?grupo=`), en el menú del docente junto a «Ejercicios», con el grupo en la URL. El banco gana «Asignar a un bloque…» para no tener que salir de él.
+- **Un servicio propio, `BlockService`,** con los grupos del docente, los bloques de un grupo con sus ejercicios y cuántos alumnos los han empezado, y las operaciones de bloques y asignaciones. `ExerciseService` se queda con el banco y deja sus tres métodos de asignación: una responsabilidad por servicio, como pide la guía de Angular.
+- **El orden lo cuenta el servidor:** `exercise_assignment.position`, única por bloque y aplazable como la de los bloques. Crear un bloque y asignar ejercicios (`create_block`, `assign_exercises`) ponen las posiciones al final, y reordenar (`reorder_blocks`, `reorder_assignments`) escribe el orden completo en una transacción y rechaza uno al que le falte o le sobre alguna fila. Todas son `security invoker`: decide la RLS.
+- **Solo se borra lo que nadie empezó:** las políticas de borrado de `class_block` y `exercise_assignment` lo exigen (`is_started_block`, `is_started_assignment`), y el bloque se borra con sus asignaciones (`on delete cascade`). Las claves ajenas no pasan por la RLS, así que borrar un grupo o un ejercicio sigue funcionando. Para retirar lo empezado, se oculta. La pantalla lo dice antes («Borrar (ya tiene intentos)», «Quitar (ya tiene intentos: ocúltalo)») y lo comprueba después.
+- **Todo responde al momento:** cada acción cambia la lista en la página y la guarda; si el servidor dice que no, vuelve atrás y lo dice. «Quitar del bloque» tiene «Deshacer», que lo devuelve a su sitio con su fecha y su visibilidad. Ordenar se hace arrastrando o, con el teclado y en el móvil (sin asas), con «Subir» y «Bajar», y se anuncia al lector de pantalla.
+- **La fecha de entrega describe, no juzga (D-054):** día y hora (sin hora, a las 23:59), también para todo un bloque de una vez. El alumno la ve en el catálogo («Entrega: vie 20 nov, 23:59 · en 5 días») hasta que entrega, y entregar después de la fecha sigue siendo posible. `DueLabel` y `dueDistance()` están en `shared/` para el histórico (4.4).
+- **Fechas en el idioma de cada uno:** el adaptador nativo de Material lee las fechas tecleadas con `Date.parse`, que solo entiende el orden americano. `LocalizedDateAdapter` las lee en el orden del idioma de la interfaz («25/11/2026» en español y catalán).
+
+**Alternativas:**
+
+- **Los bloques dentro de «Grupos» (5.2):** mezclaba la matrícula con la docencia y obligaba a adelantar esa pantalla.
+- **Seguir con las asignaciones en `ExerciseService`:** un servicio con dos responsabilidades y más de 15 métodos.
+- **Calcular las posiciones en el cliente:** dos pestañas podían chocar, y un orden a medias quedaba guardado si fallaba una de varias peticiones.
+- **Dejar borrar lo empezado, como hasta ahora:** los alumnos perderían ese trabajo en su catálogo y el docente en la analítica, sin que nadie lo viera venir.
+- **Bloquear la entrega pasada la fecha:** contradice D-054, que pide describir sin sancionar.
+
+**Consecuencias:**
+
+- Migración `blocks_and_assignments`, con 19 tests de pgTAP, y `SEED_VERSION` 10, con fechas de entrega en cinco bloques.
+- El catálogo, el panel en vivo y el detalle del ejercicio ordenan por la posición de la asignación, no por su id.
+- `MatDialog` crea su contenido con el inyector raíz: los diálogos de la pantalla se abren con el de la página para recibir los valores por defecto del área.
+- Quedan para un paso posterior (propuestos, en [PENDIENTES](PENDIENTES.md)): fecha de apertura de un bloque y duplicar un bloque en otro grupo.
+
+**Aprobación:** el plan, aprobado por el autor («Sí, empieza»); el detalle técnico y las mejoras (asignar desde el banco, fecha para todo el bloque, «También en», «Deshacer»), por delegación del autor.

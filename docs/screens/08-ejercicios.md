@@ -1,12 +1,16 @@
 # 08 · Ejercicios
 
-`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario) · Docente y administrador · Capa 2 · 5 h (4.3; las asignaciones, en el 4.3b)
+`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3) y 3 h (4.3b)
 
 ## Objetivo
 
 Que el docente encuentre en el banco común los ejercicios de sus asignaturas, los cree y los edite (RF-14, RF-17, CU-05): título, enunciado y contenidos en cada idioma, dificultad, asignaturas, la función con sus parámetros, la batería de pruebas y los umbrales del tutor proactivo. Puede verlo como lo leerá el alumno antes de guardar (CU-05, 5b).
 
 ## Datos
+
+**Bloques (4.3b, D-058):** `BlockService.listGroups()` (los grupos del docente con su asignatura; la administración, todos) y `listBlocks(groupId)` (los bloques en orden, ocultos incluidos, con sus ejercicios en orden y cuántos alumnos ha empezado cada uno). `createBlock`, `updateBlock`, `removeBlock` y `reorderBlocks`; `assign`, `updateAssignment` (oculta y fecha de entrega), `unassign` y `reorderAssignments`. Solo se borra lo que nadie empezó. Funciones puras: `moveItem()`, `toBlockFormModel()`, `toBlockDraft()`, `blockSchema` y, en `shared/`, `dueDistance()` y `withTime()`.
+
+**Banco y formulario (4.3):**
 
 - `ExerciseService.listBank(scope)`: los ejercicios de la parte del banco que se pide, del más nuevo al más antiguo, con sus asignaturas, cuántas pruebas tienen, cuántos alumnos los han empezado (en cualquier grupo) y en qué grupos del docente están asignados. Además devuelve todas las asignaturas y las del docente. Por defecto, las de sus grupos («Mis asignaturas»); también una concreta o «Todas». Quien no tiene grupos, como la administración, ve el banco entero.
 - `ExerciseService.listSubjects()` y `getWithTests(id)`: el ejercicio con todas sus pruebas (también las ocultas), sus asignaturas y su uso.
@@ -36,7 +40,21 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - **Pruebas automáticas:** cada prueba en su grupo, con los argumentos como en la llamada y el resultado esperado en JSON, «Oculta», «Quitar» y la llamada tal como la verá el alumno. «Añadir prueba».
 - Un panel flotante abajo a la derecha con «Hay cambios sin guardar», «Cancelar» y «Guardar los cambios» o «Crear el ejercicio».
 
+**Bloques** (`/docente/bloques?grupo=`, captura `08c-bloques`):
+
+- Cabecera con el título, lo que es la pantalla y el grupo (desplegable con la asignatura, o su nombre si solo hay uno).
+- Una tarjeta por bloque: asa para arrastrar (no en el móvil), título en su idioma, cuántos ejercicios tiene y si está oculto, «Visible» y un menú con «Editar el título», «Añadir ejercicios», «Fecha de entrega para todo el bloque», «Subir», «Bajar» y «Borrar» (desactivado si alguien ha empezado alguno de sus ejercicios).
+- Dentro, sus ejercicios en orden: asa, número, título (enlace al formulario), quién lo ha empezado, dificultad, fecha de entrega («mié 18 nov, 23:59 · en 3 días» o «Sin fecha de entrega»), mostrar u ocultar y un menú con «Subir», «Bajar» y «Quitar del bloque». Debajo, «Añadir ejercicios».
+- «Nuevo bloque», botón flotante abajo a la derecha.
+- Diálogos: el del bloque (título, idioma en que se escribe, títulos en los otros idiomas y «Oculto para los alumnos»), «Añadir ejercicios» (el banco de la asignatura del grupo o de todas, con buscador; marca los que ya están y en qué otros bloques), la fecha de entrega (día y hora, «Quitar la fecha») y, desde el banco, «Asignar a un bloque…» (grupo y bloque).
+- El alumno ve la fecha en su catálogo («Entrega: vie 20 nov, 23:59 · en 5 días») hasta que entrega.
+
 ## Interacciones
+
+- **Ordenar bloques y ejercicios:** arrastrando o con «Subir» y «Bajar»; se ve al momento, se anuncia («Bloque «Tema 2» en el lugar 1 de 8») y vuelve atrás si no se puede guardar.
+- **Crear un bloque:** va al final, y la página baja hasta él con el foco en su título.
+- **Quitar un ejercicio:** sin preguntar, con «Deshacer», que lo devuelve a su sitio con su fecha y su visibilidad. **Borrar un bloque:** pregunta antes y dice cuántos ejercicios salen con él.
+- **Fecha de entrega:** sin hora, a las 23:59; el día se escribe en el orden del idioma («25/11/2026»).
 
 - **Buscar y filtrar:** cambian la URL sin llenar el historial y vuelven a la página 1. Solo la asignatura pide datos al servidor; mientras llegan, se quedan los filtros y la lista con una barra fina encima.
 - **Quitar los filtros:** conserva la asignatura. **Buscar en todas las asignaturas:** cuando no se encuentra nada en la asignatura elegida.
@@ -73,11 +91,13 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Parámetros con nombre, en inglés, que el tutor usa en el esqueleto.
 - [x] Aviso al editar un ejercicio ya empezado y antes de salir sin guardar.
 - [x] Vista previa como la verá el alumno.
+- [x] Bloques: crear, titular y traducir, ordenar, ocultar y borrar lo que nadie empezó (4.3b).
+- [x] Asignar ejercicios del banco a un bloque, desde Bloques y desde el banco, con orden y fecha de entrega opcional que el alumno ve en el catálogo (4.3b).
 - [ ] Revisión visual del autor.
 
 ## Fuera de alcance
 
-- Bloques y asignaciones, con fecha de entrega (4.3b).
+- Fecha de apertura de un bloque, duplicar un bloque en otro grupo y archivar ejercicios (4.3d, propuesto).
 - «Traducir con IA», «Probar mi solución», «Probar como alumno» y el formulario como herramienta de WebMCP (4.3c).
 - Archivar un ejercicio con intentos para que deje de salir en el banco ([PENDIENTES](../PENDIENTES.md)).
 
