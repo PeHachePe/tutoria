@@ -16,6 +16,7 @@ import type { AssignedGroup, ClassBlock, Exercise } from '../../data/exercise';
 import { ExerciseService } from '../../data/exercise-service';
 import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
+import { DueLabel } from '../../shared/due-label/due-label';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot } from '../../shared/mascot/mascot';
@@ -73,6 +74,7 @@ interface ShownText {
     MatTabLink,
     MatTabNavPanel,
     DifficultyChip,
+    DueLabel,
     StatusChip,
     EmptyState,
     LoadError,
@@ -155,6 +157,8 @@ export class CatalogPage {
         hintCount: entry.hintCount,
         hintLevel: entry.hintLevel,
         repetitions: entry.repetitions,
+        // Once submitted, the due date says nothing more (D-054)
+        dueAt: entry.status === 'submitted' ? null : entry.dueAt,
         action: catalogAction(currentAttempt(entry).status),
         path: APP_PATHS.student.exercise(entry.assignmentId),
       })),
@@ -199,6 +203,7 @@ export class CatalogPage {
       block: this.titleOf(entry.block),
       status,
       repetitions: entry.repetitions,
+      dueAt: entry.status === 'submitted' ? null : entry.dueAt,
       action: catalogAction(status),
       path: APP_PATHS.student.exercise(entry.assignmentId),
     };

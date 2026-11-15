@@ -40,6 +40,11 @@ const TEACHING: NavSection = {
       label: $localize`:@@nav.exercises:Ejercicios`,
       icon: 'assignment',
     },
+    {
+      path: APP_PATHS.teacher.blocks,
+      label: $localize`:@@nav.blocks:Bloques`,
+      icon: 'view_agenda',
+    },
     { path: APP_PATHS.teacher.groups, label: $localize`:@@nav.groups:Grupos`, icon: 'groups' },
   ],
 };

@@ -7,12 +7,20 @@ import userEvent from '@testing-library/user-event';
 
 import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
 import { provideLocalizedPaginator } from '../../core/i18n/localized-paginator-intl';
+import { BlockService } from '../../data/block-service';
 import { DataError } from '../../data/data-error';
 import { ExerciseService } from '../../data/exercise-service';
 import { exerciseId } from '../../data/mock/fixtures/exercises';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { ADVANCED_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
-import { ADMIN_ID, DAW_GROUP_ID, TEACHER_ID } from '../../data/mock/fixtures/users';
+import { fixtureId } from '../../data/mock/fixtures/fixture-id';
+import {
+  ADMIN_ID,
+  DAW_GROUP_ID,
+  DAW_WEB_GROUP_ID,
+  TEACHER_ID,
+} from '../../data/mock/fixtures/users';
+import { MockBlockService } from '../../data/mock/mock-block-service';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockExerciseService } from '../../data/mock/mock-exercise-service';
 import { MockNetwork } from '../../data/mock/mock-network';
@@ -48,6 +56,7 @@ describe('ExerciseBankPage', () => {
         provideSessionOf(userId === ADMIN_ID ? 'admin' : 'teacher', { id: userId }),
         MockExerciseService,
         { provide: ExerciseService, useExisting: MockExerciseService },
+        { provide: BlockService, useClass: MockBlockService },
       ],
     });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
@@ -261,7 +270,9 @@ describe('ExerciseBankPage', () => {
                   groupId: DAW_GROUP_ID,
                   blockId: dawBlock?.id ?? '',
                   exerciseId: leapYear?.id ?? '',
+                  position: 9,
                   isHidden: false,
+                  dueAt: null,
                 },
               ]
             : []),
@@ -365,5 +376,137 @@ describe('ExerciseBankPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     await vi.waitFor(() => expect(screen.getByText(`${MY_EXERCISES} ejercicios`)).toBeTruthy());
     expect(listBank).toHaveBeenCalledTimes(2);
+  });
+
+  describe('assigning to a block', () => {
+    const leapYear = SEED.exercises.find((exercise) => exercise.functionName === 'isLeapYear');
+
+    /** Opens «Asignar a un bloque…» of «Año bisiesto» and waits for its groups. */
+    async function openAssign(harness: RouterTestingHarness): Promise<HTMLElement> {
+      await userEvent.click(screen.getByRole('button', { name: 'Acciones de «Año bisiesto»' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Asignar a un bloque…' }));
+      const dialog = await screen.findByRole('dialog');
+      await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+      await settle(harness);
+      return dialog;
+    }
+
+    async function choose(dialog: HTMLElement, select: string, option: string): Promise<void> {
+      await userEvent.click(within(dialog).getByRole('combobox', { name: select }));
+      await userEvent.click(await screen.findByRole('option', { name: option }));
+    }
+
+    it('assigns an exercise to a block of a group of its subjects, at the end', async () => {
+      const harness = await renderBank('/docente/ejercicios?buscar=bisiesto');
+      const open = vi.spyOn(MatSnackBar.prototype, 'open');
+
+      const dialog = await openAssign(harness);
+      // The group of its subject comes chosen; the block where it already is cannot be chosen
+      expect(text(within(dialog).getByRole('combobox', { name: 'Grupo' }))).toBe(
+        '1.º DAW A · Programación básica',
+      );
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Bloque' }));
+      const assigned = await screen.findByRole('option', { name: /Tema 5: Funciones con números/ });
+      expect(text(assigned)).toContain('(ya está)');
+      expect(assigned.getAttribute('aria-disabled')).toBe('true');
+      await userEvent.click(screen.getByRole('option', { name: 'Tema 2: Vectores' }));
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Asignar' }));
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      await settle(harness);
+
+      expect(open).toHaveBeenCalledWith(
+        'Asignado a «Tema 2: Vectores» (1.º DAW A · Programación básica)',
+      );
+      const rows = TestBed.inject(MockDb)
+        .tables()
+        .assignments.filter((row) => row.blockId === fixtureId('block', 2));
+      expect(rows.at(-1)).toMatchObject({ exerciseId: leapYear?.id, position: 3 });
+    });
+
+    it('asks for the block, which another group empties, and says when a group has none', async () => {
+      const harness = await renderBank('/docente/ejercicios?buscar=bisiesto', TEACHER_ID, (db) =>
+        db.update('classBlocks', (rows) => rows.filter((row) => row.groupId !== DAW_WEB_GROUP_ID)),
+      );
+
+      const dialog = await openAssign(harness);
+      await choose(dialog, 'Bloque', 'Tema 2: Vectores');
+      await choose(dialog, 'Grupo', '1.º DAW A · Desarrollo web en entorno cliente');
+      await settle(harness);
+      expect(text(within(dialog).getByRole('combobox', { name: 'Bloque' }))).toBe('');
+      expect(text(dialog)).toContain('Este grupo no tiene bloques todavía');
+      expect(
+        within(dialog).getByRole('link', { name: 'créalos en Bloques' }).getAttribute('href'),
+      ).toBe(`/docente/bloques?grupo=${DAW_WEB_GROUP_ID}`);
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Asignar' }));
+      expect(await within(dialog).findByText('Elige el bloque')).toBeTruthy();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    });
+
+    it('keeps the dialog open with the error when assigning fails', async () => {
+      const harness = await renderBank('/docente/ejercicios?buscar=bisiesto');
+
+      const dialog = await openAssign(harness);
+      await choose(dialog, 'Bloque', 'Tema 2: Vectores');
+      TestBed.inject(MockNetwork).setLatency({ min: 5, max: 5 });
+      TestBed.inject(MockNetwork).failNextRequest('unknown');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Asignar' }));
+
+      expect(await within(dialog).findByText('Asignando…')).toBeTruthy();
+      expect(text(await within(dialog).findByRole('alert'))).toBe(
+        'No se ha podido asignar. Inténtalo de nuevo.',
+      );
+    });
+
+    it('says when the teacher has no groups, and retries the groups that fail', async () => {
+      const harness = await renderBank('/docente/ejercicios?buscar=bisiesto', TEACHER_ID, (db) =>
+        db.update('groups', () => []),
+      );
+
+      TestBed.inject(MockNetwork).failNextRequest('unknown');
+      const dialog = await openAssign(harness);
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Reintentar' }));
+      await settle(harness);
+
+      expect(text(dialog)).toContain('Todavía no tienes grupos a los que asignarlo.');
+      expect(
+        (within(dialog).getByRole('button', { name: 'Asignar' }) as HTMLButtonElement).disabled,
+      ).toBe(true);
+    });
+
+    it('marks the language of the titles without translation, and puts other subjects last', async () => {
+      const harness = await renderBank('/docente/ejercicios?buscar=leap', TEACHER_ID, (db) => {
+        db.update('exercises', (rows) =>
+          rows.map((row) =>
+            row.id === leapYear?.id
+              ? { ...row, title: 'Leap year', sourceLocale: 'en', translations: {} }
+              : row,
+          ),
+        );
+        db.update('classBlocks', (rows) =>
+          rows.map((row) =>
+            row.id === fixtureId('block', 2)
+              ? { ...row, title: 'Topic 2: Arrays', sourceLocale: 'en', translations: {} }
+              : row,
+          ),
+        );
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Acciones de «Leap year»' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Asignar a un bloque…' }));
+      const dialog = await screen.findByRole('dialog');
+      await settle(harness);
+      expect(within(dialog).getByText('Leap year').getAttribute('lang')).toBe('en');
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Grupo' }));
+      const groups = (await screen.findAllByRole('option')).map((option) => text(option));
+      expect(groups).toEqual([
+        '1.º DAW A · Programación básica',
+        '1.º DAW A · Desarrollo web en entorno cliente',
+      ]);
+      await userEvent.keyboard('{Escape}');
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Bloque' }));
+      expect((await screen.findByText('Topic 2: Arrays')).getAttribute('lang')).toBe('en');
+    });
   });
 });

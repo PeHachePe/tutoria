@@ -3,6 +3,7 @@ import {
   computed,
   type ElementRef,
   inject,
+  Injector,
   input,
   linkedSignal,
   resource,
@@ -21,6 +22,7 @@ import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
 import { ALL_SUBJECTS, APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
@@ -40,6 +42,11 @@ import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
+import {
+  AssignDialog,
+  type AssignDialogData,
+  type AssignDialogResult,
+} from '../blocks/assign-dialog';
 import { BANK_PAGE_SIZE, type BankFilters, filterBank, pageOf } from './bank-filter';
 import { canEditExercise } from './can-edit-exercise';
 
@@ -100,6 +107,7 @@ export class ExerciseBankPage {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly locale = inject(LanguageService).locale;
+  private readonly injector = inject(Injector);
 
   /** The filters, from the query parameters of the URL (withComponentInputBinding). */
   readonly buscar = input<string>();
@@ -240,6 +248,29 @@ export class ExerciseBankPage {
 
   protected copyQuery(exerciseId: string) {
     return { [TEACHER_PARAMS.copy]: exerciseId };
+  }
+
+  /** Assigns it to a block of one of the user's groups, without leaving the bank (4.3b). */
+  protected async assign(entry: BankExercise): Promise<void> {
+    const text = exerciseText(entry.exercise, this.locale);
+    const ref = this.dialog.open<AssignDialog, AssignDialogData, AssignDialogResult>(AssignDialog, {
+      data: {
+        exerciseId: entry.exercise.id,
+        title: text.title,
+        lang: text.locale === this.locale ? null : text.locale,
+        subjectIds: entry.subjectIds,
+        locale: this.locale,
+      },
+      // The dialog gets the defaults of the area, such as the outlined fields
+      injector: this.injector,
+    });
+    const assigned = await firstValueFrom(ref.afterClosed());
+    if (!assigned) return;
+    this.snackBar.open(
+      $localize`:@@bank.assign.done:Asignado a «${assigned.block}:block:» (${assigned.group}:group:)`,
+    );
+    // Where it is assigned shows in its card
+    this.bank.reload();
   }
 
   /** Asks first: deleting cannot be undone, and its assignments go with it. */

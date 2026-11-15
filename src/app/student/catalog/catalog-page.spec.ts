@@ -50,6 +50,7 @@ function entry(
     assignmentId: `assignment-${group.id}-${index}`,
     group,
     block: group === DAW ? BLOCKS[blockPosition] : block(blockPosition, 'Tema 1: Formularios', WEB),
+    dueAt: null,
     updatedAt,
     status,
     hintCount,

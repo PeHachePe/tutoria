@@ -38,4 +38,10 @@ export const SCREENS: readonly Screen[] = [
     path: '/docente/ejercicios/40000000-0000-4000-8000-000000000003',
     user: 'teacher',
   },
+  // The blocks of 1.º DAW A in basic programming, with due dates and a hidden block (4.3b)
+  {
+    code: '08c-bloques',
+    path: '/docente/bloques?grupo=20000000-0000-4000-8000-000000000001',
+    user: 'teacher',
+  },
 ];

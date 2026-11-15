@@ -8,6 +8,7 @@ import { unsavedChangesGuard } from '../core/unsaved-changes-guard';
 import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
 import { AttemptDetailPage } from './attempt-detail/attempt-detail-page';
+import { BlocksPage } from './blocks/blocks-page';
 import { ExerciseBankPage } from './exercises/exercise-bank-page';
 import { ExerciseFormPage } from './exercises/exercise-form-page';
 import { LivePage } from './live/live-page';
@@ -66,6 +67,11 @@ export const teacherRoutes: Routes = [
             canDeactivate: [unsavedChangesGuard],
           },
         ],
+      },
+      {
+        path: SEGMENTS.teacher.blocks,
+        title: $localize`:@@route.blocks.title:Bloques`,
+        component: BlocksPage,
       },
       {
         path: SEGMENTS.teacher.groups,

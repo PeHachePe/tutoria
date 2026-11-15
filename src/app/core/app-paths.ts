@@ -13,6 +13,8 @@ export const SEGMENTS = {
     exercises: 'ejercicios',
     /** The form of a new exercise, under the bank. */
     newExercise: 'nuevo',
+    /** The blocks of a group and what is assigned in them (4.3b). */
+    blocks: 'bloques',
     groups: 'grupos',
   },
   admin: { area: 'admin', users: 'usuarios', system: 'sistema' },
@@ -40,6 +42,7 @@ export const APP_PATHS = {
     newExercise: `/${teacher.area}/${teacher.exercises}/${teacher.newExercise}`,
     /** The form of an exercise of the bank (4.3). */
     exercise: (exerciseId: string) => `/${teacher.area}/${teacher.exercises}/${exerciseId}`,
+    blocks: `/${teacher.area}/${teacher.blocks}`,
     groups: `/${teacher.area}/${teacher.groups}`,
   },
   admin: {
@@ -64,7 +67,7 @@ export const ALL_SUBJECTS = 'todas';
 
 /** Query parameters of the teacher's screens (D-046), part of the URLs like the segments. */
 export const TEACHER_PARAMS = {
-  /** The group followed live: its id. */
+  /** The group followed live, or whose blocks are shown: its id. */
   group: 'grupo',
   /** The block of that group: its id. */
   block: 'bloque',

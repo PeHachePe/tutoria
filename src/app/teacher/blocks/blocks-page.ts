@@ -1,0 +1,526 @@
+import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { CdkDrag, type CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DOCUMENT,
+  inject,
+  Injector,
+  input,
+  resource,
+} from '@angular/core';
+import { MatButton, MatFabButton, MatIconButton } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatOption, MatSelect } from '@angular/material/select';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltip } from '@angular/material/tooltip';
+import { NgTemplateOutlet } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+
+import { AuthStore } from '../../auth/auth-store';
+import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
+import { LanguageService } from '../../core/i18n/language-service';
+import {
+  type AssignmentChanges,
+  type BlockDraft,
+  BlockService,
+  type PlannedAssignment,
+  type PlannedBlock,
+} from '../../data/block-service';
+import type { AssignedGroup, ClassBlock } from '../../data/exercise';
+import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
+import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
+import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
+import { DueLabel } from '../../shared/due-label/due-label';
+import { EmptyState } from '../../shared/empty-state/empty-state';
+import { LoadError } from '../../shared/load-error/load-error';
+import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import {
+  AddExercisesDialog,
+  type AddExercisesData,
+  type AddExercisesResult,
+} from './add-exercises-dialog';
+import { BlockDialog, type BlockDialogData } from './block-dialog';
+import { moveItem } from './block-order';
+import { DueDateDialog, type DueDateDialogData, type DueDateDialogResult } from './due-date-dialog';
+
+const SKELETON_BLOCKS = [1, 2, 3];
+
+/**
+ * The blocks of a group (/docente/bloques?grupo=, ficha 08, D-046, 4.3b): create, title, translate,
+ * reorder, hide and delete them; and in each one, the exercises of the bank assigned there, in their
+ * order, with an optional due date (D-054). Only what nobody started can be deleted: their attempts
+ * keep it, and hiding is the way to take it out of sight.
+ */
+@Component({
+  selector: 'app-blocks-page',
+  imports: [
+    RouterLink,
+    NgTemplateOutlet,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
+    MatButton,
+    MatFabButton,
+    MatIconButton,
+    MatIcon,
+    MatFormField,
+    MatLabel,
+    MatSelect,
+    MatOption,
+    MatSlideToggle,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
+    MatProgressBar,
+    MatTooltip,
+    DifficultyChip,
+    DueLabel,
+    EmptyState,
+    LoadError,
+    LoadingSkeleton,
+    Skeleton,
+  ],
+  templateUrl: './blocks-page.html',
+})
+export class BlocksPage {
+  private readonly service = inject(BlockService);
+  private readonly auth = inject(AuthStore);
+  private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly announcer = inject(LiveAnnouncer);
+  private readonly locale = inject(LanguageService).locale;
+  /** The dialogs get the defaults of the area, such as the outlined fields (teacher.routes.ts). */
+  private readonly injector = inject(Injector);
+  private readonly document = inject(DOCUMENT);
+
+  /** The group, from the query parameters of the URL (withComponentInputBinding). */
+  readonly grupo = input<string>();
+
+  protected readonly paths = APP_PATHS.teacher;
+  protected readonly skeletonBlocks = SKELETON_BLOCKS;
+
+  /** Empty until they arrive: the template tells loading from empty by the status. */
+  protected readonly groups = resource({
+    loader: () => this.service.listGroups(),
+    defaultValue: [],
+  });
+
+  /** The groups once loaded; none while they fail, when reading the value would throw. */
+  private readonly groupList = computed(() => (this.groups.hasValue() ? this.groups.value() : []));
+
+  /** The group of the URL or, without one (or an unknown one), the first. */
+  protected readonly group = computed(() => {
+    const groups = this.groupList();
+    return groups.find((group) => group.id === this.grupo()) ?? groups.at(0) ?? null;
+  });
+
+  protected readonly groupOptions = computed(() =>
+    this.groupList().map((group) => ({
+      id: group.id,
+      label: `${group.name} · ${subjectName(group.subject, this.locale).name}`,
+    })),
+  );
+
+  /** Changed in place by every action, so the page answers at once; reloaded only after a failure. */
+  protected readonly blocks = resource({
+    params: () => this.group()?.id,
+    loader: ({ params }) => this.service.listBlocks(params),
+    defaultValue: [],
+  });
+
+  /** The blocks, ready for the template. */
+  protected readonly rows = computed(() => {
+    const blocks = this.blocks.value();
+    return blocks.map((planned, index) => {
+      const title = blockTitle(planned.block, this.locale);
+      return {
+        planned,
+        id: planned.block.id,
+        title: title.title,
+        lang: title.locale === this.locale ? null : title.locale,
+        headingId: `block-${planned.block.id}`,
+        first: index === 0,
+        last: index === blocks.length - 1,
+        started: planned.assignments.some((entry) => entry.studentCount > 0),
+        actionsLabel: $localize`:@@blocks.actions:Acciones del bloque «${title.title}:title:»`,
+        dragLabel: $localize`:@@blocks.drag:Arrastrar el bloque «${title.title}:title:»`,
+        assignments: planned.assignments.map((entry, position) =>
+          this.assignmentRow(entry, position, planned.assignments.length),
+        ),
+      };
+    });
+  });
+
+  protected selectGroup(groupId: string): void {
+    void this.router.navigate([], { queryParams: { [TEACHER_PARAMS.group]: groupId } });
+  }
+
+  // Blocks ---------------------------------------------------------------------------------------
+
+  protected async newBlock(group: AssignedGroup): Promise<void> {
+    let createdId: string | null = null;
+    const created = await this.openBlockDialog(null, async (draft) => {
+      const block = await this.service.createBlock(group.id, draft);
+      createdId = block.id;
+      this.blocks.value.update((blocks) => [...blocks, { block, assignments: [] }]);
+    });
+    if (!created) return;
+    this.snackBar.open($localize`:@@blocks.created:Bloque creado`);
+    // The new block is the last one, often out of sight: it takes the focus, and the page scrolls to it
+    afterNextRender(() => this.document.getElementById(`block-${createdId}`)?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  protected async editBlock(planned: PlannedBlock): Promise<void> {
+    const saved = await this.openBlockDialog(planned.block, async (draft) => {
+      this.replaceBlock(await this.service.updateBlock(planned.block.id, draft));
+    });
+    if (saved) this.snackBar.open($localize`:@@blocks.saved:Bloque guardado`);
+  }
+
+  /** Shown or hidden at once; back as it was if the server says no. */
+  protected async setBlockHidden(planned: PlannedBlock, isHidden: boolean): Promise<void> {
+    const { title, sourceLocale, translations } = planned.block;
+    this.replaceBlock({ ...planned.block, isHidden });
+    try {
+      await this.service.updateBlock(planned.block.id, {
+        title,
+        sourceLocale,
+        translations,
+        isHidden,
+      });
+    } catch {
+      this.replaceBlock(planned.block);
+      this.failed();
+    }
+  }
+
+  protected async moveBlock(group: AssignedGroup, from: number, to: number): Promise<void> {
+    const blocks = this.blocks.value();
+    const moved = moveItem(blocks, from, to);
+    if (moved.every((entry, index) => entry === blocks[index])) return;
+    this.blocks.set(moved);
+    const position = moved.indexOf(blocks[from]) + 1;
+    this.announcer.announce(
+      $localize`:@@blocks.moved:Bloque «${blockTitle(blocks[from].block, this.locale).title}:title:» en el lugar ${position}:position: de ${moved.length}:total:`,
+    );
+    try {
+      await this.service.reorderBlocks(
+        group.id,
+        moved.map((entry) => entry.block.id),
+      );
+    } catch {
+      this.blocks.set(blocks);
+      this.failed();
+    }
+  }
+
+  protected dropBlock(group: AssignedGroup, event: CdkDragDrop<unknown>): void {
+    void this.moveBlock(group, event.previousIndex, event.currentIndex);
+  }
+
+  /** Asks first: its exercises go with it, and it cannot be undone. */
+  protected async removeBlock(planned: PlannedBlock): Promise<void> {
+    const title = blockTitle(planned.block, this.locale).title;
+    const count = planned.assignments.length;
+    const confirmed = await confirmAction(this.dialog, {
+      title: $localize`:@@blocks.delete.title:¿Borrar «${title}:title:»?`,
+      text:
+        count === 0
+          ? $localize`:@@blocks.delete.text:Está vacío. No se puede deshacer.`
+          : count === 1
+            ? $localize`:@@blocks.delete.withExercise:Se quita también su ejercicio, que sigue en el banco. Nadie lo ha empezado. No se puede deshacer.`
+            : $localize`:@@blocks.delete.withExercises:Se quitan también sus ${count}:count: ejercicios, que siguen en el banco. Nadie los ha empezado. No se puede deshacer.`,
+      confirm: $localize`:@@blocks.delete.confirm:Borrar`,
+    });
+    if (!confirmed) return;
+    try {
+      await this.service.removeBlock(planned.block.id);
+      this.blocks.value.update((blocks) =>
+        blocks.filter((entry) => entry.block.id !== planned.block.id),
+      );
+      this.snackBar.open($localize`:@@blocks.deleted:Bloque borrado`);
+    } catch {
+      this.snackBar.open(
+        $localize`:@@blocks.delete.failed:No se ha podido borrar: puede que alguien acabe de empezar uno de sus ejercicios.`,
+      );
+      this.blocks.reload();
+    }
+  }
+
+  // Assignments ----------------------------------------------------------------------------------
+
+  protected async addExercises(group: AssignedGroup, planned: PlannedBlock): Promise<void> {
+    const ref = this.dialog.open<AddExercisesDialog, AddExercisesData, AddExercisesResult>(
+      AddExercisesDialog,
+      {
+        data: {
+          blockTitle: blockTitle(planned.block, this.locale).title,
+          subjectId: group.subject.id,
+          subjectName: subjectName(group.subject, this.locale).name,
+          assignedIds: planned.assignments.map((entry) => entry.exercise.id),
+          elsewhere: this.blocksOfExercises(planned.block.id),
+          locale: this.locale,
+          userId: this.auth.userId(),
+        },
+        width: '42rem',
+        injector: this.injector,
+      },
+    );
+    const chosen = await firstValueFrom(ref.afterClosed());
+    if (!chosen?.length) return;
+    try {
+      const created = await this.service.assign(
+        planned.block.id,
+        chosen.map((exercise) => exercise.id),
+      );
+      const added = created.map((assignment, index) => ({
+        assignment,
+        exercise: chosen[index],
+        studentCount: 0,
+      }));
+      this.updateAssignments(planned.block.id, (entries) => [...entries, ...added]);
+      // $localize has no plurals: one message for one and another for several
+      this.snackBar.open(
+        added.length === 1
+          ? $localize`:@@blocks.assigned.one:1 ejercicio añadido`
+          : $localize`:@@blocks.assigned.other:${added.length}:count: ejercicios añadidos`,
+      );
+    } catch {
+      this.failed();
+      this.blocks.reload();
+    }
+  }
+
+  protected async moveAssignment(planned: PlannedBlock, from: number, to: number): Promise<void> {
+    const entries = planned.assignments;
+    const moved = moveItem(entries, from, to);
+    if (moved.every((entry, index) => entry === entries[index])) return;
+    this.updateAssignments(planned.block.id, () => moved);
+    const title = exerciseText(entries[from].exercise, this.locale).title;
+    this.announcer.announce(
+      $localize`:@@blocks.exercise.moved:«${title}:title:» en el lugar ${moved.indexOf(entries[from]) + 1}:position: de ${moved.length}:total:`,
+    );
+    try {
+      await this.service.reorderAssignments(
+        planned.block.id,
+        moved.map((entry) => entry.assignment.id),
+      );
+    } catch {
+      this.updateAssignments(planned.block.id, () => entries);
+      this.failed();
+    }
+  }
+
+  protected dropAssignment(planned: PlannedBlock, event: CdkDragDrop<unknown>): void {
+    void this.moveAssignment(planned, event.previousIndex, event.currentIndex);
+  }
+
+  protected setAssignmentHidden(entry: PlannedAssignment, isHidden: boolean): Promise<void> {
+    return this.changeAssignment(entry, { isHidden });
+  }
+
+  protected async chooseDueDate(entry: PlannedAssignment): Promise<void> {
+    const text = exerciseText(entry.exercise, this.locale);
+    const ref = this.dialog.open<DueDateDialog, DueDateDialogData, DueDateDialogResult>(
+      DueDateDialog,
+      {
+        data: {
+          title: text.title,
+          lang: text.locale === this.locale ? null : text.locale,
+          dueAt: entry.assignment.dueAt,
+        },
+        injector: this.injector,
+      },
+    );
+    const dueAt = await firstValueFrom(ref.afterClosed());
+    if (dueAt === undefined || dueAt === entry.assignment.dueAt) return;
+    await this.changeAssignment(entry, { dueAt });
+    this.snackBar.open(
+      dueAt === null
+        ? $localize`:@@blocks.due.removed:Fecha de entrega quitada`
+        : $localize`:@@blocks.due.saved:Fecha de entrega guardada`,
+    );
+  }
+
+  /** The same due date for every exercise of the block: the usual case of a topic. */
+  protected async chooseBlockDueDate(planned: PlannedBlock): Promise<void> {
+    const title = blockTitle(planned.block, this.locale);
+    const dates = new Set(planned.assignments.map((entry) => entry.assignment.dueAt));
+    const ref = this.dialog.open<DueDateDialog, DueDateDialogData, DueDateDialogResult>(
+      DueDateDialog,
+      {
+        data: {
+          title: $localize`:@@blocks.due.every:Todos los ejercicios de «${title.title}:title:»`,
+          lang: null,
+          // The date they share, if they share one
+          dueAt: dates.size === 1 ? [...dates][0] : null,
+        },
+        injector: this.injector,
+      },
+    );
+    const dueAt = await firstValueFrom(ref.afterClosed());
+    if (dueAt === undefined) return;
+    await Promise.all(planned.assignments.map((entry) => this.changeAssignment(entry, { dueAt })));
+    this.snackBar.open(
+      dueAt === null
+        ? $localize`:@@blocks.due.removedAll:Fechas de entrega quitadas`
+        : $localize`:@@blocks.due.savedAll:Fecha de entrega guardada en todo el bloque`,
+    );
+  }
+
+  /** Nobody started it: it goes back to the bank, with «Deshacer» to put it back where it was. */
+  protected async unassign(planned: PlannedBlock, entry: PlannedAssignment): Promise<void> {
+    const order = planned.assignments.map((other) => other.assignment.id);
+    try {
+      await this.service.unassign(entry.assignment.id);
+    } catch {
+      this.snackBar.open(
+        $localize`:@@blocks.unassign.failed:No se ha podido quitar: puede que alguien acabe de empezarlo.`,
+      );
+      this.blocks.reload();
+      return;
+    }
+    this.updateAssignments(planned.block.id, (entries) =>
+      entries.filter((other) => other.assignment.id !== entry.assignment.id),
+    );
+    const title = exerciseText(entry.exercise, this.locale).title;
+    this.snackBar
+      .open(
+        $localize`:@@blocks.unassigned:«${title}:title:» quitado del bloque`,
+        $localize`:@@blocks.undo:Deshacer`,
+      )
+      .onAction()
+      .subscribe(() => void this.restore(planned.block.id, entry, order));
+  }
+
+  /** Assigns the exercise again, in its place and with its due date and visibility. */
+  private async restore(
+    blockId: string,
+    entry: PlannedAssignment,
+    order: readonly string[],
+  ): Promise<void> {
+    try {
+      const [created] = await this.service.assign(blockId, [entry.exercise.id]);
+      const { isHidden, dueAt } = entry.assignment;
+      const assignment =
+        isHidden || dueAt
+          ? await this.service.updateAssignment(created.id, { isHidden, dueAt })
+          : created;
+      const ids = order.map((id) => (id === entry.assignment.id ? assignment.id : id));
+      let restored: readonly PlannedAssignment[] = [];
+      this.updateAssignments(blockId, (entries) => {
+        restored = [...entries, { ...entry, assignment }].sort(
+          (a, b) => ids.indexOf(a.assignment.id) - ids.indexOf(b.assignment.id),
+        );
+        return restored;
+      });
+      await this.service.reorderAssignments(
+        blockId,
+        restored.map((other) => other.assignment.id),
+      );
+    } catch {
+      this.failed();
+      this.blocks.reload();
+    }
+  }
+
+  // Helpers --------------------------------------------------------------------------------------
+
+  private assignmentRow(entry: PlannedAssignment, index: number, total: number) {
+    const text = exerciseText(entry.exercise, this.locale);
+    const due = entry.assignment.dueAt;
+    return {
+      entry,
+      id: entry.assignment.id,
+      number: index + 1,
+      first: index === 0,
+      last: index === total - 1,
+      title: text.title,
+      lang: text.locale === this.locale ? null : text.locale,
+      due,
+      actionsLabel: $localize`:@@blocks.exercise.actions:Acciones de «${text.title}:title:»`,
+      dragLabel: $localize`:@@blocks.exercise.drag:Arrastrar «${text.title}:title:»`,
+      dueLabel: $localize`:@@blocks.exercise.due:Fecha de entrega de «${text.title}:title:»`,
+      visibilityLabel: entry.assignment.isHidden
+        ? $localize`:@@blocks.exercise.show:Mostrar «${text.title}:title:» a los alumnos`
+        : $localize`:@@blocks.exercise.hide:Ocultar «${text.title}:title:» a los alumnos`,
+    };
+  }
+
+  private async openBlockDialog(
+    block: ClassBlock | null,
+    save: (draft: BlockDraft) => Promise<void>,
+  ): Promise<boolean> {
+    const ref = this.dialog.open<BlockDialog, BlockDialogData, boolean>(BlockDialog, {
+      data: { block, locale: this.locale, save },
+      injector: this.injector,
+    });
+    return (await firstValueFrom(ref.afterClosed())) === true;
+  }
+
+  private async changeAssignment(
+    entry: PlannedAssignment,
+    changes: AssignmentChanges,
+  ): Promise<void> {
+    const blockId = entry.assignment.blockId;
+    const replace = (assignment: PlannedAssignment['assignment']) =>
+      this.updateAssignments(blockId, (entries) =>
+        entries.map((other) =>
+          other.assignment.id === assignment.id ? { ...other, assignment } : other,
+        ),
+      );
+    replace({ ...entry.assignment, ...changes });
+    try {
+      replace(await this.service.updateAssignment(entry.assignment.id, changes));
+    } catch {
+      replace(entry.assignment);
+      this.failed();
+    }
+  }
+
+  /** The other blocks of the group where each exercise is, by title: «También en Tema 3». */
+  private blocksOfExercises(exceptBlockId: string): ReadonlyMap<string, readonly string[]> {
+    const titles = new Map<string, string[]>();
+    for (const { block, assignments } of this.blocks.value()) {
+      if (block.id === exceptBlockId) continue;
+      const title = blockTitle(block, this.locale).title;
+      for (const { exercise } of assignments) {
+        titles.set(exercise.id, [...(titles.get(exercise.id) ?? []), title]);
+      }
+    }
+    return titles;
+  }
+
+  private replaceBlock(block: ClassBlock): void {
+    this.blocks.value.update((blocks) =>
+      blocks.map((entry) => (entry.block.id === block.id ? { ...entry, block } : entry)),
+    );
+  }
+
+  private updateAssignments(
+    blockId: string,
+    change: (entries: readonly PlannedAssignment[]) => readonly PlannedAssignment[],
+  ): void {
+    this.blocks.value.update((blocks) =>
+      blocks.map((entry) =>
+        entry.block.id === blockId ? { ...entry, assignments: change(entry.assignments) } : entry,
+      ),
+    );
+  }
+
+  private failed(): void {
+    this.snackBar.open($localize`:@@blocks.failed:No se ha podido guardar. Inténtalo de nuevo.`);
+  }
+}

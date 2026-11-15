@@ -63,6 +63,13 @@
             <span [attr.lang]="next.block.lang">{{ next.block.text }}</span>
             · <span [attr.lang]="next.lang">{{ next.topics }}</span>
           </p>
+          @if (next.dueAt; as dueAt) {
+            <p class="flex items-center gap-1 text-body-medium">
+              <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">event</mat-icon>
+              <span i18n="@@catalog.due">Entrega:</span>
+              <app-due-label [dueAt]="dueAt" />
+            </p>
+          }
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <app-status-chip [status]="next.status" />
@@ -252,6 +259,13 @@
                 <p class="text-body-medium text-on-surface-variant" [attr.lang]="card.lang">
                   {{ card.topics }}
                 </p>
+                @if (card.dueAt; as dueAt) {
+                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                    <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">event</mat-icon>
+                    <span i18n="@@catalog.due">Entrega:</span>
+                    <app-due-label [dueAt]="dueAt" />
+                  </p>
+                }
                 @if (card.ready) {
                   <p class="flex items-center gap-1 text-label-large text-primary">
                     <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">outbox</mat-icon>

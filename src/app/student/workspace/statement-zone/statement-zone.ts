@@ -10,6 +10,7 @@ import {
 import { MatIcon } from '@angular/material/icon';
 
 import { LanguageService } from '../../../core/i18n/language-service';
+import { LOCALE_NAMES } from '../../../core/i18n/locale-names';
 import type { ExerciseDetail } from '../../../data/exercise';
 import { exerciseText, type ContentLocale } from '../../../data/localized-text';
 import { formatCall, formatValue, isMultilineText } from '../../../shared/format-value';
@@ -29,13 +30,6 @@ export type StatementContent = Pick<
 
 /** Example rows drawn while the exercise loads. */
 const SKELETON_EXAMPLES = [1, 2, 3];
-
-/** The name of each language inside a sentence of the interface («solo está en inglés»). */
-const LOCALE_NAMES: Record<ContentLocale, string> = {
-  es: $localize`:@@locale.name.es:español`,
-  en: $localize`:@@locale.name.en:inglés`,
-  ca: $localize`:@@locale.name.ca:catalán`,
-};
 
 /**
  * The statement zone of the workspace (ficha 03): the text of the exercise, its visible tests as the
