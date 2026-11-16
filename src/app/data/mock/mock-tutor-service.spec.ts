@@ -3,9 +3,9 @@ import { TestBed } from '@angular/core/testing';
 import type { Attempt } from '../attempt';
 import { DataError } from '../data-error';
 import type { TutorEvent, TutorPreviewRequest, TutorRequest } from '../tutor';
-import { exerciseId } from './fixtures/exercises';
+import { assignmentId, exerciseId } from './fixtures/exercises';
 import { TUTOR_SCRIPTS } from './fixtures/tutor-script';
-import { DAW_STUDENT_IDS, TEACHER_ID } from './fixtures/users';
+import { DAW_GROUP_ID, DAW_STUDENT_IDS, TEACHER_ID } from './fixtures/users';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 import { TUTOR_TYPING_MS, typingChunks } from '../tutor/typing';
@@ -20,7 +20,7 @@ function attemptOf(userId: string, status: Attempt['status'] = 'in_progress'): A
     id: `attempt-${userId}`,
     exerciseId: exerciseId(3),
     userId,
-    assignmentId: null,
+    assignmentId: assignmentId(DAW_GROUP_ID, 3),
     number: 1,
     currentCode: '',
     finalCode: null,
@@ -222,6 +222,17 @@ describe('MockTutorService', () => {
     await expect(collect(service.ask(request({ attemptId: SUBMITTED.id })))).rejects.toMatchObject({
       kind: 'invalid',
     });
+  });
+
+  it('does not help with an attempt its student no longer works on (D-063)', async () => {
+    setUp();
+    // Its block was hidden
+    db.update('classBlocks', (blocks) => blocks.map((block) => ({ ...block, isHidden: true })));
+
+    await expect(collect(service.ask(request()))).rejects.toEqual(
+      new DataError('forbidden', 'The exercise is not open'),
+    );
+    expect(db.tables().interactions).toEqual([]);
   });
 
   it('needs the message of a question', async () => {

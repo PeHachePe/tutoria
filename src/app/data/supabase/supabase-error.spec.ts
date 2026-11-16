@@ -30,6 +30,7 @@ describe('toDataError', () => {
     [403, 'forbidden'],
     [404, 'not_found'],
     [409, 'invalid'],
+    [413, 'invalid'],
     [422, 'invalid'],
     [429, 'rate_limited'],
     [502, 'unavailable'],

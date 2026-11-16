@@ -120,6 +120,22 @@ export function findOwnAttempt(tables: MockTables, user: AppUser, attemptId: str
   return attempt;
 }
 
+/**
+ * The attempt its student still works on, as `is_open_attempt`: they are enrolled in the group of
+ * its assignment and see it. Otherwise it is `forbidden` to run its code or to ask the tutor about
+ * it, as `execute` and `tutor` answer (D-063).
+ */
+export function requireOpenAttempt(tables: MockTables, attempt: Attempt): void {
+  const assignment = tables.assignments.find((candidate) => candidate.id === attempt.assignmentId);
+  if (
+    assignment === undefined ||
+    !enrolledGroupIds(tables, attempt.userId).has(assignment.groupId) ||
+    !isVisibleAssignment(tables, assignment)
+  ) {
+    throw new DataError('forbidden', 'The exercise is not open');
+  }
+}
+
 export function now(): string {
   return new Date().toISOString();
 }

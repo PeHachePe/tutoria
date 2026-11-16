@@ -14,7 +14,7 @@ import { CodeRunnerService } from '../code-runner-service';
 import { DataError } from '../data-error';
 import { CODE_RUNNER_WORKER } from './code-runner/code-runner-worker';
 import type { RunMessage } from './code-runner/run-protocol';
-import { findOwnAttempt, findRow, now } from './mock-access';
+import { findOwnAttempt, findRow, now, requireOpenAttempt } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 
@@ -39,6 +39,7 @@ export class MockCodeRunnerService extends CodeRunnerService {
       if (attempt.status === 'submitted') {
         throw new DataError('invalid', 'A submitted attempt cannot run again');
       }
+      requireOpenAttempt(tables, attempt);
       return {
         functionName: findRow(tables.exercises, attempt.exerciseId).functionName,
         tests: tables.tests

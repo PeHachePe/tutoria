@@ -249,6 +249,27 @@ describe('MockCodeRunnerService', () => {
     expect(workers).toEqual([]);
   });
 
+  it('does not run an attempt its student no longer works on (D-063)', async () => {
+    const closed = { kind: 'forbidden', message: 'The exercise is not open' };
+    const blocks = db.tables().classBlocks;
+    const enrollments = db.tables().enrollments;
+
+    // Its block was hidden
+    db.update('classBlocks', () => blocks.map((block) => ({ ...block, isHidden: true })));
+    await expect(service.run(ATTEMPT_ID, '')).rejects.toMatchObject(closed);
+
+    // Its student left the group
+    db.update('classBlocks', () => blocks);
+    db.update('enrollments', () => enrollments.filter(({ userId }) => userId !== STUDENT));
+    await expect(service.run(ATTEMPT_ID, '')).rejects.toMatchObject(closed);
+
+    // It was left without assignment: its group was deleted
+    db.update('enrollments', () => enrollments);
+    db.update('attempts', () => [attemptRow({ assignmentId: null })]);
+    await expect(service.run(ATTEMPT_ID, '')).rejects.toMatchObject(closed);
+    expect(workers).toEqual([]);
+  });
+
   it('hides the attempts of other students', async () => {
     db.update('attempts', () => [attemptRow({ userId: DAW_STUDENT_IDS[1] })]);
 

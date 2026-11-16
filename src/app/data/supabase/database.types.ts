@@ -476,6 +476,36 @@ export type Database = {
           },
         ];
       };
+      student_request: {
+        Row: {
+          id: number;
+          kind: Database['public']['Enums']['student_request_kind'];
+          received_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: never;
+          kind: Database['public']['Enums']['student_request_kind'];
+          received_at?: string;
+          user_id: string;
+        };
+        Update: {
+          id?: never;
+          kind?: Database['public']['Enums']['student_request_kind'];
+          received_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'student_request_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       subject: {
         Row: {
           id: string;
@@ -597,6 +627,36 @@ export type Database = {
           },
         ];
       };
+      tutor_pending_query: {
+        Row: {
+          asked_at: string;
+          calls: NonNullable<Json>;
+          request_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          asked_at?: string;
+          calls: NonNullable<Json>;
+          request_id: string;
+          user_id: string;
+        };
+        Update: {
+          asked_at?: string;
+          calls?: NonNullable<Json>;
+          request_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'tutor_pending_query_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -634,8 +694,18 @@ export type Database = {
       can_record_event: { Args: { target_attempt_id: string }; Returns: boolean };
       claim_staff_request: {
         Args: {
+          per_day?: number;
           per_minute: number;
           request_kind: Database['public']['Enums']['staff_request_kind'];
+          target_user_id: string;
+        };
+        Returns: number;
+      };
+      claim_student_request: {
+        Args: {
+          per_day?: number;
+          per_minute: number;
+          request_kind: Database['public']['Enums']['student_request_kind'];
           target_user_id: string;
         };
         Returns: number;
@@ -686,9 +756,11 @@ export type Database = {
         Returns: boolean;
       };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
+      is_open_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_started_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       is_started_block: { Args: { target_block_id: string }; Returns: boolean };
+      is_valid_ai_provider: { Args: { setting: Json }; Returns: boolean };
       is_valid_exercise_translations: {
         Args: { source_locale: Database['public']['Enums']['app_locale']; translations: Json };
         Returns: boolean;
@@ -702,9 +774,9 @@ export type Database = {
         Returns: boolean;
       };
       is_visible_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
-      latest_tutor_calls: {
-        Args: { max_count: number; since: string; target_user_id: string };
-        Returns: string[];
+      keep_tutor_queries: {
+        Args: { asked_calls: Json; target_request_id: string; target_user_id: string };
+        Returns: undefined;
       };
       move_assignment: {
         Args: { target_assignment_id: string; target_block_id: string; target_position: number };
@@ -854,6 +926,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      take_tutor_queries: {
+        Args: { target_request_id: string; target_user_id: string };
+        Returns: Json;
+      };
       teaches_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       teaches_group: { Args: { target_group_id: string }; Returns: boolean };
       teaches_student: { Args: { target_user_id: string }; Returns: boolean };
@@ -874,6 +950,7 @@ export type Database = {
         | 'focus_lost'
         | 'focus_gained';
       staff_request_kind: 'check' | 'translate' | 'tutor';
+      student_request_kind: 'run' | 'tutor';
       tutor_trigger: 'question' | 'hint' | 'proactive';
       user_role: 'student' | 'teacher' | 'admin';
       user_status: 'active' | 'disabled';
@@ -1007,6 +1084,7 @@ export const Constants = {
         'focus_gained',
       ],
       staff_request_kind: ['check', 'translate', 'tutor'],
+      student_request_kind: ['run', 'tutor'],
       tutor_trigger: ['question', 'hint', 'proactive'],
       user_role: ['student', 'teacher', 'admin'],
       user_status: ['active', 'disabled'],

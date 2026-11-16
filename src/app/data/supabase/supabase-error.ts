@@ -50,6 +50,8 @@ const KIND_OF_STATUS: Readonly<Record<number, DataErrorKind>> = {
   403: 'forbidden',
   404: 'not_found',
   409: 'invalid',
+  // An Edge Function did not read a body past its limit (`readJson()`)
+  413: 'invalid',
   422: 'invalid',
   429: 'rate_limited',
   502: 'unavailable',

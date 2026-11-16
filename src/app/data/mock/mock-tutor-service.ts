@@ -4,7 +4,7 @@ import { DataError } from '../data-error';
 import type { ProcessEvent } from '../process-event';
 import type { TutorEvent, TutorInteraction, TutorPreviewRequest, TutorRequest } from '../tutor';
 import { TutorService } from '../tutor-service';
-import { findOwnAttempt, findRow, now } from './mock-access';
+import { findOwnAttempt, findRow, now, requireOpenAttempt } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 import { TUTOR_TYPING_MS, typeOut } from '../tutor/typing';
@@ -74,6 +74,7 @@ export class MockTutorService extends TutorService {
     if (attempt.status === 'submitted') {
       throw new DataError('invalid', 'A submitted attempt gets no more help');
     }
+    requireOpenAttempt(tables, attempt);
     // In the order they were recorded, oldest first
     const previous = tables.interactions.filter(
       (interaction) => interaction.attemptId === attemptId,
