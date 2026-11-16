@@ -23,6 +23,7 @@ select set_eq(
     'is_visible_assignment', 'can_open_assignment', 'can_read_attempt', 'can_record_event',
     'can_edit_exercise', 'is_started_assignment', 'is_started_block', 'is_browser_event',
     'is_valid_exercise_translations', 'is_valid_text_translations', 'are_valid_parameters',
+    'is_valid_ai_provider',
     -- What the app calls
     'open_attempt', 'retry_attempt', 'submit_attempt', 'hidden_test_count', 'save_exercise',
     'exercise_student_counts', 'assignment_student_counts', 'create_block', 'assign_exercises',

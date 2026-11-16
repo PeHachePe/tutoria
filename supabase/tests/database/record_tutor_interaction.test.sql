@@ -2,7 +2,7 @@
 -- with tests failed (attempt ...012); Lucía (...011) has exercise 8 passed (attempt ...008).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(16);
 
 set local role service_role;
 
@@ -108,14 +108,6 @@ select throws_ok(
        false, 'v1', 'm', true) $$,
   'P0001', null,
   'only an intervention may keep quiet'
-);
-
--- The limit counts every call of the last minute: the four answers and the silent intervention
-select is(
-  (select count(*)::integer from latest_tutor_calls('10000000-0000-4000-8000-000000000012',
-     now() - interval '1 minute', 10)),
-  5,
-  'the latest calls count the answers and the silent interventions'
 );
 
 select throws_ok(

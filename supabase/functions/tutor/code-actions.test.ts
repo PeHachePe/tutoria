@@ -12,6 +12,7 @@ const ATTEMPT: TutorAttempt = {
   userId: 'hugo',
   ownerActive: true,
   status: 'in_progress',
+  open: true,
   currentCode: '',
   exercise: {
     title: 'Suma',

@@ -141,6 +141,37 @@ const CODE_LINES: readonly RegExp[] = [
   /;\s*$/,
 ];
 
+/**
+ * Code written inside a line of words, where no line starts as code (D-063): a declaration with its
+ * value, the head of a loop, a function with its brace, a condition with what it does. Narrow on
+ * purpose: words about the code («para i = 0», «el operador +=») are not it.
+ */
+const CODE_IN_WORDS: readonly RegExp[] = [
+  /\b(?:const|let|var)\s+[\w$]+\s*=(?!=)\s*\S/,
+  /\bfor\s*\(\s*(?:const|let|var)\b/,
+  /\bfor\s*\([^)]*;[^)]*;/,
+  /\bfunction\s+[\w$]+\s*\([^)]*\)\s*\{/,
+  /\b(?:if|while)\s*\([^)]*\)\s*(?:\{|return\b)/,
+];
+
+/** What is written as code inside a line: `…`. */
+const INLINE_SPAN = /`([^`\n]+)`/g;
+
+/**
+ * What makes it a statement and not a name, an expression or a format of the statement (`i < n`,
+ * `clave=valor`, `{ a: 1 }`), which are fine: a keyword with what it runs, an arrow function, two
+ * statements, or an assignment that changes a variable.
+ */
+const CODE_SPANS: readonly RegExp[] = [
+  /^\s*(?:function|const|let|var|return|for|while|if|else|switch|class|do)\b.*[({;=]/,
+  /=>/,
+  /;/,
+  /^\s*[\w$.[\]]+\s*[+\-*/%]=/,
+];
+
+/** What follows a label («Línea 3: total += n»): an assignment that changes a variable is code. */
+const LABELLED_ASSIGNMENT = /:\s+[\w$.[\]]+\s*[+\-*/%]=/;
+
 /** The function an exercise asks for: its name and how many parameters it takes. */
 export interface FunctionSignature {
   readonly functionName: string;
@@ -180,7 +211,8 @@ const EMPTY_FUNCTION = /^function\s+([\w$]+)\s*\(([^)]*)\)\s*\{\s*\}$/;
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
 /**
- * Whether the message carries code: a fenced block, or a line that looks like code (2.6). With the
+ * Whether the message carries code: a fenced block, a line that looks like code, or code inside a
+ * line of words or written as code in it (2.6, D-063). With the
  * signature of the exercise, a block with only its empty function is fine (2.5d): the skeleton is
  * for a student who does not know how to start, and its body is where the logic would go.
  */
@@ -194,6 +226,17 @@ export function containsCode(message: string, skeleton?: FunctionSignature): boo
 }
 
 function looksLikeCode(line: string): boolean {
+  return (
+    startsAsCode(line) ||
+    CODE_IN_WORDS.some((pattern) => pattern.test(line)) ||
+    LABELLED_ASSIGNMENT.test(line) ||
+    [...line.matchAll(INLINE_SPAN)].some(([, span]) =>
+      CODE_SPANS.some((pattern) => pattern.test(span)),
+    )
+  );
+}
+
+function startsAsCode(line: string): boolean {
   return CODE_LINES.some((pattern) => pattern.test(line));
 }
 

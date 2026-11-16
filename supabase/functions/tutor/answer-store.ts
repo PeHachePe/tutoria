@@ -37,6 +37,8 @@ export interface TutorAttempt {
   /** Whether its owner's account is active (`app_user.status`). */
   readonly ownerActive: boolean;
   readonly status: 'in_progress' | 'tests_failed' | 'passed' | 'submitted';
+  /** Whether its student still sees its assignment and is in its group (`is_open_attempt`). */
+  readonly open: boolean;
   /** The code the server has: the last run's while the attempt is not back in progress. */
   readonly currentCode: string;
   /** Its texts in every language it has: the prompt takes those of the request (D-045). */
@@ -91,8 +93,10 @@ export interface AnswerStore {
   userOf(token: string): Promise<string | null>;
   findAttempt(attemptId: string): Promise<TutorAttempt | null>;
   findAnswer(requestId: string): Promise<RecordedAnswer | null>;
-  /** When the user's latest calls to the model since `since` were made, newest first. */
-  latestCalls(userId: string, since: Date, limit: number): Promise<readonly Date[]>;
+  /** Keeps the queries the model asked for in a request, until the app answers them (2.5e). */
+  keepQueries(requestId: string, userId: string, queries: readonly ToolRequest[]): Promise<void>;
+  /** The queries the request of the user waits for, taken: once. `null` if it waits for none. */
+  takeQueries(requestId: string, userId: string): Promise<readonly ToolRequest[] | null>;
   providerSetting(): Promise<ProviderSetting | null>;
   /** The answer and its process event, all or nothing (`record_tutor_interaction`). */
   recordAnswer(answer: NewAnswer): Promise<RecordOutcome>;

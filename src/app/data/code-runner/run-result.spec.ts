@@ -269,6 +269,7 @@ describe('solutionCheckOf', () => {
       { ...check, functionName: undefined },
       { ...check, functionName: ' ' },
       { ...check, functionName: 'f'.repeat(101) },
+      { ...check, functionName: 'sum; while (true) {}' },
       { ...check, tests: 'tests' },
       { ...check, tests: [] },
       { ...check, tests: Array.from({ length: MAX_CHECK_TESTS + 1 }, () => check.tests[0]) },

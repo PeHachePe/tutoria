@@ -5,6 +5,7 @@ import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import type { StaffRequestKind, StaffRequests } from '../_shared/staff-requests.ts';
 import {
   createTranslateHandler,
+  TRANSLATIONS_PER_DAY,
   TRANSLATIONS_PER_MINUTE,
   type TranslateStore,
 } from './translate.ts';
@@ -44,9 +45,9 @@ class FakeStore implements TranslateStore {
 class FakeStaff implements StaffRequests {
   teacher = true;
   wait = 0;
-  readonly claims: [string, StaffRequestKind, number][] = [];
-  claim(userId: string, kind: StaffRequestKind, perMinute: number) {
-    this.claims.push([userId, kind, perMinute]);
+  readonly claims: [string, StaffRequestKind, number, number | undefined][] = [];
+  claim(userId: string, kind: StaffRequestKind, perMinute: number, perDay?: number) {
+    this.claims.push([userId, kind, perMinute, perDay]);
     return Promise.resolve(this.teacher ? this.wait : null);
   }
 }
@@ -110,7 +111,9 @@ Deno.test(
     assertEquals(response.headers.get('Access-Control-Allow-Origin'), '*');
     assertEquals(await response.json(), GOOD);
     assertEquals(settings, [SETTING]);
-    assertEquals(staff.claims, [['marta', 'translate', TRANSLATIONS_PER_MINUTE]]);
+    assertEquals(staff.claims, [
+      ['marta', 'translate', TRANSLATIONS_PER_MINUTE, TRANSLATIONS_PER_DAY],
+    ]);
     assertEquals(provider.asked.length, 1);
   },
 );
@@ -159,6 +162,18 @@ Deno.test('a body that is not a request is invalid, before counting it', async (
 
   assertEquals((await handle(post('not json'))).status, 400);
   assertEquals((await handle(post({ ...REQUEST, to: 'es' }))).status, 400);
+  assertEquals(staff.claims, []);
+});
+
+Deno.test('a body past the limit is not read', async () => {
+  const { handle, staff } = setup();
+  const huge = new Request('http://functions.test/translate', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer token-marta' },
+    body: JSON.stringify({ pad: 'x'.repeat(1_000_001) }),
+  });
+
+  assertEquals((await handle(huge)).status, 413);
   assertEquals(staff.claims, []);
 });
 

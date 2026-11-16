@@ -11,18 +11,21 @@ import type {
 import type { RunOutcome, RunRequest } from '../../../src/app/data/code-runner/run-result.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import type { StaffRequestKind, StaffRequests } from '../_shared/staff-requests.ts';
+import type { StudentRequestKind, StudentRequests } from '../_shared/student-requests.ts';
+import type { ToolRequest } from '../../../src/app/data/tutor/tutor-contract.ts';
+import { MAX_BODY_BYTES } from '../_shared/http.ts';
 import { type ChatMessage, type LlmProvider, ProviderError } from '../_shared/llm-provider.ts';
 import {
   DEFAULT_ANSWERS,
   MAX_MESSAGE_LENGTH,
   TUTOR_CALLS_PER_DAY,
   TUTOR_CALLS_PER_MINUTE,
+  TUTOR_PREVIEWS_PER_DAY,
   TUTOR_PREVIEWS_PER_MINUTE,
   createTutorHandler,
 } from './tutor.ts';
 import { PROMPT_VERSION } from './prompt.ts';
 
-const NOW = Date.parse('2026-11-10T10:00:00Z');
 const ATTEMPT_ID = '70000000-0000-4000-8000-000000000012';
 const REQUEST_ID = 'a0000000-0000-4000-8000-000000000001';
 const CODE = 'function sum(v) { return 0; }';
@@ -37,6 +40,7 @@ const ATTEMPT: TutorAttempt = {
   userId: 'hugo',
   ownerActive: true,
   status: 'in_progress',
+  open: true,
   currentCode: CODE,
   exercise: {
     title: 'Suma',
@@ -64,7 +68,8 @@ const GOOD = JSON.stringify({
 class FakeStore implements AnswerStore {
   attempt: TutorAttempt | null = ATTEMPT;
   answers: RecordedAnswer[] = [];
-  calls: Date[] = [];
+  /** The queries each request waits for, by request and user. */
+  readonly waiting = new Map<string, readonly ToolRequest[]>();
   setting: ProviderSetting | null = { models: [FLASH] };
   outcome: RecordOutcome | null = null;
   readonly recorded: NewAnswer[] = [];
@@ -78,8 +83,14 @@ class FakeStore implements AnswerStore {
   findAnswer(requestId: string) {
     return Promise.resolve(this.answers.find((answer) => answer.id === `i-${requestId}`) ?? null);
   }
-  latestCalls(_userId: string, since: Date, limit: number) {
-    return Promise.resolve(this.calls.filter((call) => call >= since).slice(0, limit));
+  keepQueries(requestId: string, userId: string, queries: readonly ToolRequest[]) {
+    this.waiting.set(`${requestId} ${userId}`, queries);
+    return Promise.resolve();
+  }
+  takeQueries(requestId: string, userId: string) {
+    const queries = this.waiting.get(`${requestId} ${userId}`) ?? null;
+    this.waiting.delete(`${requestId} ${userId}`);
+    return Promise.resolve(queries);
   }
   providerSetting() {
     return Promise.resolve(this.setting);
@@ -92,14 +103,25 @@ class FakeStore implements AnswerStore {
   }
 }
 
+/** The limits of the turns of a student: free, unless `wait` says how long to wait. */
+class FakeStudents implements StudentRequests {
+  wait = 0;
+  readonly claims: [string, StudentRequestKind, number, number | undefined][] = [];
+
+  claim(userId: string, kind: StudentRequestKind, perMinute: number, perDay?: number) {
+    this.claims.push([userId, kind, perMinute, perDay]);
+    return Promise.resolve(this.wait);
+  }
+}
+
 /** The limit of the staff: Hugo is a teacher here, unless `teacher` says otherwise. */
 class FakeStaff implements StaffRequests {
   teacher = true;
   wait = 0;
-  readonly claims: [string, StaffRequestKind, number][] = [];
+  readonly claims: [string, StaffRequestKind, number, number | undefined][] = [];
 
-  claim(userId: string, kind: StaffRequestKind, perMinute: number) {
-    this.claims.push([userId, kind, perMinute]);
+  claim(userId: string, kind: StaffRequestKind, perMinute: number, perDay?: number) {
+    this.claims.push([userId, kind, perMinute, perDay]);
     return Promise.resolve(this.teacher ? this.wait : null);
   }
 }
@@ -131,18 +153,19 @@ function setup(answers: (string | Error)[] = [GOOD]) {
   const llm = new FakeProvider(answers);
   const sandbox = new FakeSandbox();
   const settings: ProviderSetting[] = [];
+  const students = new FakeStudents();
   const staff = new FakeStaff();
   const handle = createTutorHandler({
     store,
+    students,
     staff,
     providerFor: (setting) => {
       settings.push(setting);
       return llm;
     },
     sandbox,
-    now: () => NOW,
   });
-  return { store, staff, llm, settings, handle, sandbox };
+  return { store, students, staff, llm, settings, handle, sandbox };
 }
 
 function post(body: Record<string, unknown> = {}, token: string | null = 'token-hugo'): Request {
@@ -459,42 +482,74 @@ Deno.test('the tutor needs a session, a valid request and an attempt of the call
   assertEquals((await handle(post())).status, 409);
 });
 
-Deno.test('the tutor answers its limit per minute with how long to wait', async () => {
-  const { handle, store, llm } = setup();
-  store.calls = Array.from({ length: TUTOR_CALLS_PER_MINUTE }, () => new Date(NOW - 20_000));
+Deno.test('an attempt its student no longer sees has no tutor, nor counts', async () => {
+  const { handle, store, students, llm } = setup();
+  // Its block was hidden or is not open yet, or the student left the group
+  store.attempt = { ...ATTEMPT, open: false };
 
-  const response = await handle(post());
+  assertEquals((await handle(post())).status, 403);
+  assertEquals(students.claims, []);
+  assertEquals(llm.requests.length, 0);
+});
+
+Deno.test('a turn is counted before the model is called, per minute and per day', async () => {
+  const { handle, students, llm } = setup();
+
+  assertEquals((await handle(post())).status, 200);
+  assertEquals(students.claims, [['hugo', 'tutor', TUTOR_CALLS_PER_MINUTE, TUTOR_CALLS_PER_DAY]]);
+  assertEquals(llm.requests.length, 1);
+});
+
+Deno.test('past its limit, the tutor says how long to wait and asks nothing', async () => {
+  const { handle, students, llm, sandbox } = setup();
+  students.wait = 40;
+
+  const response = await handle(post({ requestId: crypto.randomUUID() }));
 
   assertEquals(response.status, 429);
   assertEquals(response.headers.get('Retry-After'), '40');
   assertEquals(llm.requests.length, 0);
+  // Nor is the code tried: that costs CPU too
+  assertEquals(sandbox.requests.length, 0);
 });
 
-Deno.test('the tutor answers its limit per day with how long to wait', async () => {
-  const { handle, store, llm } = setup();
-  // Spread over the day, never six in a minute: the oldest one leaves the day in an hour
-  store.calls = Array.from(
-    { length: TUTOR_CALLS_PER_DAY },
-    (_, index) => new Date(NOW - 10 * 60_000 - index * 20 * 60_000),
-  );
-  store.calls[TUTOR_CALLS_PER_DAY - 1] = new Date(NOW - 23 * 3_600_000);
+Deno.test('a turn the provider fails, or that only asks for data, counts too', async () => {
+  const down = setup([new ProviderError('The model answered 503', 503)]);
+  assertEquals((await down.handle(post())).status, 503);
+  assertEquals(down.students.claims.length, 1);
 
-  const response = await handle(post());
-
-  assertEquals(response.status, 429);
-  assertEquals(response.headers.get('Retry-After'), '3600');
-  assertEquals(llm.requests.length, 0);
+  const asks = setup([ASKS_PROGRESS]);
+  await asks.handle(post(QUESTION));
+  assertEquals(asks.students.claims.length, 1);
 });
 
-Deno.test('below both limits, the tutor asks the model', async () => {
-  const { handle, store, llm } = setup();
-  store.calls = Array.from(
-    { length: TUTOR_CALLS_PER_DAY - 1 },
-    (_, index) => new Date(NOW - 10 * 60_000 - index * 20 * 60_000),
-  );
+Deno.test('a request already answered is given back without counting again', async () => {
+  const { handle, store, students } = setup();
+  store.answers.push({
+    id: `i-${REQUEST_ID}`,
+    attemptId: ATTEMPT_ID,
+    hintLevel: 1,
+    emotion: 'joy',
+    intensity: 2,
+    transcript: 'Mira la línea 1.',
+    elusion: false,
+    actions: [],
+  });
 
   assertEquals((await handle(post())).status, 200);
-  assertEquals(llm.requests.length, 1);
+  assertEquals(students.claims, []);
+});
+
+Deno.test('a body past the limit is not read', async () => {
+  const { handle, llm } = setup();
+  const huge = new Request('http://functions.test/tutor', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer token-hugo' },
+    body: JSON.stringify({ code: 'x'.repeat(MAX_BODY_BYTES) }),
+  });
+
+  assertEquals((await handle(huge)).status, 413);
+  assertEquals(llm.requests.length, 0);
 });
 
 Deno.test('without a provider, or when it fails, the tutor is unavailable', async () => {
@@ -593,8 +648,12 @@ Deno.test(
 
 Deno.test('with the results, the model answers with the data, once', async () => {
   // Asking again for data is not taken: its message is the answer
-  const { store, llm, handle } = setup([ASKS_PROGRESS]);
+  const { store, students, llm, handle } = setup([ASKS_PROGRESS, ASKS_PROGRESS]);
+  await handle(post(QUESTION));
+  llm.requests.length = 0;
   const response = await handle(post({ ...QUESTION, results: PROGRESS }));
+  // The same turn goes on: it was counted when it was asked
+  assertEquals(students.claims.length, 1);
   const { events } = await response.json();
   assertEquals(events[1], { type: 'delta', text: 'Voy a mirarlo.' });
   assertEquals(llm.requests.length, 1);
@@ -603,6 +662,43 @@ Deno.test('with the results, the model answers with the data, once', async () =>
   assertStringIncludes(sent.at(-1)!.content, '<resultado_consulta>');
   assertStringIncludes(sent.at(-1)!.content, 'getMyProgress: {"pending":4}');
   assertEquals(store.recorded.length, 1);
+});
+
+Deno.test('results are only taken for the queries the request waits for, once', async () => {
+  const { store, students, llm, handle } = setup([ASKS_PROGRESS]);
+
+  // Nobody asked for them: the model never sees text handed as data
+  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 400);
+  assertEquals(llm.requests.length, 0);
+
+  // Asked in another request, by another query, or with other arguments
+  await handle(post(QUESTION));
+  assertEquals(
+    (await handle(post({ ...QUESTION, requestId: crypto.randomUUID(), results: PROGRESS }))).status,
+    400,
+  );
+  store.waiting.set(`${REQUEST_ID} hugo`, [{ name: 'getSettings', arguments: {} }]);
+  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 400);
+  store.waiting.set(`${REQUEST_ID} hugo`, [
+    { name: 'searchExercises', arguments: { text: 'suma' } },
+  ]);
+  const others = [{ name: 'searchExercises', arguments: { text: 'resta' }, result: [] }];
+  assertEquals((await handle(post({ ...QUESTION, results: others }))).status, 400);
+  assertEquals(llm.requests.length, 1);
+
+  // And once: the second time there is nothing waiting
+  store.waiting.set(`${REQUEST_ID} hugo`, [{ name: 'getMyProgress', arguments: {} }]);
+  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 200);
+  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 400);
+  assertEquals(students.claims.length, 1);
+});
+
+Deno.test('if the provider fails with the data in hand, they may come again', async () => {
+  const { store, handle } = setup([new ProviderError('The model answered 503', 503)]);
+  store.waiting.set(`${REQUEST_ID} hugo`, [{ name: 'getMyProgress', arguments: {} }]);
+
+  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 503);
+  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 200);
 });
 
 Deno.test('a hint never waits for data', async () => {
@@ -761,7 +857,9 @@ Deno.test(
         { type: 'done', interactionId: null, silent: false },
       ],
     });
-    assertEquals(staff.claims, [['hugo', 'tutor', TUTOR_PREVIEWS_PER_MINUTE]]);
+    assertEquals(staff.claims, [
+      ['hugo', 'tutor', TUTOR_PREVIEWS_PER_MINUTE, TUTOR_PREVIEWS_PER_DAY],
+    ]);
     assertEquals(store.recorded, []);
     // The exercise of the form reaches the model, and only its visible examples are tried
     const prompt = llm.requests[0].map((message) => message.content).join('\n');
@@ -799,6 +897,17 @@ Deno.test('a preview needs the exercise, and never an attempt with it', async ()
     (
       await handle(
         postPreview({ preview: { ...PREVIEW, exercise: { ...exercise, functionName: ' ' } } }),
+      )
+    ).status,
+    400,
+  );
+  // The sandbox calls the function by its name: only an identifier
+  assertEquals(
+    (
+      await handle(
+        postPreview({
+          preview: { ...PREVIEW, exercise: { ...exercise, functionName: 'sum; while (true) {}' } },
+        }),
       )
     ).status,
     400,

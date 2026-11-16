@@ -2,12 +2,13 @@ import { assertEquals } from '@std/assert';
 
 import type { RunOutcome, RunResult } from '../../../src/app/data/code-runner/run-result.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
-import { MAX_CODE_LENGTH, secondsToWait } from '../_shared/limits.ts';
+import { MAX_BODY_BYTES } from '../_shared/http.ts';
+import { MAX_CODE_LENGTH } from '../_shared/limits.ts';
 import type { StaffRequestKind, StaffRequests } from '../_shared/staff-requests.ts';
+import type { StudentRequestKind, StudentRequests } from '../_shared/student-requests.ts';
 import { CHECKS_PER_MINUTE, createExecuteHandler, RUNS_PER_MINUTE } from './execute.ts';
 import type { RecordOutcome, RunAttempt, RunStore } from './run-store.ts';
 
-const NOW = Date.parse('2026-11-10T10:00:00Z');
 const ATTEMPT_ID = '70000000-0000-4000-8000-000000000012';
 const CODE = 'function sum(v) { return 6; }';
 
@@ -15,6 +16,7 @@ const ATTEMPT: RunAttempt = {
   userId: 'hugo',
   ownerActive: true,
   status: 'in_progress',
+  open: true,
   functionName: 'sum',
   tests: [
     { id: 't1', input: [[1, 2, 3]], expectedOutput: 6, isHidden: false },
@@ -25,7 +27,6 @@ const ATTEMPT: RunAttempt = {
 /** A store in memory: Hugo signs in with `token-hugo`. */
 class FakeStore implements RunStore {
   attempt: RunAttempt | null = ATTEMPT;
-  runs: Date[] = [];
   recordOutcome: RecordOutcome = 'recorded';
   readonly recorded: { attemptId: string; code: string; result: RunResult }[] = [];
 
@@ -35,12 +36,20 @@ class FakeStore implements RunStore {
   findAttempt(attemptId: string) {
     return Promise.resolve(attemptId === ATTEMPT_ID ? this.attempt : null);
   }
-  latestRuns(_userId: string, since: Date, limit: number) {
-    return Promise.resolve(this.runs.filter((run) => run >= since).slice(0, limit));
-  }
   recordRun(attemptId: string, code: string, result: RunResult) {
     this.recorded.push({ attemptId, code, result });
     return Promise.resolve(this.recordOutcome);
+  }
+}
+
+/** The limit of the runs of a student: free, unless `wait` says how long to wait. */
+class FakeStudents implements StudentRequests {
+  wait = 0;
+  readonly claims: [string, StudentRequestKind, number, number | undefined][] = [];
+
+  claim(userId: string, kind: StudentRequestKind, perMinute: number, perDay?: number) {
+    this.claims.push([userId, kind, perMinute, perDay]);
+    return Promise.resolve(this.wait);
   }
 }
 
@@ -75,10 +84,11 @@ function setup(
   },
 ) {
   const store = new FakeStore();
+  const students = new FakeStudents();
   const staff = new FakeStaff();
   const sandbox = new FakeSandbox(outcome);
-  const handle = createExecuteHandler({ store, staff, sandbox, now: () => NOW });
-  return { store, staff, sandbox, handle };
+  const handle = createExecuteHandler({ store, students, staff, sandbox });
+  return { store, students, staff, sandbox, handle };
 }
 
 function post(body: unknown, token: string | null = 'token-hugo'): Request {
@@ -197,15 +207,79 @@ Deno.test('a submitted attempt cannot run again, also if it was submitted meanwh
   assertEquals((await handle(post({ attemptId: ATTEMPT_ID, code: CODE }))).status, 404);
 });
 
-Deno.test('the eleventh run in a minute waits, and says how long', async () => {
-  const { store, sandbox, handle } = setup();
-  // Every 5 s since 50 s ago: the oldest leaves the minute in 10 s
-  store.runs = Array.from({ length: RUNS_PER_MINUTE }, (_, i) => new Date(NOW - 5_000 * (i + 1)));
+Deno.test('a run is counted before it runs, and past the limit it waits', async () => {
+  const { students, sandbox, handle } = setup();
 
+  assertEquals((await handle(post({ attemptId: ATTEMPT_ID, code: CODE }))).status, 200);
+  assertEquals(students.claims, [['hugo', 'run', RUNS_PER_MINUTE, undefined]]);
+
+  students.wait = 10;
   const response = await handle(post({ attemptId: ATTEMPT_ID, code: CODE }));
 
   assertEquals(response.status, 429);
   assertEquals(response.headers.get('Retry-After'), '10');
+  assertEquals(sandbox.requests.length, 1);
+});
+
+Deno.test('an attempt its student no longer sees does not run, nor counts', async () => {
+  const { store, students, sandbox, handle } = setup();
+  // Its block was hidden or is not open yet, or the student left the group
+  store.attempt = { ...ATTEMPT, open: false };
+
+  assertEquals((await handle(post({ attemptId: ATTEMPT_ID, code: CODE }))).status, 403);
+  assertEquals(students.claims, []);
+  assertEquals(sandbox.requests, []);
+});
+
+Deno.test(
+  'the hidden tests run after the visible ones, and the result keeps their order',
+  async () => {
+    // The sandbox gets the visible ones first: 1, 3 and then the hidden 2
+    const { store, sandbox, handle } = setup({
+      outcomes: [
+        { ok: true, value: 'first' },
+        { ok: true, value: 'third' },
+        { ok: true, value: 'second' },
+      ],
+    });
+    store.attempt = {
+      ...ATTEMPT,
+      tests: [
+        { id: 't1', input: [1], expectedOutput: 'first', isHidden: false },
+        { id: 't2', input: [2], expectedOutput: 'second', isHidden: true },
+        { id: 't3', input: [3], expectedOutput: 'third', isHidden: false },
+      ],
+    };
+
+    const response = await handle(post({ attemptId: ATTEMPT_ID, code: CODE }));
+
+    assertEquals(sandbox.requests, [{ code: CODE, functionName: 'sum', inputs: [[1], [3], [2]] }]);
+    const { status, results } = await response.json();
+    assertEquals(status, 'passed');
+    assertEquals(
+      results.map((result: { testId: string }) => result.testId),
+      ['t1', 't2', 't3'],
+    );
+  },
+);
+
+Deno.test('a body past the limit is not read, whatever its length says', async () => {
+  const { store, sandbox, handle } = setup();
+  const huge = JSON.stringify({
+    attemptId: ATTEMPT_ID,
+    code: CODE,
+    pad: 'x'.repeat(MAX_BODY_BYTES),
+  });
+  const declared = new Request('http://functions.test/execute', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer token-hugo', 'Content-Length': String(huge.length) },
+    body: huge,
+  });
+
+  assertEquals((await handle(declared)).status, 413);
+  // Without the header, as a body sent in chunks
+  assertEquals((await handle(post(huge))).status, 413);
+  assertEquals(store.recorded, []);
   assertEquals(sandbox.requests, []);
 });
 
@@ -307,10 +381,14 @@ Deno.test('a check with code longer than any solution is invalid, before countin
   assertEquals(staff.claims, []);
 });
 
-Deno.test('secondsToWait lets run below the limit and waits at least a second at it', () => {
-  const runs = (ago: number) => Array.from({ length: RUNS_PER_MINUTE }, () => new Date(NOW - ago));
+Deno.test('a check names its function with an identifier, before counting it', async () => {
+  const { staff, sandbox, handle } = setup();
 
-  assertEquals(secondsToWait(runs(1_000).slice(1), RUNS_PER_MINUTE, NOW), 0);
-  assertEquals(secondsToWait(runs(30_000), RUNS_PER_MINUTE, NOW), 30);
-  assertEquals(secondsToWait(runs(59_999), RUNS_PER_MINUTE, NOW), 1);
+  // Not a check, nor a run of an attempt: nothing reaches the sandbox, which would throw
+  assertEquals(
+    (await handle(post({ ...CHECK, functionName: 'sum; while (true) {}' }))).status,
+    400,
+  );
+  assertEquals(staff.claims, []);
+  assertEquals(sandbox.requests, []);
 });

@@ -1,4 +1,12 @@
-import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
+import {
+  bearerToken,
+  BodyTooLargeError,
+  failure,
+  json,
+  preflight,
+  readJson,
+  tooLarge,
+} from '../_shared/http.ts';
 import { type LlmProvider, ProviderError } from '../_shared/llm-provider.ts';
 import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import type { StaffRequests } from '../_shared/staff-requests.ts';
@@ -12,6 +20,12 @@ import {
 
 /** Translations a teacher may ask for in a minute: each one is a call to the model, or two. */
 export const TRANSLATIONS_PER_MINUTE = 5;
+
+/**
+ * And in a day: enough to draft every exercise of a course in its two other languages, but not to
+ * spend the quota of the day of the whole project from one account (D-063).
+ */
+export const TRANSLATIONS_PER_DAY = 200;
 
 /** Times the model is asked before giving up: a second time, telling it what was wrong. */
 const MAX_TRIES = 2;
@@ -49,13 +63,18 @@ export function createTranslateHandler({
       const token = bearerToken(request);
       const userId = token ? await store.userOf(token) : null;
       if (!userId) return failure(401, 'Sign in to translate');
-      const body = requestSchema.safeParse(await request.json().catch(() => null));
+      const body = requestSchema.safeParse(await readJson(request));
       if (!body.success) {
         return failure(400, 'Expected { from, to, texts, functionName, parameters }');
       }
       const ask = body.data;
 
-      const wait = await staff.claim(userId, 'translate', TRANSLATIONS_PER_MINUTE);
+      const wait = await staff.claim(
+        userId,
+        'translate',
+        TRANSLATIONS_PER_MINUTE,
+        TRANSLATIONS_PER_DAY,
+      );
       if (wait === null) return failure(403, 'Only a teacher translates an exercise');
       if (wait > 0) return failure(429, 'Too many translations', { 'Retry-After': String(wait) });
 
@@ -72,6 +91,7 @@ export function createTranslateHandler({
         messages.push({ role: 'assistant', content: answer }, correctionMessage(check.problem));
       }
     } catch (error) {
+      if (error instanceof BodyTooLargeError) return tooLarge();
       if (error instanceof ProviderError) {
         console.error(error.message);
         return failure(503, 'The AI provider is not available');

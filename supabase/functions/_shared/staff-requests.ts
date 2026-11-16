@@ -4,11 +4,17 @@
  */
 export type StaffRequestKind = 'check' | 'translate' | 'tutor';
 
-/** The limit per minute of the requests of the staff, with `claim_staff_request`. */
+/** The limits of the requests of the staff, with `claim_staff_request`. */
 export interface StaffRequests {
   /**
    * Counts one request of the user if they may make it now and answers 0; otherwise, the seconds to
-   * wait. `null` if they are not an active teacher or administrator.
+   * wait. `null` if they are not an active teacher or administrator. `perDay` limits those of the
+   * last 24 hours too: the ones that call the model (D-063).
    */
-  claim(userId: string, kind: StaffRequestKind, perMinute: number): Promise<number | null>;
+  claim(
+    userId: string,
+    kind: StaffRequestKind,
+    perMinute: number,
+    perDay?: number,
+  ): Promise<number | null>;
 }

@@ -2,13 +2,25 @@ import {
   buildRunResult,
   checkRunTests,
   encodeRunResult,
+  type RunOutcome,
+  type RunResult,
+  type RunTest,
   type SolutionCheck,
   solutionCheckOf,
 } from '../../../src/app/data/code-runner/run-result.ts';
-import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
-import { MAX_CODE_LENGTH, minuteBefore, secondsToWait } from '../_shared/limits.ts';
+import {
+  bearerToken,
+  BodyTooLargeError,
+  failure,
+  json,
+  preflight,
+  readJson,
+  tooLarge,
+} from '../_shared/http.ts';
+import { MAX_CODE_LENGTH } from '../_shared/limits.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import type { StaffRequests } from '../_shared/staff-requests.ts';
+import type { StudentRequests } from '../_shared/student-requests.ts';
 import type { RunStore } from './run-store.ts';
 
 /** Runs a user may start in a minute (2.3). */
@@ -21,25 +33,27 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface ExecuteDependencies {
   readonly store: RunStore;
+  /** The limit of the runs of a student, counted before they run (D-063). */
+  readonly students: StudentRequests;
   readonly staff: StaffRequests;
   readonly sandbox: CodeSandbox;
-  readonly now?: () => number;
 }
 
 /**
- * The Edge Function `execute` (2.3): checks the session and that the attempt is the caller's, runs
- * every test in the sandbox, compares outside it, keeps the code with the status it earned and the
- * `run` event, and answers with the `RunResult` (hidden tests, without details), encoded so that
- * `undefined`, `NaN` and `±Infinity` survive JSON (`encodeRunResult()`).
+ * The Edge Function `execute` (2.3): checks the session, that the attempt is the caller's and that
+ * it is still open to them, counts the run, runs every test in the sandbox, compares outside it,
+ * keeps the code with the status it earned and the `run` event, and answers with the `RunResult`
+ * (hidden tests, without details), encoded so that `undefined`, `NaN` and `±Infinity` survive JSON
+ * (`encodeRunResult()`).
  *
  * Without an attempt, a teacher checks their solution against the tests of the form (4.3c, D-059):
  * the same sandbox and comparison, with the details of the hidden tests, and nothing kept.
  */
 export function createExecuteHandler({
   store,
+  students,
   staff,
   sandbox,
-  now = Date.now,
 }: ExecuteDependencies): (request: Request) => Promise<Response> {
   return async (request) => {
     if (request.method === 'OPTIONS') return preflight();
@@ -60,20 +74,14 @@ export function createExecuteHandler({
       if (!attempt || attempt.userId !== userId) return failure(404, 'Attempt not found');
       if (!attempt.ownerActive) return failure(403, 'The account is disabled');
       if (attempt.status === 'submitted') return failure(409, 'The attempt is submitted');
+      // Hidden, not open yet or out of the group: what the student no longer sees does not run
+      if (!attempt.open) return failure(403, 'The exercise is not open');
 
-      const wait = secondsToWait(
-        await store.latestRuns(userId, minuteBefore(now()), RUNS_PER_MINUTE),
-        RUNS_PER_MINUTE,
-        now(),
-      );
+      // Counted before it runs: runs at once wait their turn, and one that kills the function counts
+      const wait = await students.claim(userId, 'run', RUNS_PER_MINUTE);
       if (wait > 0) return failure(429, 'Too many runs', { 'Retry-After': String(wait) });
 
-      const outcome = await sandbox.run({
-        code: body.code,
-        functionName: attempt.functionName,
-        inputs: attempt.tests.map((test) => test.input),
-      });
-      const result = buildRunResult(attempt.tests, outcome);
+      const result = await runTests(sandbox, body.code, attempt.functionName, attempt.tests);
       switch (await store.recordRun(body.attemptId, body.code, result)) {
         case 'submitted':
           return failure(409, 'The attempt is submitted');
@@ -83,6 +91,7 @@ export function createExecuteHandler({
           return json(200, encodeRunResult(result));
       }
     } catch (error) {
+      if (error instanceof BodyTooLargeError) return tooLarge();
       console.error(error);
       return failure(500, 'The run failed');
     }
@@ -105,13 +114,30 @@ export function createExecuteHandler({
   }
 }
 
-/** The body as JSON, or `undefined` if it is not JSON. */
-async function readJson(request: Request): Promise<unknown> {
-  try {
-    return await request.json();
-  } catch {
-    return undefined;
-  }
+/**
+ * The result of the code against the tests of an attempt, in their order. The code keeps what it
+ * wrote outside its function for the whole run, so the hidden tests run after the visible ones: what
+ * it saw of a hidden test can never come back in the value of a visible one, which the student
+ * does read.
+ */
+async function runTests(
+  sandbox: CodeSandbox,
+  code: string,
+  functionName: string,
+  tests: readonly RunTest[],
+): Promise<RunResult> {
+  const hiddenLast = [
+    ...tests.filter((test) => !test.isHidden),
+    ...tests.filter((test) => test.isHidden),
+  ];
+  const outcome: RunOutcome = await sandbox.run({
+    code,
+    functionName,
+    inputs: hiddenLast.map((test) => test.input),
+  });
+  const { status, results } = buildRunResult(hiddenLast, outcome);
+  const byTest = new Map(results.map((result) => [result.testId, result]));
+  return { status, results: tests.map((test) => byTest.get(test.id)!) };
 }
 
 /** The run of an attempt the app sends, or `null` if the body is not one. */

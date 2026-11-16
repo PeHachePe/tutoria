@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { checkRunTests, MAX_CHECK_TESTS } from '../../../src/app/data/code-runner/run-result.ts';
+import {
+  checkRunTests,
+  isFunctionName,
+  MAX_CHECK_TESTS,
+} from '../../../src/app/data/code-runner/run-result.ts';
 import { EMOTIONS, TUTOR_TRIGGERS } from '../../../src/app/data/tutor/tutor-contract.ts';
 import type { TutorAttempt } from './answer-store.ts';
 
@@ -38,7 +42,8 @@ export const previewSchema = z.object({
   exercise: textsSchema.extend({
     sourceLocale: z.enum(LOCALES),
     translations: z.partialRecord(z.enum(LOCALES), textsSchema),
-    functionName: z.string().trim().min(1).max(PREVIEW_LIMITS.name),
+    // It names the function the sandbox calls: an identifier, as the table asks of a saved one
+    functionName: z.string().refine(isFunctionName),
     parameters: z.array(z.string().max(PREVIEW_LIMITS.name)).max(PREVIEW_LIMITS.parameters),
     tests: z
       .array(
@@ -91,6 +96,8 @@ export function previewAttempt(userId: string, code: string, preview: TutorPrevi
     userId,
     // `claim_staff_request` only lets an active teacher or administrator through
     ownerActive: true,
+    // There is no assignment to be hidden: the exercise comes from the form
+    open: true,
     status,
     currentCode: code,
     exercise: {

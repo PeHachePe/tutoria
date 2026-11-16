@@ -28,7 +28,7 @@ export class SupabaseAnswerStore implements AnswerStore {
   }
 
   async findAttempt(attemptId: string): Promise<TutorAttempt | null> {
-    const [attempt, lastRun] = await Promise.all([
+    const [attempt, lastRun, open] = await Promise.all([
       this.admin
         .from('attempt')
         .select(
@@ -44,8 +44,10 @@ export class SupabaseAnswerStore implements AnswerStore {
         .order('received_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      this.admin.rpc('is_open_attempt', { target_attempt_id: attemptId }),
     ]);
     if (attempt.error) throw new Error(`Reading the attempt failed: ${attempt.error.message}`);
+    if (open.error) throw new Error(`Reading the attempt failed: ${open.error.message}`);
     if (lastRun.error) throw new Error(`Reading the last run failed: ${lastRun.error.message}`);
     const data = attempt.data;
     if (!data?.exercise || !data.app_user) return null;
@@ -53,6 +55,7 @@ export class SupabaseAnswerStore implements AnswerStore {
       userId: data.user_id,
       ownerActive: data.app_user.status === 'active',
       status: data.status,
+      open: open.data,
       currentCode: data.current_code,
       exercise: {
         title: data.exercise.title,
@@ -110,14 +113,27 @@ export class SupabaseAnswerStore implements AnswerStore {
     );
   }
 
-  async latestCalls(userId: string, since: Date, limit: number): Promise<readonly Date[]> {
-    const { data, error } = await this.admin.rpc('latest_tutor_calls', {
+  async keepQueries(
+    requestId: string,
+    userId: string,
+    queries: readonly ToolRequest[],
+  ): Promise<void> {
+    const { error } = await this.admin.rpc('keep_tutor_queries', {
+      target_request_id: requestId,
       target_user_id: userId,
-      since: since.toISOString(),
-      max_count: limit,
+      asked_calls: queries as unknown as Json,
     });
-    if (error) throw new Error(`Reading the latest calls failed: ${error.message}`);
-    return data.map((calledAt) => new Date(calledAt));
+    if (error) throw new Error(`Keeping the queries failed: ${error.message}`);
+  }
+
+  async takeQueries(requestId: string, userId: string): Promise<readonly ToolRequest[] | null> {
+    const { data, error } = await this.admin.rpc('take_tutor_queries', {
+      target_request_id: requestId,
+      target_user_id: userId,
+    });
+    if (error) throw new Error(`Reading the queries failed: ${error.message}`);
+    // `keep_tutor_queries` wrote only calls of the contract
+    return (data ?? null) as unknown as ToolRequest[] | null;
   }
 
   providerSetting(): Promise<ProviderSetting | null> {

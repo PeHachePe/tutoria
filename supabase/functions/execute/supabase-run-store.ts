@@ -14,19 +14,24 @@ export class SupabaseRunStore implements RunStore {
   }
 
   async findAttempt(attemptId: string): Promise<RunAttempt | null> {
-    const { data, error } = await this.admin
-      .from('attempt')
-      .select(
-        'user_id, status, app_user(status), exercise(function_name, test(id, input, expected_output, is_hidden, position))',
-      )
-      .eq('id', attemptId)
-      .maybeSingle();
+    const [{ data, error }, open] = await Promise.all([
+      this.admin
+        .from('attempt')
+        .select(
+          'user_id, status, app_user(status), exercise(function_name, test(id, input, expected_output, is_hidden, position))',
+        )
+        .eq('id', attemptId)
+        .maybeSingle(),
+      this.admin.rpc('is_open_attempt', { target_attempt_id: attemptId }),
+    ]);
     if (error) throw new Error(`Reading the attempt failed: ${error.message}`);
+    if (open.error) throw new Error(`Reading the attempt failed: ${open.error.message}`);
     if (!data?.exercise || !data.app_user) return null;
     return {
       userId: data.user_id,
       ownerActive: data.app_user.status === 'active',
       status: data.status,
+      open: open.data,
       functionName: data.exercise.function_name,
       tests: data.exercise.test
         .toSorted((a, b) => a.position - b.position)
@@ -37,19 +42,6 @@ export class SupabaseRunStore implements RunStore {
           isHidden: test.is_hidden,
         })),
     };
-  }
-
-  async latestRuns(userId: string, since: Date, limit: number): Promise<readonly Date[]> {
-    const { data, error } = await this.admin
-      .from('process_event')
-      .select('received_at, attempt!inner(user_id)')
-      .eq('type', 'run')
-      .eq('attempt.user_id', userId)
-      .gte('received_at', since.toISOString())
-      .order('received_at', { ascending: false })
-      .limit(limit);
-    if (error) throw new Error(`Reading the latest runs failed: ${error.message}`);
-    return data.map((row) => new Date(row.received_at));
   }
 
   async recordRun(attemptId: string, code: string, result: RunResult): Promise<RecordOutcome> {

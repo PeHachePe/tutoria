@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   answerHintLevel,
   type HintLevel,
+  type ToolRequest,
   TUTOR_TRIGGERS,
   type TutorEvent,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
@@ -11,16 +12,20 @@ import {
   type ToolCall,
   toolCallsOf,
 } from '../../../src/app/data/tutor/tutor-tools.ts';
+import { outputsEqual } from '../../../src/app/data/code-runner/run-result.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import type { StaffRequests } from '../_shared/staff-requests.ts';
-import { bearerToken, failure, json, preflight } from '../_shared/http.ts';
+import type { StudentRequests } from '../_shared/student-requests.ts';
 import {
-  DAY_MS,
-  dayBefore,
-  MAX_CODE_LENGTH,
-  minuteBefore,
-  secondsToWait,
-} from '../_shared/limits.ts';
+  bearerToken,
+  BodyTooLargeError,
+  failure,
+  json,
+  preflight,
+  readJson,
+  tooLarge,
+} from '../_shared/http.ts';
+import { MAX_CODE_LENGTH } from '../_shared/limits.ts';
 import type { AnswerStore, RecordedAnswer, TutorAttempt } from './answer-store.ts';
 import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import { checkCodeActions, tryExamples } from './code-actions.ts';
@@ -43,13 +48,15 @@ import {
 } from './prompt.ts';
 
 /**
- * Calls to the model a user may make in a minute: it is what spends the quota and the money of the
- * provider. A student asks, reads and thinks, so a handful is plenty.
+ * Turns of the tutor a user may ask for in a minute: it is what spends the quota and the money of
+ * the provider. A student asks, reads and thinks, so a handful is plenty. A turn is counted before
+ * the model is called (D-063), whatever comes of it; the data the model asks the app for come back
+ * in the same turn.
  */
 export const TUTOR_CALLS_PER_MINUTE = 6;
 
 /**
- * Calls to the model a user may make in a day (the last 24 hours): the free plans of the providers
+ * Turns of the tutor a user may ask for in a day (the last 24 hours): the free plans of the providers
  * limit the calls of the whole project in a day, so no student may spend the quota of the rest. A
  * long session of practice is far below it.
  */
@@ -60,6 +67,12 @@ export const TUTOR_CALLS_PER_DAY = 60;
  * D-061): as many as a student, counted apart with the requests of the staff.
  */
 export const TUTOR_PREVIEWS_PER_MINUTE = TUTOR_CALLS_PER_MINUTE;
+
+/**
+ * And in a day: a teacher tries many exercises, so several times what a student may ask, but not
+ * the quota of the day of the whole project from one account (D-063).
+ */
+export const TUTOR_PREVIEWS_PER_DAY = 200;
 
 /** Far above the 500 characters of the chat: room for a spoken question (6.1). */
 export const MAX_MESSAGE_LENGTH = 2_000;
@@ -129,20 +142,22 @@ type Ask = Omit<TutorRequestBody, 'attemptId'>;
 
 export interface TutorDependencies {
   readonly store: AnswerStore;
+  /** The limits of the turns of a student, counted before the model is called (D-063). */
+  readonly students: StudentRequests;
   /** The limit of the teachers who try an exercise (4.3e). */
   readonly staff: StaffRequests;
   /** The provider of the setting, with the key of the secrets. */
   readonly providerFor: (setting: ProviderSetting) => LlmProvider;
   /** Where the code is tried with the examples, so the model knows what it does now. */
   readonly sandbox: CodeSandbox;
-  readonly now?: () => number;
 }
 
 /**
- * The Edge Function `tutor` (2.4): checks the session and that the attempt is the caller's, decides
- * the hint level, tries the code with the examples, asks the model with the context of the attempt, checks its answer (2.6), keeps it
- * with its process event and answers with the events `meta` → `delta` → `done` all at once (no
- * streaming, D-043). A retry of a request already answered gets that answer back.
+ * The Edge Function `tutor` (2.4): checks the session, that the attempt is the caller's and that it
+ * is still open to them, counts the turn, decides the hint level, tries the code with the examples,
+ * asks the model with the context of the attempt, checks its answer (2.6), keeps it with its process
+ * event and answers with the events `meta` → `delta` → `done` all at once (no streaming, D-043). A
+ * retry of a request already answered gets that answer back.
  *
  * With `preview` instead of `attemptId`, a teacher tries an exercise as a student (4.3e, D-061): the
  * exercise and the try come from the form, the limit is that of the staff, and the answer is the
@@ -150,10 +165,10 @@ export interface TutorDependencies {
  */
 export function createTutorHandler({
   store,
+  students,
   staff,
   providerFor,
   sandbox,
-  now = Date.now,
 }: TutorDependencies): (request: Request) => Promise<Response> {
   return async (request) => {
     if (request.method === 'OPTIONS') return preflight();
@@ -162,7 +177,7 @@ export function createTutorHandler({
       const token = bearerToken(request);
       const userId = token ? await store.userOf(token) : null;
       if (!userId) return failure(401, 'Sign in to ask the tutor');
-      const raw: unknown = await request.json().catch(() => null);
+      const raw = await readJson(request);
       if (isPreview(raw)) return await answerPreview(userId, raw);
       const body = requestSchema.safeParse(raw);
       if (!body.success) {
@@ -178,25 +193,45 @@ export function createTutorHandler({
       if (!attempt || attempt.userId !== userId) return failure(404, 'Attempt not found');
       if (!attempt.ownerActive) return failure(403, 'The account is disabled');
       if (attempt.status === 'submitted') return failure(409, 'The attempt is submitted');
+      // Hidden, not open yet or out of the group: what the student no longer sees has no tutor
+      if (!attempt.open) return failure(403, 'The exercise is not open');
 
       const answered = await store.findAnswer(ask.requestId);
       if (answered) return replay(answered, ask.attemptId);
 
-      // One read for both limits: the calls of the minute are the newest of the day
-      const latest = await store.latestCalls(userId, dayBefore(now()), TUTOR_CALLS_PER_DAY);
-      const minuteStart = minuteBefore(now());
-      const wait = Math.max(
-        secondsToWait(
-          latest.filter((call) => call >= minuteStart),
+      let waited: readonly ToolRequest[] | null = null;
+      if (ask.results) {
+        // The data of the queries the model asked for in this request, once: the same turn goes on.
+        // Anything else would hand the model text as data it never asked for (D-063)
+        waited = await store.takeQueries(ask.requestId, userId);
+        if (!waited || !answersQueries(ask.results, waited)) {
+          return failure(400, 'The tutor asked for no such data');
+        }
+      } else {
+        // Counted before the code is tried and the model called: turns at once wait theirs, and
+        // one the provider fails or that only asks for data counts too
+        const wait = await students.claim(
+          userId,
+          'tutor',
           TUTOR_CALLS_PER_MINUTE,
-          now(),
-        ),
-        secondsToWait(latest, TUTOR_CALLS_PER_DAY, now(), DAY_MS),
-      );
-      if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
+          TUTOR_CALLS_PER_DAY,
+        );
+        if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
+      }
 
-      const turn = await answerTurn(ask, attempt);
+      const turn = await answerTurn(ask, attempt).catch(async (error: unknown) => {
+        // The provider failed with the data in hand: the same request may bring them again
+        if (waited && error instanceof ProviderError) {
+          await store.keepQueries(ask.requestId, userId, waited);
+        }
+        throw error;
+      });
       if (turn instanceof Response) return turn;
+      if ('queries' in turn) {
+        // Nothing of the answer is kept until the model gives it with the data (2.5e)
+        await store.keepQueries(ask.requestId, userId, turn.queries);
+        return queryEvents(turn.queries);
+      }
       const { answer, hintLevel, rejected, model } = turn;
 
       const outcome = await store.recordAnswer({
@@ -222,6 +257,7 @@ export function createTutorHandler({
           return failure(404, 'Attempt not found');
       }
     } catch (error) {
+      if (error instanceof BodyTooLargeError) return tooLarge();
       if (error instanceof ProviderError) {
         console.error(error.message);
         return failure(503, 'The AI provider is not available');
@@ -241,20 +277,30 @@ export function createTutorHandler({
       );
     }
     const { preview, ...ask } = body.data;
-    const wait = await staff.claim(userId, 'tutor', TUTOR_PREVIEWS_PER_MINUTE);
+    const wait = await staff.claim(
+      userId,
+      'tutor',
+      TUTOR_PREVIEWS_PER_MINUTE,
+      TUTOR_PREVIEWS_PER_DAY,
+    );
     if (wait === null) return failure(403, 'Only a teacher tries an exercise');
     if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
     const turn = await answerTurn(ask, previewAttempt(userId, ask.code, preview));
     if (turn instanceof Response) return turn;
+    // Each trip of a preview counts as a request of the staff, so its data are taken as they come
+    if ('queries' in turn) return queryEvents(turn.queries);
     return json(200, { events: eventsOf(turn.answer, turn.hintLevel, null) });
   }
 
   /**
    * What the tutor answers to a turn about an attempt: the level, the code tried with the examples,
-   * the model's answer checked (2.6) and its actions checked against the attempt (2.5f); or the
-   * response to give at once, when there is no provider or the model needs data first (2.5e).
+   * the model's answer checked (2.6) and its actions checked against the attempt (2.5f); the queries
+   * the model needs answered first (2.5e); or the response to give at once, when there is no provider.
    */
-  async function answerTurn(ask: Ask, attempt: TutorAttempt): Promise<AnsweredTurn | Response> {
+  async function answerTurn(
+    ask: Ask,
+    attempt: TutorAttempt,
+  ): Promise<AnsweredTurn | AskedQueries | Response> {
     const setting = await store.providerSetting();
     if (!setting) return failure(503, 'No AI provider is set');
     const provider = providerFor(setting);
@@ -270,8 +316,7 @@ export function createTutorHandler({
       tried,
       results: ask.results,
     });
-    // The model needs data of the student first: nothing is kept until it answers with it (2.5e)
-    if ('queries' in asked) return json(200, { events: [{ type: 'query', calls: asked.queries }] });
+    if ('queries' in asked) return asked;
     // What touches the code or the submission is checked against the attempt here, and a slip
     // that keeps the code from running gets its fix, but not in an intervention (2.5f)
     const answer = asked.answer
@@ -295,6 +340,27 @@ interface AnsweredTurn {
   readonly hintLevel: HintLevel;
   readonly rejected: number;
   readonly model: string;
+}
+
+/** The model needs data of the student first: the app reads them and asks again with them (2.5e). */
+function queryEvents(queries: readonly ToolCall[]): Response {
+  return json(200, { events: [{ type: 'query', calls: queries }] });
+}
+
+/** Whether the results are those of the queries the request waited for, one by one. */
+function answersQueries(
+  results: readonly { readonly name: string; readonly arguments: unknown }[],
+  waited: readonly { readonly name: string; readonly arguments: unknown }[],
+): boolean {
+  return (
+    results.length === waited.length &&
+    waited.every(
+      (call, index) =>
+        results[index].name === call.name &&
+        // As JSON, whatever the order of the keys: the database keeps them in its own
+        outputsEqual(results[index].arguments, call.arguments),
+    )
+  );
 }
 
 /** A preview carries the exercise instead of an attempt. */

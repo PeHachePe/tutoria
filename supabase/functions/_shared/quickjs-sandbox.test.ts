@@ -73,7 +73,7 @@ Deno.test('an exception in a test is its error, and the other tests still run', 
     'function sum(v) { if (v.length === 0) throw new RangeError("Vacío"); return v[0]; }',
   );
 
-  assertEquals(outcome.outcomes[2], { ok: false, error: 'RangeError: Vacío' });
+  assertEquals(outcome.outcomes[2], { ok: false, error: 'RangeError: Vacío', line: 1 });
   assertEquals(outcome.outcomes[3], { ok: true, value: -2 });
 });
 
@@ -112,6 +112,22 @@ Deno.test('an endless loop in a test times it out, and the next tests still run'
   ]);
 });
 
+Deno.test('a regular expression that never ends times its test out too', async () => {
+  // The engine checks the clock inside its regular expressions since 0.32.0: before, this one
+  // took the whole CPU time of the function, and the worker with it (D-063)
+  const outcome = await run(
+    "function sum(v) { return v.length === 1 ? /^(a+)+$/.test('a'.repeat(40) + 'b') : v.length; }",
+  );
+
+  assertEquals(outcome.outcomes, [
+    { ok: true, value: 3 },
+    undefined,
+    { ok: true, value: 0 },
+    { ok: true, value: 3 },
+    { ok: true, value: 3 },
+  ]);
+});
+
 Deno.test('when the run runs out of time, the pending tests time out', async () => {
   const outcome = await run('function sum() { while (true) {} }');
 
@@ -129,14 +145,18 @@ Deno.test('an endless recursion overflows the stack as in the browser', async ()
   const outcome = await run('function sum(v) { return sum(v); }', [[[]]]);
 
   assertEquals(outcome.outcomes, [
-    { ok: false, error: 'RangeError: Maximum call stack size exceeded' },
+    { ok: false, error: 'RangeError: Maximum call stack size exceeded', line: 1 },
   ]);
 });
 
 Deno.test('a memory bomb fails its test without hurting the function', async () => {
-  const outcome = await run('function sum() { let s = "x"; while (true) s += s; }', [[[]]]);
+  // Arrays, not a string doubled: the engine joins strings without copying them (0.32.0)
+  const outcome = await run(
+    'function sum() { const all = []; while (true) all.push(new Array(100000).fill(0)); }',
+    [[[]]],
+  );
 
-  assertEquals(outcome.outcomes, [{ ok: false, error: 'InternalError: out of memory' }]);
+  assertEquals(outcome.outcomes, [{ ok: false, error: 'InternalError: out of memory', line: 1 }]);
   assertEquals((await run('const sum = () => 1;', [[[]]])).outcomes, [{ ok: true, value: 1 }]);
 });
 

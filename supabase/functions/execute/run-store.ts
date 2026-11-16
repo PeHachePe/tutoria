@@ -6,6 +6,8 @@ export interface RunAttempt {
   /** Whether its owner's account is active (`app_user.status`). */
   readonly ownerActive: boolean;
   readonly status: 'in_progress' | 'tests_failed' | 'passed' | 'submitted';
+  /** Whether its student still sees its assignment and is in its group (`is_open_attempt`). */
+  readonly open: boolean;
   readonly functionName: string;
   /** All of them, hidden ones included, in their order. */
   readonly tests: readonly RunTest[];
@@ -19,8 +21,6 @@ export interface RunStore {
   /** The user of a session token, or `null` if it is not valid. */
   userOf(token: string): Promise<string | null>;
   findAttempt(attemptId: string): Promise<RunAttempt | null>;
-  /** When the user's latest runs since `since` were received, newest first and `limit` at most. */
-  latestRuns(userId: string, since: Date, limit: number): Promise<readonly Date[]>;
   /** The code that ran, the status it earned and the `run` event, all or nothing (`record_run`). */
   recordRun(attemptId: string, code: string, result: RunResult): Promise<RecordOutcome>;
 }

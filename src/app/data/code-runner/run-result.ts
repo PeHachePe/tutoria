@@ -156,6 +156,17 @@ export const MAX_CHECK_TESTS = 50;
 /** Longer than any name of a function. */
 const MAX_FUNCTION_NAME_LENGTH = 100;
 
+/** A plain identifier in ASCII, as `isIdentifier()` asks of the form (this file imports nothing). */
+const FUNCTION_NAME = /^[A-Za-z_$][\w$]*$/;
+
+/**
+ * Whether `name` can be the function a sandbox calls: an identifier, as the table asks of a saved
+ * exercise. Whoever calls the Edge Functions may send anything as the name of one not saved yet.
+ */
+export function isFunctionName(name: string): boolean {
+  return name.length <= MAX_FUNCTION_NAME_LENGTH && FUNCTION_NAME.test(name);
+}
+
 /** The id of the test in `position` of the form (from 0), so each result names its test. */
 export function checkTestId(position: number): string {
   return `test-${position + 1}`;
@@ -171,7 +182,7 @@ export function solutionCheckOf(body: unknown): SolutionCheck | null {
   if (!isRecord(body)) return null;
   const { code, functionName, tests } = body as Partial<Record<keyof SolutionCheck, unknown>>;
   if (typeof code !== 'string' || typeof functionName !== 'string') return null;
-  if (functionName.trim() === '' || functionName.length > MAX_FUNCTION_NAME_LENGTH) return null;
+  if (!isFunctionName(functionName)) return null;
   if (!Array.isArray(tests) || tests.length === 0 || tests.length > MAX_CHECK_TESTS) return null;
   const checked = tests.map(checkTestOf);
   return checked.every((test) => test !== null) ? { code, functionName, tests: checked } : null;

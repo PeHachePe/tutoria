@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../../src/app/data/supabase/database.types.ts';
 import { QuickJsSandbox } from '../_shared/quickjs-sandbox.ts';
 import { SupabaseStaffRequests } from '../_shared/supabase-staff-requests.ts';
+import { SupabaseStudentRequests } from '../_shared/supabase-student-requests.ts';
 import { providerForSetting } from '../_shared/llm-provider.ts';
 import { SupabaseAnswerStore } from './supabase-answer-store.ts';
 import { createTutorHandler } from './tutor.ts';
@@ -17,6 +18,8 @@ const admin = createClient<Database>(
 Deno.serve(
   createTutorHandler({
     store: new SupabaseAnswerStore(admin),
+    // The turns of a student, counted before the model is called (D-063)
+    students: new SupabaseStudentRequests(admin),
     // The teachers who try an exercise as a student count apart (4.3e, D-061)
     staff: new SupabaseStaffRequests(admin),
     // The main model and its fallbacks in order, each with the key of its own secret (D-044)

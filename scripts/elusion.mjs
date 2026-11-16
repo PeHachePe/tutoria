@@ -18,7 +18,8 @@
 //   after changing the prompt, which prints the verdicts and saves nothing). --only: some cases. --report: only rebuild the report.
 // - Another provider, or a local model (Ollama, LM Studio…): --base-url (from Docker, with
 //   host.docker.internal), --key-secret with the name of its secret (none by default: the key of
-//   the main provider never goes to another one, D-044), --response-format if it does not take the
+//   the main provider never goes to another one, D-044; its host must be in the secret
+//   AI_ALLOWED_HOSTS of the functions, D-063), --response-format if it does not take the
 //   JSON schema and --timeout, in seconds, if it needs more than the 15 s of the tutor.
 // - The results of each model and version of the prompt are kept in docs/elusion/*.json; the
 //   report is built from all of them, plus the conclusions written by hand in
@@ -299,6 +300,10 @@ async function freshAttempt({ admin, student, userId, exercise }) {
     .eq('user_id', userId)
     .eq('exercise_id', exercise.id);
   if (removed.error) throw new Error(`Clearing the attempt failed: ${removed.error.message}`);
+  // The turns of the tutor are counted apart from the attempt (D-063): a battery asks more in a day
+  // than a student may, so each case starts with none
+  const turns = await admin.from('student_request').delete().eq('user_id', userId);
+  if (turns.error) throw new Error(`Clearing the turns failed: ${turns.error.message}`);
   const opened = await student.rpc('open_attempt', { target_assignment_id: BATTERY_ASSIGNMENT_ID });
   if (opened.error) throw new Error(`Opening the attempt failed: ${opened.error.message}`);
   return opened.data.id;

@@ -2,7 +2,7 @@
 -- administrator is ...001 and Lucía (...011) is a student.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(12);
 
 set local role service_role;
 
@@ -36,6 +36,32 @@ select is(
   0,
   'the administrator may too'
 );
+-- Per day too, for what calls the model (D-063): two yesterday afternoon and one just now
+reset role;
+insert into staff_request (user_id, kind, received_at) values
+  ('10000000-0000-4000-8000-000000000001', 'tutor', now() - interval '25 hours'),
+  ('10000000-0000-4000-8000-000000000001', 'tutor', now() - interval '20 hours'),
+  ('10000000-0000-4000-8000-000000000001', 'tutor', now() - interval '18 hours');
+set local role service_role;
+select is(
+  claim_staff_request('10000000-0000-4000-8000-000000000001', 'tutor', 6, 3),
+  0,
+  'a request older than a day does not count for the day'
+);
+select ok(
+  claim_staff_request('10000000-0000-4000-8000-000000000001', 'tutor', 6, 3)
+    between 3 * 3600 and 4 * 3600,
+  'past the limit of the day, the seconds until the oldest of the day leaves it'
+);
+reset role;
+select is(
+  (select count(*) from staff_request
+   where user_id = '10000000-0000-4000-8000-000000000001' and kind = 'tutor'),
+  3::bigint,
+  'and what is older than a day is gone'
+);
+set local role service_role;
+
 select throws_ok(
   $$ select claim_staff_request('10000000-0000-4000-8000-000000000011', 'check', 10) $$,
   'P0003', null,

@@ -19,6 +19,7 @@ const ATTEMPT: TutorAttempt = {
   userId: 'hugo',
   ownerActive: true,
   status: 'tests_failed',
+  open: true,
   currentCode: CODE,
   exercise: {
     title: 'Suma de los elementos de un vector',
@@ -406,10 +407,7 @@ Deno.test('code that passes every example is said to be right, with nothing to f
 
 Deno.test('the system prompt lets the server write the skeleton and the syntax examples', () => {
   const prompt = systemPrompt('es');
-  assertStringIncludes(
-    prompt,
-    'No escribes código. De su ejercicio, solo puedes darle el esqueleto',
-  );
+  assertStringIncludes(prompt, 'nunca sentencias. De su ejercicio, solo puedes darle el esqueleto');
   assertStringIncludes(
     prompt,
     'No lo escribes\ntú: pon en "skeleton" los nombres de sus parámetros',

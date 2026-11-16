@@ -105,6 +105,43 @@ Deno.test('containsCode lets words about the code through', () => {
   }
 });
 
+Deno.test('containsCode finds code inside a line of words or written as code in it', () => {
+  for (const message of [
+    // Written as code in the line
+    'Escribe esto dentro de tu función: `let total = 0; for (const n of numbers) total += n; return total` y listo.',
+    'Te falta `total += n` dentro del bucle.',
+    'Usa `numbers.reduce((a, b) => a + b, 0)`.',
+    'Prueba con `for (const n of numbers) {`.',
+    'Añade `if (n > 0) return n` al principio.',
+    // In words, without a line that starts as code
+    'La solución es declarar let total = 0, recorrer con for (const n of numbers) total += n y al final return total.',
+    'Recorre con for (let i = 0; i < v.length; i++) y suma cada elemento.',
+    'Dentro pon if (v.length === 0) return 0 y sigue.',
+    // Line by line, each behind a label
+    'Línea 1: function sum(numbers) {',
+    'Línea 3: total += n',
+    'pon: let t = 0',
+  ]) {
+    assertEquals(containsCode(message), true, message);
+  }
+});
+
+Deno.test('containsCode lets names, expressions and formats written as code through', () => {
+  for (const message of [
+    '¿Qué vale `total` antes del bucle? ¿Y `numbers.length`?',
+    'Compara `i < v.length` con `i <= v.length`: ¿cuál llega al último elemento?',
+    'Prueba mentalmente `sum([1, 2, 3])`: ¿qué devuelve tu `return`?',
+    'Cada parámetro va como `clave=valor`, separados por `&`.',
+    'Devuelve un objeto como `{ a: 1 }`, no un texto.',
+    '¿Conoces el operador `+=`? Mira qué hace con el acumulador.',
+    'Para el caso vacío: ¿qué devuelve tu función si no entra en el bucle?',
+    'Remember: for each element (starting at the first one) you add it to the total.',
+    'Think about this: if the list is empty (no elements), what should come back?',
+  ]) {
+    assertEquals(containsCode(message), false, message);
+  }
+});
+
 const SUM: FunctionSignature = { functionName: 'sum', parameters: 1 };
 
 Deno.test('containsCode lets through only the empty skeleton of the function asked for', () => {
