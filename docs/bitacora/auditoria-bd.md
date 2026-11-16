@@ -1,6 +1,6 @@
 # Auditoría · Seguridad de la base de datos
 
-16/11/2026 · Sesión de Claude Code · commits propuestos (ver abajo)
+16/11/2026 · Sesión de Claude Code · `15a6ab1`, `9cfbb20` y `50b12e0`
 
 ## Objetivo
 
@@ -59,7 +59,7 @@ Cobertura de la app, 100 %. Los de pgTAP nuevos cubren: un alumno de dos docente
 
 ## Validación humana
 
-El autor aprobó empezar por la base de datos y, vistos los hallazgos, pidió la migración. Acotar la lectura del docente al grupo se hizo como se recomendó; queda a su revisión, con la migración sin publicar en la nube y sin commits.
+El autor aprobó empezar por la base de datos y, vistos los hallazgos, pidió la migración. Acotar la lectura del docente al grupo se hizo como se recomendó; queda a su revisión. Ejecutó los commits; la migración sigue sin publicar en la nube.
 
 ## Capturas
 
@@ -75,11 +75,11 @@ Modelo: `claude-fable-5-2`. Horas humanas estimadas: el tiempo de Claude sin pau
 
 ## Commits
 
-Propuestos, sin ejecutar:
+Los ejecutó el autor:
 
-1. `fix(db): teachers read by group, limits to what the browser writes and narrower grants (security review)`
-2. `fix(data): mock services follow the rules of the security review (security review)`
-3. `docs: record the security review of the database (security review)`
+1. `15a6ab1` · `fix(db): teachers read by group, limits to what the browser writes and narrower grants (security review)`
+2. `9cfbb20` · `fix(data): mock services follow the rules of the security review (security review)`
+3. `50b12e0` · `docs: record the security review of the database (security review)`
 
 ## Para la presentación
 
