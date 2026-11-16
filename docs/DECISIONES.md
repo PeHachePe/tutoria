@@ -1979,3 +1979,69 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Si se hace el 6.1d, `TutorRequest` gana `delivery`, la batería de elusión se pasa también en ese modo y D-043 queda matizada: en una llamada, una frase ya dicha no se retira.
 
 **Aprobación:** propuesta, a revisión del autor.
+
+## D-068 · El panel en vivo, replanteado: cada dato responde a una decisión del docente (17/11/2026)
+
+**Contexto:** el autor probó la sesión en vivo del 4.1 y el 4.1b y no la vio útil. No se sabía en qué grupo y asignatura se estaba (un título genérico y dos desplegables con el texto cortado); con los datos del seed, tres tarjetas vacías; casi ninguna gráfica; listas que crecían sin tope (el feed, la cola y veinticuatro tarjetas de alumnos), y una cola que daba como «a quién atender» cosas que no lo son, como salir de la ventana. Quedaba además por decidir cómo sigue el panel a un grupo que trabaja en bloques distintos (ideas A a E de `PENDIENTES.md`) y qué señales nuevas entran. El paso 4.1c lo replantea sin código.
+
+**Decisión** (propuesta en el diseño del paso 4.1c):
+
+- **Una regla para toda la pantalla:** cada dato responde a una decisión del docente en clase, o no sale. Las decisiones son cuatro: a quién atender, si explicar algo a todos, si el ritmo es el esperado y, solo cuando él lo pregunta, quién no está trabajando. Lo que vale cero no se enseña.
+- **El contexto es el título:** el grupo y el bloque en el `h1`, con la asignatura encima; los selectores, compactos.
+- **Cuatro cifras, que son también los filtros de la tabla:** «Trabajando ahora», «Necesitan ayuda», «Han terminado» y «Avance del bloque».
+- **La cola solo tiene motivos del código,** los que el docente resuelve acercándose: pistas agotadas, fallos seguidos de la misma prueba, atasco en el chat (`isStuckMessage`, pendiente del 2.5d) y pistas en ráfaga. Cada entrada dice la prueba que falla. **Salen la inactividad y la salida de la ventana:** no son algo que atender y, en la cola, vigilaban más que ayudaban. Quedan como «parado» en la cifra «Trabajando ahora» y en su filtro, que el docente abre cuando quiere saberlo. Matiza D-054, que los tenía al final de la cola.
+- **Bloques distintos: la idea D, con el bloque como filtro.** La cola y la tabla son siempre de todo el grupo, así nadie queda fuera por trabajar en otro bloque. El selector de bloque elige qué enseña «Dónde está la clase»: un bloque (todos sus ejercicios, y cuántos alumnos trabajan en otros) o «Toda la clase» (los ejercicios en marcha de cualquier bloque, los 5 con más alumnos y «Ver los N»). Al abrir se elige el bloque donde trabaja más de la mitad de la sesión, o «Toda la clase» si ninguno llega; después no cambia solo.
+- **«Dónde está la clase» es la gráfica principal,** a dos tercios del ancho, y «Para explicar a todos» solo aparece desde 3 alumnos con la misma prueba fallida, con lo que la prueba espera.
+- **«Ritmo de la clase» lleva una frase que lo lee** (`rhythmReading()`): una gráfica que el docente tiene que interpretar en plena clase no le sirve.
+- **Nada crece sin tope:** la cola enseña 4 y despliega el resto dentro de su tarjeta; la tabla pagina de 8 en 8; «Lo último» desaparece.
+- **Fuera de clase,** la pantalla enseña el estado acumulado del bloque en lugar de tarjetas vacías.
+- **Animada, con sentido:** se mueve lo que cambia (las cifras cuentan, las barras crecen, las entradas de la cola llegan y se van, el último punto del ritmo late), y todo se queda quieto con `prefers-reduced-motion`.
+- **Dos subpasos:** 4.1d (datos y lógica, con la pantalla de antes funcionando) y 4.1e (la pantalla).
+
+**Alternativas:**
+
+- **A (un bloque elegido a mano, como hasta ahora):** quien trabaja en otro bloque sale «sin empezar» y no entra en la cola.
+- **B (la gráfica del bloque más activo, que cambia sola):** con medio grupo en dos bloques, salta de uno a otro y esconde a la mitad.
+- **C (pestañas por bloque con actividad):** no escala a muchos bloques.
+- **E (dos vistas con un botón):** D-054 ya descartó las vistas; el filtro de bloque da lo mismo en una sola pantalla.
+- **Retocar la pantalla del 4.1** (quitar columnas, añadir el bloque a cada fila): fue la primera propuesta del paso; el autor pidió replantearla entera.
+- **La inactividad y la salida de la ventana como último grupo de la cola** (D-054): llenaban la cola de alumnos a los que el docente no tiene nada que resolver.
+- **El ritmo de escritura** (cientos de caracteres en segundos, pendiente del 2.5c): pide un evento nuevo, da falsos positivos (autocompletado, deshacer, el esqueleto que pone el tutor) y es justo el dato «por salir» y con tono de vigilancia que este replanteo quita. Queda como trabajo futuro.
+- **Un mapa de alumnos por ejercicios:** descartado en D-054.
+- **Mantener «Lo último»:** era la columna que más crecía y no cambiaba ninguna decisión.
+
+**Consecuencias:**
+
+- `docs/PLAN.md` §2.2 y los pasos 4.1c, 4.1d y 4.1e; la ficha `06-en-vivo`, reescrita.
+- `LiveService.snapshot()` pasa a leer el grupo entero en la ventana de sesión, con las interacciones del tutor; el bloque de la URL es opcional.
+- `liveFeed()` y su lista se borran en el 4.1e: D-056 sigue valiendo para la gráfica de actividad, no para el feed.
+- Las figuras 9 y 18 de la memoria cambian: capturas nuevas en el 4.1e.
+- La fila de «Llamar al profesor» sigue en `PENDIENTES.md`: cuando se haga, será el primer motivo de la cola.
+
+**Aprobación:** propuesta. El autor vio el boceto del replanteo y dejó el resto a criterio del agente, con dos condiciones: que sea útil de verdad para el docente y animado, y que no salgan datos por salir ni la salida de la ventana como algo que atender.
+
+## D-069 · El detalle del intento, replanteado: «Ahora», la evolución y nada a cero (17/11/2026)
+
+**Contexto:** el detalle del 4.2 abría con seis cifras, varias casi siempre a cero («Preguntas al tutor 0», «Pegados 0», «Fuera de la ventana 0») y repetidas en los recuentos de los filtros. Para saber dónde estaba atascado el alumno había que leer la línea temporal desde el principio. El autor pidió revisarlo (D-055, `PENDIENTES.md`).
+
+**Decisión** (propuesta en el diseño del paso 4.1c):
+
+- **«Ahora» sustituye a las cifras:** las pruebas que fallan en la última ejecución, con lo que esperan y desde cuántas ejecuciones, y la última ayuda del tutor con su nivel. Es lo que el docente necesita al acercarse. Con el intento entregado, «Cómo lo resolvió».
+- **Un resumen en una línea** (tiempo, ejecuciones y pistas con su nivel) y, solo si existen, chips para las preguntas, los pegados y el tiempo fuera: nada que valga cero.
+- **«Evolución», la gráfica del intento:** una columna por ejecución, tan alta como las pruebas superadas, con una marca por pista y por pegado. Enseña si avanza, si lleva varias ejecuciones igual o si saltó tras un pegado, sin que la pantalla lo juzgue (D-054). Cada columna lleva a su entrada de la línea temporal.
+- **La línea temporal, con lo más reciente arriba** y las ejecuciones seguidas con el mismo resultado agrupadas: la evolución ya cuenta la historia en orden, y la lista se abre para saber qué pasa ahora.
+- **El detalle solo necesita el grupo en la URL,** porque el panel sigue a todo el grupo (D-068).
+
+**Alternativas:**
+
+- **Esconder solo las cifras a cero:** quedaba una franja de tamaño cambiante que seguía sin decir dónde está el problema.
+- **La línea temporal en orden cronológico, colocada al final:** obliga a mover el desplazamiento desde el código (una API imperativa) y la lista se abre igual por lo último.
+- **Guardar el código de cada ejecución para compararlas:** daría mucho a la evolución, pero pide cambiar `execute` y una migración; sigue en `PENDIENTES.md`.
+
+**Consecuencias:**
+
+- `docs/PLAN.md` §2.2 y el paso 4.2b; la ficha `07-detalle`, reescrita.
+- `attemptFigures()` se sustituye por `attemptSummary()`; nuevas `attemptNow()` y `attemptRuns()`; `attemptTimeline()` agrupa e invierte.
+- Capturas nuevas de `07-detalle` en el 4.2b.
+
+**Aprobación:** propuesta, a revisión del autor, que dejó el diseño a criterio del agente.

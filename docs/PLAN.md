@@ -75,6 +75,7 @@ Este documento es el plan de construcción de TutorIA. Está pensado para ejecut
 - Un paso nuevo, 4.1b, con la actividad en directo del bloque (el progreso por ejercicio y las pruebas que más fallan pasan al 4.1).
 - Fecha de entrega opcional en la asignación (4.3b) y, en el histórico (4.4), el ritmo de cada alumno respecto al plazo.
 - Las figuras del panel docente en la memoria son la 9 (boceto) y la 18 (prototipo).
+- Replanteo del panel en vivo y del detalle del intento (4.1c, D-068 y D-069): cada dato responde a una decisión del docente; pasos nuevos 4.1d, 4.1e y 4.2b.
 
 ---
 
@@ -131,7 +132,7 @@ Detalle por pantalla:
 
 - **Catálogo:** con más de un grupo, una pestaña por grupo con el nombre de su asignatura, en la URL (`?grupo=`); ejercicios agrupados por bloque (por su título) con título, contenidos, dificultad, chip de estado, pistas pedidas con su nivel, «Repetido N veces» y botón (Empezar, Continuar o Repasar); progreso «n/N superados» del grupo de la pestaña y por bloque, donde N es el número de ejercicios asignados y «superados» cuenta los superados y los entregados (D-027), con cuántos están listos para entregar; la tarjeta «Continúa donde lo dejaste», que mira todos los grupos, y, con todo entregado, la enhorabuena con la mascota (D-034, D-046).
 - **Pantalla de trabajo:** la asignatura (enlace a su pestaña) y el bloque; enunciado y pruebas visibles; editor; botón para ejecutar las pruebas con resultados ✔ (superada), ✘ (fallida) o ● (error o tiempo agotado); botón Entregar y, una vez entregado, «Practicar de nuevo» y «Siguiente ejercicio» (el siguiente del bloque sin entregar); con varios intentos, un selector «Intento 2 de 3» (`?intento=`) y un aviso mientras se practica; panel del tutor tipo chat con nivel de pista visible y botón «Pedir pista»; reacciones flotantes (D-046).
-- **Sesión en vivo:** de un grupo y un bloque; cola «A quién atender» con el motivo y «Atendido»; «La clase en el bloque», con una barra por ejercicio y la prueba que más falla; tabla por alumno con su intento actual del bloque (ejercicio, estado, tiempo, pistas y nivel, pegados, pérdidas de foco, pruebas superadas, las señales derivadas «atascado» y «fuera», y los patrones como chips), ordenable por cualquier indicador y con buscador; solo cuenta la actividad de la última hora (D-054); actividad en directo (4.1b); detalle por intento con la línea temporal de eventos, las interacciones con el tutor y el código.
+- **Sesión en vivo** (replanteada en el 4.1c, D-068 y D-069; hasta el 4.1e y el 4.2b la aplicación tiene la versión del 4.1, el 4.1b y el 4.2): de un grupo, con el bloque como filtro («Toda la clase» o uno); el grupo y el bloque como título; cuatro cifras que son también filtros («Trabajando ahora», «Necesitan ayuda», «Han terminado» y «Avance del bloque»); «Dónde está la clase», con una barra por ejercicio y «Para explicar a todos» cuando 3 alumnos o más fallan la misma prueba; cola «A quién atender», de todo el grupo y solo con motivos del código (pistas agotadas, fallos seguidos, atasco en el chat y pistas en ráfaga), con la prueba que falla y «Atendido»; salir de la ventana o dejar de escribir no es un motivo: cuenta como «parado» en las cifras; «Ritmo de la clase», con las ejecuciones y las pistas por minuto y una frase que lo lee; tabla del alumnado paginada, con el ejercicio, el estado y las pruebas, las pistas, la última actividad y las observaciones como chips, solo si existen; solo cuenta la actividad de la última hora (D-054) y, sin ella, la pantalla enseña el estado acumulado del bloque. Detalle por intento con «Ahora» (qué pruebas fallan y la última ayuda del tutor), la evolución ejecución a ejecución, la línea temporal de eventos e interacciones con el tutor y el código. Regla de las dos pantallas: cada dato responde a una decisión del docente, y lo que vale cero no se enseña.
 - **Histórico:** gráfica de la media de pistas solicitadas por bloque (una tendencia descendente indica autonomía creciente) y KPI: tiempo medio, porcentaje de ejercicios superados y alumnos con señales. Cuenta el intento que cuenta de cada asignación (el primero entregado); las prácticas no cambian los datos de la clase (D-046).
 - **Gestión de ejercicios:** alta, edición y baja de ejercicios con sus pruebas y los umbrales del tutor proactivo; asignación a un bloque de un grupo; ocultar o mostrar bloques y asignaciones. Un ejercicio con intentos no se borra, para conservar su historial.
 - **Datos registrados (RF-07):** qué registra la aplicación (tiempos, ejecuciones, pistas, pegados y salidas a otra ventana o pestaña, con su duración), qué no registra nunca (el audio), con qué finalidad (formativa, no sancionadora), quién lo ve (su docente) y qué servicios externos intervienen (reconocimiento de voz del navegador, proveedor de IA). La primera vez que el alumno entra, un aviso le resume esto con un enlace a la pantalla, antes de empezar a trabajar, como pide el RGPD citado en la memoria.
@@ -1555,7 +1556,7 @@ La app que ya funciona en local, publicada en Supabase en la nube y en Vercel, c
 
 Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
-#### Fase 4 · Panel docente (capa 2, ≈23 h)
+#### Fase 4 · Panel docente (capa 2, ≈32 h)
 
 **4.1 · Sesión en vivo, con datos simulados y reales (≈6 h)** · ficha `06-en-vivo` · Figuras 9 y 18 del TFM
 
@@ -1580,6 +1581,43 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
 - **Hecho así (D-056):** `activityByMinute()` (ejecuciones y pistas por minuto) y `liveFeed()` (solo avances: empezar un ejercicio que no es el primero o repetir uno, superar una prueba tras 3 o más fallos seguidos, superar todas, entregar) como funciones puras con TDD, servidas por el `LiveStore`; tarjeta «Actividad» con dos líneas en SVG propio bajo la cola y «Lo último» bajo la clase, con el nombre como enlace al intento. Además, la pestaña del detalle del intento dice el alumno y el ejercicio.
 
+**4.1c · Replanteo del panel en vivo y del detalle (≈0,5 h, sin código)** · fichas `06-en-vivo` y `07-detalle`
+
+Al probar el 4.1, el 4.1b y el 4.2, el autor no los vio útiles: no se sabía en qué grupo y asignatura se estaba, casi no había gráficas, las listas crecían sin tope y la cola daba como «a quién atender» cosas que no lo son, como salir de la ventana. El diseño dejó escritas las dos fichas, D-068 y D-069, y los tres subpasos que siguen, cada uno en su sesión y en este orden: 4.1d, 4.1e y 4.2b. Tras el 4.1d, el panel sigue a todo el grupo con la pantalla de antes; tras el 4.1e, tiene la pantalla nueva.
+
+**4.1d · El panel sigue a todo el grupo: datos y lógica (≈3 h)** · ficha `06-en-vivo`
+
+- `LiveService.snapshot(grupo, bloque | null)`, simulado y Supabase: los intentos de todo el grupo con actividad en la ventana de sesión, con sus eventos y sus interacciones con el tutor, y, si se pide un bloque, todos los de ese bloque. `watch()` no cambia.
+- `LiveStore`: el bloque de la URL pasa a ser opcional («Toda la clase»); sin él, `defaultBlock()` elige al abrir el bloque donde trabaja más de la mitad de la sesión, «Toda la clase» si ninguno llega, o el de actividad más reciente fuera de clase.
+- La cola, de todo el grupo y solo con motivos del código (`attentionReason()`): salen la inactividad y la salida de la ventana, y entra el atasco en el chat (`isStuckMessage`, desde `CHAT_STUCK_MESSAGES = 2` seguidas). Cada entrada lleva la prueba que falla.
+- `workState()`: trabajando (actividad en los últimos `ACTIVE_MINUTES = 5` y sin estar fuera), parado o sin entrar.
+- `liveFigures()`: las cuatro cifras, y las acumuladas del bloque fuera de clase.
+- `exerciseOverview()` en sus dos modos (los ejercicios del bloque; con toda la clase, los que tienen actividad, los 5 con más alumnos primero), con los nombres de cada tramo, la prueba que más falla con lo que espera y cuántos trabajan en otros bloques.
+- `rhythmReading()`: la frase que lee el ritmo, comparando los últimos 10 minutos con los 10 anteriores.
+- La pantalla del 4.1 sigue funcionando sobre el store nuevo, con lo mínimo: el selector con «Toda la clase», la cola sin los dos motivos y el bloque junto al ejercicio. El detalle del intento corrige solo el grupo de la URL.
+- Simulador de la clase: tres repartos (toda la clase en un bloque, medio grupo en dos, cada alumno en uno distinto) y alumnos que le dicen al tutor que no saben seguir.
+
+🧪 `attentionReason()` (cada motivo, su orden y que una salida o un parón no dan motivo); `workState()`; `liveFigures()` en directo y fuera de clase; `exerciseOverview()` con un bloque, con toda la clase y con alumnos en otros bloques; `rhythmReading()` (sus cuatro frases); `defaultBlock()` en los tres repartos; la foto simulada y la de Supabase con y sin bloque.
+
+Commit: `feat(live): the live panel follows the whole group (step 4.1d)`.
+
+**4.1e · El panel en vivo, la pantalla nueva (≈3 h)** · ficha `06-en-vivo`
+
+- Cabecera con la asignatura, el grupo y el bloque como título, y los selectores compactos.
+- Las cuatro cifras como botones que filtran la tabla, con la cuenta animada al cambiar.
+- «Dónde está la clase» a dos tercios del ancho, con los nombres de cada tramo, «Para explicar a todos» con «Ver quiénes» y la línea de los otros bloques.
+- «A quién atender» con 4 entradas en dos líneas y el resto desplegado dentro de la tarjeta, sin que la página crezca.
+- «Ritmo de la clase» a todo el ancho, con su frase y el último punto latiendo.
+- «Alumnado» paginado (8 por página; tarjetas de 6 en 6 con poco ancho), con los filtros de las cifras, sin las columnas de tiempo, pegados y salidas, y con las observaciones como chips.
+- El estado «Fuera de clase», con lo acumulado del bloque.
+- Sale «Lo último»: se borran `liveFeed()` y su lista (D-056 queda sustituida en esa parte).
+- Animaciones con las `animate-*` del tema, quietas con `prefers-reduced-motion`; las piezas nuevas (cifra, barra apilada con nombres, aviso «Para explicar a todos»), al muestrario `/dev/ui`.
+- Definición de terminado (5.4) y capturas nuevas de `06-en-vivo`.
+
+🧪 Component tests: el título con el grupo y el bloque; una cifra filtra la tabla; la cola enseña 4 y despliega el resto; «Ver quiénes» filtra por la prueba; la tabla pagina y no pinta columnas vacías; fuera de clase no hay cola ni ritmo; nada se anima con `prefers-reduced-motion`.
+
+Commit: `feat(live): the new live panel (step 4.1e)`.
+
 **4.2 · Detalle del intento (≈3 h)** · ficha `07-detalle`
 
 - Línea temporal de eventos e interacciones con el tutor.
@@ -1588,6 +1626,20 @@ Etiqueta: `v0.9` (la versión entregada en la PEC3).
 🧪 Component test con datos de ejemplo.
 
 - **Hecho así (D-055):** `LiveService.attemptDetail()` (simulado y Supabase, en una petición) con el alumno, el ejercicio con sus pruebas, el grupo y el bloque; el directo llega por el `LiveStore` de la ruta padre y la URL se corrige al grupo y bloque del intento; `tutor_interaction` en Realtime (migración `attempt_detail_realtime`); línea temporal pura (`attemptTimeline()`), con cada respuesta del tutor emparejada con su evento, salidas con su vuelta, silencios marcados y filtros; cifras del intento; franja de la cola con «Atendido»; enlaces a los demás intentos; código en solo lectura con «Ver el actual» (D-029); `AttemptDetailPage` (carga y estados) y `AttemptDetailView` (el intento); `TutorMessage` en `shared/`; el simulador escribe respuestas del tutor y código. El autor quiere revisarlo más adelante (pendientes), y propuso una ficha del alumno.
+
+**4.2b · El detalle del intento, replanteado (≈2,5 h)** · ficha `07-detalle`
+
+Diseñado en el 4.1c (D-069). Se hace después del 4.1e.
+
+- «Ahora» en lugar de las seis cifras (`attemptNow()`): las pruebas que fallan en la última ejecución, con lo que esperan y desde cuántas ejecuciones, y la última ayuda del tutor con su nivel. Con el intento entregado, «Cómo lo resolvió».
+- El resumen en una línea y los chips (`attemptSummary()`, que sustituye a `attemptFigures()`): nada que valga cero.
+- «Evolución» (`attemptRuns()` y un SVG propio): una columna por ejecución y una marca por pista y por pegado; pulsar una lleva a su entrada de la línea temporal.
+- La línea temporal, con lo más reciente arriba, las ejecuciones seguidas iguales agrupadas y sin los filtros vacíos.
+- Definición de terminado (5.4), también a 1024 y 1920 px, y capturas nuevas de `07-detalle`.
+
+🧪 `attemptNow()` (sin ejecuciones, con fallos y su racha, todo superado, entregado, con y sin ayuda del tutor); `attemptSummary()` sin partes a cero; `attemptRuns()` con sus marcas; el agrupado de ejecuciones iguales y el orden de `attemptTimeline()`; component tests de «Ahora», de la evolución (una columna lleva a su entrada) y de los filtros.
+
+Commit: `feat(live): the attempt detail, rethought (step 4.2b)`.
 
 **4.3 · Banco de ejercicios y formulario (≈5 h)** · ficha `08-ejercicios` · Figuras 11 y 20 del TFM
 
