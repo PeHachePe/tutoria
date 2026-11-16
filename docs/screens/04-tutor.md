@@ -1,6 +1,6 @@
 # 04 · Tutor
 
-Zona del tutor de `/alumno/ejercicio/:id` · Alumno · Capa 1 (las capas 3 y 4 añaden la voz y las intervenciones proactivas) · 3 h (paso 1.7) y 1,5 h las reacciones (1.8) · D-033 y D-035
+Zona del tutor de `/alumno/ejercicio/:id` · Alumno · Capa 1 (las capas 3 y 4 añaden la voz y las intervenciones proactivas) · 3 h (paso 1.7), 1,5 h las reacciones (1.8) y 4,5 h el tutor proactivo (6.2b y 6.2d) · D-033, D-035, D-064 y D-065
 
 ## Objetivo
 
@@ -14,6 +14,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
   - escribe la respuesta según llegan sus eventos (`meta` → `delta` → `done`, §2.6).
 - El nivel de pista lo decide el servidor: «Pedir pista» lo sube (de 1 a 3) y una pregunta se responde en el nivel actual (§2.6).
 - El tutor simulado registra cada interacción y los eventos `hint_requested` y `proactive_intervention` (§2.8).
+- `ProactivityMonitor` (6.2b, provisto en la ruta; no en la vista previa del docente): tras cada ejecución y cada 15 segundos decide con `proactiveReason()` si el tutor se acerca y por qué (`failures`, `idle` o `achievement`, §2.7), y se lo pide a `TutorStore`. Lee el ajuste `SettingsStore.proactive` y `awaySince()`.
 
 ## Contenido y disposición
 
@@ -30,6 +31,12 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Pie:** «Pedir pista» («Otra pista» en el nivel 3), con un tooltip que dice qué dará el siguiente nivel; debajo, el campo «Pregunta al tutor» con el botón de enviar y la ayuda «Intro para enviar; Mayús + Intro, nueva línea».
 - **Escritorio:** columna a la derecha del código, de ancho ajustable con un separador vertical (nunca baja de 16rem), o flotante si el alumno lo elige.
 - **Flotante** (con el código ampliado, en la tableta o por elección del alumno, D-033): la mascota abajo a la derecha. Al pulsarla, el tutor se abre en un panel sobre la esquina del código (24rem de ancho) y la mascota saca la lengua; en su cabecera están «Fijar el tutor a la derecha» (no en la tableta) y «Minimizar el tutor». Plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto.
+- **Bocadillo de dos estados** (6.2d, D-064), solo con el tutor plegado:
+  - **Pensando:** tres puntos y la mascota pensativa, al instante. Solo cuando el alumno ha preguntado sin abrir el tutor, con el atajo «Pregúntale al tutor»;
+  - **Respuesta:** las primeras palabras (dos líneas como mucho), con el punto en la mascota y «Cerrar el aviso». Se queda hasta que el alumno lo abre o lo cierra, o llega otra respuesta; cerrarlo deja el punto;
+  - una intervención del tutor por iniciativa propia entra directamente en «Respuesta»: si el tutor decide callar, un «pensando» sería una promesa sin cumplir;
+  - si la respuesta no llega, «No he podido responder. Ábreme para reintentar», que abre el tutor con su «Reintentar». Una intervención que falla no enseña nada.
+- **Atajo «Pregúntale al tutor»** (6.2d): un botón junto a cada ejemplo visible que falla en los resultados de la ejecución (ficha 03). Envía la pregunta de un clic con sus datos («¿Por qué falla `suma([1,2,3])`? Devuelve 5 y se espera 6»), en el nivel actual. Nunca hay avisos sueltos dentro del editor.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
 - **Reacciones flotantes (1.8, D-035 a D-037):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos la reacción que eligió el tutor (o la de su emoción) en una capa sobre toda la pantalla:
   - un emoji grande en el centro (animado en 3D, o el mismo en 3D estático si el alumno desactiva «Emojis animados» o mientras el animado carga, D-043), con un halo y ondas de luz a su compás, y alrededor coronas, lluvia de emojis pequeños y confeti; nunca sale igual;
@@ -40,6 +47,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
   - si llega otra respuesta mientras dura, se suma sin cortar la anterior (hasta tres);
   - la mascota del panel (o la flotante) se mueve con ellas;
   - las respuestas del historial, las que fallan a mitad y las intervenciones que el tutor decide callar no reaccionan;
+  - una intervención de ayuda (por fallos repetidos o por un parón) reacciona en reducido, con un solo icono pequeño, sea cual sea su intensidad: el alumno no ha pedido nada y la pantalla no se le llena. La de un logro, completa (6.2d);
   - ejecutar las pruebas también reacciona (2.2, D-041): fiesta cuando pasan todas, aplausos más discretos si siguen pasando al volver a ejecutar, ánimo cuando pasan más que en la ejecución anterior y nada con fallos, que solo desanimaría. Gana la reacción más reciente, del tutor o de la ejecución.
   - En el tutor simulado, siempre con intensidad 3: las pistas de nivel 1, 2 y 3 dan pensando, bombilla y cohete; pedir la solución, por turnos, guiño, secreto, «¿en serio?», lanzamiento y enfado; las preguntas, aplausos, mente explotando, risas o fuego; el enunciado, corazones; el código vacío, ánimo; el ejercicio superado, fiesta; sus intervenciones, ojos o empatía.
 
@@ -55,6 +63,9 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Hacer flotante / Fijar:** pasa el tutor de la columna a la mascota flotante (abierto, con el foco en la pregunta) y de vuelta; fijarlo devuelve también la vista normal si el código estaba ampliado. Se recuerda para el alumno.
 - **Abrir y minimizar** (flotante): la mascota lo abre con el foco en la pregunta; «Minimizar el tutor», la mascota o Esc lo pliegan y el foco vuelve a la mascota. El bocadillo de una respuesta nueva también lo abre.
 - **Móvil:** si llega una respuesta mientras el alumno está en otra pestaña, la pestaña «Tutor» muestra un punto hasta que la abre.
+- **El tutor se acerca** (6.2, §2.7): tras una ejecución en la que la misma prueba lleva tres fallos seguidos, tras cuatro minutos sin actividad o cuando el alumno supera una prueba que se le resistía (los umbrales son los del ejercicio). Con el tutor a la vista, el turno entra en la conversación con «El tutor se acerca»; plegado, asoma en el bocadillo; en el móvil, el punto de la pestaña. Nunca mueve el foco ni abre el tutor. No se acerca mientras el alumno escribe una pregunta, el tutor responde o hay una ejecución en curso, ni con el alumno fuera de la pestaña, ni antes de tres minutos desde su último turno, ni más de cinco veces por ejercicio para ayudar.
+- **Pregúntale al tutor** (atajo): con el tutor a la vista, la pregunta entra en la conversación como cualquier otra; plegado, el bocadillo pasa por «pensando» y después por la respuesta, y pulsarlo abre el tutor; en el móvil, cambia a la pestaña «Tutor», porque lo ha pedido el alumno. El foco se queda en el botón.
+- **Cerrar el aviso:** quita el bocadillo y deja el punto en la mascota; el foco pasa a la mascota.
 
 - **Preguntar por sus datos** (2.5e): «¿cuántos me quedan?», «¿qué asignaturas tengo?», «¿cuántos errores llevo?»: el tutor los consulta con la sesión del alumno (solo ve lo suyo) y responde con ellos; mientras, los tres puntos de siempre.
 - **Pedirle que actúe** (2.5e): «ponme uno de bucles», «el siguiente que me queda», «pon el modo oscuro», «resalta la línea 3». El botón de una acción se puede enfocar mientras se ejecuta; si falla, «No se ha podido hacer: …» (con el texto de su botón) y «Reintentar». «Deshacer» devuelve los ajustes que cambió.
@@ -66,7 +77,9 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Error al cargar:** «No se ha podido cargar la conversación.» con «Reintentar».
 - **Vacío:** la bienvenida con las preguntas sugeridas.
 - **Respondiendo:** tres puntos hasta que llega el texto y un cursor al final mientras sigue llegando; «Pedir pista» y enviar, deshabilitados (enfocables).
-- **Respuesta fallida:** aviso según el tipo de error (sin conexión, demasiadas preguntas, sesión caducada) con «Reintentar».
+- **Respuesta fallida:** aviso según el tipo de error (sin conexión, demasiadas preguntas, sesión caducada) con «Reintentar». Una intervención por iniciativa del tutor que falla, o que el tutor calla, no deja turno ni aviso.
+- **Proactividad desactivada** (ajustes): el tutor solo habla cuando le preguntan; apagarla tiene efecto al momento. El atajo y el bocadillo siguen igual.
+- **Atajo deshabilitado** (enfocable) mientras el tutor responde; no aparece con el intento entregado ni en las pruebas ocultas.
 - **Entregado:** la conversación en solo lectura, sin pie, con la nota «Ejercicio entregado: puedes repasar la conversación, pero el tutor ya no da más pistas». Sin conversación: «En este ejercicio no pediste ayuda al tutor».
 
 ## Accesibilidad
@@ -81,6 +94,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - Los botones deshabilitados siguen enfocables (`disabledInteractive`).
 - La pestaña con aviso se llama «Tutor, respuesta nueva».
 - La mascota flotante es un botón «Abrir el tutor» / «Cerrar el tutor» con `aria-expanded` y `aria-controls` al panel. Plegado, la respuesta nueva se anuncia con su propia región `aria-live`, porque la del panel no está en la página.
+- El bocadillo no roba el foco en ninguno de sus estados. «Pensando» se anuncia una vez («El tutor está pensando…») y la respuesta, una vez y completa, en esa misma región (`polite`): una intervención nunca interrumpe al lector de pantalla. El bocadillo es un botón «Abrir el tutor: » seguido de sus primeras palabras, y «Cerrar el aviso», otro botón, los dos alcanzables con el teclado después de la mascota.
+- El atajo se llama «Pregúntale al tutor por qué falla el ejemplo N», para distinguir los de cada fila.
 - Las animaciones (entrada de cada turno, puntos y cursor) respetan `prefers-reduced-motion`.
 
 ## Criterios de aceptación
@@ -98,11 +113,21 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 - [x] «¿Cuántos me quedan?» responde con los datos del alumno y dice «Ha consultado tu progreso»; «pon el modo oscuro» lo aplica con «Deshacer»; «ponme el siguiente» deja el botón (2.5e).
 - [x] «Arréglame el código» con un `retrun` deja «Aplicar la corrección» con «Línea 5: retrun → return»; «formatéalo», «ejecuta las pruebas» y «entrégalo» dejan su botón y dicen qué pasó; sin despiste, no hay arreglo (2.5f, con datos simulados).
+- [ ] Tres ejecuciones seguidas con la misma prueba fallando traen una intervención con «El tutor se acerca»; no se repite hasta otros tres fallos ni antes de tres minutos, y recargar no la repite (6.2b).
+- [ ] Cuatro minutos sin actividad traen una sola intervención, y ninguna con el alumno fuera de la pestaña, con una pregunta a medio escribir o con la proactividad desactivada (6.2b).
+- [ ] Superar una prueba que llevaba tres fallos trae una felicitación, sin esperar al cooldown (6.2b).
+- [ ] Una intervención que el tutor calla o que falla no deja turno, aviso ni reacción (6.2b).
+- [ ] Una petición proactiva sin motivo real recibe silencio del servidor, sin llamada al modelo (6.2c).
+- [ ] Plegado, «Pregúntale al tutor» enseña «pensando» y después la respuesta sin mover el foco; una intervención entra sin «pensando»; «Cerrar el aviso» deja el punto (6.2d).
+- [ ] El atajo sale solo en los ejemplos visibles que fallan y en el móvil cambia a la pestaña «Tutor» (6.2d).
+- [ ] Una intervención de ayuda reacciona en reducido y un logro, completo (6.2d).
+- [ ] axe sin infracciones en claro y oscuro con el bocadillo en «pensando», con respuesta y con error (6.2d).
 
 ## Fuera de alcance
 
 - Los ajustes de las reacciones (modo y emojis 3D) en la pantalla de ajustes (1.9): hasta entonces se cambian en el muestrario.
-- La voz (6.1) y las intervenciones proactivas (6.2); la conversación ya muestra las de las fixtures.
+- La voz (6.1); las intervenciones proactivas llegan en el 6.2b (lógica), el 6.2c (servidor) y el 6.2d (bocadillo y atajo). La conversación ya muestra las de las fixtures.
+- El atajo «Pregúntale al tutor» en la línea del error del editor: fase 7 (`PENDIENTES.md`).
 - El streaming real (2.4, D-017): el tutor simulado ya escribe poco a poco y el cliente no cambiará.
 
 ## Pulido pendiente

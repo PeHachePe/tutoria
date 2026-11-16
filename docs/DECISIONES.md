@@ -1858,3 +1858,62 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Al publicar: migración, funciones y, si hay otro proveedor, el secreto `AI_ALLOWED_HOSTS`.
 
 **Aprobación:** el autor pidió la auditoría y, vistos los hallazgos, que se arreglara todo decidiendo lo más útil. Las decisiones de producto (lista de hosts fuera de la base, 403 con el bloque oculto, no agregar las ocultas) quedan a su revisión.
+
+## D-064 · El tutor proactivo: en puntos de corte, una vez por episodio y con un bocadillo de dos estados (16/11/2026)
+
+**Contexto:** el 6.2 decía «cooldown entre intervenciones» y poco más. Un tutor que habla sin que le pregunten puede ayudar o estorbar: interrumpir a quien está escribiendo, repetirse ante quien no le hace caso o hablarle a una pantalla vacía. Además gasta turnos del alumno (6 por minuto y 60 al día, en planes gratuitos). Había siete filas en `PENDIENTES.md` esperando este paso: las ausencias, el ajuste, el motivo del logro, el atajo «Pregúntale al tutor», el bocadillo de dos estados, el arreglo de despistes y quién decide que una petición es proactiva.
+
+**Decisión** (propuesta en el paso 6.2a, de diseño):
+
+- **Solo en puntos de corte naturales:** justo después de una ejecución (la misma prueba falla N veces seguidas, o se supera una que se resistía) o tras N minutos sin actividad. Nunca mientras el alumno escribe.
+- **Tres motivos** (`failures`, `idle` y `achievement`), que viajan en la petición. Los dos primeros son los de `stuckReason()`, y el logro, `lastBreakthrough()`: el tutor y el panel docente leen lo mismo.
+- **Una vez por episodio, leído de los eventos:** otros N fallos para volver a hablar de fallos, una sola intervención por parón y una por logro. El evento `proactive_intervention` guarda el motivo, así que no hay estado que se pierda al recargar.
+- **Cooldown de 3 minutos** desde cualquier turno del tutor, también los que pidió el alumno y las intervenciones calladas. Los logros no lo esperan. **Tope de 5** intervenciones de ayuda por intento.
+- **El cliente calla sin gastar turno** si la proactividad está desactivada, el alumno está fuera de la pestaña o sin conexión, el tutor o una ejecución están ocupados o hay una pregunta a medio escribir. Un logro que no puede salir al momento se pierde.
+- **Todo en una función pura,** `proactiveReason()`, que comparten el cliente y el servidor (D-065).
+- **Bocadillo de dos estados** con el tutor plegado: «pensando» solo cuando el alumno ha preguntado con el atajo «Pregúntale al tutor», y después la respuesta. Una intervención entra directamente con la respuesta. Nunca mueve el foco ni abre el tutor, y se puede cerrar.
+- **El atajo entra en el 6.2d** junto a los ejemplos visibles que fallan; el de la línea del error se queda para la fase 7.
+- **La reacción de una intervención de ayuda sale reducida;** la de un logro, completa.
+- El 6.2 se parte en 6.2a (diseño), 6.2b (lógica), 6.2c (servidor) y 6.2d (interfaz), y pasa de ≈6 h a ≈7 h por el atajo.
+
+**Alternativas:**
+
+- **Intervenir en cuanto se cumple el umbral, también a mitad de escritura:** más simple, pero interrumpe justo cuando el alumno está probando algo.
+- **Recordar los episodios en memoria del monitor:** recargar la página repetiría la intervención, y el servidor no podría comprobar nada.
+- **Cooldown que se alarga si el alumno ignora al tutor:** más fino, pero «ignorar» es difícil de definir; el episodio único y el tope ya evitan la insistencia.
+- **«Pensando» también en las intervenciones:** si el modelo decide callar, el bocadillo habría prometido algo que no llega.
+- **Dejar el atajo para el pulido:** el estado «pensando» se quedaría sin nada que lo encienda.
+
+**Consecuencias:**
+
+- `docs/PLAN.md` §2.6 (el campo `reason`), §2.7 y §2.8, y la ficha 04.
+- `TutorRequest` y el `detail` de `proactive_intervention` ganan `reason` (6.2b).
+- Los tiempos (15 s, 3 min, 5 intervenciones) son constantes con nombre: se ajustan tras probarlo con alumnos.
+
+**Aprobación:** propuesta. El autor pidió el diseño y, ante la duda del atajo, que se decidiera lo mejor.
+
+## D-065 · El servidor comprueba por qué se acerca el tutor, y el prompt lo sabe (16/11/2026)
+
+**Contexto:** `kind: 'proactive'` lo elige el navegador (pendiente de la auditoría, D-063): con la API directa, un alumno podía pedir ayuda sin que quedara como pista pedida. El modelo, por su parte, recibía «el alumno puede estar bloqueado, decide si intervenir», sin saber qué había pasado, y no distinguía ayudar de celebrar (D-017).
+
+**Decisión** (propuesta en el paso 6.2a; se implementa en el 6.2c):
+
+- **`reason` es obligatorio en una petición proactiva** y el servidor lo vuelve a calcular con `proactiveReason()` sobre sus datos: los eventos `run` y `proactive_intervention`, la última actividad y el último turno del intento. Con holgura por los relojes: cooldown de 2 minutos (3 en el cliente) y 30 segundos menos de inactividad.
+- **Si el motivo no cuadra, responde `silent`** sin llamar al modelo y sin registrar evento. El turno ya está contado (D-063).
+- **Una intervención nunca sube el nivel de pista** y queda registrada con su motivo. Quien la fuerce con la API obtiene, como mucho, lo que el tutor le habría dicho solo, a su ritmo y a la vista del docente.
+- **Prompt v7:** el servidor da al modelo el motivo con sus hechos (qué prueba y cuántos fallos, cuántos minutos parado, qué acaba de superar) y qué se espera en cada uno: una o dos frases en el nivel actual que acaban ofreciendo seguir, o una frase que celebra sin pistas. El modelo sigue pudiendo callar, y se le dice cuándo: si su última respuesta trataba de lo mismo o no tiene nada nuevo.
+- **Sin herramientas en una intervención,** salvo el arreglo de un despiste de escritura cuando la última ejecución no cargó (D-052): nadie le ha pedido que actúe, pero ese botón es la ayuda más directa y no hace nada hasta que el alumno lo pulsa.
+
+**Alternativas:**
+
+- **Que el servidor decida solo, sin `reason`:** el cliente no sabría qué esperar y un desacuerdo no se podría depurar; con el motivo, la respuesta es sí o silencio.
+- **Fiarse del cliente:** era lo que había; cualquiera con la API se saltaba el registro de pistas.
+- **Disparar las intervenciones desde el servidor** (Realtime o un cron): el servidor no sabe si el alumno está escribiendo o fuera de la pestaña, y son más piezas en un plan gratuito.
+
+**Consecuencias:**
+
+- La función `tutor` importa `proactiveReason()` de la aplicación, como ya hace con el contrato.
+- La vista previa del docente no admite intervenciones.
+- Cierra la fila de la auditoría en `PENDIENTES.md`. El prompt v7 queda sin probar con el modelo real hasta que se pase la batería de elusión, como la v6.
+
+**Aprobación:** propuesta, a revisión del autor.

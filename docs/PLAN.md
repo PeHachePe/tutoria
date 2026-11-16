@@ -238,7 +238,7 @@ Los enunciados, sus traducciones al inglés y al catalán y las pruebas de los d
 
 - «Pedir pista» sube un nivel (empieza en 1; máximo 3).
 - Una pregunta libre se responde en el nivel actual, como mínimo 1.
-- Una intervención proactiva usa el nivel actual.
+- Una intervención proactiva usa el nivel actual, como mínimo 1, y nunca lo sube (2.7).
 
 **Petición** (cliente → servidor):
 
@@ -248,6 +248,7 @@ interface TutorRequest {
   attemptId: string;
   kind: 'question' | 'hint' | 'proactive';
   message?: string; // only for 'question'
+  reason?: 'failures' | 'idle' | 'achievement'; // only for 'proactive', and required: why the app asks; the server checks it (2.7, D-065)
   code: string; // current editor content, so the tutor always sees the latest code
   language: 'es' | 'en' | 'ca'; // language of the interface, which the tutor answers in (D-033)
 }
@@ -342,18 +343,35 @@ Los intentos de elusión (`elusion: true`) quedan registrados para su análisis.
 
 ### 2.7 Proactividad
 
-- **Disparadores:** se evalúan en el cliente con los umbrales de cada ejercicio:
-  - `max_repeated_failures`: por defecto, 3 fallos de la misma prueba;
-  - `max_idle_minutes`: por defecto, 4 minutos sin actividad.
-- **Comprobación:** cada 15 segundos, con la misma función `isStuck()` que usa el panel docente (D-015):
-  - solo en intentos en `in_progress` o `tests_failed`;
-  - fallos: la misma prueba falla en las últimas N ejecuciones seguidas, y la cuenta vuelve a cero si la supera;
-  - inactividad: N minutos desde la última actividad del alumno (guardar código, ejecutar, entregar, pedir pista, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan);
-  - basta con llegar al umbral.
-- **Logros (RF-09 y CU-03 de la memoria):** el tutor también interviene cuando el alumno supera una prueba que llevaba al menos `max_repeated_failures` ejecuciones seguidas fallando. Se comprueba justo después de cada ejecución, con una función pura en `shared/` hermana de `isStuck()`, y la petición proactiva lleva el motivo para que el modelo celebre en lugar de ayudar (D-017).
-- **Cooldown:** hay un tiempo mínimo entre intervenciones.
-- **Llamada:** lleva `kind: 'proactive'`. Si el modelo decide callar (`silent`), la aplicación no muestra nada.
-- El alumno puede desactivar la proactividad en sus ajustes.
+El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en un punto de corte natural: justo después de una ejecución o cuando el alumno lleva un rato parado. Nunca mientras escribe (diseño del paso 6.2a, D-064 y D-065).
+
+- **Motivos** (`reason` de la petición), con los umbrales de cada ejercicio:
+  - `failures`: la misma prueba falla en las últimas `max_repeated_failures` ejecuciones seguidas (por defecto, 3), y la cuenta vuelve a cero si la supera. Una ejecución que no carga cuenta como fallo de todas sus pruebas;
+  - `idle`: pasan `max_idle_minutes` (por defecto, 4) desde la última actividad del alumno (guardar código, ejecutar, entregar, pedir pista, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan);
+  - `achievement` (RF-09 y CU-03 de la memoria, D-017): la última ejecución supera una prueba que llevaba al menos `max_repeated_failures` ejecuciones seguidas fallando. El modelo celebra en lugar de ayudar.
+  - Basta con llegar al umbral. Los dos primeros son los de `stuckReason()`, la lectura de `isStuck()` que comparte el panel docente (D-015), y el tercero, `lastBreakthrough()` (D-054).
+- **Comprobación:** justo después de cada ejecución (fallos y logros) y cada 15 segundos (inactividad, y lo que quedó esperando). La ayuda, solo en intentos en `in_progress` o `tests_failed`; el logro, en cualquiera sin entregar.
+- **Una vez por episodio.** Se lee de los eventos `proactive_intervention` del intento, que guardan el motivo (2.8), así que recargar la página no repite una intervención:
+  - `failures`: hacen falta otras `max_repeated_failures` ejecuciones fallidas después de la última intervención por fallos (con el umbral en 3: a los 3, 6, 9… fallos seguidos);
+  - `idle`: una por parón; hasta que no vuelve la actividad, no hay otra;
+  - `achievement`: una por ejecución que lo consigue.
+- **Cooldown:** 3 minutos desde el último turno del tutor en el intento, sea pregunta, pista o intervención, también si calló: quien acaba de hablar con el tutor ya tiene ayuda. Los logros no lo esperan.
+- **Tope:** 5 intervenciones de ayuda por intento. Más sería insistir, y cada una gasta un turno del alumno (2.6).
+- **Una sola función pura,** `proactiveReason()` en `shared/`, junta motivos, episodios, cooldown y tope, y la usan el cliente y el servidor.
+- **El cliente calla,** sin llamar al servidor, si:
+  - el alumno desactivó la proactividad en sus ajustes, o es la vista previa del docente (D-061);
+  - el alumno está fuera de la pestaña (`awaySince()`, D-054) o sin conexión;
+  - el tutor está respondiendo, hay una ejecución o una entrega en curso, o el alumno tiene una pregunta a medio escribir.
+  - Lo que queda esperando se vuelve a mirar en la siguiente comprobación. El logro no espera: si no puede salir al momento, se pierde, porque una felicitación tardía no se entiende.
+- **El servidor comprueba el motivo** (D-065): `kind: 'proactive'` lo elige el navegador, así que `tutor` vuelve a calcular `proactiveReason()` con sus eventos y la última actividad del intento, con holgura por los relojes (cooldown de 2 minutos y 30 segundos menos de inactividad). Si no sale el mismo motivo, responde `silent` sin llamar al modelo. La petición cuenta su turno como cualquier otra (D-063), usa el nivel actual y no lo sube.
+- **Prompt** (v7, en `docs/prompt-history.md` desde el paso 6.2c): el servidor dice al modelo el motivo y sus hechos, y qué se espera en cada uno:
+  - `failures`: qué prueba y cuántas ejecuciones lleva fallando. Una o dos frases en el nivel actual sobre esa prueba, que acaban ofreciendo seguir. Si la última ejecución no cargó por un despiste de escritura, lo dice y propone el arreglo (2.5f, D-052), la única herramienta de una intervención;
+  - `idle`: cuántos minutos y cómo está el intento (código vacío, pruebas que fallan). Una o dos frases que preguntan qué le frena u ofrecen por dónde seguir;
+  - `achievement`: qué prueba y tras cuántos fallos. Una frase que celebra el esfuerzo y nombra lo conseguido, sin pistas ni peros, con emoción `celebration`;
+  - en todas: nadie le ha preguntado, así que es breve, no repite lo que ya dijo y calla (`message` vacío) si su última respuesta trataba de lo mismo o no tiene nada nuevo. Sin bromas. Reacciones: `eyes` o `empathy` ante los fallos, `sleepy` ante el parón y las de celebración en el logro.
+- **Silencio:** si el modelo calla (`silent`), el servidor rechaza el motivo o la petición falla (también con 429), la aplicación no muestra nada.
+- **En pantalla** (ficha 04): con el tutor a la vista, el turno entra en la conversación con «El tutor se acerca»; plegado, asoma en el bocadillo de la mascota, sin mover el foco. La reacción de una intervención de ayuda sale reducida; la de un logro, completa.
+- El alumno puede desactivar la proactividad en sus ajustes, con efecto al momento.
 
 ### 2.8 Eventos de proceso
 
@@ -362,7 +380,7 @@ Los intentos de elusión (`elusion: true`) quedan registrados para su análisis.
 | `run`                    | Servidor (`execute`)        | Número de pruebas superadas y falladas; identificadores de las que fallan  |
 | `submit`                 | Servidor (`submit_attempt`) | —                                                                          |
 | `hint_requested`         | Servidor (`tutor`)          | Nivel                                                                      |
-| `proactive_intervention` | Servidor (`tutor`)          | Si el modelo calló                                                         |
+| `proactive_intervention` | Servidor (`tutor`)          | El motivo (`reason`, 2.7) y si el modelo calló                             |
 | `paste`                  | Cliente                     | Longitud del texto pegado de fuera del código                              |
 | `focus_lost`             | Cliente                     | — (la hora es la de salida; solo ausencias de 2 s o más, o pestaña oculta) |
 | `focus_gained`           | Cliente                     | Tiempo fuera en milisegundos (`awayMs`)                                    |
@@ -1561,7 +1579,7 @@ Commit: `feat: teacher panel`.
 🧪 e2e: el administrador crea un alumno, lo matricula y ese alumno ve su catálogo.
 Commit: `feat: admin`.
 
-#### Fase 6 · Capas 3 y 4 (≈12 h, más ≈6 h si se hace el 6.3)
+#### Fase 6 · Capas 3 y 4 (≈13 h, más ≈6 h si se hace el 6.3)
 
 **6.1 · Voz (≈6 h)**
 
@@ -1574,15 +1592,49 @@ Commit: `feat: admin`.
 
 🧪 Con un `SpeechRecognition` falso.
 
-**6.2 · Tutor proactivo (≈6 h)**
+**6.2 · Tutor proactivo (≈7 h, en cuatro subpasos)**
 
-- `ProactivityMonitor` de ámbito de pantalla: comprueba cada 15 segundos con `isStuck()` y los umbrales del ejercicio.
-- Logros (2.7): tras cada ejecución, comprueba si se ha superado una prueba atascada y pide una intervención de celebración.
-- Cooldown entre intervenciones; llama con `kind: 'proactive'` y respeta el silencio del modelo.
-- Se puede desactivar en los ajustes.
+Cada subpaso va en su sesión y deja la aplicación funcionando: tras el 6.2b el tutor ya se acerca con datos simulados, tras el 6.2c también con el servidor, y el 6.2d cuida cómo se ve.
 
-🧪 Primero los tests de la función de logros, con casos límite; temporizadores simulados: umbrales, cooldown y silencio.
-Commit: `feat: voice and proactive tutor`.
+**6.2a · Diseño (≈1 h, sin código)**
+
+- Cuándo interviene y cuándo calla, el cooldown, el bocadillo de dos estados y los cambios del prompt: 2.7, la ficha 04, D-064 y D-065.
+
+**6.2b · Lógica (≈2 h)**
+
+- Contrato: `reason` en `TutorRequest` y en el `detail` de `proactive_intervention` (2.6 y 2.8), con sus constantes (`PROACTIVE_REASONS`).
+- `shared/proactive-reason.ts`: la función pura `proactiveReason()` (2.7) sobre `stuckReason()` y `lastBreakthrough()`, que ya existen. Sus tiempos y topes, constantes con nombre que recibe como parámetros, para que el servidor pase los suyos.
+- `ProactivityMonitor` de ámbito de pantalla: comprueba tras cada ejecución y cada 15 segundos, aplica los silencios del cliente (ajuste, ausencia, sin conexión, tutor o ejecución ocupados, pregunta a medio escribir) y pide la intervención a `TutorStore`. No se provee en la vista previa del docente (D-061). El temporizador es una API imperativa: su `effect()`, justificado.
+- `TutorStore`: la intervención con su motivo; si falla o el tutor calla, no deja turno, aviso ni reacción.
+- Tutor simulado: responde según el motivo (ayuda o celebra), guarda el motivo en el evento y a veces calla.
+- Sin interfaz nueva: el turno entra en la conversación con «El tutor se acerca» y el bocadillo de siempre.
+
+🧪 Primero los tests de `proactiveReason()`: cada motivo en su umbral y uno antes; fallos que se rearman a los 3, 6 y 9; un parón que no repite hasta que hay actividad; un logro por ejecución, sin esperar al cooldown y también con el intento superado; cooldown tras pregunta, pista e intervención callada; el tope de 5; intento entregado. Después, el monitor con temporizadores simulados: cada silencio del cliente, lo que espera a la siguiente comprobación, el logro que se pierde, el ajuste que se apaga a mitad y el temporizador que se para al salir de la pantalla.
+Commit: `feat(tutor): proactivity monitor (step 6.2b)`.
+
+**6.2c · Servidor (≈1,5 h)**
+
+- `tutor` valida `reason`: obligatorio con `kind: 'proactive'` y rechazado en los demás.
+- Comprueba el motivo con `proactiveReason()` y los datos del intento (eventos `run` y `proactive_intervention`, última actividad y último turno), con su holgura (2.7). Si no cuadra, `silent` sin llamar al modelo y sin evento. La vista previa del docente no admite intervenciones.
+- El evento `proactive_intervention` guarda el motivo; migración solo si el `detail` tiene una restricción que lo impida.
+- Prompt v7 (2.7), anotado en `docs/prompt-history.md`: la nota de cada motivo con sus hechos, la brevedad, cuándo callar y las reacciones. Sin herramientas, salvo el arreglo del despiste en `failures`, que hoy se excluye de las proactivas.
+- `SupabaseTutorService` envía el motivo.
+- Cierra la fila de la auditoría en `PENDIENTES.md`: el navegador ya no decide solo qué es una intervención.
+
+🧪 Deno: cada motivo aceptado con los datos que lo sostienen y callado sin ellos (sin llamada al modelo); el cooldown y el tope en el servidor; el nivel no sube; el modelo que calla y el que falla dos veces (calla, D-043); el despiste que deja su arreglo; la nota del prompt de cada motivo. pgTAP si hay migración. Con el modelo real, un caso por motivo en la batería de elusión cuando se pase la de la v6.
+Commit: `feat(tutor): the server checks why the tutor approaches (step 6.2c)`.
+
+**6.2d · Interfaz (≈2,5 h)**
+
+- Bocadillo de la mascota con dos estados (ficha 04): «pensando» al instante y después la respuesta, con «Cerrar el aviso» y su estado de error. Las intervenciones, solo con la respuesta. Nunca mueve el foco.
+- Atajo «Pregúntale al tutor» junto a cada ejemplo visible que falla en los resultados: envía la pregunta de un clic («¿Por qué falla `suma([1,2,3])`? Devuelve 5 y se espera 6») y, con el tutor plegado, enciende el bocadillo; en el móvil, cambia a la pestaña «Tutor». El atajo de la línea del error sigue en `PENDIENTES.md` (fase 7).
+- La reacción de una intervención de ayuda sale reducida, sea cual sea su intensidad; la de un logro, completa.
+- Ajustes: el interruptor de la proactividad deja de decir que no tiene efecto.
+- El muestrario `/dev/ui` gana los estados del bocadillo.
+
+🧪 Por rol y texto: los dos estados del bocadillo y su anuncio único; la intervención que entra sin «pensando»; el foco que no se mueve; cerrar el aviso; el error; el atajo solo en ejemplos visibles que fallan, deshabilitado mientras el tutor responde y ausente con el intento entregado; la reacción reducida. axe en claro y oscuro con el bocadillo en cada estado. Capturas con `npm run screenshots -- 6.2d tutor`.
+🧪 e2e (a `E2E-PENDIENTES.md`): tres ejecuciones fallidas seguidas con el tutor plegado hacen asomar el bocadillo, y con la proactividad desactivada no.
+Commit: `feat(tutor): two-state bubble and ask-the-tutor shortcut (step 6.2d)`.
 
 **6.3 · Tutor en el dispositivo con la IA de Chrome (opcional, ≈6 h)**
 
