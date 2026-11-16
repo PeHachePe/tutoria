@@ -610,7 +610,7 @@
     "bank.delete.text": "Nobody has started it yet. This cannot be undone.",
     "bank.delete.confirm": "Delete",
     "bank.delete.done": "Exercise deleted",
-    "bank.delete.started": "Somebody has just started it: it can no longer be deleted",
+    "bank.delete.in-use": "It is already in use: it cannot be deleted, but it can be archived",
     "bank.delete.failed": "It could not be deleted. Try again.",
     "bank.actions": "Actions of «{$title}»",
     "exerciseForm.back": "Back to the exercises",

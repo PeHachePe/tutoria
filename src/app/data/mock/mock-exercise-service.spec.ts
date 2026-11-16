@@ -464,15 +464,31 @@ describe('MockExerciseService', () => {
     });
 
     it('removes an exercise nobody has attempted, with its tests, subjects and assignments', async () => {
-      db.update('attempts', (rows) => rows.filter((a) => a.exerciseId !== exerciseId(8)));
+      // Exercise 20, of web development, is only in the groups of its author
+      const id = exerciseId(20);
+      db.update('attempts', (rows) => rows.filter((a) => a.exerciseId !== id));
+      expect(db.tables().assignments.some((a) => a.exerciseId === id)).toBe(true);
 
-      await service.remove(exerciseId(8));
+      await service.remove(id);
 
       const tables = db.tables();
-      expect(tables.exercises.some((e) => e.id === exerciseId(8))).toBe(false);
-      expect(tables.tests.some((t) => t.exerciseId === exerciseId(8))).toBe(false);
-      expect(tables.exerciseSubjects.some((t) => t.exerciseId === exerciseId(8))).toBe(false);
-      expect(tables.assignments.some((a) => a.exerciseId === exerciseId(8))).toBe(false);
+      expect(tables.exercises.some((e) => e.id === id)).toBe(false);
+      expect(tables.tests.some((t) => t.exerciseId === id)).toBe(false);
+      expect(tables.exerciseSubjects.some((t) => t.exerciseId === id)).toBe(false);
+      expect(tables.assignments.some((a) => a.exerciseId === id)).toBe(false);
+    });
+
+    it('does not remove an exercise assigned in the groups of another teacher', async () => {
+      // Exercise 8, of basic programming, is also in 1.º DAM B, of the other teacher
+      const id = exerciseId(8);
+      db.update('attempts', (rows) => rows.filter((a) => a.exerciseId !== id));
+      expect(
+        db.tables().assignments.some((a) => a.exerciseId === id && a.groupId === DAM_GROUP_ID),
+      ).toBe(true);
+
+      await expect(service.remove(id)).rejects.toMatchObject({ kind: 'invalid' });
+      db.setSession(ADMIN_ID);
+      await expect(service.remove(id)).resolves.toBeUndefined();
     });
 
     it('does not remove an exercise with attempts, to keep their history', async () => {

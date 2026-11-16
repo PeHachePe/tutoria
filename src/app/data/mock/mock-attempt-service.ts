@@ -5,10 +5,10 @@ import { AttemptService } from '../attempt-service';
 import { DataError } from '../data-error';
 import type { ExerciseAssignment } from '../exercise';
 import {
-  canSeeStudentData,
+  canReadAttempt,
+  findOpenableAssignment,
   findOwnAttempt,
   findRow,
-  findVisibleAssignment,
   now,
 } from './mock-access';
 import { MockDb } from './mock-db';
@@ -23,7 +23,7 @@ export class MockAttemptService extends AttemptService {
   openOrCreate(assignmentId: string, number?: number): Promise<Attempt> {
     return this.network.request(() => {
       const user = this.db.requireUser();
-      const assignment = findVisibleAssignment(this.db.tables(), user, assignmentId);
+      const assignment = findOpenableAssignment(this.db.tables(), user, assignmentId);
       const own = this.ownAt(assignmentId);
       if (number !== undefined) {
         const found = own.find((attempt) => attempt.number === number);
@@ -41,7 +41,7 @@ export class MockAttemptService extends AttemptService {
   retry(assignmentId: string): Promise<Attempt> {
     return this.network.request(() => {
       const user = this.db.requireUser();
-      const assignment = findVisibleAssignment(this.db.tables(), user, assignmentId);
+      const assignment = findOpenableAssignment(this.db.tables(), user, assignmentId);
       const latest = this.ownAt(assignmentId).at(-1);
       if (!latest) {
         throw new DataError('invalid', 'Only a submitted attempt can be practised again');
@@ -102,7 +102,7 @@ export class MockAttemptService extends AttemptService {
       const user = this.db.requireUser();
       const tables = this.db.tables();
       const attempt = findRow(tables.attempts, attemptId);
-      if (!canSeeStudentData(tables, user, attempt.userId)) {
+      if (!canReadAttempt(tables, user, attempt)) {
         throw new DataError('not_found');
       }
       return {

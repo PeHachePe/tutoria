@@ -395,7 +395,7 @@ describe('ExerciseBankPage', () => {
 
       await renderUnstarted(true);
       await vi.waitFor(() =>
-        expect(open).toHaveBeenCalledWith('Alguien acaba de empezarlo: ya no se puede borrar'),
+        expect(open).toHaveBeenCalledWith('Ya está en uso: no se puede borrar, pero sí archivar'),
       );
       await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 

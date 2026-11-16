@@ -236,7 +236,10 @@ export class SupabaseExerciseService extends ExerciseService {
     return new Map(rows.map((row) => [row.exercise_id, row.student_count]));
   }
 
-  /** An exercise with attempts cannot be deleted (`on delete restrict`): `invalid`. */
+  /**
+   * `invalid` (23503) for an exercise with attempts (`on delete restrict`) or assigned in the
+   * groups of another teacher (`exercise_kept_by_others`).
+   */
   async remove(exerciseId: string): Promise<void> {
     const deleted = unwrap(
       await this.supabase.from('exercise').delete().eq('id', exerciseId).select('id'),

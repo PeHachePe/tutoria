@@ -129,7 +129,10 @@ export abstract class ExerciseService {
    */
   abstract update(exerciseId: string, draft: ExerciseDraft): Promise<Exercise>;
 
-  /** `invalid` if someone has started it: their attempts keep it. `forbidden` as `update`. */
+  /**
+   * `invalid` if someone has started it (their attempts keep it) or it is assigned in the groups of
+   * another teacher (D-062). `forbidden` as `update`.
+   */
   abstract remove(exerciseId: string): Promise<void>;
 
   /**

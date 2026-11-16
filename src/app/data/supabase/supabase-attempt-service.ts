@@ -26,7 +26,7 @@ export class SupabaseAttemptService extends AttemptService {
   }
 
   /**
-   * Those of the signed-in user: the RLS would also give a teacher those of their students. The
+   * Those of the signed-in user: the RLS would also give a teacher those of their groups. The
    * session is read from the client, without a request.
    */
   async list(assignmentId: string): Promise<Attempt[]> {

@@ -48,8 +48,8 @@ export function isVisibleAssignment(tables: MockTables, assignment: ExerciseAssi
 }
 
 /**
- * Who sees an assignment and opens attempts at it, as `can_open_assignment`: a student of its group
- * while it is visible, its teacher or an administrator.
+ * Who sees an assignment, as its policy: a student of its group while it is visible, its teacher or
+ * an administrator.
  */
 export function canSeeAssignment(
   tables: MockTables,
@@ -78,13 +78,37 @@ export function findVisibleAssignment(
   return assignment;
 }
 
-/** Students see their own data; teachers, that of the students in their groups; administrators, all. */
-export function canSeeStudentData(tables: MockTables, user: AppUser, studentId: string): boolean {
-  if (user.id === studentId || user.role === 'admin') {
+/**
+ * The assignment the user opens attempts at, as `can_open_assignment`: one they see of a group they
+ * are enrolled in. Its teacher and the administration try the exercise without an attempt (4.3e).
+ */
+export function findOpenableAssignment(
+  tables: MockTables,
+  user: AppUser,
+  assignmentId: string,
+): ExerciseAssignment {
+  const assignment = findRow(tables.assignments, assignmentId);
+  if (
+    !enrolledGroupIds(tables, user.id).has(assignment.groupId) ||
+    !isVisibleAssignment(tables, assignment)
+  ) {
+    throw new DataError('not_found');
+  }
+  return assignment;
+}
+
+/**
+ * Who reads an attempt, as `can_read_attempt`: its student, the teacher of the group of its
+ * assignment and the administration. Another teacher of the student does not (D-062).
+ */
+export function canReadAttempt(tables: MockTables, user: AppUser, attempt: Attempt): boolean {
+  if (user.id === attempt.userId || user.role === 'admin') {
     return true;
   }
-  const groupIds = enrolledGroupIds(tables, studentId);
-  return tables.groups.some((group) => groupIds.has(group.id) && canManageGroup(user, group));
+  const assignment = tables.assignments.find((candidate) => candidate.id === attempt.assignmentId);
+  return (
+    assignment !== undefined && canManageGroup(user, findRow(tables.groups, assignment.groupId))
+  );
 }
 
 /** The user's own attempt; anybody else's is `not_found`, as row level security hides it. */

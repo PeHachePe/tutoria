@@ -182,9 +182,19 @@ export class MockExerciseService extends ExerciseService {
   remove(exerciseId: string): Promise<void> {
     return this.network.request(() => {
       this.findEditable(exerciseId);
+      const user = this.db.requireUser();
       const tables = this.db.tables();
       if (tables.attempts.some((attempt) => attempt.exerciseId === exerciseId)) {
         throw new DataError('invalid', 'An exercise with attempts keeps their history');
+      }
+      // Its assignments go with it, but not those of the blocks of another teacher (D-062)
+      const assignedByOthers = tables.assignments.some(
+        (assignment) =>
+          assignment.exerciseId === exerciseId &&
+          !canManageGroup(user, findRow(tables.groups, assignment.groupId)),
+      );
+      if (assignedByOthers) {
+        throw new DataError('invalid', 'The exercise is assigned in the groups of other teachers');
       }
       this.db.update('exercises', (rows) => rows.filter((row) => row.id !== exerciseId));
       this.db.update('tests', (rows) => rows.filter((row) => row.exerciseId !== exerciseId));

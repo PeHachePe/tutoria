@@ -333,7 +333,7 @@ export class ExerciseBankPage {
     } catch (error) {
       this.snackBar.open(
         error instanceof DataError && error.kind === 'invalid'
-          ? $localize`:@@bank.delete.started:Alguien acaba de empezarlo: ya no se puede borrar`
+          ? $localize`:@@bank.delete.in-use:Ya está en uso: no se puede borrar, pero sí archivar`
           : $localize`:@@bank.delete.failed:No se ha podido borrar. Inténtalo de nuevo.`,
       );
     }

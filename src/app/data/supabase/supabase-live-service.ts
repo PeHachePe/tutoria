@@ -23,7 +23,7 @@ import {
 
 /**
  * The live panel in Supabase (4.1). The RLS decides what the teacher reads: their own groups and
- * the attempts, events and tutor interactions of their students; the administrator, all (2.3).
+ * the attempts, events and tutor interactions at their assignments; the administrator, all (2.3).
  * Realtime sends the changes of `attempt` and the new rows of `process_event` and
  * `tutor_interaction` with the same RLS, published by the migrations `live_realtime` and
  * `attempt_detail_realtime`.

@@ -642,7 +642,7 @@
     "bank.delete.text": "Nadie lo ha empezado todavía. No se puede deshacer.",
     "bank.delete.confirm": "Borrar",
     "bank.delete.done": "Ejercicio borrado",
-    "bank.delete.started": "Alguien acaba de empezarlo: ya no se puede borrar",
+    "bank.delete.in-use": "Ya está en uso: no se puede borrar, pero sí archivar",
     "bank.delete.failed": "No se ha podido borrar. Inténtalo de nuevo.",
     "bank.actions": "Acciones de «{$title}»",
     "exerciseForm.back": "Volver a los ejercicios",

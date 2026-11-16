@@ -610,7 +610,7 @@
     "bank.delete.text": "Encara no l’ha començat ningú. No es pot desfer.",
     "bank.delete.confirm": "Esborra",
     "bank.delete.done": "Exercici esborrat",
-    "bank.delete.started": "Algú l’acaba de començar: ja no es pot esborrar",
+    "bank.delete.in-use": "Ja s’està fent servir: no es pot esborrar, però sí arxivar",
     "bank.delete.failed": "No s’ha pogut esborrar. Torna-ho a provar.",
     "bank.actions": "Accions de «{$title}»",
     "exerciseForm.back": "Torna als exercicis",

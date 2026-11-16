@@ -110,12 +110,16 @@ describe('MockAttemptService', () => {
       });
     });
 
-    it('lets the teacher of the group try its exercises, the hidden ones too', async () => {
+    it('opens no attempts for the teacher of the group or the administrator, who try without one', async () => {
       db.setSession(TEACHER_ID);
-
-      const attempt = await service.openOrCreate(blockAssignmentId(DAW_RESIT_BLOCK, 2));
-
-      expect(attempt).toMatchObject({ userId: TEACHER_ID, exerciseId: exerciseId(2) });
+      await expect(service.openOrCreate(assignmentAt(3))).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+      await expect(service.retry(assignmentAt(3))).rejects.toMatchObject({ kind: 'not_found' });
+      db.setSession(ADMIN_ID);
+      await expect(service.openOrCreate(assignmentAt(3))).rejects.toMatchObject({
+        kind: 'not_found',
+      });
     });
 
     it('fails for an unknown assignment or without a session', async () => {
@@ -307,6 +311,29 @@ describe('MockAttemptService', () => {
       db.setSession(DAW_STUDENT_IDS[1]);
       await expect(service.history(attempt.id)).rejects.toMatchObject({ kind: 'not_found' });
       db.setSession(OTHER_TEACHER_ID);
+      await expect(service.history(attempt.id)).rejects.toMatchObject({ kind: 'not_found' });
+    });
+
+    it('is not visible to another teacher of the student, in whose group it was not made', async () => {
+      const attempt = await service.openOrCreate(assignmentAt(3));
+      const otherGroup = db.tables().groups.find((group) => group.teacherId === OTHER_TEACHER_ID);
+      db.update('enrollments', (rows) => [
+        ...rows,
+        { id: 'both', groupId: otherGroup?.id ?? '', userId: STUDENT },
+      ]);
+
+      db.setSession(OTHER_TEACHER_ID);
+      await expect(service.history(attempt.id)).rejects.toMatchObject({ kind: 'not_found' });
+    });
+
+    it('is only for its student and the administrator once it has no assignment', async () => {
+      const attempt = { ...(await service.openOrCreate(assignmentAt(3))), assignmentId: null };
+      db.update('attempts', (rows) => rows.map((row) => (row.id === attempt.id ? attempt : row)));
+
+      await expect(service.history(attempt.id)).resolves.toMatchObject({ attempt });
+      db.setSession(ADMIN_ID);
+      await expect(service.history(attempt.id)).resolves.toMatchObject({ attempt });
+      db.setSession(TEACHER_ID);
       await expect(service.history(attempt.id)).rejects.toMatchObject({ kind: 'not_found' });
     });
   });
