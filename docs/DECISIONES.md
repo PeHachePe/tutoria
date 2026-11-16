@@ -1793,3 +1793,37 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Iteración 1 (revisión del autor):** el autor vio redundante «Ver como el alumno» y preguntó por la X a la izquierda. Se quita «Ver como el alumno» y su diálogo: «Probar como alumno» ya muestra el enunciado como lo leerá el alumno, y ahora se abre en el idioma de la pestaña abierta del formulario (`TryoutExercise.locale`, `openLocale` de `ExerciseTexts`), que era lo único que aportaba el otro. Solo se pierde ver el enunciado antes de tener pruebas válidas, que ya está en el formulario. La zona del enunciado pone `lang` siempre que el texto no está en el idioma de la interfaz, no solo cuando falta la traducción (WCAG 3.1.2). La X se queda a la izquierda: es la pauta de Material 3 para los diálogos a pantalla completa y el sitio de «Volver» en la pantalla del alumno. Lo aprobó el autor («hazlo pues»).
 
 **Aprobación:** el plan, con el diálogo a pantalla completa en lugar de una ruta, aprobado por el autor («si»). Aclarado que en producción todo va contra el servidor real (`execute` y el modelo de IA) y que solo no se guarda nada. El detalle técnico, por delegación del autor.
+
+## D-062 · Revisión de seguridad de la base de datos: el docente lee por grupo, límites a lo que escribe el navegador y permisos más estrechos (16/11/2026)
+
+**Contexto:** antes de usar la aplicación con alumnos reales se revisó la base de datos como lo haría alguien con una cuenta y la API, sin pasar por las pantallas: las políticas, los permisos de columna, las funciones y lo que publica Realtime. Lo importante aguantó: las pruebas ocultas no se leen por ningún camino, el estado de un intento solo lo escribe el servidor, nadie cambia su rol y un visitante sin sesión no lee nada. Aparecieron dos problemas de gravedad media y varios menores, comprobados en local:
+
+- Un docente leía todo lo que hacían sus alumnos, también en los grupos de otros docentes (`teaches_student()`): al matricular a un alumno en un grupo de otro docente, este pasaba de 0 a 7 intentos, 15 mensajes al tutor y 34 eventos de asignaturas que no imparte. Era lo que decía §2.3 («a través de `enrollment`»), pero no la minimización de §2.10.
+- Lo que el navegador escribe directamente no tenía límite: la tabla aceptaba un código de 5 MB y 20 000 eventos en una petición, con cualquier fecha. El panel en vivo carga los eventos de cada intento del bloque y recibe cada uno por Realtime, así que un alumno podía dejarlo sin responder.
+
+**Decisión:**
+
+- **El docente lee los intentos de las asignaciones de sus grupos,** no los de sus alumnos en general: `teaches_assignment()` en la política de `attempt` y en `can_read_attempt()`, de la que cuelgan `tutor_interaction` y `process_event` (y Realtime, que aplica las mismas políticas). Un intento sin asignación (se borró su grupo) lo leen su alumno y la administración. `teaches_student()` sigue decidiendo de qué alumnos lee el nombre.
+- **El código de un intento, hasta 50 000 caracteres:** el mismo límite que ya aplican las Edge Functions (`MAX_CODE_LENGTH`), ahora también en la tabla.
+- **Los eventos del navegador, acotados:** el detalle es pequeño (100 bytes: son un número), la hora queda entre la apertura del intento y la llegada del evento (se ajusta, no se rechaza: un reloj desajustado no debe perder eventos), y un intento admite 300 por minuto y 3000 en total. Es mucho más de lo que produce un alumno (la app los envía en lotes de 20) y poco para saturar el panel. Un lote que se pasa se rechaza entero y la app no lo reintenta.
+- **El aviso de datos se acepta una vez, con la hora del servidor:** desde el navegador, `privacy_notice_seen_at` solo pasa de vacío a ahora. El servidor puede vaciarlo para volver a pedirlo si el aviso cambia.
+- **Permisos de columna en asignaciones y bloques:** el docente cambia el bloque, el orden, la visibilidad y la fecha de una asignación, pero no su ejercicio ni su grupo; de un bloque, todo menos el grupo. Antes podía apuntar una asignación con intentos a otro ejercicio.
+- **Solo los alumnos de un grupo abren intentos:** `can_open_assignment()` ya no deja al docente ni a la administración, que desde el 4.3e prueban sin intento (D-061). Su intento contaba como un alumno más y, una vez abierto, la asignación no se podía borrar.
+- **Un ejercicio asignado en grupos de otros docentes no lo borra su autor:** borrarlo se llevaba esas asignaciones sin aviso. Sí lo borra mientras solo esté en sus grupos, como hasta ahora; si no, lo archiva (D-060). El mensaje del banco pasa a «Ya está en uso: no se puede borrar, pero sí archivar», que vale también cuando alguien lo acaba de empezar.
+- **Ninguna función abierta a `anon`:** se cierran las tres que lo estaban (validadores de las tablas, sin riesgo) y `function_privileges.test.sql` falla si una migración olvida su `revoke` o concede una función de más a `authenticated`.
+
+**Alternativas:**
+
+- **Dejar la lectura por matrícula, como decía §2.3:** un docente no necesita el trabajo de otra asignatura para atender la suya, y es justo lo que el RGPD pide minimizar. Si la analítica (4.4) quiere mostrar algo de otras asignaturas, que sea un agregado con su propia función.
+- **Quitar el permiso de `PUBLIC` por defecto para todas las funciones nuevas (`alter default privileges for role postgres`):** es un valor global del rol, que alcanza también a las extensiones que instale y a las funciones temporales de los tests. Se probó y rompía cuatro ficheros de tests; el test que vigila los permisos da la misma garantía sin ese alcance.
+- **Rechazar los eventos con una hora imposible:** un portátil con el reloj mal perdería todos sus eventos.
+- **Limitar los eventos con una función en lugar de la inserción directa:** cambiaba el camino de la app y el envío con `keepalive`; el disparador da el mismo límite sin tocar el cliente.
+- **`on delete restrict` en las asignaciones de un ejercicio:** impedía también borrar el que solo está en los bloques del autor, que la pantalla ya avisa y permite.
+
+**Consecuencias:**
+
+- Migración `security_review` y tests de pgTAP en los ficheros de cada tema (211 en total), con uno nuevo, `function_privileges`. Los servicios simulados imitan las reglas nuevas (`canReadAttempt`, `findOpenableAssignment` y el borrado en `mock-access.ts` y sus servicios).
+- §2.3 del plan dice ya «de las asignaciones de sus grupos».
+- Si en la nube hay intentos abiertos por docentes antes del 4.3e, siguen contando como alumnos: hay que mirarlo al publicar la migración. Queda en [PENDIENTES](PENDIENTES.md), con el cierre de un bloque (ocultarlo no impide entregar a quien ya lo tenía abierto), la configuración de Auth y la revisión de las Edge Functions.
+
+**Aprobación:** el autor pidió la revisión y, vistos los hallazgos, la migración con los arreglos propuestos. Acotar la lectura del docente era una decisión suya: se hace como se recomendó y queda a su revisión. El detalle técnico, por delegación del autor.
