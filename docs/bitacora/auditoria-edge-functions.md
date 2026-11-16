@@ -49,7 +49,7 @@ QuickJS pasa de 0.31.0 a 0.32.0 (`supabase/functions/deno.json`).
 - **Borrado con los disparadores apagados.** Una limpieza de datos de prueba dejó 12 eventos sin intento; se borraron y la base quedó como la línea base.
 - **`npm run check` se pasó entero después de los commits,** en verde: antes solo lint, Deno, pgTAP y unitarios.
 - **En la revisión, la base local del otro equipo estaba en las migraciones del 12/11.** Con `supabase migration up` pasan 231 de 233 pruebas de pgTAP; las dos que fallan (`blocks_and_assignments`, `exercise_editor`) dependen del seed, que cambió después: falta un `db:reset` allí para confirmarlo.
-- **En ese equipo los unitarios agotan los 5 s en pruebas pesadas del panel docente** (1 de 1841 en una pasada, 4 en otra; solas pasan). No tocan nada de esta revisión: `npm run check` no llegó a salir en verde allí; formato, scripts, Deno, seed e i18n sí.
+- **En ese equipo (Windows) los unitarios agotaban los 5 s en pruebas pesadas del panel docente** (entre 1 y 4 de 1841 en cada pasada, nunca las mismas; solas pasan). No tenían que ver con la revisión: renderizan la pantalla entera en jsdom y, con todos los ficheros a la vez, se pasaban del tiempo por defecto de Vitest. `vitest-base.config.mts` lo sube a 15 s (`testTimeout`), y `npm run check` sale en verde también allí.
 
 ## Decisiones
 

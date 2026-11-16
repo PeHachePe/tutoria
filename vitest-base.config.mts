@@ -42,8 +42,16 @@ function isAsyncClassMetadata(node: Node): boolean {
   return name === 'ɵsetClassMetadataAsync';
 }
 
+/**
+ * Three times the default of Vitest (5 s). The tests of the largest screens render the whole page
+ * in jsdom and take one or two seconds each alone; with every file running at once on a slower
+ * machine (Windows), a few of them went past 5 s in each run, never the same ones.
+ */
+const TEST_TIMEOUT_MS = 15_000;
+
 export default defineConfig({
   test: {
+    testTimeout: TEST_TIMEOUT_MS,
     coverage: {
       ignoreNode: (node) =>
         isClosureGuard(node) || isAsyncClassMetadata(node)
