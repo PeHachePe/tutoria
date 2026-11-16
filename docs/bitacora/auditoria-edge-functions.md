@@ -1,6 +1,6 @@
 # Auditoría · Seguridad de las Edge Functions
 
-16/11/2026 · Sesión de Claude Code · `966eadd`, `1f83b36`, `f2323ab`, `acdf32c`, `306da96`, `5938b47` y `c94557b`; la revisión posterior, pendiente de commit
+16/11/2026 · Sesión de Claude Code · `966eadd`, `1f83b36`, `f2323ab`, `acdf32c`, `306da96`, `5938b47` y `c94557b`; la revisión posterior, `a3e0398` y `27ece4e`
 
 ## Objetivo
 
@@ -91,10 +91,10 @@ Los ejecutó el autor:
 6. `5938b47` · `docs: the plan follows the limits of the function review (security review)`
 7. `c94557b` · `docs: log of the security review of the Edge Functions (security review)`
 
-Propuestos, de la revisión posterior:
+De la revisión posterior:
 
-8. `fix(tutor): the data of a query are taken once and the model call follows no redirect (security review)`
-9. `docs: record the second look at the Edge Functions review (security review)`
+8. `a3e0398` · `fix(tutor): the data of a query are taken once and the model call follows no redirect (security review)`
+9. `27ece4e` · `docs: record the second look at the Edge Functions review (security review)`
 
 ## Para la presentación
 
