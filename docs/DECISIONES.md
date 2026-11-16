@@ -1827,3 +1827,33 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Si en la nube hay intentos abiertos por docentes antes del 4.3e, siguen contando como alumnos: hay que mirarlo al publicar la migración. Queda en [PENDIENTES](PENDIENTES.md), con el cierre de un bloque (ocultarlo no impide entregar a quien ya lo tenía abierto), la configuración de Auth y la revisión de las Edge Functions.
 
 **Aprobación:** el autor pidió la revisión y, vistos los hallazgos, la migración con los arreglos propuestos. Acotar la lectura del docente era una decisión suya: se hace como se recomendó y queda a su revisión. El detalle técnico, por delegación del autor.
+
+## D-063 · Revisión de seguridad de las Edge Functions: turnos contados antes, hosts de IA permitidos, sandbox que corta las expresiones regulares e intento abierto (16/11/2026)
+
+**Contexto:** tras la base de datos (D-062) se revisaron `execute`, `tutor` y `translate` como lo haría alguien con una cuenta y la API directa, probando cada hallazgo en local (el tutor, contra un proveedor simulado). Aguantó lo esencial: la sesión y la propiedad del intento, la cuenta desactivada, los límites del personal, el aislamiento del sandbox y que al modelo no viajan pruebas ocultas ni soluciones. No aguantaron: los límites del tutor y de las ejecuciones (leían y después escribían: 70 pistas a la vez, 28 atendidas con el límite en 6; las preguntas que piden datos no contaban), la URL de `app_setting.ai_provider` (con una sesión de administración la clave de la IA viajaba a cualquier servidor), una expresión regular catastrófica (tumbaba el worker sin contar como ejecución), que un intento siguiera ejecutando y gastando tutor con su bloque oculto o su alumno fuera del grupo, y un validador de «sin código» que solo miraba el principio de cada línea.
+
+**Decisión:**
+
+- **Los turnos se cuentan antes, de uno en uno:** `claim_student_request` (tabla `student_request`, bloqueo por usuario y tipo, como `claim_staff_request`) reserva la ejecución o el turno del tutor antes de lanzar el sandbox o llamar al modelo. Cuenta también lo que falla, lo que mata la función y el turno en que el modelo pide datos. Las ejecuciones pasan a contarse por usuario. El personal tiene además un tope diario en lo que llama al modelo (200 traducciones y 200 turnos de vista previa).
+- **Los datos de una consulta solo se aceptan si el tutor la hizo:** `tutor` guarda la consulta que pidió el modelo (`tutor_pending_query`) y toma los resultados una vez, de ese usuario y esa petición, durante diez minutos; el segundo viaje no cuenta otro turno. Si el proveedor falla con los datos en la mano, se pueden volver a mandar.
+- **La clave solo viaja a hosts permitidos:** el del proyecto (`generativelanguage.googleapis.com`) y los del secreto `AI_ALLOWED_HOSTS`, por `https` salvo que el secreto diga `http://…` (un modelo local). Quien pone las claves dice adónde pueden ir; la administración sigue cambiando de modelo sin desplegar, pero no de destino. Un modelo de otro host se ignora, y si es el principal no hay proveedor. La tabla exige además la forma: URL web, modelo y hasta cinco respaldos.
+- **QuickJS 0.32.0:** su motor comprueba el reloj dentro de las expresiones regulares, así que la catastrófica agota su prueba (250 ms) como un bucle infinito. Da además la línea en más errores.
+- **Un intento se trabaja mientras su alumno ve la asignación y sigue en el grupo** (`is_open_attempt`): si no, `execute` y `tutor` responden 403. Guardar código y entregar no cambian: es la decisión del cierre de un bloque, que sigue en PENDIENTES.
+- **Las pruebas ocultas se ejecutan después de las visibles:** el estado del código dura toda la ejecución, y así lo que vio de una oculta no puede volver en el valor de una visible.
+- **El validador rechaza también el código dentro de una línea:** una declaración con su valor, la cabecera de un bucle, una función con su llave, una asignación tras una etiqueta («Línea 3: …») y las sentencias entre comillas invertidas. Nombres, expresiones y formatos del enunciado (`i < n`, `clave=valor`) siguen pasando. Las 179 respuestas reales guardadas de la batería de elusión pasan todas.
+- **Menores:** ninguna función lee más de 1 MB de cuerpo (413), y el nombre de función de la comprobación docente y de «Probar como alumno» es un identificador.
+
+**Alternativas:**
+
+- **Lista de hosts en la base de datos:** quien robara una sesión de administración la cambiaría igual que el ajuste.
+- **Ejecutar el sandbox en un Worker que se pueda matar:** más piezas y arranque más lento; el motor nuevo resuelve el caso encontrado, y el turno contado antes acota lo que quede.
+- **Devolver de las ocultas solo cuántas pasan:** el oráculo sigue (un bit por ejecución con cualquier condición) y el alumno pierde saber cuál falla. Se acepta el resto: el docente ve el código y cada ejecución.
+- **Contar los dos viajes de una pregunta con datos:** partía por la mitad lo que un alumno puede preguntar sin gastar más de lo que ya permite un turno.
+
+**Consecuencias:**
+
+- Migración `edge_functions_review` y `latest_tutor_calls` eliminada. La batería de elusión borra los turnos del alumno en cada caso y necesita `AI_ALLOWED_HOSTS` para probar otro proveedor.
+- Los servicios simulados imitan el intento abierto (`requireOpenAttempt`).
+- Al publicar: migración, funciones y, si hay otro proveedor, el secreto `AI_ALLOWED_HOSTS`.
+
+**Aprobación:** el autor pidió la auditoría y, vistos los hallazgos, que se arreglara todo decidiendo lo más útil. Las decisiones de producto (lista de hosts fuera de la base, 403 con el bloque oculto, no agregar las ocultas) quedan a su revisión.

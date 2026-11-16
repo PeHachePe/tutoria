@@ -99,7 +99,7 @@ Lo que en local es cómodo para desarrollar se queda en la nube con los valores 
 npx supabase secrets set --env-file supabase/functions/.env --remote
 ```
 
-Sube las claves de la IA (`AI_API_KEY` y las de respaldo, D-044). `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` ya las pone Supabase.
+Sube las claves de la IA (`AI_API_KEY` y las de respaldo, D-044). Si algún modelo del ajuste `ai_provider` no es del proveedor del proyecto (`generativelanguage.googleapis.com`), sube también `AI_ALLOWED_HOSTS` con sus hosts separados por comas (`api.groq.com`; uno por `http`, entero: `http://host:11434`): las funciones solo llaman a esos (D-063). `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` ya las pone Supabase.
 
 Lo lanza el autor: lee `supabase/functions/.env`, que el agente no toca.
 
