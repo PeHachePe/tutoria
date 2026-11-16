@@ -4,7 +4,7 @@
 -- groups of DAW A; Elena (...041), in DAM B.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(19);
 
 create function pg_temp.sign_in(user_id uuid) returns void language plpgsql as $$
 begin
@@ -60,6 +60,53 @@ select throws_ok(
   'only the server writes tutor interactions'
 );
 select is((select count(*) from app_setting), 0::bigint, 'a teacher cannot read the settings');
+
+-- A student of two teachers: Lucía joins 1.º DAM B, of Javier (D-062)
+reset role;
+insert into enrollment (group_id, user_id)
+values ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000011');
+create temporary table lucia_attempts on commit drop as
+select id from attempt where user_id = '10000000-0000-4000-8000-000000000011';
+grant select on lucia_attempts to authenticated;
+select pg_temp.sign_in('10000000-0000-4000-8000-000000000003');
+
+select is(
+  (select count(*) from attempt where user_id = '10000000-0000-4000-8000-000000000011'),
+  0::bigint,
+  'a teacher does not see what their students do in the groups of another teacher'
+);
+select is(
+  (select count(*) from process_event where attempt_id in (select id from lucia_attempts)),
+  0::bigint,
+  'nor its events'
+);
+select is(
+  (select count(*) from tutor_interaction where attempt_id in (select id from lucia_attempts)),
+  0::bigint,
+  'nor what they asked the tutor there'
+);
+
+-- She starts an exercise of Javier's group
+reset role;
+insert into attempt (exercise_id, user_id, assignment_id) values (
+  '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011',
+  '60000000-0000-4000-8000-000000000101'
+);
+select pg_temp.sign_in('10000000-0000-4000-8000-000000000003');
+
+select is(
+  (select count(*) from attempt where user_id = '10000000-0000-4000-8000-000000000011'),
+  1::bigint,
+  'a teacher sees the attempts at the assignments of their groups'
+);
+
+reset role;
+select pg_temp.sign_in('10000000-0000-4000-8000-000000000002');
+select is(
+  (select count(*) from attempt where user_id = '10000000-0000-4000-8000-000000000011'),
+  10::bigint,
+  'and the other teacher, only those of theirs'
+);
 
 -- Administrator: every attempt is the count without RLS, not that of the seed, so the test passes
 -- in a local database already used by hand

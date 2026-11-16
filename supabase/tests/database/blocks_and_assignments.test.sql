@@ -4,7 +4,7 @@
 -- Javier (...003) teaches 1.º DAM B (group ...002). Lucía (...011) is a student of 1.º DAW A.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(20);
 
 create function pg_temp.sign_in(user_id uuid) returns void language plpgsql as $$
 begin
@@ -86,6 +86,18 @@ select lives_ok(
   $$ update exercise_assignment set due_at = '2026-12-01T22:59:00Z'
      where id = '60000000-0000-4000-8000-000000000011' $$,
   'a teacher gives an assignment a due date'
+);
+select throws_ok(
+  $$ update exercise_assignment set exercise_id = '40000000-0000-4000-8000-000000000002'
+     where id = '60000000-0000-4000-8000-000000000001' $$,
+  '42501', null,
+  'a teacher cannot change the exercise of an assignment: its attempts are at that one'
+);
+select throws_ok(
+  $$ update class_block set group_id = '20000000-0000-4000-8000-000000000003'
+     where id = 'a0000000-0000-4000-8000-000000000013' $$,
+  '42501', null,
+  'nor move a block to another group'
 );
 select is(
   (select student_count from assignment_student_counts('20000000-0000-4000-8000-000000000001')

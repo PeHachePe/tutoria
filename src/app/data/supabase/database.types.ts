@@ -679,7 +679,12 @@ export type Database = {
       };
       hidden_test_count: { Args: { target_exercise_id: string }; Returns: number };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      is_assigned_by_others: { Args: { target_exercise_id: string }; Returns: boolean };
       is_assigned_to_me: { Args: { target_exercise_id: string }; Returns: boolean };
+      is_browser_event: {
+        Args: { event_type: Database['public']['Enums']['process_event_type'] };
+        Returns: boolean;
+      };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_started_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
@@ -849,6 +854,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      teaches_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       teaches_group: { Args: { target_group_id: string }; Returns: boolean };
       teaches_student: { Args: { target_user_id: string }; Returns: boolean };
     };

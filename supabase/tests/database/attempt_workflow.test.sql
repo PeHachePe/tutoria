@@ -6,7 +6,7 @@
 -- (...003), 1.º DAM B. Assignments ...001 to ...008 are exercises 1 to 8 in 1.º DAW A.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(30);
 
 create function pg_temp.sign_in(user_id uuid) returns void language plpgsql as $$
 begin
@@ -87,6 +87,19 @@ select is(
   'tests_failed',
   'an update that sets the code and the status keeps that status'
 );
+
+-- As long as the Edge Functions take it (MAX_CODE_LENGTH)
+select pg_temp.sign_in('10000000-0000-4000-8000-000000000012');
+select lives_ok(
+  $$ update attempt set current_code = repeat('x', 50000) where id = '70000000-0000-4000-8000-000000000012' $$,
+  'the code may be as long as the server runs'
+);
+select throws_ok(
+  $$ update attempt set current_code = repeat('x', 50001) where id = '70000000-0000-4000-8000-000000000012' $$,
+  '23514', null,
+  'and no longer'
+);
+reset role;
 
 -- Opening, by assignment. Hugo has submitted assignment ...001 (attempt ...009) and has no attempt
 -- at ...007; ...503 is exercise 3 again, in the resit; ...502 is hidden, and so is the block of ...605.
@@ -175,10 +188,18 @@ select throws_ok(
 
 reset role;
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000002');
-select is(
-  (select assignment_id from open_attempt('60000000-0000-4000-8000-000000000605')),
-  '60000000-0000-4000-8000-000000000605'::uuid,
-  'a teacher can try the exercises of their groups, the hidden ones too'
+select throws_ok(
+  $$ select open_attempt('60000000-0000-4000-8000-000000000001') $$,
+  'P0002', null,
+  'a teacher opens no attempts in their groups: they try the exercises without one'
+);
+
+reset role;
+select pg_temp.sign_in('10000000-0000-4000-8000-000000000001');
+select throws_ok(
+  $$ select open_attempt('60000000-0000-4000-8000-000000000001') $$,
+  'P0002', null,
+  'nor the administration'
 );
 
 reset role;

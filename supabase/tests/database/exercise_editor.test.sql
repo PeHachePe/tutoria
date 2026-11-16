@@ -3,7 +3,7 @@
 -- Elena (...041) is a student of Javier.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(17);
 
 create function pg_temp.sign_in(user_id uuid) returns void language plpgsql as $$
 begin
@@ -112,8 +112,39 @@ select ok(
   'the counts include the students of other teachers, whose attempts she cannot read'
 );
 
+-- Her new exercise, assigned in a block of hers and in one of Javier: nobody has started it
+reset role;
+insert into exercise_assignment (group_id, block_id, exercise_id, position) values
+  ('20000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000006', (select id from saved), 99),
+  ('20000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000007', (select id from saved), 99);
+select pg_temp.sign_in('10000000-0000-4000-8000-000000000002');
+
+select throws_ok(
+  $$ delete from exercise where id = (select id from saved) $$,
+  '23503', null,
+  'its author does not delete an exercise assigned in the groups of another teacher'
+);
+
+reset role;
+delete from exercise_assignment
+where exercise_id = (select id from saved) and group_id = '20000000-0000-4000-8000-000000000002';
+select pg_temp.sign_in('10000000-0000-4000-8000-000000000002');
+
+delete from exercise where id = (select id from saved);
+select is(
+  (select count(*) from exercise_assignment where exercise_id = (select id from saved)),
+  0::bigint,
+  'assigned only in her groups, she deletes it with its assignments'
+);
+
 -- The administrator
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000001');
+
+select is(
+  is_assigned_by_others('40000000-0000-4000-8000-000000000001'),
+  false,
+  'no group is of others for the administration'
+);
 
 select lives_ok(
   $$ select save_exercise(

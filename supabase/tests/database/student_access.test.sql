@@ -4,7 +4,7 @@
 -- client group, the 15 of web development; 1.º DAM B, those of basic and advanced programming.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(19);
 
 create function pg_temp.sign_in(user_id uuid) returns void language plpgsql as $$
 begin
@@ -59,13 +59,25 @@ select throws_ok(
   'a student cannot change their own role'
 );
 select lives_ok(
-  $$ update app_user set privacy_notice_seen_at = now() where id = '10000000-0000-4000-8000-000000000011' $$,
+  $$ update app_user set privacy_notice_seen_at = '2000-01-01' where id = '10000000-0000-4000-8000-000000000011' $$,
   'a student records that they saw the data notice'
 );
-select isnt(
+select is(
   (select privacy_notice_seen_at from app_user where id = '10000000-0000-4000-8000-000000000011'),
-  null,
-  'the data notice is recorded on the server'
+  now(),
+  'with the time of the server, whatever the browser says'
+);
+update app_user set privacy_notice_seen_at = null where id = '10000000-0000-4000-8000-000000000011';
+select is(
+  (select privacy_notice_seen_at from app_user where id = '10000000-0000-4000-8000-000000000011'),
+  now(),
+  'and it cannot be taken back'
+);
+update app_user set privacy_notice_seen_at = '2000-01-01' where id = '10000000-0000-4000-8000-000000000011';
+select is(
+  (select privacy_notice_seen_at from app_user where id = '10000000-0000-4000-8000-000000000011'),
+  now(),
+  'nor changed'
 );
 
 -- Elena, in groups without exercise 9 (web development only)
