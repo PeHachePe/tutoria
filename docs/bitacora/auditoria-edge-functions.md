@@ -1,6 +1,6 @@
 # Auditoría · Seguridad de las Edge Functions
 
-16/11/2026 · Sesión de Claude Code · `966eadd`, `1f83b36`, `f2323ab`, `acdf32c`, `306da96` y `5938b47`
+16/11/2026 · Sesión de Claude Code · `966eadd`, `1f83b36`, `f2323ab`, `acdf32c`, `306da96`, `5938b47` y `c94557b`; la revisión posterior, pendiente de commit
 
 ## Objetivo
 
@@ -10,6 +10,7 @@ Revisar `execute`, `tutor` y `translate` como lo haría alguien con una cuenta y
 
 - Una auditoría de las Edge Functions, con cada hallazgo serio comprobado en el Supabase local y anotado en `PENDIENTES.md`.
 - Después, vistos los hallazgos, arreglarlos decidiendo lo más útil, y mejorar el prompt del tutor sin perder su esencia.
+- En otra sesión, revisar lo hecho, porque la primera se quedó sin cerrar, y arreglar lo que saliera.
 
 ## Qué hizo Claude
 
@@ -18,6 +19,7 @@ Revisar `execute`, `tutor` y `translate` como lo haría alguien con una cuenta y
 3. Encontró tres problemas altos (límites del tutor y de las ejecuciones con carrera, la clave de la IA viajando a la URL del ajuste, una expresión regular que tumbaba `execute`), tres medios y varios menores.
 4. Los arregló (D-063): migración `edge_functions_review`, turnos contados antes y de uno en uno, hosts de IA permitidos, QuickJS 0.32.0, intento abierto, consultas pendientes del tutor, validador más estricto, cuerpo acotado y prompt v6.
 5. Llevó la regla del intento abierto a los servicios simulados y volvió a probar en local cada hallazgo con el arreglo puesto.
+6. En la revisión posterior releyó las tres funciones, lo compartido y la migración, y cerró dos huecos: el viaje con los datos de una consulta, que no cuenta turno, se podía repetir sin límite mientras el proveedor fallara (ya no se vuelven a guardar las consultas: el chat pregunta de nuevo desde el principio, y eso sí cuenta), y la llamada al modelo seguía redirecciones (`redirect: error`).
 
 ## Comandos e instalaciones
 
@@ -37,6 +39,7 @@ QuickJS pasa de 0.31.0 a 0.32.0 (`supabase/functions/deno.json`).
 - **Funciones:** `execute`, `tutor`, `translate` y `_shared` (`http.ts`, `provider-setting.ts`, `student-requests.ts`, `staff-requests.ts`), con sus tests.
 - **Datos:** `mock-access.ts` (`requireOpenAttempt`), los servicios simulados de ejecución y tutor, `run-result.ts`, `supabase-error.ts` y `database.types.ts`.
 - **Scripts:** `elusion.mjs` borra los turnos del alumno en cada caso.
+- **Revisión posterior:** `tutor/tutor.ts` y `_shared/llm-provider.ts`, con sus tests.
 - **Documentación:** `PLAN.md` §2.3 y los límites, `DECISIONES.md` (D-063), `PENDIENTES.md`, `DESPLIEGUE.md`, `CLAUDE.md`, esta bitácora y `REGISTRO.md`.
 
 ## Problemas y cómo se resolvieron
@@ -45,6 +48,8 @@ QuickJS pasa de 0.31.0 a 0.32.0 (`supabase/functions/deno.json`).
 - **El tutor no arrancaba en local.** Importaba un fichero de la app que el runtime no tenía montado; la validación del nombre de función se movió a `run-result.ts`, que ya se importaba.
 - **Borrado con los disparadores apagados.** Una limpieza de datos de prueba dejó 12 eventos sin intento; se borraron y la base quedó como la línea base.
 - **`npm run check` se pasó entero después de los commits,** en verde: antes solo lint, Deno, pgTAP y unitarios.
+- **En la revisión, la base local del otro equipo estaba en las migraciones del 12/11.** Con `supabase migration up` pasan 231 de 233 pruebas de pgTAP; las dos que fallan (`blocks_and_assignments`, `exercise_editor`) dependen del seed, que cambió después: falta un `db:reset` allí para confirmarlo.
+- **En ese equipo los unitarios agotan los 5 s en pruebas pesadas del panel docente** (1 de 1841 en una pasada, 4 en otra; solas pasan). No tocan nada de esta revisión: `npm run check` no llegó a salir en verde allí; formato, scripts, Deno, seed e i18n sí.
 
 ## Decisiones
 
@@ -52,7 +57,7 @@ QuickJS pasa de 0.31.0 a 0.32.0 (`supabase/functions/deno.json`).
 
 ## Tests
 
-Unitarios: 1841 (nuevos: 3) · e2e: 39 (sin cambios, no se han pasado) · Deno: 190 (nuevos: 15) · pgTAP: 243 (nuevos: 32)
+Unitarios: 1841 (nuevos: 3) · e2e: 39 (sin cambios, no se han pasado) · Deno: 191 (nuevos: 16, uno de la revisión posterior) · pgTAP: 243 (nuevos: 32)
 
 Cobertura de la app, 100 %.
 
@@ -60,13 +65,19 @@ Cobertura de la app, 100 %.
 
 El autor pidió la auditoría y, vistos los hallazgos, que se arreglara todo decidiendo lo más útil; ejecutó los commits. Las decisiones de producto de D-063 quedan a su revisión. Sin publicar en la nube.
 
+Iteración 1: el autor pidió revisar lo hecho en otra sesión y, vistos los dos huecos, arreglarlos.
+
 ## Capturas
 
 No es una pantalla.
 
 ## Métricas
 
-Sin tomar: falta `npm run metrics -- auditoria-edge-functions`.
+| Duración                           | Tokens de entrada | Tokens de salida | Tokens de caché             | Coste equivalente                          | Líneas +/− | Archivos | Horas humanas            |
+| ---------------------------------- | ----------------- | ---------------- | --------------------------- | ------------------------------------------ | ---------- | -------- | ------------------------ |
+| 10 min, solo la revisión posterior | 47                | 19.868           | 3,5 M leída · 145 k escrita | sin calcular: el script no tiene su precio | +35 / −17  | 4        | ≈ 15 min, de la revisión |
+
+Modelo: `claude-fable-5-2`. La sesión de la auditoría se cerró sin tomar sus métricas y no se pueden recuperar desde otra: su duración, sus tokens y sus horas humanas quedan sin medir. Las de la tabla son las de la revisión posterior, tomadas antes de la documentación del cierre.
 
 ## Commits
 
@@ -78,6 +89,12 @@ Los ejecutó el autor:
 4. `acdf32c` · `docs: record the security review of the Edge Functions (security review)`
 5. `306da96` · `docs: note AI_ALLOWED_HOSTS and prompt v6 (security review)`
 6. `5938b47` · `docs: the plan follows the limits of the function review (security review)`
+7. `c94557b` · `docs: log of the security review of the Edge Functions (security review)`
+
+Propuestos, de la revisión posterior:
+
+8. `fix(tutor): the data of a query are taken once and the model call follows no redirect (security review)`
+9. `docs: record the second look at the Edge Functions review (security review)`
 
 ## Para la presentación
 
