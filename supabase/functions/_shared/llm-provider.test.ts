@@ -74,6 +74,15 @@ Deno.test(
   },
 );
 
+Deno.test(
+  'the provider follows no redirect: the request goes to the host of the setting',
+  async () => {
+    const { llm, calls } = provider(() => completion('{}'), 'secret-key');
+    await llm.complete(MESSAGES, ANSWER_FORMAT);
+    assertEquals(calls[0].init.redirect, 'error');
+  },
+);
+
 Deno.test('a local Ollama needs no key', async () => {
   const { llm, calls } = provider(() => completion('{}'));
   await llm.complete(MESSAGES, ANSWER_FORMAT);

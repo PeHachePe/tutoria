@@ -119,6 +119,9 @@ export class OpenAICompatibleProvider implements LlmProvider {
           ...responseFormatOf(this.settings.responseFormat ?? 'json_schema', format),
         }),
         signal: AbortSignal.timeout(timeoutMs),
+        // The host was allowed by the setting (`allowedHosts()`): a redirect would take the code
+        // of the student, and maybe the key, to another one (D-063)
+        redirect: 'error',
       });
     } catch (error) {
       const reason =

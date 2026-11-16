@@ -693,13 +693,25 @@ Deno.test('results are only taken for the queries the request waits for, once', 
   assertEquals(students.claims.length, 1);
 });
 
-Deno.test('if the provider fails with the data in hand, they may come again', async () => {
-  const { store, handle } = setup([new ProviderError('The model answered 503', 503)]);
-  store.waiting.set(`${REQUEST_ID} hugo`, [{ name: 'getMyProgress', arguments: {} }]);
+Deno.test(
+  'if the provider fails with the data in hand, the turn starts again and counts',
+  async () => {
+    const { store, students, llm, handle } = setup([
+      new ProviderError('The model answered 503', 503),
+    ]);
+    store.waiting.set(`${REQUEST_ID} hugo`, [{ name: 'getMyProgress', arguments: {} }]);
 
-  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 503);
-  assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 200);
-});
+    assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 503);
+    // The data are not taken twice: a trip that counts no turn is never one to repeat at will
+    assertEquals((await handle(post({ ...QUESTION, results: PROGRESS }))).status, 400);
+    assertEquals(llm.requests.length, 1);
+    assertEquals(students.claims.length, 0);
+
+    // As the app retries: the same request from the start, which takes its turn
+    assertEquals((await handle(post(QUESTION))).status, 200);
+    assertEquals(students.claims.length, 1);
+  },
+);
 
 Deno.test('a hint never waits for data', async () => {
   const { store, handle } = setup([ASKS_PROGRESS]);

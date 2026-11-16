@@ -3,7 +3,6 @@ import { z } from 'zod';
 import {
   answerHintLevel,
   type HintLevel,
-  type ToolRequest,
   TUTOR_TRIGGERS,
   type TutorEvent,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
@@ -199,11 +198,12 @@ export function createTutorHandler({
       const answered = await store.findAnswer(ask.requestId);
       if (answered) return replay(answered, ask.attemptId);
 
-      let waited: readonly ToolRequest[] | null = null;
       if (ask.results) {
         // The data of the queries the model asked for in this request, once: the same turn goes on.
-        // Anything else would hand the model text as data it never asked for (D-063)
-        waited = await store.takeQueries(ask.requestId, userId);
+        // Anything else would hand the model text as data it never asked for (D-063). Once also
+        // if the provider fails then: this trip counts no turn, so it is never one to repeat, and
+        // the app asks again from the start, which does count
+        const waited = await store.takeQueries(ask.requestId, userId);
         if (!waited || !answersQueries(ask.results, waited)) {
           return failure(400, 'The tutor asked for no such data');
         }
@@ -219,13 +219,7 @@ export function createTutorHandler({
         if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
       }
 
-      const turn = await answerTurn(ask, attempt).catch(async (error: unknown) => {
-        // The provider failed with the data in hand: the same request may bring them again
-        if (waited && error instanceof ProviderError) {
-          await store.keepQueries(ask.requestId, userId, waited);
-        }
-        throw error;
-      });
+      const turn = await answerTurn(ask, attempt);
       if (turn instanceof Response) return turn;
       if ('queries' in turn) {
         // Nothing of the answer is kept until the model gives it with the data (2.5e)
