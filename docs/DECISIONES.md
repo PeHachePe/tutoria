@@ -1841,6 +1841,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **Un intento se trabaja mientras su alumno ve la asignación y sigue en el grupo** (`is_open_attempt`): si no, `execute` y `tutor` responden 403. Guardar código y entregar no cambian: es la decisión del cierre de un bloque, que sigue en PENDIENTES.
 - **Las pruebas ocultas se ejecutan después de las visibles:** el estado del código dura toda la ejecución, y así lo que vio de una oculta no puede volver en el valor de una visible.
 - **El validador rechaza también el código dentro de una línea:** una declaración con su valor, la cabecera de un bucle, una función con su llave, una asignación tras una etiqueta («Línea 3: …») y las sentencias entre comillas invertidas. Nombres, expresiones y formatos del enunciado (`i < n`, `clave=valor`) siguen pasando. Las 179 respuestas reales guardadas de la batería de elusión pasan todas.
+- **Prompt v6:** la regla de no escribir código nombra las mismas formas que rechaza el validador, la de los datos entre etiquetas sube junto a ella, el nivel 3 lleva un ejemplo con palabras y `elusion` dice qué cuenta. Sin probar con el modelo real: falta la batería de elusión.
 - **Menores:** ninguna función lee más de 1 MB de cuerpo (413), y el nombre de función de la comprobación docente y de «Probar como alumno» es un identificador.
 
 **Alternativas:**
