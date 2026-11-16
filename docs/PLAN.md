@@ -1751,6 +1751,212 @@ El diseño (≈0,5 h, sin código) dejó escritos 2.11, las dos fichas, D-066 y 
 🧪 Primero los tests de `speakableSentences()`: bloques de código fuera y su frase fija una sola vez, código en línea, Markdown y emojis, decimales y abreviaturas que no parten la frase, los tres idiomas y el texto vacío. Después: los ajustes nuevos por usuario; `WebSpeechService` con un `speechSynthesis` falso (voces que llegan tarde con `voiceschanged`, solo las del idioma, una locución por frase, parar y el error); `TutorSpeaker` con un `SpeechService` falso (habla mientras la respuesta crece, nunca el historial ni una respuesta fallida, y se calla con otra pregunta, otro ejercicio, la pestaña oculta y al salir); los ajustes por rol y texto (ninguna voz elegida, «Probar», sin voces del idioma); «Escuchar» y «Parar» en el chat; axe.
 Commit: `feat(voice): the tutor reads its answers aloud (step 6.1a)`.
 
+**Plan de implementación del 6.1a** (17/11/2026, tras leer el código: quien lo implemente no tiene que decidir nada)
+
+Dudas resueltas:
+
+- **`injectAsync` exige un servicio autoprovisto** (angular.dev): `WebSpeechService` lleva `@Service()`, y solo lo importa, con `import()` dinámico, `SpeechLoader` (`core/speech/`, también `@Service()`). Los tests cambian el cargador por uno que devuelve un `SpeechService` falso (`core/speech/speech-testing.ts`, fuera de la cobertura por su nombre).
+- **`StudentVoice`** (`student/settings/`, `@Service()`) junta los ajustes con lo que puede el navegador: carga el habla solo con `voice` activado, da las voces del idioma y la voz elegida si sigue existiendo. No es un store (no guarda estado propio, solo `resource()` y `computed()`); lo usan los ajustes, el chat y, después, el dictado y la llamada. Proponer **D-071** al cerrar (D-070 es del 6.2b).
+- **`TutorSpeaker` no se provee en la vista previa del docente** (como `ProactivityMonitor`, D-061): un docente no tiene ajustes de voz. `TutorPanel` y `WorkspaceLayout` lo inyectan con `{ optional: true }`.
+- **Pestaña oculta:** se sabe por `visibilitychange` (`WorkspacePage.onVisibilityChange()`, que ya existe), no por `awaySince()`, que también cuenta una ventana sin foco; con la ventana sin foco pero a la vista, el tutor sigue hablando. Corregir la mención de 2.11 al cerrar.
+- **Una frase cada vez:** `TutorSpeaker` lleva su cola y pide la siguiente frase cuando acaba la anterior; no usa la cola del navegador. Así se corta entre frases y el doble de los tests es trivial.
+- **Qué turno se dice solo:** el último turno `fresh`, cuando aparece (su clave es `id` más `createdAt`, porque un reintento conserva el `id`). Un turno nuevo calla siempre lo que sonaba, se lea o no. Con la pestaña oculta no empieza a hablar.
+- **Si la síntesis falla,** se calla sin aviso: todo está escrito. Si la voz elegida ya no existe, `ready()` es falso y «Escuchar» lleva a los ajustes.
+- **La voz se guarda por su `voiceURI`,** una sola para todos los idiomas: al cambiar de idioma deja de estar en la lista y hay que elegir otra; al volver, sigue valiendo.
+- **`speakableSentences()` no traduce:** recibe la frase de cierre. Usa `splitCodeBlocks()` (`shared/`), que ya trata como bloque uno sin cerrar. Mientras la respuesta llega (`partial`), la última frase espera; así, lo ya dicho nunca cambia al crecer el texto.
+- **Abreviaturas:** `Intl.Segmenter` no parte tras un punto seguido de minúscula ni en un decimal, pero sí en «p. ej. Un bucle»: una lista corta por idioma une ese trozo con el siguiente.
+- **La mascota no tiene boca aparte:** «hablando» mueve la lengua (`mascot-talk`). Con `prefers-reduced-motion` no se mueve (regla que ya existe en `mascot.css`).
+- **Lista de voces:** `MatRadioGroup` (primer uso de Material Radio; su aspecto, solo en `theme.scss` si hace falta). Edge trae decenas de voces por idioma, así que la lista se desplaza por dentro (`max-h-60 overflow-y-auto scroll-shadows`).
+- **El texto del interruptor dice lo que ya funciona:** «Podrás escuchar sus respuestas» en este paso; el 6.1b y el 6.1c lo amplían.
+- **Chrome** descarta una locución sin referencia (se guarda en un campo) y no deja hablar sin un gesto previo del usuario en la página: enviar la pregunta o pulsar «Escuchar» lo son.
+- **`updateSettings`** (2.5e) no gana los ajustes de voz.
+- **Tipos:** TypeScript 6.0.3 ya trae los de `speechSynthesis`.
+
+Ficheros:
+
+- **Nuevo `src/app/core/speech/speech-service.ts`** (sin decorador; solo lo de hablar, el 6.1b añade lo de escuchar):
+
+```ts
+export const SPEECH_RATES = ['slow', 'normal', 'fast'] as const;
+export type SpeechRate = (typeof SPEECH_RATES)[number];
+
+export interface SpeechVoice {
+  /** Its `voiceURI`: what the settings keep. */
+  readonly id: string;
+  /** As the system names it. */
+  readonly name: string;
+  /** BCP 47, as the browser gives it (`es-ES`). */
+  readonly lang: string;
+}
+
+export interface SpeakOptions {
+  readonly voiceId: string;
+  readonly rate: SpeechRate;
+}
+
+export type SpeechErrorCode = 'voice-unavailable' | 'synthesis-failed';
+export class SpeechError extends Error {
+  override readonly name = 'SpeechError';
+  constructor(readonly code: SpeechErrorCode) {
+    super(`Speech error: ${code}`);
+  }
+}
+
+export abstract class SpeechService {
+  /** Whether this browser has speech synthesis at all. */
+  abstract readonly canSpeak: boolean;
+  /** The voices of that language, in alphabetical order; none if it cannot speak. */
+  abstract voices(language: AppLocale): Promise<readonly SpeechVoice[]>;
+  /** Says one sentence; rejects with a SpeechError. */
+  abstract speak(sentence: string, options: SpeakOptions): Promise<'ended' | 'cancelled'>;
+  abstract stopSpeaking(): void;
+}
+```
+
+- **Nuevo `core/speech/web-speech-service.ts`** (`@Service()`, `WebSpeechService extends SpeechService`) y su spec. Lee `speechSynthesis` y `SpeechSynthesisUtterance` de `inject(DOCUMENT).defaultView`:
+  - `canSpeak`: los dos existen;
+  - `voices()`: si `getVoices()` viene vacío, espera a `voiceschanged` o a `VOICES_TIMEOUT_MS = 2000`; se queda con las que `lang` (con `_` como `-`, en minúsculas) empieza por el idioma, sin repetir `voiceURI`, ordenadas por `name` con `localeCompare(…, language)`;
+  - `speak()`: sin la voz, rechaza con `voice-unavailable`; locución con `voice`, `lang` de la voz y `rate` de `RATE_VALUES = { slow: 0.85, normal: 1, fast: 1.2 }`; `end` resuelve `ended`; `error` con `canceled` o `interrupted` resuelve `cancelled`, y con otro código rechaza con `synthesis-failed`;
+  - `stopSpeaking()`: `speechSynthesis.cancel()`.
+- **Nuevo `core/speech/speech-loader.ts`** y su spec:
+
+```ts
+@Service()
+export class SpeechLoader {
+  private readonly web = injectAsync(() =>
+    import('./web-speech-service').then((file) => file.WebSpeechService),
+  );
+  /** Downloads the Web Speech code the first time: only called with the voice on (2.11). */
+  load(): Promise<SpeechService> {
+    return this.web();
+  }
+}
+```
+
+- **Nuevo `core/speech/speech-testing.ts`:** `FakeSpeechService extends SpeechService` con `canSpeak`, `voiceList`, `spoken: { sentence: string; options: SpeakOptions }[]`, `finish()` (acaba la frase en curso con `ended`), `fail(code)` y `stops` (veces que se llamó a `stopSpeaking()`, que resuelve la frase en curso con `cancelled`); y `provideFakeSpeech(fake)`, que provee `SpeechLoader` con `{ load: () => Promise.resolve(fake) }`.
+- **Nuevo `core/speech/speakable-sentences.ts`** y su spec:
+
+```ts
+export interface SpeakableOptions {
+  readonly locale: AppLocale;
+  /** Said last if the text had a block of code or leaves a button: «Te lo dejo en el chat». */
+  readonly closing: string;
+  /** The answer leaves a button in the chat (2.5e). */
+  readonly leavesButton?: boolean;
+  /** Still arriving: the last sentence may not be whole, so it waits, and so does the closing. */
+  readonly partial?: boolean;
+}
+export function speakableSentences(text: string, options: SpeakableOptions): string[];
+```
+
+- Reglas de `speakableSentences()`, en orden:
+  1. `splitCodeBlocks(text)`: los bloques se quitan y se recuerda si había alguno;
+  2. en cada trozo de texto, por línea: fuera `#` de títulos, `>` de citas y viñetas (`-`, `*`, `•`); `1.` o `1)` al principio pasa a `1,`;
+  3. en línea: `[texto](url)` deja `texto`; fuera `**`, `__`, y `*` o `_` que envuelven palabras (no los de dentro de una palabra, como `mi_variable`); el código en línea pierde las comillas invertidas; fuera los emojis (`\p{Extended_Pictographic}` con sus selectores, uniones y tonos);
+  4. frases con `new Intl.Segmenter(locale, { granularity: 'sentence' })`, recortadas; la que acaba en una abreviatura de `ABBREVIATIONS[locale]` se une a la siguiente (`es`: `p. ej.`, `ej.`, `etc.`, `núm.`, `pág.`; `en`: `e.g.`, `i.e.`, `etc.`, `vs.`; `ca`: `p. ex.`, `ex.`, `etc.`, `núm.`, `pàg.`); fuera las que no tienen letras ni cifras;
+  5. con `partial`, si el texto acaba en texto (no en un bloque), se quita la última frase;
+  6. sin `partial`, si había un bloque o `leavesButton`, se añade `closing`, una vez. Texto vacío: `[]`.
+- `student/settings/settings-store.ts`: claves `voice: 'tutoria.voice'`, `tutorVoice: 'tutoria.tutor-voice'`, `speechRate: 'tutoria.speech-rate'` y `readAloud: 'tutoria.read-aloud'`. `voice` y `readAloud`, `flag(…, false)`; `tutorVoice: Signal<string | null>` (lo guardado, o `null` si no hay o está vacío); `speechRate: Signal<SpeechRate>` (`normal` si lo guardado no es de `SPEECH_RATES`). Métodos `setVoice(on)`, `setTutorVoice(id: string)`, `setSpeechRate(rate)` y `setReadAloud(on)`. El comentario de la clase nombra la voz.
+- **Nuevo `student/settings/student-voice.ts`** y su spec:
+
+```ts
+@Service()
+export class StudentVoice {
+  /** The speech of the browser, loaded only with the voice on; undefined until then. */
+  readonly speech: Signal<SpeechService | undefined>;
+  /** The voices of the language of the interface; none until they load. */
+  readonly voices: Signal<readonly SpeechVoice[]>;
+  readonly voicesLoading: Signal<boolean>;
+  /** The voice is on and the browser has voices of the language: «Escuchar» is offered. */
+  readonly canSpeak: Signal<boolean>;
+  /** The voice the student chose, if the browser still has it in this language. */
+  readonly tutorVoice: Signal<SpeechVoice | undefined>;
+  /** Says a sentence with the chosen voice and rate; `cancelled` without one. Rejects with a SpeechError. */
+  say(sentence: string): Promise<'ended' | 'cancelled'>;
+  /** «Probar»: stops what sounds and says the sample with that voice; never rejects. */
+  sample(voiceId: string): Promise<void>;
+  stop(): void;
+}
+```
+
+- `speech` sale de `resource({ params: () => (settings.voice() ? true : undefined), loader: () => loader.load() })`, y `voices`, de otro `resource()` sobre `speech()` con `defaultValue: []`. El idioma es `LanguageService.locale`.
+- **Nuevo `student/workspace/tutor-speaker.ts`** (`@Service({ autoProvided: false })`) y su spec:
+
+```ts
+export class TutorSpeaker {
+  /** The answer being said, from its first sentence to its last; null in silence. */
+  readonly speakingTurnId: Signal<string | null>;
+  /** «Escuchar» is offered (StudentVoice.canSpeak). */
+  readonly available: Signal<boolean>;
+  /** A voice is chosen: without it, «Escuchar» leads to the settings. */
+  readonly ready: Signal<boolean>;
+  /** «Escuchar»: says that answer from its start; whatever sounded stops. */
+  listen(turnId: string): void;
+  /** «Parar», and everything that silences the tutor. */
+  stop(): void;
+}
+```
+
+- Reglas de `TutorSpeaker`:
+  - un `effect()` (frontera con Web Speech, 4.8: la respuesta crece en un signal y la síntesis es imperativa) lee `tutor.turns()`: si la clave del último turno `fresh` cambia, `stop()` y, con `settings.readAloud()`, `ready()` y la pestaña a la vista, empieza a decirlo; después alimenta la cola del turno que se está diciendo;
+  - alimentar: `speakableSentences(turn.answer, { locale, closing, leavesButton: turn.actions.some((action) => waitsForStudent(action.call)), partial: turn.status === 'answering' })`; las frases nuevas (a partir de las ya encoladas) van a la cola; si el turno ya no está (otro ejercicio) o falla, `stop()`;
+  - la cola dice una frase cada vez con `voice.say()`; con `cancelled` o un rechazo, `stop()`; vacía y con el turno completo, `speakingTurnId` vuelve a `null`;
+  - `listen()` no hace nada sin `ready()`; `stop()` vacía la cola, llama a `voice.stop()` y deja `speakingTurnId` en `null`; `DestroyRef` llama a `stop()`.
+- `student/workspace/workspace.routes.ts`: provee `TutorSpeaker`. `workspace-page.ts`: lo inyecta y, en `onVisibilityChange()` con la pestaña oculta, `speaker.stop()`.
+- `shared/mascot/mascot.ts`: `MascotMood` gana `'speaking'` (`mascot-speaking`). `mascot.css`: `.mascot-speaking .mascot-tongue { animation: mascot-talk 0.45s ease-in-out infinite; }`, con `@keyframes mascot-talk` entre `scale(0.6, 0.24)` y `scale(0.7, 0.6)`.
+- `tutor/tutor-panel.ts` y `.html`:
+  - `speaker = inject(TutorSpeaker, { optional: true })`; `settingsPath = APP_PATHS.student.settings`; importa `RouterLink`;
+  - `mascotMood`: `thinking` si responde; `speaking` si `speaker?.speakingTurnId()`; `chat` si escribe; si no, `idle`;
+  - bajo cada respuesta `done`, en la fila de la hora y solo con `speaker?.available()`: con `ready()`, un botón «Escuchar» (icono `volume_up`) que pasa a «Parar» (`stop`) si `speakingTurnId() === turn.id` (`toggleListen(turn)`); sin `ready()`, un enlace «Escuchar» a los ajustes con el tooltip «Elige una voz para el tutor en los ajustes». Los dos con las mismas clases: `inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-label-medium text-primary outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary`.
+- `workspace-layout.ts`: `speaker` opcional; `floatingMascotMood`: `chat` abierto; `speaking` si habla; `thinking` si responde; si no, `idle`.
+- `student/settings/settings-page.ts` y `.html` (importa `MatRadioGroup`, `MatRadioButton` y `MatIconButton`; inyecta `StudentVoice`):
+  - el interruptor deja `disabled`: `[checked]="settings.voice()"` y `(change)="setVoice($event.checked)"`, que al apagar llama también a `voice.stop()`;
+  - con la voz activada, debajo y con la sangría de las ayudas (`ps-14`): `h3` «Voz del tutor»; «Elige una voz para el tutor» si no hay `voice.tutorVoice()`; «Buscando las voces de tu navegador…» mientras `voicesLoading()`; sin voces, el aviso; si no, el `mat-radio-group` (`aria-labelledby` al `h3`, `[value]="settings.tutorVoice()"`, `(change)="chooseVoice($event.value)"`), cada fila con su `mat-radio-button` (el nombre de la voz) y un botón de icono `play_arrow` «Probar la voz {nombre}» (`tryVoice(voice.id)`);
+  - `chooseVoice(id)`: `settings.setTutorVoice(id)` y `voice.sample(id)`;
+  - `h3` «Velocidad» con su `mat-button-toggle-group` (`RATE_CHOICES`, como `THEME_CHOICES`);
+  - el interruptor «Leer las respuestas en voz alta» con su ayuda, y la nota del lector de pantalla.
+- `dev/showcase/showcase-page.ts`: `mascotMoods` gana `{ value: 'speaking', label: 'Hablando' }`.
+- Textos (`src/locale/messages.en.json` y `messages.ca.json`; después, `npm run i18n`):
+
+| ID                                   | es                                                                                    | en                                                                                                     | ca                                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `settings.tutor.voice.hint` (cambia) | Podrás escuchar sus respuestas. Nunca se graba el audio.                              | You will be able to listen to its answers. The audio is never recorded.                                | Podràs escoltar les seves respostes. Mai no s'enregistra l'àudio.                        |
+| `settings.voice.tutorVoice`          | Voz del tutor                                                                         | Voice of the tutor                                                                                     | Veu del tutor                                                                            |
+| `settings.voice.choose`              | Elige una voz para el tutor                                                           | Choose a voice for the tutor                                                                           | Tria una veu per al tutor                                                                |
+| `settings.voice.loading`             | Buscando las voces de tu navegador…                                                   | Looking for the voices of your browser…                                                                | Cercant les veus del teu navegador…                                                      |
+| `settings.voice.none`                | Tu navegador no tiene voces en {idioma}: el tutor te escribirá.                       | Your browser has no voices in {idioma}: the tutor will write to you.                                   | El teu navegador no té veus en {idioma}: el tutor t'escriurà.                            |
+| `settings.voice.tryLabel`            | Probar la voz {nombre}                                                                | Try the voice {nombre}                                                                                 | Provar la veu {nombre}                                                                   |
+| `settings.voice.sample`              | Hola, soy tu tutor. ¿Seguimos con el ejercicio?                                       | Hi, I am your tutor. Shall we go on with the exercise?                                                 | Hola, soc el teu tutor. Continuem amb l'exercici?                                        |
+| `settings.voice.rate`                | Velocidad                                                                             | Speed                                                                                                  | Velocitat                                                                                |
+| `settings.voice.rate.slow`           | Lenta                                                                                 | Slow                                                                                                   | Lenta                                                                                    |
+| `settings.voice.rate.normal`         | Normal                                                                                | Normal                                                                                                 | Normal                                                                                   |
+| `settings.voice.rate.fast`           | Rápida                                                                                | Fast                                                                                                   | Ràpida                                                                                   |
+| `settings.voice.readAloud`           | Leer las respuestas en voz alta                                                       | Read the answers aloud                                                                                 | Llegir les respostes en veu alta                                                         |
+| `settings.voice.readAloud.hint`      | Las respuestas nuevas suenan solas. Si no, pulsa «Escuchar» bajo la que quieras oír.  | New answers play by themselves. Otherwise, press «Listen» under the one you want to hear.              | Les respostes noves sonen soles. Si no, prem «Escoltar» sota la que vulguis sentir.      |
+| `settings.voice.screenReader`        | Si usas un lector de pantalla, no necesitas activar la voz: ya te lee las respuestas. | If you use a screen reader, you do not need to turn the voice on: it already reads the answers to you. | Si fas servir un lector de pantalla, no cal activar la veu: ja et llegeix les respostes. |
+| `tutor.voice.listen`                 | Escuchar                                                                              | Listen                                                                                                 | Escoltar                                                                                 |
+| `tutor.voice.stop`                   | Parar                                                                                 | Stop                                                                                                   | Aturar                                                                                   |
+| `tutor.voice.chooseVoice`            | Elige una voz para el tutor en los ajustes                                            | Choose a voice for the tutor in the settings                                                           | Tria una veu per al tutor a la configuració                                              |
+| `tutor.voice.closing`                | Te lo dejo en el chat.                                                                | I have left it for you in the chat.                                                                    | T'ho deixo al xat.                                                                       |
+
+- `{idioma}` es `LOCALE_NAMES[locale]` (`core/i18n/locale-names.ts`). El catalán de «ajustes» y la forma de los botones siguen las traducciones que ya hay en `messages.ca.json`.
+- Comprobación en el navegador: con la voz apagada, la pestaña de red no pide el chunk de `web-speech-service`; al activarla, sí. La columna de síntesis de la tabla de 2.11 la comprueba el agente en Chromium y el autor en Edge, Safari, Firefox y Chrome de Android (activar la voz, contar las voces de cada idioma y oír una respuesta).
+- Documentación al cerrar: ficha 05 (el interruptor ya no está deshabilitado), criterios de las fichas 04 y 05, 2.11 (las firmas de hablar, `visibilitychange` y la tabla), 4.1 (`speech-loader.ts`, `student-voice.ts`, `tutor-speaker.ts`), `PENDIENTES.md` (la parte de la voz de la fila del 1.9), `E2E-PENDIENTES.md` (axe de los ajustes con la voz activada y del chat con «Escuchar») y D-071. Capturas: `npm run screenshots -- 6.1a 05-ajustes` y `-- 6.1a 04-tutor`.
+
+Tests, en este orden:
+
+1. `speakable-sentences.spec.ts`: los del paso, más: bloque sin cerrar (se quita con lo que le sigue), respuesta que es solo un bloque (solo el cierre), `leavesButton` sin bloque, lista con viñetas y numerada, enlace, `mi_variable` intacta, `p. ej.` seguido de mayúscula, `partial` que retiene la última frase y no la que precede a un bloque, y que para cada prefijo de una respuesta las frases con `partial` son un prefijo de las finales.
+2. `settings-store.spec.ts`: los cuatro ajustes por usuario y sus valores por defecto; una velocidad guardada desconocida es `normal`; sin voz guardada, `null`.
+3. `web-speech-service.spec.ts`, con `speechSynthesis` y `SpeechSynthesisUtterance` falsos (`vi.stubGlobal`): sin síntesis, `canSpeak` falso y ninguna voz; voces que llegan con `voiceschanged` y las que no llegan nunca (temporizador); solo las del idioma (`es-ES`, `es_MX`, no `en-US`), sin repetir y en orden; la locución lleva voz, idioma y velocidad; `ended`, `cancelled` (`canceled` e `interrupted`), `synthesis-failed` y `voice-unavailable`; `stopSpeaking()` cancela.
+4. `speech-loader.spec.ts`: `load()` da un `WebSpeechService`, el mismo las dos veces.
+5. `student-voice.spec.ts` (con `provideFakeSpeech`): con la voz apagada no carga nada; activada, las voces del idioma; `tutorVoice` solo si está en la lista; `canSpeak` sin voces y sin síntesis; `say()` con la voz y la velocidad elegidas, y `cancelled` sin voz; `sample()` para lo que suena y no rechaza si falla; apagar la voz deja `speech` sin valor.
+6. `tutor-speaker.spec.ts` (con `TutorStore` real, `TutorService` falso que entrega por trozos y `FakeSpeechService`): con `readAloud`, dice cada frase cuando se completa y el cierre al final; sin `readAloud`, nada; nunca el historial ni una respuesta que falla (y calla lo ya empezado); una pregunta nueva calla la anterior; `listen()` dice una del historial y otra `listen()` la sustituye; `speakingTurnId` durante y después; sin voz elegida no habla; `cancelled` y el error de síntesis callan sin más; otro ejercicio, `stop()` y la destrucción callan; con la pestaña oculta no empieza; un reintento se dice.
+7. `mascot.spec.ts`: la clase de `speaking`.
+8. `tutor-panel.spec.ts`: sin `TutorSpeaker`, con la voz apagada y sin voces del idioma no hay «Escuchar»; con voz elegida, «Escuchar» bajo cada respuesta completa (no bajo una fallida ni mientras llega), que pasa a «Parar» y vuelve; sin voz elegida, el enlace a los ajustes con su tooltip; la mascota en `speaking`.
+9. `workspace-page.spec.ts`: ocultar la pestaña calla al tutor; la mascota flotante en `speaking`; la vista previa del docente (`exercise-tryout-dialog.spec.ts`) sigue sin controles de voz.
+10. `settings-page.spec.ts` (sustituye al test de «pronto»): el interruptor activa la voz y despliega los controles sin mover el foco; ninguna voz elegida y «Elige una voz para el tutor»; elegir una la guarda y la prueba; «Probar la voz …» suena con la velocidad elegida; sin voces, el aviso con el idioma; «Buscando…»; la velocidad y «Leer las respuestas en voz alta» se guardan; apagar la voz pliega, calla y conserva lo elegido.
+11. `showcase-page.spec.ts`: el estado «Hablando».
+
 **6.1b · Dictado (≈1,5 h)**
 
 - `WebSpeechService`, la parte de escuchar: resultados provisionales y finales, el prefijo `webkit`, los errores con su código y el reconocimiento en el equipo cuando el navegador lo ofrece (2.11).
@@ -1761,6 +1967,135 @@ Commit: `feat(voice): the tutor reads its answers aloud (step 6.1a)`.
 
 🧪 Con un `SpeechRecognition` falso: el resultado provisional que se sustituye y el final que se queda; varias frases seguidas; parar con el botón, Esc, al escribir y por silencio; el texto dictado no pisa lo escrito y nunca llama a `ask()`; cada error con su mensaje; `webkitSpeechRecognition`; navegador sin reconocimiento; en el equipo, descargable y en el servicio; el aviso, una sola vez por usuario. axe con el dictado en marcha.
 Commit: `feat(voice): dictate the question to the tutor (step 6.1b)`.
+
+**Plan de implementación del 6.1b** (17/11/2026; necesita el 6.1a hecho)
+
+Dudas resueltas:
+
+- **TypeScript 6.0.3 no trae `SpeechRecognition`** (sí sus eventos, resultados y `SpeechRecognitionErrorCode`): `core/speech/speech-recognition-api.ts` declara lo mínimo, sin `any`. `available()` e `install()` son opcionales en ese tipo; sus firmas se contrastan con MDN al implementarlo, y manda MDN.
+- **`listen()` no rechaza:** devuelve `Listening`, con `stop()` y una promesa `ended` que dice por qué acabó. No oír nada (`no-speech`, o un `end` sin más) es `silence`, no un error (2.11).
+- **Los 8 segundos de silencio** los cuenta quien dicta (`TutorComposer`, con `createDebouncer`), no el servicio: la llamada (6.1c) tiene sus propios tiempos.
+- **El aviso sale antes de abrir el micrófono:** la primera pulsación de «Dictar» con el audio saliendo del equipo (`server` o `downloadable`) enseña el aviso; «Entendido» lo recuerda (`SettingsStore.audioNoticeSeen`, por usuario) y empieza a dictar. Es un componente (`AudioNotice`), porque la llamada lo reutiliza.
+- **Con el paquete solo descargable** se dicta igual, por el servicio del navegador, hasta que el alumno lo instala en los ajustes.
+- **Escribir para el dictado:** el evento `input` del campo solo lo dispara el teclado; lo dictado entra por el modelo y no lo dispara.
+- **Esc mientras dicta** para el dictado y no pliega el tutor flotante (`stopPropagation()`).
+- **El texto provisional se queda** en el campo si el dictado acaba antes de fijarse: el alumno lo revisa igual.
+- **Sin voces del idioma se dicta igual** (ficha 04): «Dictar» depende de `canDictate()`, no de la voz del tutor.
+- **Idioma del reconocimiento:** `RECOGNITION_LANGS = { es: 'es-ES', en: 'en-US', ca: 'ca-ES' }`.
+- **Si el 6.2b ya está hecho,** lo dictado también es «pregunta a medio escribir»: el cambio del modelo llama a `setDrafting()` como el teclado. Si no, lo conecta el 6.2b (añadir la línea a su plan).
+- **Muestrario:** gana el aviso (`AudioNotice`). El botón «Dictar» vive en `TutorComposer`, que necesita el store y no está en el muestrario.
+- **La plantilla de `TutorComposer`** pasa a `tutor-composer.html`: ya no es pequeña.
+
+Ficheros:
+
+- `core/speech/speech-service.ts` gana:
+
+```ts
+export type RecognitionPlace = 'device' | 'downloadable' | 'server' | 'none';
+export type ListenError =
+  | 'not-allowed'
+  | 'no-microphone'
+  | 'service-unavailable'
+  | 'language-not-supported';
+export type ListeningEnd = 'stopped' | 'silence' | ListenError;
+export type SpeechErrorCode = 'voice-unavailable' | 'synthesis-failed' | ListenError;
+
+export interface Transcript {
+  readonly text: string;
+  /** Final stays; one that is not is replaced by the next. */
+  readonly final: boolean;
+}
+export interface Listening {
+  /** Closes the microphone: `ended` resolves with `stopped`. */
+  stop(): void;
+  /** Why it ended; it never rejects. */
+  readonly ended: Promise<ListeningEnd>;
+}
+
+// In SpeechService:
+/** Where the audio would be transcribed in this browser, or that it cannot be. */
+abstract recognition(language: AppLocale): Promise<RecognitionPlace>;
+/** Downloads the language pack to recognise on the device; whether it is there now. */
+abstract installRecognition(language: AppLocale): Promise<boolean>;
+/** Opens the microphone: every result replaces the last one until one is final. */
+abstract listen(language: AppLocale, heard: (transcript: Transcript) => void): Listening;
+```
+
+- **Nuevo `core/speech/speech-recognition-api.ts`:** `RecognitionApi` (`lang`, `continuous`, `interimResults`, `processLocally?`, `start()`, `stop()`, `abort()`, `onresult`, `onerror`, `onend`), `RecognitionAvailability = 'available' | 'downloadable' | 'downloading' | 'unavailable'` y `RecognitionConstructor` (`new (): RecognitionApi`, `available?(options: { langs: string[]; processLocally: boolean }): Promise<RecognitionAvailability>`, `install?(options): Promise<boolean>`).
+- `core/speech/web-speech-service.ts`:
+  - el constructor es `SpeechRecognition ?? webkitSpeechRecognition` de la ventana;
+  - `recognition()`: sin constructor, `none`; sin `available`, `server`; `available` da `device`; `downloadable` o `downloading`, `downloadable`; `unavailable` o un rechazo, `server`;
+  - `installRecognition()`: `install({ langs, processLocally: true })`; sin él o si rechaza, `false`;
+  - `listen()`: `continuous` e `interimResults` a `true`, `lang` del idioma y `processLocally = true` si el sitio es `device` (lo recuerda de `recognition()`, que se llama antes); en `onresult`, desde `resultIndex`: cada resultado final llama a `heard({ text, final: true })` y los provisionales, juntos, a `heard({ text, final: false })`, con el texto recortado y sin llamar con texto vacío; `onerror`: `not-allowed` y `service-not-allowed` son `not-allowed`; `audio-capture`, `no-microphone`; `network` y `phrases-not-supported`, `service-unavailable`; `language-not-supported`, igual; `no-speech`, `silence`; `aborted`, `stopped`; `onend` sin error: `stopped` si se pidió, si no `silence`; si `start()` lanza, `service-unavailable`. `ended` se resuelve una sola vez.
+- `core/speech/speech-testing.ts`: `FakeSpeechService` gana `place: RecognitionPlace`, `installs`, `listening` (si el micrófono está abierto), `hear(text, final = true)` y `endListening(reason)`.
+- `settings-store.ts`: `audioNoticeSeen: 'tutoria.audio-notice-seen'` (`flag(…, false)`) y `setAudioNoticeSeen()`.
+- `student/settings/student-voice.ts` gana:
+
+```ts
+/** Where this browser would transcribe; undefined with the voice off or while it is asked. */
+readonly recognition: Signal<RecognitionPlace | undefined>;
+/** The browser can recognise speech: «Dictar» and the call are offered. */
+readonly canDictate: Signal<boolean>;
+/** The audio leaves the device and the student has not been told yet. */
+readonly needsAudioNotice: Signal<boolean>;
+readonly installing: Signal<boolean>;
+/** «Reconocer la voz en este equipo»: downloads the pack and asks again where it transcribes. */
+installRecognition(): Promise<void>;
+/** Opens the microphone in the language of the interface; null with the voice off. */
+listen(heard: (transcript: Transcript) => void): Listening | null;
+```
+
+- **Nuevo `tutor/append-dictation.ts`** y su spec: `appendDictation(written: string, spoken: string, max: number): string` (lo dicho, recortado, tras lo escrito, con un espacio si lo escrito no acaba en uno; cortado a `max`; sin nada dicho, lo escrito).
+- **Nuevo `tutor/listen-error-message.ts`** y su spec: `listenErrorMessage(error: ListenError): string`.
+- **Nuevo `tutor/audio-notice.ts`** y su spec: `AudioNotice` (`app-audio-notice`), `role="status"`, con el texto del aviso y «Entendido» (`accepted = output<void>()`).
+- `tutor/tutor-composer.ts` y **nuevo `tutor-composer.html`**:
+  - `export const DICTATION_SILENCE_MS = 8000;`
+  - `dictating = signal(false)`, `dictationError = signal<ListenError | null>(null)`, `noticeOpen = signal(false)`;
+  - `toggleDictation()`: dictando, para; con `voice.needsAudioNotice()`, abre el aviso; si no, empieza. Siempre deja el foco en el campo;
+  - `acceptNotice()`: `settings.setAudioNoticeSeen()`, cierra el aviso y empieza;
+  - empezar: borra el error, recuerda lo escrito, `voice.listen()` y el temporizador de silencio; cada resultado reinicia el temporizador y pone en el modelo `appendDictation(escrito, text, MAX_QUESTION_LENGTH)`; uno final pasa a ser lo escrito; al resolverse `ended`, deja de dictar y, si es un `ListenError`, lo guarda;
+  - paran el dictado: el botón, `(keydown.escape)` (con `stopPropagation()` solo si dictaba), `(input)` (que además borra el error), enviar, el temporizador y `DestroyRef`;
+  - plantilla: «Dictar» antes de enviar, los dos en un `<span matSuffix class="flex">`; es un `matIconButton` con `mic`, `aria-pressed`, nombre y tooltip «Dictar» o «Dejar de dictar», solo con `voice.canDictate()`; dictando, `mat-hint` dice «Te escucho…» en lugar de la ayuda de Intro, y un `<p class="sr-only" aria-live="polite">` lo anuncia una vez; el aviso y el error (`role="alert"`, con las clases del de `tutor-panel.html`) van sobre el campo.
+- `student/settings/settings-page.html`: tras «Leer las respuestas en voz alta», `h3` «Dónde se transcribe tu voz» y su línea según `voice.recognition()` (`downloadable` dice lo de `server`), con el botón «Reconocer la voz en este equipo» si es `downloadable` (deshabilitado y «Descargando…» con `voice.installing()`).
+- `student/registered-data/registered-data-page.ts`: `services` pasa a `computed()`; el detalle del reconocimiento de voz depende de `voice.recognition()`: sin valor, el texto de hoy; `device`, `server` (también `downloadable`) o `none`, el suyo.
+- `dev/showcase`: el aviso, en la sección del tutor.
+- Textos:
+
+| ID                                   | es                                                                                                                                                                          | en                                                                                                                                                                          | ca                                                                                                                                                                             |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `settings.tutor.voice.hint` (cambia) | Podrás escucharle y dictarle. Nunca se graba el audio.                                                                                                                      | You will be able to listen to it and dictate to it. The audio is never recorded.                                                                                            | Podràs escoltar-lo i dictar-li. Mai no s'enregistra l'àudio.                                                                                                                   |
+| `tutor.dictate`                      | Dictar                                                                                                                                                                      | Dictate                                                                                                                                                                     | Dictar                                                                                                                                                                         |
+| `tutor.dictate.stop`                 | Dejar de dictar                                                                                                                                                             | Stop dictating                                                                                                                                                              | Deixar de dictar                                                                                                                                                               |
+| `tutor.dictate.listening`            | Te escucho…                                                                                                                                                                 | I am listening…                                                                                                                                                             | T'escolto…                                                                                                                                                                     |
+| `voice.audioNotice`                  | Tu navegador envía el audio a su servicio de reconocimiento para transcribirlo. TutorIA no lo graba.                                                                        | Your browser sends the audio to its recognition service to transcribe it. TutorIA does not record it.                                                                       | El teu navegador envia l'àudio al seu servei de reconeixement per transcriure'l. TutorIA no l'enregistra.                                                                      |
+| `voice.audioNotice.ok`               | Entendido                                                                                                                                                                   | Got it                                                                                                                                                                      | Entesos                                                                                                                                                                        |
+| `voice.error.notAllowed`             | No tengo permiso para usar el micrófono. Dámelo desde el icono de la barra de direcciones, o sigue escribiendo.                                                             | I have no permission to use the microphone. Give it to me from the icon in the address bar, or keep typing.                                                                 | No tinc permís per fer servir el micròfon. Dona-me'l des de la icona de la barra d'adreces, o continua escrivint.                                                              |
+| `voice.error.noMicrophone`           | No encuentro ningún micrófono. Conecta uno, o sigue escribiendo.                                                                                                            | I cannot find a microphone. Connect one, or keep typing.                                                                                                                    | No trobo cap micròfon. Connecta'n un, o continua escrivint.                                                                                                                    |
+| `voice.error.serviceUnavailable`     | El reconocimiento de voz no está disponible ahora. Inténtalo más tarde, o sigue escribiendo.                                                                                | Speech recognition is not available right now. Try again later, or keep typing.                                                                                             | El reconeixement de veu no està disponible ara. Torna-ho a provar més tard, o continua escrivint.                                                                              |
+| `voice.error.languageNotSupported`   | Tu navegador no reconoce la voz en {idioma}. Puedes seguir escribiendo.                                                                                                     | Your browser does not recognise speech in {idioma}. You can keep typing.                                                                                                    | El teu navegador no reconeix la veu en {idioma}. Pots continuar escrivint.                                                                                                     |
+| `settings.voice.where`               | Dónde se transcribe tu voz                                                                                                                                                  | Where your voice is transcribed                                                                                                                                             | On es transcriu la teva veu                                                                                                                                                    |
+| `settings.voice.where.device`        | En este equipo: el audio no sale de él.                                                                                                                                     | On this device: the audio does not leave it.                                                                                                                                | En aquest equip: l'àudio no en surt.                                                                                                                                           |
+| `settings.voice.where.server`        | En el servicio de tu navegador, que recibe el audio para transcribirlo.                                                                                                     | In the service of your browser, which receives the audio to transcribe it.                                                                                                  | Al servei del teu navegador, que rep l'àudio per transcriure'l.                                                                                                                |
+| `settings.voice.where.none`          | Tu navegador no reconoce la voz: puedes escuchar al tutor y escribirle.                                                                                                     | Your browser does not recognise speech: you can listen to the tutor and write to it.                                                                                        | El teu navegador no reconeix la veu: pots escoltar el tutor i escriure-li.                                                                                                     |
+| `settings.voice.install`             | Reconocer la voz en este equipo                                                                                                                                             | Recognise speech on this device                                                                                                                                             | Reconèixer la veu en aquest equip                                                                                                                                              |
+| `settings.voice.installing`          | Descargando…                                                                                                                                                                | Downloading…                                                                                                                                                                | Baixant…                                                                                                                                                                       |
+| `myData.services.voice.device`       | Con la voz activada, este navegador la transcribe en tu equipo: el audio no sale de él.                                                                                     | With the voice on, this browser transcribes it on your device: the audio does not leave it.                                                                                 | Amb la veu activada, aquest navegador la transcriu al teu equip: l'àudio no en surt.                                                                                           |
+| `myData.services.voice.server`       | Con la voz activada, este navegador envía el audio a su servicio de reconocimiento para transcribirlo. TutorIA no lo graba. Si prefieres evitarlo, puedes escribir siempre. | With the voice on, this browser sends the audio to its recognition service to transcribe it. TutorIA does not record it. If you would rather avoid it, you can always type. | Amb la veu activada, aquest navegador envia l'àudio al seu servei de reconeixement per transcriure'l. TutorIA no l'enregistra. Si prefereixes evitar-ho, sempre pots escriure. |
+| `myData.services.voice.none`         | Este navegador no reconoce la voz: al tutor se le escribe.                                                                                                                  | This browser does not recognise speech: you write to the tutor.                                                                                                             | Aquest navegador no reconeix la veu: al tutor se li escriu.                                                                                                                    |
+
+- La columna de reconocimiento de la tabla de 2.11: el agente la comprueba en Chromium (`recognition()` y un dictado, si la pestaña tiene micrófono) y el autor en Edge, Safari, Firefox (sin «Dictar») y Chrome de Android.
+- Documentación al cerrar: criterios de las fichas 04 y 05, ficha 05b (el texto según el navegador), 2.11 (las firmas de escuchar y la tabla), `E2E-PENDIENTES.md` (axe con el dictado en marcha, con un reconocimiento falso inyectado). Capturas: `npm run screenshots -- 6.1b 04-tutor` y `-- 6.1b 05-ajustes`.
+
+Tests, en este orden:
+
+1. `append-dictation.spec.ts` (campo vacío, con texto, con espacio final, sin nada dicho, el corte) y `listen-error-message.spec.ts` (los cuatro).
+2. `settings-store.spec.ts`: `audioNoticeSeen`, por usuario.
+3. `web-speech-service.spec.ts`, con un `SpeechRecognition` falso: el provisional que se sustituye y el final que se queda; varias frases seguidas; cada código de error con su final; `no-speech` y un `end` sin más son `silence`; `stop()` es `stopped`; `start()` que lanza; `webkitSpeechRecognition`; sin reconocimiento, `none`; sin `available`, `server`; `available`, `downloadable`, `downloading`, `unavailable` y el rechazo; `processLocally` solo en el equipo; `installRecognition()` con y sin `install`.
+4. `student-voice.spec.ts`: `recognition`, `canDictate` y `needsAudioNotice` en cada sitio y con el aviso ya visto; `installRecognition()` marca `installing` y vuelve a preguntar; `listen()` con el idioma de la interfaz y `null` con la voz apagada.
+5. `audio-notice.spec.ts`: el texto y «Entendido».
+6. `tutor-panel.spec.ts` (el campo): sin reconocimiento o con la voz apagada no hay «Dictar»; pulsar empieza (`aria-pressed`, «Dejar de dictar», «Te escucho…» anunciado una vez) y deja el foco en el campo; lo provisional se sustituye y lo final se queda, tras lo escrito; varias frases; para con el botón, Esc (sin plegar el tutor), al escribir, al enviar y a los 8 segundos (`vi.useFakeTimers()`), y cada resultado reinicia la cuenta; nunca llama a `ask()`; cada error con su mensaje, lo escrito intacto, y se borra al escribir o al volver a dictar; el aviso la primera vez con `server`, que no abre el micrófono hasta «Entendido», y no vuelve a salir; en el equipo no hay aviso; el corte a 500 caracteres.
+7. `settings-page.spec.ts`: la línea en cada sitio; «Reconocer la voz en este equipo» y «Descargando…»; sin reconocimiento, la voz se activa igual. `registered-data-page.spec.ts`: el texto de cada sitio y el de hoy con la voz apagada.
+8. `showcase-page.spec.ts`: el aviso.
 
 **6.1c · Modo llamada (≈3 h)**
 
@@ -1774,6 +2109,174 @@ Commit: `feat(voice): dictate the question to the tutor (step 6.1b)`.
 🧪 Primero `isEcho()`. Después `VoiceCall` con un `SpeechService` falso y temporizadores simulados: cada paso de la tabla de estados; el turno que acaba a los 1,5 s y se alarga con palabras nuevas; Esc que descarta, «Corregir» y el turno vacío; el micrófono cerrado mientras el tutor piensa y habla; interrumpir con el botón, el atajo, una pregunta escrita y una pista; con auriculares, hablar interrumpe y el eco no; el reconocimiento que se reabre y el que se cierra tres veces seguidas; la espera a los 90 s y con la pestaña oculta; la intervención hablada y su ventana de respuesta; el fallo y el 429 dichos en voz alta; colgar al cambiar de ejercicio, al entregar y al salir, con el micrófono cerrado. La barra, por rol y texto: cada estado anunciado una vez, el foco que no se mueve y los nombres de los botones. axe en claro y oscuro en cada estado. Capturas con `npm run screenshots -- 6.1c tutor`.
 🧪 e2e (a `E2E-PENDIENTES.md`): con un reconocimiento falso inyectado, una pregunta dicha recibe su respuesta en el chat y la barra pasa por sus estados.
 Commit: `feat(voice): call mode with the tutor (step 6.1c)`.
+
+**Plan de implementación del 6.1c** (17/11/2026; necesita el 6.1a y el 6.1b hechos)
+
+Dudas resueltas:
+
+- **Atajo de la llamada: Ctrl + punto** (`event.ctrlKey && event.key === '.'`, también Control en macOS, donde ⌘ + punto es «cancelar» del sistema). No lo usan CodeMirror (`defaultKeymap`), Chrome, Edge, Firefox ni Safari. Lo escucha `WorkspaceLayout` en `document`, porque con el tutor plegado no hay panel. Si al probarlo choca en algún navegador, el de reserva es Alt + punto.
+- **`VoiceCall` no se provee en la vista previa del docente;** `TutorPanel` y `WorkspaceLayout` lo inyectan con `{ optional: true }`, como `TutorSpeaker`.
+- **Un solo `effect()`** en `VoiceCall` (frontera con Web Speech, 4.8): lee el último turno `fresh`, `TutorSpeaker` y el intento, y mueve la máquina. Todo lo demás son métodos y temporizadores.
+- **`thinking` pasa a `speaking` con la primera frase,** no al empezar la respuesta: `TutorSpeaker` expone la frase que suena (`saying`).
+- **Cualquier turno nuevo durante la llamada** (pregunta escrita, pista o intervención) lleva a `thinking` y se oye. Si la llamada estaba en espera, tras la respuesta el micrófono se abre 10 segundos y, sin voz, vuelve a la espera.
+- **Con la pestaña oculta** la llamada queda en espera y no se oye nada: `TutorSpeaker` ya no empieza a hablar oculto, y `VoiceCall`, al acabar el tutor, va a la espera en lugar de abrir el micrófono.
+- **Eco:** `isEcho()` compara lo oído con las dos últimas frases dichas (el reconocimiento va con retraso). Interrumpe lo que tiene dos palabras o más que no están en ellas.
+- **«Corregir»** lo resuelve el panel: `call.correct()` devuelve el texto y el panel lo pone en el campo (`TutorComposer.insert()`) con el foco. Con el tutor plegado no hay «Corregir»; Esc sí descarta.
+- **Esc** con el alumno hablando (`hearing`) descarta el turno desde cualquier sitio (`document`); el tutor flotante no se pliega con ese Esc.
+- **«Dictar»** queda deshabilitado (enfocable) durante una llamada: los dos usan el micrófono.
+- **«Llamar al tutor»** solo existe con `canCall()`; durante la llamada sigue ahí, deshabilitado y enfocable («En llamada»), para que el foco vuelva a él al colgar.
+- **El aviso del audio** (6.1b) también sale antes de la primera llamada si no se ha visto: «Entendido» lo recuerda y llama.
+- **Tres cierres seguidos:** cuenta el micrófono que se cierra solo menos de un segundo después de abrirse. Al tercero seguido, la llamada acaba con su aviso. Un cierre más tardío lo reabre y pone la cuenta a cero.
+- **El fallo y el límite** se dicen con frases fijas (`callFailurePhrase()`); con un 429 corto dice los segundos de `retryAt`.
+- **Anuncios:** `listening` y `hearing` comparten el texto «Te escucho», así que el paso de uno a otro no se anuncia; lo entendido se ve, pero no está en una región viva.
+- **Con el tutor plegado** no se toca el bocadillo de las respuestas (lo cambia el 6.2d): una línea propia sobre la mascota dice el estado o lo que se va entendiendo, y la respuesta asoma como siempre.
+- **La medición** usa `performance.mark()` (sin escribir en la consola): la hace el autor, que tiene micrófono y la clave del proveedor, en diez turnos con `npm run start:local`; el agente le da el fragmento que calcula las medianas desde `performance.getEntriesByType('mark')`. `SpeakOptions.started` marca el primer sonido con el evento `start` de la locución.
+- **Android:** el autor comprueba si Chrome avisa con un sonido cada vez que abre el micrófono (`PENDIENTES.md`). Por defecto la llamada se ofrece también en el móvil; si molesta, se decide entonces.
+- **`ProactivityMonitor`:** si `proactivity-monitor.ts` ya existe, gana el silencio `call?.state() === 'hearing'` (inyección opcional) y su test. Si no, se añade esa línea al plan del 6.2b y la frase de `PENDIENTES.md` sigue abierta.
+
+Ficheros:
+
+- `settings-store.ts`: `headphones: 'tutoria.headphones'` (`flag(…, false)`) y `setHeadphones(on)`. `settings-page.html`: su interruptor con su ayuda, tras «Leer las respuestas en voz alta».
+- `core/speech/speech-service.ts`: `SpeakOptions.started?: () => void` («The sound starts»). `web-speech-service.ts` lo llama en el `start` de la locución; `StudentVoice.say(sentence, started?)` lo pasa.
+- **Nuevo `student/workspace/is-echo.ts`** y su spec:
+
+```ts
+/** Words of its own the student must say over the tutor to interrupt it. */
+export const MIN_OWN_WORDS = 2;
+/** Whether what the microphone heard is the tutor itself: fewer than MIN_OWN_WORDS words are not in `spoken`. */
+export function isEcho(heard: string, spoken: string): boolean;
+```
+
+- Las palabras se comparan en minúsculas, sin acentos (`normalize('NFD')`) ni puntuación.
+- `student/workspace/tutor-speaker.ts` gana:
+
+```ts
+/** The sentence that sounds now; null between sentences and in silence. */
+readonly saying: Signal<string | null>;
+/** The sentences said since the tutor started to speak, the one that sounds included. */
+readonly said: Signal<readonly string[]>;
+/** In a call, every new answer is said, whatever `readAloud` says. */
+setFollowing(on: boolean): void;
+/** A fixed sentence that is not a turn («Te escucho»); it stops what sounded. Never rejects. */
+say(sentence: string): Promise<'ended' | 'cancelled'>;
+```
+
+- **Nuevo `tutor/call-failure-phrase.ts`** y su spec: `callFailurePhrase(error: unknown, now: number): { readonly text: string; readonly hold: boolean }` (`hold` con `rate_limited`).
+- **Nuevo `student/workspace/voice-call.ts`** (`@Service({ autoProvided: false })`) y su spec:
+
+```ts
+export type CallState = 'listening' | 'hearing' | 'thinking' | 'speaking' | 'standby';
+export type CallNotice = ListenError | 'unstable';
+export const CALL_TIMES = {
+  turnSilenceMs: 1_500,
+  standbyMs: 90_000,
+  replyWindowMs: 10_000,
+  quickCloseMs: 1_000,
+} as const;
+export const MAX_QUICK_CLOSES = 3;
+export const CALL_MARKS = {
+  lastWord: 'tutoria-call-last-word',
+  sent: 'tutoria-call-sent',
+  firstText: 'tutoria-call-first-text',
+  firstSound: 'tutoria-call-first-sound',
+} as const;
+
+export class VoiceCall {
+  /** Where the call is; null without one. */
+  readonly state: Signal<CallState | null>;
+  readonly active: Signal<boolean>;
+  /** What the browser has understood of the turn of the student. */
+  readonly heard: Signal<string>;
+  /** A voice is chosen, the browser recognises speech and the attempt takes questions. */
+  readonly canCall: Signal<boolean>;
+  /** Why the last call ended by itself; null once another starts. */
+  readonly notice: Signal<CallNotice | null>;
+  start(): void;
+  hangUp(): void;
+  /** «Interrumpir»: silences the tutor and listens. */
+  interrupt(): void;
+  /** Esc: drops what was being said. */
+  discard(): void;
+  /** «Corregir»: the call waits and gives what was said, for the field. */
+  correct(): string;
+  /** «Seguir hablando». */
+  resume(): void;
+  /** The tab was hidden. */
+  hold(): void;
+  /** The shortcut: interrupts, holds or resumes, by the state. */
+  shortcut(): void;
+}
+```
+
+- Reglas de `VoiceCall`:
+  - `canCall`: `voice.tutorVoice()`, `voice.canDictate()` y `!tutor.readonly()`;
+  - `start()`: nada sin `canCall()` o con una llamada; borra `notice`, `speaker.setFollowing(true)`, estado `listening`, dice «Te escucho» con `speaker.say()` y, si la llamada sigue en `listening`, abre el micrófono;
+  - abrir el micrófono: `voice.listen()`, apunta la hora y arranca la cuenta de `standbyMs` (o `replyWindowMs` si se venía de la espera), que acaba en la espera;
+  - al oír: en `speaking` (solo con auriculares), si `isEcho(text, speaker.said().slice(-2).join(' '))` se ignora; si no, estado `hearing` y `speaker.stop()`. En `listening`, con texto, pasa a `hearing` y para la cuenta de espera. En `hearing`: lo fijado más lo provisional va a `heard`, `performance.mark(lastWord)` y se reinicia la cuenta de `turnSilenceMs`;
+  - al vencer `turnSilenceMs`: sin texto, vuelve a `listening`; con texto, cierra el micrófono, estado `thinking`, `performance.mark(sent)` y `tutor.ask(text)`;
+  - el `effect()`: con la llamada activa, si el intento cambia o `tutor.readonly()`, `hangUp()`. Si aparece un turno `fresh` nuevo fuera de `thinking` y con la pestaña a la vista, cierra el micrófono, borra `heard`, recuerda si venía de la espera y pasa a `thinking`. En `thinking`: con `speaker.saying()` de ese turno, `speaking` (y abre el micrófono, sin cuenta, con `settings.headphones()`); si el turno falla, dice `callFailurePhrase()` una vez y después va a la espera (`hold`) o sigue como tras el tutor; si el turno ya no está, o está completo y `speaker.speakingTurnId()` es `null`, sigue como tras el tutor. En `speaking`: con `speaker.speakingTurnId()` en `null`, sigue como tras el tutor. Marca `firstText` con el primer texto del turno y `firstSound` con `started`;
+  - tras el tutor: con la pestaña oculta, a la espera; si no, `listening` y abre el micrófono;
+  - a la espera: cierra el micrófono, para las cuentas, borra `heard`, estado `standby`;
+  - `interrupt()`: en `speaking`, `speaker.stop()`. `discard()`: en `hearing`, borra lo oído y vuelve a `listening` con su cuenta. `correct()`: en `hearing`, va a la espera y devuelve el texto; si no, `''`. `resume()`: en `standby`, `listening` y abre el micrófono. `hold()`: en `listening`, `hearing` o `speaking`, a la espera (y `speaker.stop()`). `shortcut()`: `speaking`, `interrupt()`; `standby`, `resume()`; `listening` o `hearing`, a la espera; `thinking`, nada;
+  - el micrófono que acaba solo: con un `ListenError`, `hangUp()` y `notice` con él; con `silence`, si se cerró antes de `quickCloseMs` cuenta uno y al llegar a `MAX_QUICK_CLOSES` seguidos, `hangUp()` y `notice` `unstable`; si no, lo reabre sin tocar el estado, lo oído ni las cuentas. El final de un micrófono que ya no es el actual se ignora;
+  - `hangUp()`: cierra el micrófono, para las cuentas, `speaker.setFollowing(false)`, `speaker.stop()`, estado `null`. También en `DestroyRef`.
+- **Nuevo `tutor/call-bar.ts`** y su spec: `CallBar` (`app-call-bar`), sin servicios, para que el muestrario la enseñe: `state = input.required<CallState>()`, `heard = input('')`, `interrupt`, `correct`, `resume` y `hangUp` como `output<void>()`. Es un `role="group"` «Llamada con el tutor»: un icono por estado (`mic`, `graphic_eq`, `more_horiz`, `volume_up`, `pause`), el texto del estado (en `hearing`, lo entendido, en dos líneas como mucho), un `<p class="sr-only" aria-live="polite">` con el texto del estado, y los botones: «Interrumpir» en `speaking`, «Corregir» en `hearing`, «Seguir hablando» en `standby` y siempre «Colgar». Los tooltips de «Interrumpir» y «Seguir hablando» llevan el atajo.
+- `tutor/tutor-composer.ts`: `insert(text: string): void` (como un dictado: `appendDictation()`); «Dictar», deshabilitado con `disabledInteractive` durante una llamada.
+- `tutor/tutor-panel.ts` y `.html`:
+  - `call = inject(VoiceCall, { optional: true })`;
+  - en la cabecera, antes del botón de fijar: «Llamar al tutor» (`matIconButton`, icono `call`), con `call?.canCall()`; `startCall()` enseña antes el aviso del audio si `voice.needsAudioNotice()`;
+  - sobre «Pedir pista»: `<app-call-bar>` con la llamada activa; el aviso del audio; y el aviso de `call.notice()` (`role="alert"`, `listenErrorMessage()` o el de `unstable`);
+  - `correct()`: `composer().insert(call.correct())` y el foco al campo; `hangUp()`: cuelga y, tras pintar, el foco a «Llamar al tutor»;
+  - `mascotMood` en una llamada: `listening` y `hearing`, `chat`; `thinking`, `thinking`; `speaking`, `speaking`; `standby`, `idle`.
+- `workspace-layout.ts` y `.html`:
+  - `call` opcional; `host` gana `'(document:keydown)': 'onKey($event)'`: Ctrl + punto con llamada activa, `preventDefault()` y `call.shortcut()`; Esc en `hearing`, `call.discard()`;
+  - `closeTutor()`: en `hearing` descarta y no pliega;
+  - `floatingMascotMood` como en el panel durante una llamada;
+  - plegado y con llamada: sobre la mascota, una línea (`<p>` con el aspecto del bocadillo, sin botón) con lo entendido o el texto del estado, y la región viva de arriba dice también el estado.
+- `workspace-page.ts`: con la pestaña oculta, `call.hold()`. `workspace.routes.ts`: provee `VoiceCall`.
+- `dev/showcase`: sección «Llamada con el tutor», con la barra en sus cinco estados.
+- Textos:
+
+| ID                                   | es                                                                                                  | en                                                                                        | ca                                                                                            |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `settings.tutor.voice.hint` (cambia) | Podrás escucharle, dictarle y llamarle. Nunca se graba el audio.                                    | You will be able to listen to it, dictate to it and call it. The audio is never recorded. | Podràs escoltar-lo, dictar-li i trucar-li. Mai no s'enregistra l'àudio.                       |
+| `settings.voice.headphones`          | Llevo auriculares: puedo interrumpir al tutor hablando                                              | I am wearing headphones: I can interrupt the tutor by speaking                            | Porto auriculars: puc interrompre el tutor parlant                                            |
+| `settings.voice.headphones.hint`     | Sin auriculares, el tutor se oiría a sí mismo.                                                      | Without headphones, the tutor would hear itself.                                          | Sense auriculars, el tutor se sentiria a si mateix.                                           |
+| `call.start`                         | Llamar al tutor                                                                                     | Call the tutor                                                                            | Trucar al tutor                                                                               |
+| `call.ongoing`                       | En llamada                                                                                          | On a call                                                                                 | En trucada                                                                                    |
+| `call.group`                         | Llamada con el tutor                                                                                | Call with the tutor                                                                       | Trucada amb el tutor                                                                          |
+| `call.listening`                     | Te escucho                                                                                          | I am listening                                                                            | T'escolto                                                                                     |
+| `call.thinking`                      | Pensando…                                                                                           | Thinking…                                                                                 | Pensant…                                                                                      |
+| `call.speaking`                      | Hablando…                                                                                           | Speaking…                                                                                 | Parlant…                                                                                      |
+| `call.standby`                       | En espera                                                                                           | On hold                                                                                   | En espera                                                                                     |
+| `call.interrupt`                     | Interrumpir                                                                                         | Interrupt                                                                                 | Interrompre                                                                                   |
+| `call.correct`                       | Corregir                                                                                            | Correct                                                                                   | Corregir                                                                                      |
+| `call.resume`                        | Seguir hablando                                                                                     | Keep talking                                                                              | Continuar parlant                                                                             |
+| `call.hangUp`                        | Colgar                                                                                              | Hang up                                                                                   | Penjar                                                                                        |
+| `call.shortcut`                      | {acción} (Ctrl + .)                                                                                 | {acción} (Ctrl + .)                                                                       | {acción} (Ctrl + .)                                                                           |
+| `call.greeting`                      | Te escucho.                                                                                         | I am listening.                                                                           | T'escolto.                                                                                    |
+| `call.failed`                        | No he podido responder.                                                                             | I could not answer.                                                                       | No he pogut respondre.                                                                        |
+| `call.rateLimited`                   | Has preguntado muchas veces seguidas. Espera {segundos} segundos y seguimos.                        | You have asked many times in a row. Wait {segundos} seconds and we will go on.            | Has preguntat moltes vegades seguides. Espera {segundos} segons i continuem.                  |
+| `call.rateLimited.soon`              | Has preguntado muchas veces seguidas. Espera un momento y seguimos.                                 | You have asked many times in a row. Wait a moment and we will go on.                      | Has preguntat moltes vegades seguides. Espera un moment i continuem.                          |
+| `call.dailyLimit`                    | Has llegado al límite de preguntas de hoy. Podremos seguir más tarde.                               | You have reached the limit of questions for today. We can go on later.                    | Has arribat al límit de preguntes d'avui. Podrem continuar més tard.                          |
+| `call.unstable`                      | La llamada se ha cortado: el micrófono se cierra solo. Puedes volver a llamar o seguir escribiendo. | The call was cut off: the microphone closes by itself. You can call again or keep typing. | La trucada s'ha tallat: el micròfon es tanca sol. Pots tornar a trucar o continuar escrivint. |
+
+- `callFailurePhrase()`: `rate_limited` con espera larga (`isLongWait()`), `call.dailyLimit`; con `retryAt`, `call.rateLimited` con los segundos redondeados hacia arriba; sin él, `call.rateLimited.soon`; cualquier otro error, `call.failed`.
+- Documentación al cerrar: criterios de las fichas 04 y 05; 2.11 (el atajo elegido); `PENDIENTES.md` (la fila del 2.4 con la medición y lo que decide sobre el 6.1d, la de Android y, si procede, la del 6.2b); `E2E-PENDIENTES.md` (el e2e del paso y axe de la barra en cada estado); la bitácora, con la tabla de los diez turnos y sus medianas. Capturas: `npm run screenshots -- 6.1c 04-tutor` y `-- 6.1c 05-ajustes`.
+
+Tests, en este orden:
+
+1. `is-echo.spec.ts`: la misma frase, con otra puntuación, mayúsculas y acentos, es eco; un trozo de ella, también; una palabra propia no interrumpe y dos sí; sin nada dicho, dos palabras no son eco; texto vacío es eco.
+2. `call-failure-phrase.spec.ts`: los cuatro casos y `hold`.
+3. `settings-store.spec.ts`: `headphones`. `web-speech-service.spec.ts`: `started`.
+4. `tutor-speaker.spec.ts`: `setFollowing()` dice las respuestas nuevas sin `readAloud` y deja de hacerlo; `say()` calla lo anterior, da `ended` o `cancelled` y no rechaza; `saying` y `said` frase a frase.
+5. `voice-call.spec.ts` (con `TutorStore` real, `TutorService` falso, `FakeSpeechService` y `vi.useFakeTimers()`): los del paso, más: sin `canCall()` no empieza; «Te escucho» se dice antes de abrir el micrófono; una pregunta escrita en la espera se oye y abre el micrófono 10 segundos; el final de un micrófono ya cerrado se ignora; un cierre tardío pone la cuenta a cero; la respuesta que llega con la pestaña oculta deja la llamada en espera; el intento entregado cuelga; las cuatro marcas de `performance`; un error del micrófono cuelga con su aviso, que se borra al volver a llamar.
+6. `call-bar.spec.ts`: cada estado con su texto y sus botones; el anuncio, una vez por estado y ninguno al pasar de `listening` a `hearing`; cada botón emite; el atajo en los tooltips.
+7. `tutor-panel.spec.ts`: «Llamar al tutor» solo con `canCall()`; llamar enseña la barra y deshabilita «Dictar» y el propio botón; «Corregir» deja el texto en el campo con el foco; «Colgar» devuelve el foco a «Llamar al tutor»; el aviso del audio antes de la primera llamada; el aviso de la llamada cortada; la mascota en cada estado; ningún cambio de estado mueve el foco.
+8. `workspace-page.spec.ts`: Ctrl + punto en cada estado y sin llamada (no hace nada ni evita el evento); Esc en `hearing` descarta y no pliega el tutor; plegado, la línea con lo entendido y el estado anunciado; ocultar la pestaña deja la llamada en espera; cambiar de ejercicio y salir cuelgan con el micrófono cerrado; la vista previa del docente no tiene llamada.
+9. `settings-page.spec.ts`: «Llevo auriculares» se guarda.
+10. `proactivity-monitor.spec.ts`, si existe: calla en `hearing`.
+11. `showcase-page.spec.ts`: la barra en sus cinco estados.
 
 **6.1d · Respuesta del servidor frase a frase (condicional, ≈3,5 h)**
 
