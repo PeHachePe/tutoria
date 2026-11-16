@@ -1,6 +1,6 @@
 # 05 · Ajustes
 
-`/alumno/ajustes` · Alumno · Capa 1 · 1,5 h
+`/alumno/ajustes` · Alumno · Capa 1 (la capa 3 añade los ajustes de la voz, en el 6.1a y el 6.1b) · 1,5 h
 
 ## Objetivo
 
@@ -20,7 +20,14 @@ Que el alumno adapte TutorIA a su gusto: aspecto, idioma, reacciones del tutor (
   - **Apariencia:** tema (claro, oscuro, sistema) e idioma, con botones conmutadores; bajo el idioma, «Al cambiarlo, la página se vuelve a cargar».
   - **Mascota:** la mascota en vista previa en directo y tres interruptores: auriculares con micro, pajarita de cuadros (los dos activados por defecto) y puntero de hueso al pasar por encima.
   - **Reacciones del tutor:** completas, reducidas o desactivadas, con una línea que explica la elegida; «Emojis 3D»; «Probar una reacción», que lanza una reacción alegre distinta cada vez, pasando por las tres intensidades, con la opción elegida (y la mascota de la vista previa se mueve con ella).
-  - **Tutor:** «El tutor puede escribirme por iniciativa propia» (activado por defecto; actúa desde el paso 6.2) y «Hablar con el tutor por voz», deshabilitado con «Pronto podrás…» hasta el 6.1.
+  - **Tutor:** «El tutor puede escribirme por iniciativa propia» (activado por defecto; actúa desde el paso 6.2) y «Hablar con el tutor por voz», deshabilitado con «Pronto podrás…» hasta el 6.1a.
+  - **Voz** (6.1a y 6.1b, §2.11, D-066), dentro de la tarjeta del tutor. «Hablar con el tutor por voz» está apagado por defecto y dice «Podrás escucharle, dictarle y llamarle. Nunca se graba el audio». Al activarlo aparecen:
+    - **Voz del tutor:** un grupo de opciones con las voces del navegador para el idioma de la interfaz, con el nombre que les da el sistema, en orden alfabético y **ninguna elegida**, bajo «Elige una voz para el tutor»; cada una con «Probar», que dice una frase corta. La aplicación no elige por el alumno (perspectiva de género de la memoria). Sin voces del idioma: «Tu navegador no tiene voces en catalán: el tutor te escribirá»;
+    - **Velocidad:** lenta, normal o rápida, con botones conmutadores; «Probar» la usa;
+    - «Leer las respuestas en voz alta» (apagado por defecto): fuera de una llamada, las respuestas nuevas suenan solas;
+    - «Llevo auriculares: puedo interrumpir al tutor hablando» (6.1c, apagado por defecto), con «Sin auriculares, el tutor se oiría a sí mismo»;
+    - **Dónde se transcribe tu voz** (6.1b), una línea según el navegador: «En este equipo: el audio no sale de él»; «En el servicio de tu navegador, que recibe el audio para transcribirlo», con «Reconocer la voz en este equipo» si se puede descargar el paquete del idioma («Descargando…» mientras tanto); o «Tu navegador no reconoce la voz: puedes escuchar al tutor y escribirle»;
+    - una nota: «Si usas un lector de pantalla, no necesitas activar la voz: ya te lee las respuestas».
 - Abajo, a todo el ancho, **Privacidad**, con el enlace «Ver los datos registrados».
 - Tema e idioma siguen también en la barra, como acceso rápido.
 - Sin prototipo en la memoria: sigue la paleta y las tarjetas del catálogo.
@@ -29,6 +36,7 @@ Que el alumno adapte TutorIA a su gusto: aspecto, idioma, reacciones del tutor (
 
 - Cada control aplica y guarda su cambio al momento; no hay botón de guardar ni formulario (D-038).
 - Con las reacciones desactivadas, «Emojis 3D» y «Probar una reacción» se deshabilitan.
+- Activar la voz carga su código en ese momento y despliega sus controles; desactivarla los pliega, calla al tutor y conserva lo elegido. Elegir una voz la prueba. Al cambiar el idioma de la interfaz, si la voz elegida no es de ese idioma, hay que elegir otra (6.1a).
 - Los mismos ajustes se pueden pedir al tutor («pon el modo oscuro») o a un agente del navegador con WebMCP (2.5e, D-051): se aplican al momento y el chat ofrece «Deshacer»; el idioma, con un botón, porque recarga la página.
 
 ## Estados
@@ -40,6 +48,7 @@ Solo el de con datos: la pantalla no lee nada que tarde.
 - Cada grupo de botones conmutadores toma su nombre del encabezado (`aria-labelledby`) y se anuncia como grupo de opciones; cada idioma lleva su `lang`.
 - Los interruptores tienen su explicación asociada con `aria-describedby`; la del modo de reacción se anuncia al cambiar (`aria-live`).
 - La vista previa de la mascota y la capa de reacciones son decorativas (`aria-hidden`).
+- Las voces son un grupo de opciones con nombre («Voz del tutor»); cada «Probar» dice de qué voz es («Probar la voz Jorge»). Los controles que aparecen al activar la voz no reciben el foco solos.
 
 ## Criterios de aceptación
 
@@ -47,10 +56,13 @@ Solo el de con datos: la pantalla no lee nada que tarde.
 - [x] La mascota de la vista previa, la del tutor y la del catálogo llevan los accesorios elegidos.
 - [x] «Probar una reacción» respeta el modo y los emojis elegidos, y enseña las tres intensidades.
 - [x] Sin scroll horizontal a 375 px.
+- [ ] Al activar la voz no hay ninguna voz elegida y el tutor no habla hasta elegir una; «Probar» suena con la voz y la velocidad elegidas; todo sigue tras recargar, por usuario (6.1a).
+- [ ] La línea «Dónde se transcribe tu voz» dice lo que hace este navegador, y en uno sin reconocimiento la voz se puede activar igual para escuchar (6.1b).
+- [ ] axe sin infracciones en claro y oscuro con la voz activada (6.1a).
 
 ## Fuera de alcance
 
-- La proactividad y la voz funcionando (pasos 6.2 y 6.1).
+- La proactividad y la voz funcionando (pasos 6.2 y 6.1a a 6.1c).
 - Guardar los ajustes en el servidor para llevarlos a otro dispositivo.
 
 ## Pulido pendiente

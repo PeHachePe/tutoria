@@ -254,7 +254,7 @@ interface TutorRequest {
 }
 ```
 
-**Respuesta:** secuencia de eventos `meta` → `delta`(s) → `done`. En la v1, sin streaming (D-043), la función responde todos juntos tras validar la respuesta completa, y el cliente muestra el texto poco a poco (de golpe con movimiento reducido). Si se activa el streaming, solo cambiarán el servidor y el transporte; el cliente no. La memoria lo pedía en la capa 1 (RF-23): validar a medida que llega obligaría a retirar texto ya leído, así que se corrige la memoria.
+**Respuesta:** secuencia de eventos `meta` → `delta`(s) → `done`. En la v1, sin streaming (D-043), la función responde todos juntos tras validar la respuesta completa, y el cliente muestra el texto poco a poco (de golpe con movimiento reducido). Si se activa el streaming, solo cambiarán el servidor y el transporte; el cliente no. En la voz, la respuesta se dice frase a frase en el cliente, y el servidor solo la enviará así si se mide que hace falta (2.11, D-067). La memoria lo pedía en la capa 1 (RF-23): validar a medida que llega obligaría a retirar texto ya leído, así que se corrige la memoria.
 
 ```ts
 type Emotion = 'joy' | 'surprise' | 'encouragement' | 'celebration';
@@ -409,13 +409,113 @@ Y tres más del paso 2.5 (D-044): pedir los valores de las comprobaciones oculta
 ### 2.10 Privacidad y seguridad
 
 - **Audio:** la aplicación no graba ni almacena audio. Solo guarda transcripciones de texto, que el alumno puede revisar antes de enviarlas, y el teclado es siempre un canal alternativo completo.
-- **Reconocimiento de voz:** en Chrome, la Web Speech API suele hacerlo en servidores de Google, y Firefox no lo implementa. Esto se informa en la aplicación y en la memoria.
+- **Reconocimiento de voz:** en Chrome, la Web Speech API suele hacerlo en servidores de Google, y Firefox no lo implementa. Si el navegador puede reconocer en el propio equipo, se usa eso (2.11). Esto se informa en la aplicación y en la memoria.
 - **Secretos:** las claves del proveedor de IA y la `service_role` de Supabase (y la de Judge0, si algún día se usa) viven solo en los secretos de las Edge Functions. El cliente se considera no confiable.
 - **Código del alumnado:** se ejecuta en QuickJS dentro de la Edge Function, sin red, ficheros ni secretos a su alcance, y nunca sale de Supabase (D-042).
 - **Usuarios desactivados:** quedan bloqueados en Supabase Auth y, además, `status = disabled` en `app_user`.
 - **Datos:** solo los necesarios para la finalidad formativa (minimización).
 - **Fuentes e iconos:** autoalojados, sin peticiones a Google Fonts.
 - **Proveedor de IA en desarrollo:** en el plan gratuito de Gemini, Google puede usar el contenido para mejorar sus productos, así que solo se usa con datos de prueba. Con alumnos reales, plan de pago u otro proveedor.
+
+### 2.11 Voz
+
+La misma conversación con el tutor, hablada (capa 3, RF-08 y CU-02 1a; diseño del paso 6.1, D-066 y D-067). La voz es otro canal sobre `TutorStore`: lo que se dice y lo que se escribe acaba en los mismos turnos, el servidor no distingue uno de otro y el teclado sigue siendo un canal completo (2.10).
+
+**Tres piezas,** cada una útil sin las siguientes:
+
+- **Síntesis** (6.1a): el tutor dice en voz alta sus respuestas.
+- **Dictado** (6.1b): el alumno dicta la pregunta en el campo, la corrige si hace falta y la envía él.
+- **Modo llamada** (6.1c): una conversación por turnos y sin manos, mientras programa.
+
+**`SpeechService`** (`core/speech/`) es la abstracción, y `WebSpeechService`, la única clase que toca `speechSynthesis` y `SpeechRecognition`; se carga con `injectAsync` solo si el alumno tiene la voz activada. Todo lo demás se prueba con un `SpeechService` falso. El contrato, orientativo (el 6.1a y el 6.1b fijan las firmas):
+
+```ts
+abstract class SpeechService {
+  abstract readonly canSpeak: boolean;
+  /** Where the audio would be transcribed in this browser, or that it cannot be. */
+  abstract recognition(language: Locale): Promise<'device' | 'downloadable' | 'server' | 'none'>;
+  /** The voices of that language, in alphabetical order. */
+  abstract voices(language: Locale): Promise<readonly SpeechVoice[]>;
+  /** Says one sentence; rejects with a SpeechError. */
+  abstract speak(sentence: string, options: SpeakOptions): Promise<'ended' | 'cancelled'>;
+  abstract stopSpeaking(): void;
+  /** Opens the microphone: every result replaces the last one until one is final. */
+  abstract listen(language: Locale, heard: (transcript: Transcript) => void): Listening; // stop(), and why it ended
+}
+```
+
+**Ajustes** (`SettingsStore`, ficha 05), por usuario y apagados por defecto:
+
+- `voice`: el interruptor general. Apagado, no hay micrófono, altavoz ni llamada, y no se carga `WebSpeechService`.
+- `tutorVoice`: la voz del tutor. **No tiene valor por defecto:** la API no dice el género de una voz, así que la aplicación no puede evitar una femenina eligiendo ella. El alumno escoge una de la lista (las del idioma de la interfaz, en orden alfabético y con «Probar»), y hasta entonces el tutor no habla; el dictado sí funciona.
+- `speechRate`: lenta, normal o rápida.
+- `readAloud`: «Leer las respuestas en voz alta» fuera de una llamada. Apagado por defecto: en un aula, veinticinco tutores hablando a la vez no ayudan a nadie.
+- `headphones`: «Llevo auriculares: puedo interrumpir al tutor hablando» (modo llamada).
+
+**Síntesis:**
+
+- **Qué se dice:** en una llamada, cada respuesta nueva del tutor (`fresh`), también sus intervenciones (2.7). Fuera de ella, solo con `readAloud`, o la respuesta en la que el alumno pulse «Escuchar», que sí puede ser del historial.
+- **Texto hablable:** la función pura `speakableSentences()` quita los bloques de código, las marcas de Markdown y los emojis, deja el código en línea como palabra y parte el texto en frases con `Intl.Segmenter` y el idioma de la interfaz. Si la respuesta traía un bloque de código o deja un botón (2.5e), acaba con una frase fija: «Te lo dejo en el chat».
+- **Frase a frase:** una locución por frase, que se encola en cuanto esa frase está completa en `turn.answer`, sin esperar al resto (D-067).
+- **Idioma:** el de la interfaz. Si la voz elegida no es de ese idioma o ya no existe, los ajustes piden elegir otra. Si el navegador no tiene ninguna voz del idioma (pasa con el catalán), se dice en los ajustes y la conversación sigue por escrito.
+- **Se calla** con «Parar», al enviar otra pregunta, al cambiar de ejercicio, al salir de la pantalla y al ocultar la pestaña.
+
+**Dictado:**
+
+- «Dictar», junto a enviar. Lo que el navegador va entendiendo aparece en el campo al momento, después de lo ya escrito; al fijarse cada frase, se queda. Acaba al pulsar otra vez, con Esc, al escribir o tras 8 segundos de silencio.
+- **Nunca envía:** el alumno revisa, corrige y pulsa enviar (RF-08).
+- **Dónde se transcribe:** si el navegador puede hacerlo en el equipo (`SpeechRecognition.available()` con `processLocally`), se usa eso, y el audio no sale de él. Si solo falta descargar el paquete del idioma, los ajustes lo ofrecen («Reconocer la voz en este equipo»). Si no, lo hace el servicio del navegador, y la primera vez un aviso lo dice junto al botón («Tu navegador envía el audio a su servicio de reconocimiento para transcribirlo. TutorIA no lo graba») y se recuerda por usuario.
+- **Sin reconocimiento** (Firefox): no hay «Dictar» ni llamada, y los ajustes dicen que se puede escuchar al tutor y escribirle.
+- **Errores**, cada uno con su mensaje junto al campo y sin perder lo escrito: sin permiso para el micrófono (cómo darlo, o seguir escribiendo), sin micrófono, servicio no disponible e idioma no admitido. No oír nada no es un error: el dictado se para sin más.
+
+**Modo llamada.** `VoiceCall` (`student/workspace/`, de ámbito de pantalla como `ProactivityMonitor`) une las dos piezas con `TutorStore`: lee `turns()` y `answering()` y pregunta con `ask()`. El store no cambia y la conversación es la misma: una pregunta escrita durante una llamada también recibe su respuesta hablada. Su `effect()` está en la frontera con Web Speech (4.8).
+
+| Estado      | Micrófono                         | En pantalla                          | Pasa a                                                                                                      |
+| ----------- | --------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `listening` | Abierto                           | «Te escucho»                         | `hearing` con la primera palabra; `standby` tras 90 s sin voz                                               |
+| `hearing`   | Abierto                           | Lo que va entendiendo                | `thinking` tras 1,5 s sin palabras nuevas (envía); `listening` con Esc (descarta); `standby` con «Corregir» |
+| `thinking`  | Cerrado                           | «Pensando…» y la mascota pensativa   | `speaking` con la primera frase; `listening` si el tutor falla, tras decirlo                                |
+| `speaking`  | Cerrado; abierto con `headphones` | La respuesta, que también se escribe | `listening` al acabar o al interrumpir                                                                      |
+| `standby`   | Cerrado                           | «En espera» y «Seguir hablando»      | `listening` con el botón o el atajo                                                                         |
+
+- **Empezar:** «Llamar al tutor», en la cabecera del tutor, con la voz activada, una voz elegida y reconocimiento en el navegador. El navegador pide el micrófono, y la llamada empieza diciendo «Te escucho» (una frase fija, que no es un turno).
+- **Turnos:** habla uno cada vez. El turno del alumno acaba con 1,5 segundos de silencio, y durante ese tiempo lo que el navegador ha entendido está en pantalla: seguir hablando lo alarga, Esc lo descarta y «Corregir» lo pasa al campo como un dictado y deja la llamada en espera. Es la revisión de RF-08 sin soltar el teclado. Un turno vacío no se envía.
+- **El tutor nunca interrumpe:** una intervención proactiva espera mientras el alumno habla (`hearing`), igual que con una pregunta a medio escribir (2.7).
+- **Interrupciones del alumno:** «Interrumpir», el atajo de la llamada, enviar una pregunta escrita o pedir una pista callan al tutor al momento. Con `headphones`, también hablar: el micrófono sigue abierto mientras el tutor habla, y dos palabras o más que no sean eco lo callan y empiezan el turno del alumno. Es eco lo que coincide con la frase que el tutor está diciendo (`isEcho()`, función pura). Sin auriculares el micrófono está cerrado, así que el tutor no puede oírse a sí mismo. El turno interrumpido queda entero en el chat.
+- **Editar el código no interrumpe:** de eso se trata.
+- **Silencios:**
+  - el navegador corta el reconocimiento cuando no oye nada: `VoiceCall` lo vuelve a abrir, salvo que se cierre tres veces seguidas en menos de un segundo, que acaba la llamada con un aviso;
+  - 90 segundos sin voz dejan la llamada **en espera**, con el micrófono cerrado: en un aula, un micrófono abierto recoge a los compañeros. Se retoma con «Seguir hablando» o el atajo;
+  - con la pestaña oculta (`awaySince()`), en espera al momento y sin voz; al volver, sigue en espera;
+  - una intervención del tutor con la llamada en espera se dice en voz alta y abre el micrófono 10 segundos para contestar; sin respuesta, vuelve a la espera;
+  - mientras el tutor piensa, la pantalla lo dice al instante; no hay frases de relleno;
+  - si la respuesta falla, el tutor lo dice («No he podido responder») y el chat ofrece «Reintentar»; con el límite de turnos (429), dice cuánto hay que esperar y deja la llamada en espera.
+- **Colgar:** «Colgar», cambiar de ejercicio, entregar o salir de la pantalla. Cierra el micrófono y calla al tutor.
+- **Con el tutor plegado** la llamada sigue: la mascota muestra el estado y el bocadillo (D-064) enseña lo que se va entendiendo, «pensando» y la respuesta.
+- **Atajo de la llamada:** una combinación de teclas de la pantalla de trabajo que interrumpe, pone en espera o retoma según el estado. Se elige en el 6.1c, comprobando que no choca con el editor ni con el navegador en Windows y macOS.
+- Los tiempos (1,5 s, 8 s, 10 s, 90 s) son constantes con nombre, que se ajustan al probarlo.
+
+**Respuesta frase a frase** (D-067):
+
+- **En el cliente, siempre.** Así el tutor empieza a hablar con la primera frase, se le puede cortar entre frases y ninguna locución es larga.
+- **En el servidor, solo si se mide que hace falta.** El 6.1c mide con el modelo real, en diez turnos, el tiempo entre la última palabra del alumno, el envío, el primer texto y el primer sonido. Si la mediana entre el envío y el primer sonido pasa de 2 segundos, o el autor nota la pausa, se hace el **6.1d**:
+  - solo las peticiones de una llamada lo piden (`delivery: 'sentences'` en `TutorRequest`); el chat escrito sigue validándose entero (D-043);
+  - el modelo responde en streaming, con el mensaje como último campo del JSON, para que `meta` y las acciones salgan antes;
+  - el servidor valida cada frase completa (sin código) y la envía como un `delta` por una respuesta en streaming, que lee `SupabaseTutorService`; `TutorStore` no cambia;
+  - si falla antes de la primera frase, sigue el camino de hoy: un reintento, entero. Si falla después, lo dicho no se puede retirar: el servidor corta, cierra con una frase fija en el idioma del alumno y lo cuenta en `rejected_answers`;
+  - la interacción se guarda al final, como hoy, con el texto que se envió.
+
+**Privacidad** (2.10): nada nuevo se guarda. El audio no pasa por TutorIA ni se graba; solo existe el texto que el alumno envía, igual que si lo hubiera escrito. El micrófono solo se abre con «Dictar» o en una llamada, y siempre se ve que está abierto.
+
+**Motor de cada navegador.** Lo que dicen el plan y MDN; el 6.1a (síntesis) y el 6.1b (reconocimiento) lo comprueban en cada uno y completan la tabla, que va también a la memoria:
+
+| Navegador            | Reconocimiento                                                                                         | Síntesis                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| Chrome de escritorio | Servicio de Google; en el equipo si la versión lo admite y el paquete del idioma está instalado        | Voces del sistema y en red    |
+| Edge                 | Servicio de Microsoft; en el equipo, por comprobar                                                     | Voces del sistema y en red    |
+| Safari               | El dictado de Apple, por comprobar dónde transcribe                                                    | Voces del sistema             |
+| Firefox              | No tiene                                                                                               | Voces del sistema             |
+| Chrome en Android    | Servicio de Google; por comprobar si avisa con un sonido cada vez que abre el micrófono (modo llamada) | Motor de síntesis del sistema |
 
 ---
 
@@ -444,7 +544,7 @@ Revisadas en noviembre de 2026 contra los paquetes publicados (Angular 22.2, Spa
 | Tutor en el dispositivo    | IA integrada en Chrome (Prompt API) como versión opcional del servicio del tutor (paso 6.3)                                                                                                                                                                                                                            | Nuevo, opcional              | Es gratis y no envía datos fuera del equipo. Pero solo funciona en Chrome de escritorio con 22 GB libres y más de 4 GB de VRAM (o 16 GB de RAM), sin móvil ni tablet, y el modelo es pequeño. No sirve como tutor principal; sí como modo privado y para comparar en la memoria un modelo en la nube con uno en el dispositivo. El servidor sigue preparando el prompt, decidiendo el nivel y registrando; el navegador solo ejecuta el modelo.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Back-end                   | Supabase (PostgreSQL, RLS, Auth, Realtime y Edge Functions), en local con su CLI                                                                                                                                                                                                                                       | Se mantiene                  | Encaja con el modelo relacional y con la seguridad por fila. Firebase (NoSQL) encaja peor con este modelo; PocketBase no tiene la RLS de Postgres y necesita alojamiento aparte; un back-end propio costaría semanas. Si Docker da problemas, se usa un proyecto de desarrollo en la nube.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Tiempo real                | Supabase Realtime con callbacks que actualizan signals; simulador con datos simulados                                                                                                                                                                                                                                  | Se mantiene                  | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Voz                        | Web Speech API, en la fase 6                                                                                                                                                                                                                                                                                           | Se mantiene, con aviso       | En Chrome el reconocimiento suele hacerse en servidores de Google y Firefox no lo implementa, así que el teclado está siempre disponible y se avisa en el apartado de privacidad.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Voz                        | Web Speech API, en la fase 6                                                                                                                                                                                                                                                                                           | Se mantiene, con aviso       | En Chrome el reconocimiento suele hacerse en servidores de Google y Firefox no lo implementa, así que el teclado está siempre disponible y se avisa en el apartado de privacidad. Si el navegador puede reconocer en el equipo, se prefiere (2.11, D-066).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Tests                      | Vitest (de serie), Testing Library, Playwright y axe                                                                                                                                                                                                                                                                   | Se ajusta                    | Cobertura del 100 % en la app Angular, comprobada por `npm run check` (D-010); TDD en la lógica (stores, servicios simulados y funciones compartidas); tests de componente en todos los componentes; e2e contra el back-end simulado (deterministas) y un smoke contra Supabase. axe se pasa en el e2e de cada pantalla, sin ninguna infracción (lo exige el `CLAUDE.md` de Angular), y deja evidencias de accesibilidad para el checklist. Los tests buscan los elementos como lo haría el usuario: por rol, etiqueta o texto. Así comprueban además que cada control tiene un nombre accesible. `data-testid` solo donde no hay forma accesible de encontrar el elemento, y nunca clases de Material.                                                                                                                                                                                                                                                                                                                                    |
 | Calidad de código          | angular-eslint, con reglas que hacen cumplir las buenas prácticas de Angular, y Prettier                                                                                                                                                                                                                               | Se amplía (v4.2)             | Las normas de Angular del `CLAUDE.md` no dependen de la memoria del agente: `ng lint` falla con decoradores antiguos (`@Input`, `@HostListener`, `@Injectable({ providedIn: 'root' })`), `ngClass` o `ngStyle`, `<img>` sin `NgOptimizedImage`, `OnPush` explícito y APIs experimentales o en developer preview. Usa información de tipos (`projectService`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Integración continua       | GitHub Actions: `npm run check` en cada push a `master` y en cada pull request (D-011)                                                                                                                                                                                                                                 | Nuevo                        | Comprueba lo mismo que el agente al cerrar cada paso, pero en una máquina limpia con Ubuntu y para cualquier persona que suba cambios. Desde el paso 0.6 ejecuta también los e2e. Sin hook de pre-commit: el CI rechaza el código sin formatear y se corrige con `npm run format`. Para que no se pueda fusionar en `master` sin pasar el check, se activa una regla de protección de la rama en GitHub.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -483,6 +583,8 @@ src/app/
     i18n/             # languages of the interface (D-023): locale.ts, load-locale.ts, language-service.ts,
                       # localized-paginator-intl.ts
     tools/            # app-tool.ts: the tools of the tutor and of WebMCP, their registry (2.5e, D-051)
+    speech/           # speech-service.ts (abstract) and its Web Speech version, loaded only with the voice on;
+                      # speakable-sentences.ts (2.11, step 6.1)
   data/
     user.ts  exercise.ts  attempt.ts  process-event.ts  tutor.ts  ai-provider-setting.ts   # data types, one file per concept
     *-service.ts      # data services as abstract classes: exercise-service.ts, attempt-service.ts...
@@ -1579,18 +1681,58 @@ Commit: `feat: teacher panel`.
 🧪 e2e: el administrador crea un alumno, lo matricula y ese alumno ve su catálogo.
 Commit: `feat: admin`.
 
-#### Fase 6 · Capas 3 y 4 (≈13 h, más ≈6 h si se hace el 6.3)
+#### Fase 6 · Capas 3 y 4 (≈14 h, más ≈6 h si se hace el 6.3 y ≈3,5 h si hace falta el 6.1d)
 
-**6.1 · Voz (≈6 h)**
+**6.1 · Voz (≈7 h: el diseño y tres subpasos)** · fichas `04-tutor` y `05-ajustes`
 
-- `SpeechService` (abstracción) e implementación con Web Speech, cargada con `injectAsync` solo si el alumno activa la voz.
-- Transcripción editable antes de enviar y síntesis de las respuestas.
-- Selector de la voz del tutor en los ajustes, sin una voz femenina por defecto (perspectiva de género de la memoria).
-- Modo «llamada» sobre el mismo `TutorStore`.
-- Si el navegador no permite reconocimiento, se avisa y se sigue con teclado.
-- Documentar qué motor usa cada navegador.
+El diseño (≈0,5 h, sin código) dejó escritos 2.11, las dos fichas, D-066 y D-067. Cada subpaso va en su sesión y deja la aplicación funcionando: tras el 6.1a el tutor habla, tras el 6.1b el alumno le dicta y tras el 6.1c conversan sin manos.
 
-🧪 Con un `SpeechRecognition` falso.
+**6.1a · Síntesis (≈2 h)**
+
+- `SpeechService` (abstracción, `core/speech/`) y `WebSpeechService`, cargado con `injectAsync` solo si el alumno tiene la voz activada. En este subpaso, la parte de hablar.
+- `SettingsStore`: `voice`, `tutorVoice`, `speechRate` y `readAloud` (2.11). En los ajustes, el interruptor de la voz deja de estar deshabilitado y aparecen la lista de voces con «Probar», sin ninguna elegida por defecto (perspectiva de género de la memoria), la velocidad y «Leer las respuestas en voz alta».
+- `core/speech/speakable-sentences.ts`: la función pura que deja el texto para decir, frase a frase.
+- `TutorSpeaker` (`student/workspace/`, de ámbito de pantalla): dice las respuestas nuevas según se completa cada frase si `readAloud` está activo, y la que el alumno pida con «Escuchar». Su `effect()`, justificado.
+- Chat: «Escuchar» y «Parar» bajo cada respuesta del tutor, y la mascota en «hablando».
+- La columna de síntesis de la tabla de motores (2.11), comprobada en cada navegador.
+
+🧪 Primero los tests de `speakableSentences()`: bloques de código fuera y su frase fija una sola vez, código en línea, Markdown y emojis, decimales y abreviaturas que no parten la frase, los tres idiomas y el texto vacío. Después: los ajustes nuevos por usuario; `WebSpeechService` con un `speechSynthesis` falso (voces que llegan tarde con `voiceschanged`, solo las del idioma, una locución por frase, parar y el error); `TutorSpeaker` con un `SpeechService` falso (habla mientras la respuesta crece, nunca el historial ni una respuesta fallida, y se calla con otra pregunta, otro ejercicio, la pestaña oculta y al salir); los ajustes por rol y texto (ninguna voz elegida, «Probar», sin voces del idioma); «Escuchar» y «Parar» en el chat; axe.
+Commit: `feat(voice): the tutor reads its answers aloud (step 6.1a)`.
+
+**6.1b · Dictado (≈1,5 h)**
+
+- `WebSpeechService`, la parte de escuchar: resultados provisionales y finales, el prefijo `webkit`, los errores con su código y el reconocimiento en el equipo cuando el navegador lo ofrece (2.11).
+- «Dictar» en el pie del tutor: la transcripción entra en el campo, editable, y nunca se envía sola (RF-08).
+- El aviso de adónde va el audio, una vez por usuario; sin reconocimiento, no hay botón y los ajustes lo dicen: se sigue con el teclado.
+- Ajustes: «Reconocer la voz en este equipo» cuando solo falta descargar el paquete del idioma. La pantalla de datos registrados (ficha 05b) dice dónde se transcribe en este navegador.
+- La columna de reconocimiento de la tabla de motores, comprobada en cada navegador.
+
+🧪 Con un `SpeechRecognition` falso: el resultado provisional que se sustituye y el final que se queda; varias frases seguidas; parar con el botón, Esc, al escribir y por silencio; el texto dictado no pisa lo escrito y nunca llama a `ask()`; cada error con su mensaje; `webkitSpeechRecognition`; navegador sin reconocimiento; en el equipo, descargable y en el servicio; el aviso, una sola vez por usuario. axe con el dictado en marcha.
+Commit: `feat(voice): dictate the question to the tutor (step 6.1b)`.
+
+**6.1c · Modo llamada (≈3 h)**
+
+- `VoiceCall` (`student/workspace/`, de ámbito de pantalla): la máquina de estados de 2.11 sobre `TutorStore`, `TutorSpeaker` y `SpeechService`. `TutorStore` no cambia.
+- `isEcho()`, función pura, y el ajuste `headphones` para interrumpir hablando.
+- La barra de la llamada sobre el pie del tutor (ficha 04): estado, lo que se va entendiendo, «Interrumpir», «Corregir», «Seguir hablando» y «Colgar»; «Llamar al tutor» en la cabecera; el atajo de la llamada. Con el tutor plegado, la mascota y el bocadillo (D-064).
+- `ProactivityMonitor` (6.2b) calla mientras el alumno habla, y una intervención con la llamada en espera abre el micrófono 10 segundos. Lo conecta el subpaso que llegue segundo.
+- Medir la pausa con el modelo real (2.11) y anotarla en la bitácora: decide si hace falta el 6.1d.
+- El muestrario `/dev/ui` gana la barra de la llamada en cada estado.
+
+🧪 Primero `isEcho()`. Después `VoiceCall` con un `SpeechService` falso y temporizadores simulados: cada paso de la tabla de estados; el turno que acaba a los 1,5 s y se alarga con palabras nuevas; Esc que descarta, «Corregir» y el turno vacío; el micrófono cerrado mientras el tutor piensa y habla; interrumpir con el botón, el atajo, una pregunta escrita y una pista; con auriculares, hablar interrumpe y el eco no; el reconocimiento que se reabre y el que se cierra tres veces seguidas; la espera a los 90 s y con la pestaña oculta; la intervención hablada y su ventana de respuesta; el fallo y el 429 dichos en voz alta; colgar al cambiar de ejercicio, al entregar y al salir, con el micrófono cerrado. La barra, por rol y texto: cada estado anunciado una vez, el foco que no se mueve y los nombres de los botones. axe en claro y oscuro en cada estado. Capturas con `npm run screenshots -- 6.1c tutor`.
+🧪 e2e (a `E2E-PENDIENTES.md`): con un reconocimiento falso inyectado, una pregunta dicha recibe su respuesta en el chat y la barra pasa por sus estados.
+Commit: `feat(voice): call mode with the tutor (step 6.1c)`.
+
+**6.1d · Respuesta del servidor frase a frase (condicional, ≈3,5 h)**
+
+Solo si la medición del 6.1c pasa del umbral (2.11, D-067).
+
+- `delivery: 'sentences'` en `TutorRequest`, que solo envía una llamada.
+- `tutor`: el proveedor en streaming, el mensaje como último campo del JSON, la validación de cada frase y la respuesta en streaming; el cierre con la frase fija si algo falla a mitad.
+- `SupabaseTutorService` lee la respuesta en streaming; el tutor simulado ya responde a trozos.
+
+🧪 Deno: una frase por `delta` y `meta` antes de la primera; código en la segunda frase, que corta y cierra con la frase fija; JSON roto a mitad; fallo antes de la primera frase, que reintenta entero; lo guardado es lo enviado; una petición sin `delivery` sigue como hoy. La batería de elusión, también con `delivery: 'sentences'`.
+Commit: `feat(tutor): sentence by sentence answers for the call (step 6.1d)`.
 
 **6.2 · Tutor proactivo (≈7 h, en cuatro subpasos)**
 

@@ -1917,3 +1917,65 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Cierra la fila de la auditoría en `PENDIENTES.md`. El prompt v7 queda sin probar con el modelo real hasta que se pase la batería de elusión, como la v6.
 
 **Aprobación:** propuesta, a revisión del autor.
+
+## D-066 · La voz en tres piezas, y una llamada por turnos sobre el mismo `TutorStore` (16/11/2026)
+
+**Contexto:** el 6.1 eran seis líneas y ≈6 h para toda la capa 3: síntesis, transcripción editable, selector de voz y un «modo llamada» sin definir. Una conversación hablada tiene problemas que el chat no tiene: quién habla, cuándo acaba un turno, qué pasa si los dos hablan a la vez y qué hace un micrófono abierto en un aula. La memoria pide conversar «por turnos» y revisar la transcripción antes de enviarla (RF-08, CU-02 1a), y que la voz del tutor no sea femenina por defecto.
+
+**Decisión** (propuesta en el diseño del paso 6.1; §2.11 del plan):
+
+- **Tres subpasos que se sostienen solos:** 6.1a, síntesis; 6.1b, dictado; 6.1c, modo llamada. Si falta tiempo, se recorta desde el último y lo anterior sigue siendo voz.
+- **`TutorStore` no cambia.** La llamada es `VoiceCall`, un servicio de pantalla como `ProactivityMonitor`, que lee los turnos y pregunta con `ask()`. Voz y teclado se mezclan en la misma conversación, y el servidor no distingue una pregunta dicha de una escrita.
+- **Por turnos:** mientras el tutor piensa o habla, el micrófono está cerrado. El turno del alumno acaba tras 1,5 s de silencio.
+- **La revisión de RF-08, sin manos:** durante ese silencio el alumno ve lo que el navegador ha entendido y puede seguir hablando, descartarlo (Esc) o pasarlo al campo («Corregir»). En el dictado, la revisión es completa: nunca se envía solo.
+- **Interrumpir al tutor,** siempre con un botón, un atajo o escribiendo. Hablando, solo si el alumno dice que lleva auriculares: sin ellos el reconocimiento oiría al tutor. Con ellos, un filtro descarta lo que coincide con la frase que se está diciendo.
+- **El tutor no interrumpe al alumno:** las intervenciones proactivas esperan mientras habla, como con una pregunta a medio escribir (D-064).
+- **En espera tras 90 s sin voz** y al ocultar la pestaña, con el micrófono cerrado. En un aula, un micrófono abierto todo el rato enviaría a transcribir las voces de los compañeros.
+- **Ninguna voz por defecto.** La Web Speech API no dice el género de una voz, así que la aplicación no puede evitar una femenina eligiendo ella: el alumno escoge una de la lista, en orden alfabético y con «Probar», y hasta entonces el tutor no habla.
+- **Reconocimiento en el equipo, si el navegador lo ofrece** (`processLocally`, que MDN ya documenta): el audio no sale de él. Si no, el servicio del navegador, con un aviso la primera vez.
+- **Leer en voz alta fuera de una llamada, apagado por defecto,** y «Escuchar» bajo cada respuesta: en clase no todos llevan auriculares.
+- El 6.1 pasa de ≈6 h a ≈7 h con el diseño.
+
+**Alternativas:**
+
+- **Micrófono siempre abierto y conversación a dos voces:** más natural, pero sin auriculares el tutor se oye a sí mismo, y la Web Speech API no cancela el eco de la síntesis, que la reproduce el sistema.
+- **Pulsar para hablar:** sin falsos turnos, pero quita las manos del teclado, que es lo que la llamada evita. Queda como recurso: el atajo de la llamada abre y cierra el micrófono.
+- **Una voz masculina o «neutra» por defecto:** no hay forma fiable de saber cuál lo es, y decidirlo por el nombre de la voz sería adivinar.
+- **Audio directo con el proveedor de IA** (llamada en tiempo real): descartado en D-043, porque choca con la privacidad (§2.10) y con validar antes de mostrar.
+- **Llevar los turnos de la llamada dentro de `TutorStore`:** el store tendría que conocer el micrófono y sus temporizadores, y §4.5 no admite `effect()` en los stores.
+
+**Consecuencias:**
+
+- `docs/PLAN.md` §2.11 (nuevo), §2.6, §2.10, §4.1 y el paso 6.1; las fichas 04 y 05.
+- `SettingsStore` gana `voice`, `tutorVoice`, `speechRate`, `readAloud` y `headphones`.
+- La tabla de motores por navegador se completa probando en el 6.1a y el 6.1b, y va a la memoria.
+- La memoria tiene que contar cómo se revisa la transcripción en una llamada y el reconocimiento en el equipo (`PENDIENTES.md`).
+- No se guarda si una pregunta fue hablada: sería un dato útil para la memoria y el docente, pero pide una migración (`PENDIENTES.md`).
+
+**Aprobación:** propuesta. El autor aprobó el plan corto y dejó a criterio del agente lo que quedaba abierto: interrumpir hablando, la voz sin valor por defecto, el reconocimiento en el equipo y no guardar el canal.
+
+## D-067 · Frase a frase: siempre en el cliente; en el servidor, solo si se mide que hace falta (16/11/2026)
+
+**Contexto:** el tutor valida la respuesta entera antes de enviarla (D-043), así que entre la pregunta y el primer texto hay 1–2 s. En el chat lo cubren los tres puntos; en una llamada, un silencio así puede notarse. Quedaba pendiente desde el 2.4: «si la pausa se nota, enviar la respuesta frase a frase, validando cada frase en el servidor». Pero ese cambio rompe la garantía de D-043 (lo dicho no se puede retirar) y toca el proveedor, el validador, el transporte y la batería de elusión.
+
+**Decisión** (propuesta en el diseño del paso 6.1):
+
+- **En el cliente, siempre:** la síntesis dice una locución por frase y encola cada una en cuanto está completa. El tutor empieza a hablar con la primera frase, se le puede cortar entre frases y no hay locuciones largas. No toca el servidor.
+- **Medir antes de construir:** el 6.1c mide con el modelo real, en diez turnos, el tiempo de la última palabra al envío, al primer texto y al primer sonido, y lo anota en su bitácora.
+- **Umbral:** si la mediana entre el envío y el primer sonido pasa de 2 s, o el autor nota la pausa al probarlo, se hace el 6.1d. Si no, la fila de `PENDIENTES.md` se cierra sin tocar el servidor.
+- **El 6.1d, ya diseñado** (§2.11): solo las peticiones de una llamada piden frases (`delivery: 'sentences'`); el modelo responde en streaming con el mensaje al final del JSON; el servidor valida y envía cada frase; un fallo antes de la primera frase reintenta entero, como hoy, y uno posterior corta y cierra con una frase fija. El chat escrito sigue validándose entero.
+
+**Alternativas:**
+
+- **Hacer ya el streaming por frases:** ≈3,5 h y más superficie para la elusión, por una pausa que quizá no se note; la mitad de la espera de una llamada es el silencio que cierra el turno, que se ajusta con una constante.
+- **Frases de relleno mientras piensa** («A ver…», «Déjame mirar»): tapan la pausa, pero cansan a la tercera y suenan a truco.
+- **Enviar la pregunta antes de que el alumno acabe de hablar:** gasta turnos del alumno (6 por minuto, 60 al día) en preguntas a medias.
+- **Streaming también en el chat escrito:** D-043 lo descartó, y ahí la pausa ya está cubierta.
+
+**Consecuencias:**
+
+- `docs/PLAN.md` §2.6, §2.11 y los pasos 6.1c y 6.1d.
+- `speakableSentences()` parte el texto con `Intl.Segmenter`, en el idioma de la interfaz.
+- Si se hace el 6.1d, `TutorRequest` gana `delivery`, la batería de elusión se pasa también en ese modo y D-043 queda matizada: en una llamada, una frase ya dicha no se retira.
+
+**Aprobación:** propuesta, a revisión del autor.
