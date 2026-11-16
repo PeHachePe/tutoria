@@ -1797,7 +1797,7 @@ Cada subpaso va en su sesión y deja la aplicación funcionando: tras el 6.2b el
 **6.2b · Lógica (≈2 h)**
 
 - Contrato: `reason` en `TutorRequest` y en el `detail` de `proactive_intervention` (2.6 y 2.8), con sus constantes (`PROACTIVE_REASONS`).
-- `shared/proactive-reason.ts`: la función pura `proactiveReason()` (2.7) sobre `stuckReason()` y `lastBreakthrough()`, que ya existen. Sus tiempos y topes, constantes con nombre que recibe como parámetros, para que el servidor pase los suyos.
+- `shared/proactive-reason.ts`: la función pura `proactiveReason()` (2.7) sobre las lecturas de `isStuck()` y `lastBreakthrough()`, que ya existen y se mudan a este fichero, sin imports (ver el plan de implementación). Sus tiempos y topes, constantes con nombre que recibe como parámetros, para que el servidor pase los suyos.
 - `ProactivityMonitor` de ámbito de pantalla: comprueba tras cada ejecución y cada 15 segundos, aplica los silencios del cliente (ajuste, ausencia, sin conexión, tutor o ejecución ocupados, pregunta a medio escribir) y pide la intervención a `TutorStore`. No se provee en la vista previa del docente (D-061). El temporizador es una API imperativa: su `effect()`, justificado.
 - `TutorStore`: la intervención con su motivo; si falla o el tutor calla, no deja turno, aviso ni reacción.
 - Tutor simulado: responde según el motivo (ayuda o celebra), guarda el motivo en el evento y a veces calla.
@@ -1806,11 +1806,146 @@ Cada subpaso va en su sesión y deja la aplicación funcionando: tras el 6.2b el
 🧪 Primero los tests de `proactiveReason()`: cada motivo en su umbral y uno antes; fallos que se rearman a los 3, 6 y 9; un parón que no repite hasta que hay actividad; un logro por ejecución, sin esperar al cooldown y también con el intento superado; cooldown tras pregunta, pista e intervención callada; el tope de 5; intento entregado. Después, el monitor con temporizadores simulados: cada silencio del cliente, lo que espera a la siguiente comprobación, el logro que se pierde, el ajuste que se apaga a mitad y el temporizador que se para al salir de la pantalla.
 Commit: `feat(tutor): proactivity monitor (step 6.2b)`.
 
+**Plan de implementación del 6.2b** (17/11/2026, tras leer el código: quien lo implemente no tiene que decidir nada)
+
+Dudas resueltas:
+
+- **Un fichero sin imports.** El Edge Runtime solo resuelve imports con extensión, también los de tipos (D-042), y el 6.2c importa `proactive-reason.ts` tal cual. Así que ese fichero no importa nada, y las lecturas que necesita se mudan a él con tipos estructurales (`ProcessEvent`, `Attempt` y `StuckThresholds` encajan sin importarlos): `failureStreak()`, `lastActivityAt()` y `lastBreakthrough()`. `is-stuck.ts` se queda con `isStuck()` y `stuckReason()` y los importa de él; `last-breakthrough.ts` y su spec se borran (sus casos pasan a `proactive-reason.spec.ts`); `live-row.ts` importa de `proactive-reason`. Proponer **D-070** al cerrar.
+- **No se apoya en `stuckReason()`:** devuelve `failures` antes que `idle` y taparía un parón tras un episodio de fallos ya atendido. Usa `failureStreak()` y `lastActivityAt()` por separado.
+- **Devuelve todos los motivos que se cumplen,** en orden `achievement`, `failures`, `idle`. Tras una ejecución el monitor toma el primero; en el temporizador, el primero que no sea `achievement` (un logro tardío se pierde, y no debe tapar a los demás); el servidor (6.2c) comprueba que el motivo recibido está en la lista.
+- **De dónde salen los eventos en el navegador:** de lo cargado con la conversación (`TutorStore` ya pide `AttemptService.history()`), más lo ocurrido en la visita: la ejecución (`runEventDetail()` sobre `AttemptStore.lastRun()`), los eventos que registra `BrowserSignals` y las propias intervenciones. Sin peticiones nuevas.
+- **Toda petición deja un evento local,** también si el servidor calla o falla (429 incluido): así el cooldown y el episodio valen en la visita y no se repite cada 15 segundos.
+- **Una intervención no se ve hasta su primer `delta`:** ni turno, ni «respondiendo», ni mascota pensativa. Si el alumno pregunta mientras viaja y su turno sigue respondiendo cuando llega, la intervención se descarta.
+- **«Pregunta a medio escribir»** es texto en el campo (no el foco): `TutorComposer` se lo dice al store.
+- **`reason` es obligatorio en el tipo del evento.** Las fixtures lo ganan: `proactive(reason = 'failures', silent = false)`, y el caso callado de `activity.ts` (`[paste(150), run(4), proactive(true), run(4)]`) pasa a `proactive('idle', true)`. Después, `npm run seed`.
+- **6.1 sin hacer:** el silencio «mientras el alumno habla» lo conecta el 6.1c.
+- **Umbrales:** `WorkspacePage` ya carga el ejercicio; el cargador de `detail` se los pasa al monitor (`watch()`), como hace con el título.
+
+Ficheros:
+
+- **Nuevo `src/app/shared/proactive-reason.ts`** (sin imports) y su spec:
+
+```ts
+export const PROACTIVE_REASONS = ['failures', 'idle', 'achievement'] as const;
+export type ProactiveReason = (typeof PROACTIVE_REASONS)[number];
+
+/** What is read of a process event: `ProcessEvent` fits it, and so does one not stored yet. */
+export type AttemptEvent =
+  | {
+      readonly type: 'run';
+      readonly timestamp: string;
+      readonly detail: { readonly failedTestIds: readonly string[] };
+    }
+  | {
+      readonly type: 'proactive_intervention';
+      readonly timestamp: string;
+      readonly detail: { readonly silent: boolean; readonly reason?: ProactiveReason };
+    }
+  | {
+      readonly type: 'submit' | 'hint_requested' | 'paste' | 'focus_lost' | 'focus_gained';
+      readonly timestamp: string;
+    };
+
+export interface ReasonThresholds {
+  readonly maxRepeatedFailures: number;
+  readonly maxIdleMinutes: number;
+}
+
+export interface ProactiveLimits {
+  readonly cooldownMs: number; // since the last turn of the tutor, also a silent one
+  readonly idleSlackMs: number; // taken off the idle threshold: only the server gives any
+  readonly maxHelp: number; // interventions to help in an attempt
+}
+export const PROACTIVE_LIMITS: ProactiveLimits = {
+  cooldownMs: 180_000,
+  idleSlackMs: 0,
+  maxHelp: 5,
+};
+
+export interface ProactiveInput {
+  readonly status: 'in_progress' | 'tests_failed' | 'passed' | 'submitted';
+  readonly updatedAt: string;
+  readonly events: readonly AttemptEvent[];
+  /** The last interaction with the tutor, in ms; null without one. Silent interventions are read from the events. */
+  readonly lastTurnAt: number | null;
+  readonly thresholds: ReasonThresholds;
+  readonly now: number;
+}
+
+export function longestFailure(
+  events: readonly AttemptEvent[],
+): { testId: string; runs: number } | null;
+export function failureStreak(events: readonly AttemptEvent[]): number; // longestFailure(events)?.runs ?? 0
+export function lastActivityAt(
+  attempt: { readonly updatedAt: string },
+  events: readonly AttemptEvent[],
+): number;
+export interface Breakthrough {
+  readonly at: number;
+  readonly failures: number;
+  readonly testId: string;
+} // testId is new
+export function lastBreakthrough(
+  events: readonly AttemptEvent[],
+  threshold: number,
+): Breakthrough | null;
+export function proactiveReasons(
+  input: ProactiveInput,
+  limits?: ProactiveLimits,
+): ProactiveReason[];
+export function proactiveReason(
+  input: ProactiveInput,
+  limits?: ProactiveLimits,
+): ProactiveReason | null; // the first
+```
+
+- Reglas de `proactiveReasons()`:
+  - entregado: ninguno;
+  - `achievement`: `lastBreakthrough()` existe, su `at` es el de la última ejecución y no hay intervención `achievement` con hora igual o posterior. Sin cooldown ni tope, en cualquier estado sin entregar;
+  - ayuda, solo en `in_progress` o `tests_failed`, si `now` menos el último turno (el mayor entre `lastTurnAt` y la hora de cualquier `proactive_intervention`) llega a `cooldownMs` y las intervenciones cuyo motivo no es `achievement` (las antiguas sin motivo cuentan) son menos de `maxHelp`;
+  - `failures`: `failureStreak()` de las ejecuciones posteriores a la última intervención `failures` llega a `maxRepeatedFailures`;
+  - `idle`: `now - lastActivityAt()` llega a `maxIdleMinutes * 60_000 - idleSlackMs` y no hay intervención `idle` con hora igual o posterior a esa última actividad.
+- `src/app/shared/is-stuck.ts`: importa `failureStreak` y `lastActivityAt`; `StuckReason = Exclude<ProactiveReason, 'achievement'>`. `shared/away-since.ts`: su parámetro pasa a `readonly Pick<ProcessEvent, 'type' | 'timestamp'>[]`.
+- `src/app/data/tutor.ts`: reexporta `PROACTIVE_REASONS` y `ProactiveReason`; `TutorRequest.reason?: ProactiveReason` («Only for `proactive`, and required»). `data/process-event.ts`: `{ silent: boolean; reason: ProactiveReason }`. `process-event-testing.ts`: `proactive(attemptId, at, reason = 'failures', silent = false)`.
+- `src/app/student/workspace/tutor-store.ts`:
+  - `TutorTurn.reason?: ProactiveReason`;
+  - `readonly loadedEvents: Signal<readonly ProcessEvent[]>` (los de `history`, o `[]`);
+  - `readonly drafting` y `setDrafting(on: boolean)`; `readonly intervening`;
+  - `intervene(reason: ProactiveReason): Promise<boolean>` (true si el tutor habló): no hace nada sin `canAsk()` o con otra en vuelo; envía `kind: 'proactive'` con `reason`; guarda `meta` aparte y añade el turno en el primer `delta`; con `silent`, con error o si al llegar ese `delta` hay otro turno respondiendo, no deja nada (y quita el turno si ya estaba). Al acabar, `runWithoutWaiting()`.
+- `tutor/tutor-composer.ts`: `(input)` llama a `setDrafting()` con el valor del campo; al enviar y al destruirse, `false`.
+- `browser-signals.ts`: guarda lo que registra y lo da con `events(attemptId): readonly NewProcessEvent[]`.
+- **Nuevo `src/app/student/workspace/proactivity-monitor.ts`** (`@Service({ autoProvided: false })`) y su spec:
+  - `export const PROACTIVE_CHECK_MS = 15_000;` con `setInterval` en el constructor y `clearInterval` en `DestroyRef`;
+  - un `effect()` sobre `AttemptStore.lastRun()` (frontera con el temporizador y la petición): apunta el evento `run` local y comprueba «tras ejecución»;
+  - `watch(exercise: Pick<Exercise, 'id' | 'maxRepeatedFailures' | 'maxIdleMinutes'>): void`;
+  - calla si: `!settings.proactive()`, no hay umbrales del ejercicio del intento, `!tutor.canAsk()`, `tutor.intervening()`, `tutor.drafting()`, `attempts.running()`, `attempts.submitting()`, `!attempts.editable()`, `navigator.onLine === false` o `awaySince(events) !== null`;
+  - si hay motivo: `await tutor.intervene(reason)` y evento local `proactive_intervention` con la hora de la petición, `reason` y `silent: !spoke`.
+- `workspace.routes.ts`: lo provee. `workspace-page.ts`: lo inyecta y llama a `watch(detail.exercise)` en el cargador. No va en `tryout-workspace.ts`.
+- Tutor simulado: `ScriptInput.reason?`; `TutorScript.proactive` pasa a `{ failures, idle, achievement }`; `scriptedAnswer()`: `achievement` celebra siempre (`celebration`, `party`); la ayuda calla si el turno anterior fue una intervención; `idle` usa `sleepy`, y `failures`, `eyes` o `empathy` por turnos. `MockTutorService`: `invalid` si `kind === 'proactive'` va sin `reason` o al revés; el evento guarda `reason`. `fixtures/activity.ts`: `PAST_SCRIPT.proactive.failures`.
+- Textos del guion (no son de la interfaz; `failures` conserva el texto actual):
+
+| Motivo        | es                                                                                   | en                                                                                                    | ca                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `idle`        | ¿Sigues ahí? Si no sabes por dónde seguir, cuéntame qué te frena o pídeme una pista. | Still there? If you are not sure how to go on, tell me what is holding you back or ask me for a hint. | Encara hi ets? Si no saps per on continuar, explica'm què et frena o demana'm una pista. |
+| `achievement` | ¡Esa prueba se te resistía y la has sacado! Buen trabajo insistiendo. 🎉             | That test was putting up a fight and you cracked it! Well done for sticking with it. 🎉               | Aquesta prova se't resistia i l'has superada! Bona feina insistint. 🎉                   |
+
+- Sin textos de interfaz nuevos. Documentación al cerrar: ficha 04 (las reacciones del simulado), `PENDIENTES.md` (filas del 1.6 y del 1.9, esta sin la parte de la voz) y D-070.
+
+Tests, en este orden:
+
+1. `proactive-reason.spec.ts`: los casos de `failureStreak`, `lastActivityAt` y `lastBreakthrough` que ya existían (con `testId`); `longestFailure`; `PROACTIVE_REASONS`; y los de `proactiveReasons()` de la lista de arriba, más: logro y fallos a la vez (los dos, el logro primero), parón tras un episodio de fallos atendido, intervención antigua sin motivo que cuenta para el tope, `idleSlackMs` y `cooldownMs` distintos.
+2. `is-stuck.spec.ts` y `live-row` siguen en verde con los imports nuevos; `away-since.spec.ts` con un evento sin `id`.
+3. `scripted-answer.spec.ts` y `mock-tutor-service.spec.ts`: cada motivo, el silencio, el evento con su motivo y las dos peticiones inválidas. `fixtures.spec.ts` en verde.
+4. `tutor-store.spec.ts`: `intervene()` deja el turno con su motivo al primer `delta`; callada, fallida, fallida a mitad y pisada por una pregunta no dejan turno, aviso ni reacción; no envía sin `canAsk()` ni con otra en vuelo; `loadedEvents`; `drafting`.
+5. `tutor-composer` (en `tutor-panel.spec.ts`): escribir, vaciar, enviar y destruir cambian `drafting`. `browser-signals.spec.ts`: `events()`.
+6. `proactivity-monitor.spec.ts`, con `vi.useFakeTimers()`: la lista del paso, más: sin umbrales no pregunta; el evento local impide repetir a los 15 segundos tras un silencio y tras un 429; cambiar de intento no arrastra eventos.
+7. `workspace-page.spec.ts`: el monitor recibe los umbrales; la vista previa del docente no lo tiene.
+
 **6.2c · Servidor (≈1,5 h)**
 
 - `tutor` valida `reason`: obligatorio con `kind: 'proactive'` y rechazado en los demás.
 - Comprueba el motivo con `proactiveReason()` y los datos del intento (eventos `run` y `proactive_intervention`, última actividad y último turno), con su holgura (2.7). Si no cuadra, `silent` sin llamar al modelo y sin evento. La vista previa del docente no admite intervenciones.
-- El evento `proactive_intervention` guarda el motivo; migración solo si el `detail` tiene una restricción que lo impida.
+- El evento `proactive_intervention` guarda el motivo; hace falta migración, porque el `detail` lo construye `record_tutor_interaction`.
 - Prompt v7 (2.7), anotado en `docs/prompt-history.md`: la nota de cada motivo con sus hechos, la brevedad, cuándo callar y las reacciones. Sin herramientas, salvo el arreglo del despiste en `failures`, que hoy se excluye de las proactivas.
 - `SupabaseTutorService` envía el motivo.
 - Cierra la fila de la auditoría en `PENDIENTES.md`: el navegador ya no decide solo qué es una intervención.
@@ -1818,17 +1953,124 @@ Commit: `feat(tutor): proactivity monitor (step 6.2b)`.
 🧪 Deno: cada motivo aceptado con los datos que lo sostienen y callado sin ellos (sin llamada al modelo); el cooldown y el tope en el servidor; el nivel no sube; el modelo que calla y el que falla dos veces (calla, D-043); el despiste que deja su arreglo; la nota del prompt de cada motivo. pgTAP si hay migración. Con el modelo real, un caso por motivo en la batería de elusión cuando se pase la de la v6.
 Commit: `feat(tutor): the server checks why the tutor approaches (step 6.2c)`.
 
+**Plan de implementación del 6.2c** (17/11/2026; necesita el 6.2b hecho)
+
+Dudas resueltas:
+
+- **Hay migración:** el `detail` no tiene restricción, pero lo construye `record_tutor_interaction` (`jsonb_build_object('silent', …)`), así que la función gana un parámetro.
+- **Los datos de la comprobación se leen aparte** (`findActivity()`), solo en las proactivas: ni las demás peticiones ni la vista previa cargan los eventos.
+- **Orden en `tutor`:** intento y permisos, respuesta ya guardada (`replay`), turno contado, y entonces el motivo. Si no cuadra: 200 con solo `done` callado, sin modelo, sin evento y sin interacción.
+- **Las horas de los eventos del navegador se pueden falsear,** pero solo para parecer más activo: nunca fabrican una intervención. Las de `run` y `proactive_intervention` las pone el servidor.
+- **`SupabaseTutorService` no cambia:** ya envía la petición entera. Solo gana un test.
+- **Herramientas:** en una intervención el servidor descarta toda acción del modelo salvo `proposeFix` con `reason === 'failures'`; tampoco esqueleto ni ejemplos de sintaxis.
+
+Ficheros:
+
+- **Nueva `supabase/migrations/20261117100000_proactive_reason.sql`:** `drop` y `create` de `record_tutor_interaction` con `answer_reason text default null` al final; lanza `22023` si `(asked_trigger = 'proactive') <> (answer_reason is not null)` o si no es `failures`, `idle` o `achievement`; el evento guarda `jsonb_build_object('silent', answer_silent, 'reason', answer_reason)`; `revoke` y `grant` con la firma nueva. Después, `npm run db:reset`, `db:test` y `db:types`.
+- **Nuevo `supabase/functions/tutor/proactive.ts`:**
+
+```ts
+export const SERVER_PROACTIVE_LIMITS: ProactiveLimits = {
+  ...PROACTIVE_LIMITS,
+  cooldownMs: 120_000,
+  idleSlackMs: 30_000,
+};
+
+export type ProactiveFacts =
+  | { readonly reason: 'failures'; readonly testId: string; readonly runs: number }
+  | { readonly reason: 'idle'; readonly minutes: number }
+  | { readonly reason: 'achievement'; readonly testId: string; readonly failures: number };
+
+/** The facts of the reason the app gives, or null if the data of the server do not hold it (D-065). */
+export function checkReason(
+  reason: ProactiveReason,
+  attempt: TutorAttempt,
+  activity: AttemptActivity,
+  now: number,
+): ProactiveFacts | null;
+```
+
+- `answer-store.ts`: `AttemptActivity { updatedAt: string; thresholds: ReasonThresholds; events: readonly AttemptEvent[]; lastTurnAt: string | null }`, `findActivity(attemptId): Promise<AttemptActivity | null>` y `NewAnswer.reason?: ProactiveReason`. `supabase-answer-store.ts`: `attempt` (`updated_at`, `exercise(max_repeated_failures, max_idle_minutes)`, `tutor_interaction(created_at)`) y los últimos 1000 `process_event` (`type, timestamp, detail`) por `timestamp`; `recordAnswer` pasa `answer_reason`.
+- `tutor.ts`: `reason: z.enum(PROACTIVE_REASONS).optional()` en `askFields`; `asksRight` exige además `(kind === 'proactive') === (reason !== undefined)`; el esquema de la vista previa rechaza `kind: 'proactive'` (400); tras contar el turno, `checkReason()` o silencio; `answerTurn` recibe los hechos, pasa `offerFix: kind !== 'proactive' || reason === 'failures'` y filtra las acciones; `recordAnswer` lleva `reason`. El mensaje del 400 nombra `reason?`.
+- `prompt.ts`: `PROMPT_VERSION = 'v7'`; `PromptInput.proactive?: ProactiveFacts`; `slipNote` también con `failures`; `askModel` no pide esqueleto ni sintaxis en una intervención. Textos:
+  - en la instrucción, el párrafo «Si la petición llega marcada como proactiva…» pasa a: «INTERVENCIONES. A veces te acercas tú, sin que el alumno pregunte: la petición lo dice, con el motivo y sus hechos. Nadie te ha preguntado, así que eres breve, sin bromas ni teatro, y no repites lo que ya le dijiste. Si tu última respuesta trataba de lo mismo o no tienes nada nuevo, calla: devuelve "message" vacío. Por fallos repetidos: una o dos frases en el nivel indicado sobre la prueba que se resiste, que acaban ofreciéndole seguir; reacción "eyes" o "empathy". Por un parón: una o dos frases que le preguntan qué le frena o le ofrecen por dónde seguir; reacción "sleepy". Por un logro: una sola frase que celebra su esfuerzo y nombra lo conseguido, sin pistas ni peros, con emoción "celebration" y una reacción de celebración. En una intervención no usas herramientas, salvo proposeFix si la petición dice que su código no se ejecuta por un despiste.» Y «En proactivas donde decidas no intervenir» pasa a «En una intervención en la que decidas callar»;
+  - `requestLine`, según el motivo (la prueba es «el ejemplo `suma([1, 2, 3])`» si es visible, «una comprobación oculta» si no, y «una prueba» si ya no existe):
+    - `failures`: «te acercas tú, sin que el alumno pregunte, porque {prueba} lleva {runs} ejecuciones seguidas fallando. Una o dos frases en el nivel {N} sobre esa prueba, que acaben ofreciéndole seguir.»
+    - `idle`: «te acercas tú, sin que el alumno pregunte, porque lleva {minutes} minutos sin actividad ({estado}). Una o dos frases, como mucho en el nivel {N}, que le pregunten qué le frena o le ofrezcan por dónde seguir.» Estado: «todavía no ha escrito nada», «su última ejecución dejó {failed} pruebas sin superar» o «tiene código sin ejecutar».
+    - `achievement`: «te acercas tú, sin que el alumno pregunte, para felicitarle: acaba de superar {prueba}, que llevaba {failures} ejecuciones seguidas fallando. Una sola frase que celebre su esfuerzo y nombre lo conseguido, sin pistas ni peros.»
+- App: `MockTutorService.tryOut` responde `invalid` a una proactiva. Documentación al cerrar: `docs/prompt-history.md` («v7 · El tutor sabe por qué se acerca»), `PENDIENTES.md` (filas del 2.4 y del 2.5f, y la frase de la auditoría), D-065 como implementada y `pgTAP` en `supabase/tests/database/record_tutor_interaction.test.sql`.
+
+Tests, en este orden:
+
+1. pgTAP: el evento guarda el motivo; proactiva sin motivo, motivo sin proactiva y motivo desconocido fallan; `function_privileges.test.sql` en verde.
+2. `proactive.test.ts` (nuevo): cada motivo con sus hechos y `null` sin ellos; cooldown de 2 minutos; 30 segundos de holgura; tope de 5; logro y fallos a la vez aceptan los dos.
+3. `prompt.test.ts`: la línea de cada motivo con sus hechos; prueba oculta sin valores; los tres estados del parón; la nota del despiste solo con `failures`; la instrucción dice cuándo callar y las reacciones; `v7`.
+4. `tutor.test.ts` (`FakeStore` gana `activity`): 400 sin `reason` en una proactiva y con `reason` en las demás; 400 a una proactiva en la vista previa; motivo que cuadra, respondido y guardado con su `reason`; motivo que no cuadra, callado sin modelo ni `recordAnswer`, con el turno contado; el nivel no sube; el modelo que calla y el que falla dos veces; el despiste deja `proposeFix` solo en `failures`; cualquier otra acción se descarta.
+5. `supabase-tutor-service.spec.ts`: el cuerpo lleva `reason`. `mock-tutor-service.spec.ts`: la vista previa rechaza la proactiva.
+
 **6.2d · Interfaz (≈2,5 h)**
 
 - Bocadillo de la mascota con dos estados (ficha 04): «pensando» al instante y después la respuesta, con «Cerrar el aviso» y su estado de error. Las intervenciones, solo con la respuesta. Nunca mueve el foco.
 - Atajo «Pregúntale al tutor» junto a cada ejemplo visible que falla en los resultados: envía la pregunta de un clic («¿Por qué falla `suma([1,2,3])`? Devuelve 5 y se espera 6») y, con el tutor plegado, enciende el bocadillo; en el móvil, cambia a la pestaña «Tutor». El atajo de la línea del error sigue en `PENDIENTES.md` (fase 7).
 - La reacción de una intervención de ayuda sale reducida, sea cual sea su intensidad; la de un logro, completa.
-- Ajustes: el interruptor de la proactividad deja de decir que no tiene efecto.
+- Ajustes: la ficha 05 deja de decir que el interruptor de la proactividad «actúa desde el paso 6.2» (la pantalla no lo dice).
 - El muestrario `/dev/ui` gana los estados del bocadillo.
 
 🧪 Por rol y texto: los dos estados del bocadillo y su anuncio único; la intervención que entra sin «pensando»; el foco que no se mueve; cerrar el aviso; el error; el atajo solo en ejemplos visibles que fallan, deshabilitado mientras el tutor responde y ausente con el intento entregado; la reacción reducida. axe en claro y oscuro con el bocadillo en cada estado. Capturas con `npm run screenshots -- 6.2d tutor`.
 🧪 e2e (a `E2E-PENDIENTES.md`): tres ejecuciones fallidas seguidas con el tutor plegado hacen asomar el bocadillo, y con la proactividad desactivada no.
 Commit: `feat(tutor): two-state bubble and ask-the-tutor shortcut (step 6.2d)`.
+
+**Plan de implementación del 6.2d** (17/11/2026; necesita el 6.2b hecho)
+
+Dudas resueltas:
+
+- **El bocadillo se extrae a un componente** (`TutorBubble`), para que el muestrario enseñe sus estados.
+- **«Pensando» dura hasta que la respuesta llega entera;** entonces pasa a «Respuesta». Solo lo enciende el atajo con el tutor plegado.
+- **Orden de teclado:** el bocadillo va después de la mascota en el DOM y encima a la vista (`order-first`).
+- **El atajo no sale** en ejemplos superados, sin ejecutar, ocultos, con el intento entregado ni con resultados de una versión anterior del código (sus datos ya no lo describen).
+- **Pregunta demasiado larga** (más de `MAX_QUESTION_LENGTH`): se envía la corta.
+- **Ajustes:** el interruptor no dice hoy que no tenga efecto; solo lo dice la ficha 05 («actúa desde el paso 6.2»), que se corrige.
+- **axe:** los tests unitarios no lo pasan; va con las capturas y, lo que no cubran, a `E2E-PENDIENTES.md`.
+
+Ficheros:
+
+- `tutor-store.ts`: `ask()` y `requestHint()` devuelven `Promise<boolean>` (true si la respuesta llegó entera); `reaction` lleva `reduced: true` si el turno es proactivo y su motivo no es `achievement`.
+- `shared/reactions/reaction.ts`: `Reaction.reduced?: boolean`. `reaction-overlay.ts`: en `draw()`, modo `reduced` si la reacción lo pide y el ajuste es `full`.
+- **Nuevo `student/workspace/tutor/tutor-bubble.ts`** y su spec: `state = input.required<'thinking' | 'answer' | 'error'>()`, `text = input('')`, `opened = output<void>()`, `dismissed = output<void>()`. «Pensando»: tres puntos decorativos, sin botones. «Respuesta» y «error»: un botón con el texto en dos líneas (`line-clamp-2`) y el botón de icono «Cerrar el aviso».
+- `workspace-layout.ts` y `.html`:
+  - `foldedAsk = signal<'thinking' | 'failed' | null>(null)` y `closedAt = signal<number | null>(null)`;
+  - `bubble`: nada con el tutor a la vista; `thinking` o `error` según `foldedAsk`; si no, `answer` con `tutorUnread()` y `closedAt() !== tutor.answerCount()`;
+  - `askFromResults(question)`: en el móvil, `selectTab(TUTOR_TAB)`; plegado, `foldedAsk` a `thinking` y, al resolver `tutor.ask()`, a `failed` o `null`; nunca mueve el foco;
+  - `dismissBubble()`: `closedAt` y `foldedAsk` a su sitio, y foco a la mascota; abrir el tutor los limpia;
+  - la región `aria-live` dice «El tutor está pensando…», la respuesta o el error.
+- **Nuevo `code-zone/failure-question.ts`** y su spec: `failureQuestion(example, position): string`.
+- `run-results.ts` y `.html`: `tutorShortcut = input<'hidden' | 'disabled' | 'enabled'>('hidden')` y `askTutor = output<string>()`; el botón de icono al final de cada fila que falla, `disabledInteractive`. `code-zone`: calcula el estado (`readonly()`: `hidden`; `canAsk()`: `enabled`; si no, `disabled`) y reenvía `askTutor` a `WorkspaceLayout`.
+- `dev/showcase`: sección «Bocadillo del tutor» con los tres estados y un botón de reacción reducida.
+- Textos (`src/locale/messages.en.json` y `messages.ca.json`):
+
+| ID                            | es                                                                        | en                                                                                | ca                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `tutor.bubble.open`           | Abrir el tutor:                                                           | Open the tutor:                                                                   | Obre el tutor:                                                          |
+| `tutor.bubble.thinking`       | El tutor está pensando…                                                   | The tutor is thinking…                                                            | El tutor està pensant…                                                  |
+| `tutor.bubble.error`          | No he podido responder. Ábreme para reintentar                            | I couldn't answer. Open me to try again                                           | No he pogut respondre. Obre'm per tornar-ho a provar                    |
+| `tutor.bubble.close`          | Cerrar el aviso                                                           | Close the notice                                                                  | Tanca l'avís                                                            |
+| `runResults.askTutor`         | Pregúntale al tutor                                                       | Ask the tutor                                                                     | Pregunta-ho al tutor                                                    |
+| `runResults.askTutorLabel`    | Pregúntale al tutor por qué falla el ejemplo {n}                          | Ask the tutor why example {n} fails                                               | Pregunta al tutor per què falla l'exemple {n}                           |
+| `runResults.question.failed`  | ¿Por qué falla `{call}`? Devuelve {actual} y se espera {expected}.        | Why does `{call}` fail? It returns {actual} and {expected} is expected.           | Per què falla `{call}`? Retorna {actual} i s'espera {expected}.         |
+| `runResults.question.error`   | ¿Por qué falla `{call}`? Lanza el error «{error}» y se espera {expected}. | Why does `{call}` fail? It throws the error «{error}» and {expected} is expected. | Per què falla `{call}`? Llança l'error «{error}» i s'espera {expected}. |
+| `runResults.question.timeout` | ¿Por qué `{call}` no termina a tiempo? Se espera {expected}.              | Why does `{call}` not finish in time? {expected} is expected.                     | Per què `{call}` no acaba a temps? S'espera {expected}.                 |
+| `runResults.question.short`   | ¿Por qué falla el ejemplo {n}?                                            | Why does example {n} fail?                                                        | Per què falla l'exemple {n}?                                            |
+
+- Documentación al cerrar: ficha 05, `PENDIENTES.md` (las dos filas del 2.5; el atajo de la línea del error sigue para la fase 7) y `E2E-PENDIENTES.md`.
+
+Tests, en este orden:
+
+1. `failure-question.spec.ts`: valor erróneo, error, tiempo agotado y la corta.
+2. `reaction-overlay.spec.ts`: una reacción `reduced` sale con un solo icono con el ajuste en `full`, y nada con `off`. `tutor-store.spec.ts`: `reduced` según el motivo; lo que devuelve `ask()`.
+3. `tutor-bubble.spec.ts`: cada estado por rol y texto; `opened` y `dismissed`.
+4. `run-results.spec.ts`: el atajo solo en ejemplos visibles que fallan, con su nombre por fila; deshabilitado y enfocable; ausente con `hidden` y con resultados antiguos; emite la pregunta.
+5. `workspace-page.spec.ts`: plegado, el atajo pasa por «pensando» y la respuesta sin mover el foco, con un anuncio cada uno; la intervención entra sin «pensando»; «Cerrar el aviso» deja el punto y da el foco a la mascota; el error abre el tutor; en el móvil cambia a la pestaña «Tutor»; con el tutor a la vista no hay bocadillo.
+6. `showcase-page.spec.ts`: los tres estados.
 
 **6.3 · Tutor en el dispositivo con la IA de Chrome (opcional, ≈6 h)**
 
