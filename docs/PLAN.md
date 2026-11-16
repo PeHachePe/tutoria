@@ -153,7 +153,9 @@ En **negrita**, lo que cambia respecto al modelo de la memoria.
 - `tutor_interaction` (id, attempt_id → attempt, **request_id** (única: la petición que respondió, D-043), trigger `question`/`hint`/`proactive`, hint_level 1–3, **student_message**, transcript, emotion, intensity, **elusion**, **prompt_version**, **model**, **rejected_answers** (0–2: respuestas del modelo que el validador rechazó antes de esta, D-044), **created_at**)
 - `process_event` (id, attempt_id → attempt, type, timestamp, detail `jsonb`, **received_at**: la hora de llegada, que el cliente no puede falsear, D-040)
 - **`staff_request`** (id, user_id → app_user, kind `check`/`translate`/`tutor`, received_at; 4.3c, D-059; `tutor` en el 4.3e, D-061): cuándo pidió un docente comprobar su solución, traducir un ejercicio o una respuesta del tutor al probarlo como alumno, para limitarlo por minuto (`claim_staff_request`). Nunca guarda el código ni los textos. Sin políticas: solo la leen y escriben las Edge Functions.
-- **`app_setting`** (key, value `jsonb`, updated_at). De momento solo `ai_provider`: URL base, modelo y, opcional, los modelos de respaldo en orden (`fallbacks`, del mismo proveedor o de otros compatibles, D-044). Las claves nunca se guardan aquí, sino en los secretos del servidor: el ajuste solo nombra el secreto de cada proveedor (`AI_API_KEY`, `AI_<NOMBRE>_API_KEY`).
+- **`student_request`** (id, user_id → app_user, kind `run`/`tutor`, received_at; D-063): cuándo pidió un alumno ejecutar su código o un turno del tutor. Solo la escriben las Edge Functions con `claim_student_request`, que reserva el turno antes de ejecutarlo, de uno en uno, y aplica los límites por minuto y por día; lo que tiene más de un día se borra.
+- **`tutor_pending_query`** (request_id, user_id → app_user, calls `jsonb`, asked_at; D-063): la consulta que el tutor pidió a la app en una petición, hasta que llegan sus datos. Se toma una vez, por su usuario y durante diez minutos; solo la usa `tutor`.
+- **`app_setting`** (key, value `jsonb`, updated_at). De momento solo `ai_provider`: URL base, modelo y, opcional, los modelos de respaldo en orden (`fallbacks`, del mismo proveedor o de otros compatibles, D-044). Las claves nunca se guardan aquí, sino en los secretos del servidor: el ajuste solo nombra el secreto de cada proveedor (`AI_API_KEY`, `AI_<NOMBRE>_API_KEY`). Las funciones solo llaman al host del proveedor del proyecto y a los del secreto `AI_ALLOWED_HOSTS`, y la tabla exige la forma de un proveedor: URL web, modelo y hasta cinco respaldos (D-063).
 
 `attempt.assignment_id` resuelve la simplificación que ya señalaba la memoria del TFM («el desarrollo valorará incorporar esa referencia directa»): el histórico por bloque deja de reconstruirse a partir de fechas. El intento que cuenta de cada asignación es el primero entregado (`countedAttempt()`); las estadísticas y el histórico usan solo ese (D-046).
 
@@ -334,7 +336,7 @@ pide la solución: nunca las uses ante un error ni una duda.
 - Una reacción que no está en el catálogo se descarta (no se reintenta): el cliente usa la de la emoción (D-035).
 - Cada interacción guarda cuántas respuestas del modelo rechazó el validador (`rejected_answers`), para distinguir el prompt que aguanta de la red que lo para (D-044).
 - **Modelos de respaldo** (D-044): si el modelo de `ai_provider` falla (saturado, sin cuota, que tarda o retirado), responde el siguiente de `fallbacks`, del mismo proveedor o de otro con la API de OpenAI y su propia clave, y así hasta que uno responda, se acabe la lista o la petición lleve 30 s; la interacción guarda cuál respondió. Cada modelo puede esperar más de los 15 s por defecto (`timeoutMs`, hasta 2 min), para los modelos locales (Ollama, LM Studio).
-- Límite de 6 llamadas por minuto y usuario (429 con `Retry-After`, que la pantalla muestra como cuenta atrás) y 15 s como máximo por llamada al modelo (D-043).
+- Límite de 6 turnos por minuto y 60 al día por usuario, contados antes de llamar al modelo y de uno en uno (`claim_student_request`, D-063; 429 con `Retry-After`, que la pantalla muestra como cuenta atrás) y 15 s como máximo por llamada al modelo (D-043).
 
 Los intentos de elusión (`elusion: true`) quedan registrados para su análisis. El evento `meta` lo lleva, y el chat ofrece debajo de la respuesta «Dame una pista» y «No entiendo el enunciado», para que la negativa lleve a algún sitio (D-044).
 
@@ -1267,7 +1269,7 @@ Commit: `feat: student flow (mock)`.
 - **Dónde se ejecuta (D-042):** en QuickJS compilado a WebAssembly, dentro de la propia función, sin cuenta ni servicio externo. La función solo conoce la interfaz `CodeSandbox`, así que otro lenguaje u otro motor (Judge0) es otra clase.
 - **Lo que hace la función:**
   1. Comprueba el JWT y que el intento es del usuario, que su cuenta está activa y que no está entregado.
-  2. Aplica el límite: 10 ejecuciones por minuto y usuario, contadas con los eventos `run` (429 con `Retry-After`).
+  2. Comprueba que el intento sigue abierto para su alumno (`is_open_attempt`: ve la asignación y sigue en el grupo; si no, 403) y aplica el límite: 10 ejecuciones por minuto y usuario, contadas antes de ejecutar con `claim_student_request` (D-063; 429 con `Retry-After`).
   3. Lee las pruebas con `service_role`.
   4. Ejecuta todas las pruebas en el sandbox, que solo recibe el código y las entradas, con límites de tiempo por prueba y por ejecución, memoria y pila.
   5. Compara en la propia función: los valores esperados nunca entran en el sandbox.
