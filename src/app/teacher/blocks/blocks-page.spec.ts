@@ -362,7 +362,10 @@ describe('BlocksPage', () => {
           rows.map((row) =>
             row.title === 'Tema 1: Bucles y condicionales'
               ? { ...row, opensAt: '2026-11-01T08:00:00.000Z' }
-              : row,
+              : row.title === 'Examen de los temas 5 y 6'
+                ? // 9:00 local, the same in any time zone the tests run in
+                  { ...row, opensAt: new Date(2026, 10, 23, 9).toISOString() }
+                : row,
           ),
         ),
       );
