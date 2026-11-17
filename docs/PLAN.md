@@ -2256,20 +2256,449 @@ Propuesto al cerrar el 4.3b (D-058). Al empezarlo, el autor cambió duplicar un 
 
 - **Hecho así (D-060):** migración `block_opening_and_archive`: `class_block.opens_at` en la política de lectura de los bloques y en `is_visible_assignment` (el alumno no ve el bloque, ni sus ejercicios, ni abre intentos hasta la fecha), `create_block` con la fecha, `exercise.archived_at` (lo cambia quien edita el ejercicio) y `move_assignment()`, que cierra el hueco en un bloque y hace sitio en el otro sin tocar los intentos; 18 tests de pgTAP. En Bloques, el diálogo pide el día y la hora de apertura (sin hora, a las 0:00) y la tarjeta dice «Se abre el lun 23 nov, 09:00 · en 8 días» hasta entonces; «Editar el título» pasa a «Editar el bloque». Cada ejercicio tiene «Mover a otro bloque» (submenú con los demás bloques; desactivados los que ya lo tienen) y se arrastra de un bloque a otro (listas conectadas, con un predicado que rechaza el bloque que ya lo tiene), con anuncio, vuelta atrás si falla y «Deshacer». Los archivados llevan «Archivado» en Bloques. En el banco, «Archivados» (en la URL) y, en el menú, «Archivar» y «Borrar» si nadie lo empezó, solo «Archivar» si alguien lo hizo, y «Desarchivar» en los archivados, que no se asignan. El formulario añade «Archivar» al aviso de un ejercicio empezado y un aviso con «Desarchivar». Seed v11 con «Tabla de multiplicar» archivado y un examen de los temas 5 y 6 que se abre el 23 de noviembre. Duplicar un bloque, a PENDIENTES como copiar los bloques de un grupo en otro.
 
-**4.4 · Histórico, con datos simulados (≈3 h)** · ficha `09-historico` · Figuras 13–14 del TFM
+**4.4 · Histórico, con datos simulados (≈3 h)** · ficha `09-historico` · Figuras 10 y 19 del TFM
 
 - Gráfica de barras propia por bloque, con una tabla alternativa accesible, y los KPI; selector de grupo (con su asignatura). Cuenta el intento que cuenta de cada asignación (D-046).
 - Ritmo de cada alumno respecto a la fecha de entrega (D-054): cuántas entregas llegan en las últimas horas antes del plazo y quién no ha entregado, descrito sin etiquetar.
 
 🧪 Una serie descendente pinta N barras con sus valores.
 
-**4.5 · Panel docente con datos reales (≈3 h)**
+Commit: `feat(history): group history with mock data (step 4.4)`.
 
-- RPC `group_block_stats`, con test en pgTAP: el intento que cuenta de cada asignación, sin las prácticas (D-046).
-- Gestión real de ejercicios, pruebas y asignaciones.
+**Plan de implementación del 4.4** (17/11/2026, tras leer el código y la memoria: quien lo implemente no tiene que decidir nada)
 
-✅ Con dos navegadores: el alumno trabaja y el docente lo ve en vivo.
-Commit: `feat: teacher panel`.
+Dudas resueltas:
+
+- **La ficha `09-historico` no existe.** La sesión la escribe primero con la plantilla (5.3), a partir de este bloque, y el autor la valida con el plan corto.
+- **Las figuras de la memoria son la 10 (boceto) y la 19 (prototipo),** no la 13 y la 14, que son la administración y los datos registrados. La 19 trae la gráfica a la izquierda con su frase («La tendencia descendente sugiere una autonomía creciente…») y tres cifras a la derecha. Al cerrar se corrige la fila de `/docente/historico` en 2.2.
+- **La pantalla responde a tres decisiones del docente fuera de clase,** con la regla del panel (D-068): si el grupo gana autonomía (la gráfica y la frase que la lee), qué bloque conviene repasar (las cifras del bloque elegido y la tabla) y a quién recordarle una entrega («Entregas»). Lo que vale cero no se enseña y nada clasifica a nadie: ni rankings ni orden por cifras, las listas de personas van por nombre.
+- **«Media de pistas» es por alumno y ejercicio:** las pistas pedidas (eventos `hint_requested`) en los intentos que cuentan del bloque, entre esos intentos. Por alumno y bloque, un bloque con tres ejercicios saldría más alto que uno con uno aunque el grupo pida menos ayuda. Es lo que ya comprueba `fixtures.spec.ts` y con el seed baja: 1,1 · 0,6 · 0,3 · 0,0.
+- **El tiempo es la mediana, no la media,** de lo que pasa entre abrir un ejercicio y entregarlo (`finishedAt − startedAt` de los intentos que cuentan ya entregados): un ejercicio abierto el lunes y entregado el jueves no puede contar tres días. La cifra se llama «Tiempo por ejercicio». Al cerrar, 2.2 dice «tiempo por ejercicio (mediana)».
+- **«Alumnos con señales» son los que se atascaron con el código:** en algún momento del intento que cuenta, la misma prueba falló en tantas ejecuciones seguidas como el umbral del ejercicio (`maxRepeatedFailures`). Es `failureStreak()` mirando todo el intento y no solo el final (`longestFailureStreak()`). La inactividad no cuenta: en datos pasados todo intento tiene parones, y D-068 ya la sacó de la cola. Se da el número, sin nombres: los nombres llegan con la ficha del alumno (`PENDIENTES.md`, fila del 4.2).
+- **Qué cuenta:** el alumnado matriculado hoy; de cada alumno y asignación, `countedAttempt()`; y las asignaciones que el alumnado ve o en las que alguien trabajó (una oculta sin intentos no baja el porcentaje). Los bloques ocultos cuentan igual: el docente los ve todos.
+- **Un bloque sin intentos no sale** ni en la gráfica ni en la tabla. Un bloque con intentos y ninguna pista sí, con su «0»: es el mejor final de la serie.
+- **La frase solo lee los bloques que ha trabajado al menos media clase** (`REPRESENTATIVE_SHARE = 0.5`). En el seed, la recuperación del tema 2 tiene un solo alumno con una pista (media 1,0) y daría la vuelta a la lectura. Esos bloques se pintan en gris con «1 alumno» debajo.
+- **Las cifras son las del bloque elegido** (`?bloque=`, `TEACHER_PARAMS.block`), no un total del grupo: una media de todo el curso no responde a ninguna decisión, y la mediana y los alumnos distintos no se pueden sumar bloque a bloque. Sin `bloque` en la URL (o con uno sin intentos), el último bloque trabajado por media clase y, si no hay ninguno, el último con intentos. Cada barra y cada fila de la tabla es un enlace que lo elige; elegir no pide nada al servidor.
+- **«Entregas» es de todo el grupo,** no del bloque elegido: un plazo que viene importa aunque nadie haya empezado ese bloque. Una entrada por bloque y fecha (las asignaciones de un bloque pueden tener fechas distintas), solo con las asignaciones que el alumnado ve ahora (`isVisibleAssignment()`: un examen que aún no se ha abierto no tiene a nadie «sin entregar»). Primero los plazos que vienen, del más cercano al más lejano, y después los pasados, del más reciente al más antiguo; se ven 3 (`DEADLINES_SHOWN`) y «Ver los N».
+- **«Las últimas horas» son 24** (`DEADLINE_LAST_HOURS`, parte del contrato: lo usan los datos simulados, la RPC y el texto). De cada plazo: las entregas a tiempo, cuántas de ellas en las últimas 24 horas, cuántas después y quién tiene algo sin entregar, por nombre y con «2 de 3». Los nombres están plegados tras «Ver quiénes». Quien entrega en el último momento no se nombra: es un dato del plazo, no de la persona.
+- **Sin store** (4.5): el estado es de la pantalla, con dos `resource()`. Los grupos salen de `BlockService.listGroups()`, que ya da los del docente (o todos al administrador) con su asignatura.
+- **`StatsService` cambia de forma:** un método, `groupHistory()`, con las cuentas en bruto de cada bloque; las medias y los porcentajes los calcula la pantalla. La versión de Supabase se queda en este paso en `throw new DataError('unavailable')`, con su test, para que `start:local` y producción enseñen el estado de error con reintento en lugar de romperse sin proveedor; el 4.5 la completa. Entre los dos pasos no se despliega.
+- **La gráfica es HTML con Tailwind,** sin SVG ni librería: una lista de barras cuya altura es un porcentaje. Sin animación.
+- **El seed no cambia.** Con él no hay entregas en las últimas horas ni después del plazo (se cubren con tests); una fila en `PENDIENTES.md` propone añadirlas para las capturas de la memoria, con cuidado de los tests de pgTAP que cuentan intentos.
+- **Los números** se escriben con `Intl.NumberFormat` del idioma de la interfaz (un decimal en las pistas); el tiempo, con `formatDuration()`, que pasa a `shared/`.
+- **Decisión nueva:** al cerrar se propone **D-073** con la media por ejercicio, la mediana, la señal solo del código, la frase sobre media clase, las cifras por bloque y las 24 horas.
+
+Ficheros:
+
+- `data/stats-service.ts`, reescrito:
+
+```ts
+/** Hours before a due date that count as its last ones (D-054). */
+export const DEADLINE_LAST_HOURS = 24;
+
+/**
+ * What a group did in a block, in raw counts: the screen works out means and shares. Only the
+ * attempt that counts of each student and assignment (`countedAttempt()`), of those enrolled now.
+ */
+export interface BlockStats {
+  readonly block: ClassBlock;
+  /** Assignments that count: those the students see or somebody worked on. */
+  readonly assignments: number;
+  /** Attempts that count. */
+  readonly attempts: number;
+  /** Students with some attempt in the block. */
+  readonly activeStudents: number;
+  /** Hints asked for in those attempts. */
+  readonly hints: number;
+  /** Attempts passed or submitted. */
+  readonly solved: number;
+  /** Median seconds from opening an exercise to submitting it; null with none submitted. */
+  readonly medianSeconds: number | null;
+  /** Students who, at some point, failed one same test as many runs in a row as its exercise allows. */
+  readonly stuckStudents: number;
+}
+
+/** A student with exercises of a deadline not submitted. */
+export interface MissingSubmission {
+  readonly student: LiveStudent;
+  readonly pending: number;
+}
+
+/** A due date of a block and what arrived for it, counting what its students see now. */
+export interface DeadlineStats {
+  readonly blockId: string;
+  readonly dueAt: string;
+  /** Assignments of the block with this due date. */
+  readonly assignments: number;
+  /** Submitted up to the date, its last hours included. */
+  readonly onTime: number;
+  /** Of `onTime`, those in the last `DEADLINE_LAST_HOURS`. */
+  readonly lastHours: number;
+  /** Submitted after the date. */
+  readonly late: number;
+  /** By name. */
+  readonly missing: readonly MissingSubmission[];
+}
+
+export interface GroupHistory {
+  /** Students enrolled now. */
+  readonly students: number;
+  /** Every block of the group, in order, also those nobody started. */
+  readonly blocks: readonly BlockStats[];
+  /** By date and, on the same date, by the order of their blocks. */
+  readonly deadlines: readonly DeadlineStats[];
+}
+
+export abstract class StatsService {
+  /** `not_found` for a group the user does not teach. */
+  abstract groupHistory(groupId: string): Promise<GroupHistory>;
+}
+```
+
+- `shared/is-stuck.ts`: nueva `longestFailureStreak(events: readonly ProcessEvent[]): number`, la racha más larga de ejecuciones seguidas, en cualquier momento, en las que falló una misma prueba (0 sin ejecuciones). Las ejecuciones, por `timestamp`.
+- **Nuevo `data/mock/group-history.ts`** y su spec, la cuenta pura que usa el servicio simulado:
+
+```ts
+export function groupHistoryOf(tables: MockTables, groupId: string): GroupHistory;
+```
+
+- Reglas de `groupHistoryOf()`:
+  - **alumnado:** las matrículas del grupo; `students` es su número;
+  - **bloques:** los del grupo por `position`. De cada uno, sus asignaciones con `!isHidden` o con algún intento; de cada alumno y asignación, `countedAttempt()` de sus intentos; `attempts`, cuántos hay; `activeStudents`, alumnos distintos; `hints`, los eventos `hint_requested` de esos intentos; `solved`, los que están en `passed` o `submitted`; `medianSeconds`, la mediana (la media de los dos centrales si son pares) de `(finishedAt − startedAt) / 1000` de los `submitted`, redondeada, o `null`; `stuckStudents`, alumnos distintos con algún intento cuyo `longestFailureStreak()` llega al `maxRepeatedFailures` de su ejercicio;
+  - **plazos:** las asignaciones con `dueAt` y `isVisibleAssignment()`, agrupadas por bloque y fecha. De cada alumno y asignación, su intento que cuenta si está `submitted`: con `finishedAt <= dueAt`, a tiempo, y además en las últimas horas si `finishedAt > dueAt − DEADLINE_LAST_HOURS`; con `finishedAt > dueAt`, después; sin intento entregado, pendiente. `missing`, quien tiene algún pendiente, por nombre (`localeCompare` con `'es'`). Sin alumnado, ningún plazo. Ordenados por `dueAt` y por la posición del bloque.
+- **Nuevo `data/mock/mock-stats-service.ts`** y su spec (`@Service({ autoProvided: false })`, con `MockDb` y `MockNetwork`): `db.requireUser('teacher', 'admin')`, `not_found` si el grupo no existe o `canManageGroup()` no lo deja, y `groupHistoryOf()`. Se añade a `provide-mock-data.ts`.
+- **Nuevo `data/supabase/supabase-stats-service.ts`** y su spec: `groupHistory()` rechaza con `DataError('unavailable')` (lo completa el 4.5). Se añade a `provide-supabase-data.ts`.
+- `teacher/attempt-detail/format-duration.ts` y su spec pasan a `shared/`; el detalle lo importa de allí.
+- **Nuevo `teacher/history/history-figures.ts`** y su spec:
+
+```ts
+/** A block reads the trend once at least this share of the class worked on it. */
+export const REPRESENTATIVE_SHARE = 0.5;
+
+/** Somebody opened an exercise of the block. */
+export function isStarted(block: BlockStats): boolean;
+export function isRepresentative(block: BlockStats, students: number): boolean;
+/** Hints per attempt that counts; 0 without attempts. */
+export function averageHints(block: BlockStats): number;
+/** Solved attempts over students × assignments, 0 to 100, rounded; 0 without any to solve. */
+export function solvedPercent(block: BlockStats, students: number): number;
+/** «1,1»: one decimal, as the language writes it. */
+export function formatAverage(value: number, locale: string): string;
+/** The block the figures are of: the one of the URL if it is started; else the default. */
+export function pickBlock(
+  blocks: readonly BlockStats[],
+  students: number,
+  blockId: string | undefined,
+): BlockStats | null;
+```
+
+- `isRepresentative()`: `students > 0` y `activeStudents >= students × REPRESENTATIVE_SHARE`. `pickBlock()`: entre los empezados, el de `blockId`; si no, el último representativo; si no, el último empezado; sin ninguno, `null`.
+- **Nuevo `teacher/history/hint-trend.ts`** y su spec:
+
+```ts
+/** Difference in hints per exercise under which the first and the last block read the same. */
+export const TREND_TOLERANCE = 0.1;
+
+export interface HintTrend {
+  readonly kind: 'falling' | 'rising' | 'steady';
+  readonly first: BlockStats;
+  readonly last: BlockStats;
+}
+
+export function hintTrend(blocks: readonly BlockStats[], students: number): HintTrend | null;
+```
+
+- Reglas de `hintTrend()`: de los bloques empezados y representativos, en orden, el primero y el último; con menos de dos, `null`. Con `averageHints(last) − averageHints(first)` por debajo de `−TREND_TOLERANCE`, `falling`; por encima de `TREND_TOLERANCE`, `rising`; si no, `steady`.
+- **Nuevo `teacher/history/deadline-order.ts`** y su spec: `DEADLINES_SHOWN = 3` y `orderDeadlines(deadlines: readonly DeadlineStats[], now: number): DeadlineStats[]`: los de `dueAt >= now`, de menor a mayor, y después los pasados, de mayor a menor.
+- **Nuevo `teacher/history/hint-chart.ts`** y su spec (`app-hint-chart`, plantilla en línea): inputs `blocks` (los empezados), `students` y `selectedId`. Un `ol` (`flex items-end gap-3 overflow-x-auto`, con `aria-label` del título de la gráfica) con un `li` por bloque (`flex min-w-16 flex-1 flex-col items-center gap-1`) que es un enlace (`[routerLink]="[]"`, `[queryParams]="{ bloque: id }"`, `queryParamsHandling="merge"`, `aria-current="true"` en el elegido, nombre accesible `history.chart.bar`): arriba el valor (`formatAverage()`); la zona de la barra (`flex h-40 w-full items-end`) con la barra dentro (`data-testid="hint-bar"`, `w-full min-h-0.5 rounded-t-md`, altura en porcentaje sobre la media más alta, `bg-primary` o `bg-outline-variant` si no es representativo, y `ring-2 ring-primary ring-offset-2` en el elegido); debajo el título (`blockTitle()`, `line-clamp-2 text-center text-label-medium`) y, si no es representativo, `history.chart.few`. Con todas las medias a cero, las barras miden su mínimo.
+- **Nuevo `teacher/history/deadline-card.ts`** y su spec (`app-deadline-card`, plantilla en línea): inputs `deadline`, `title` (el del bloque) y `students`. El título, `app-due-label` con la fecha y «N ejercicios»; una línea con `onTime` sobre `students × assignments`; solo si no son cero, las líneas de las últimas horas y de después del plazo; con `missing`, su cuenta y «Ver quiénes» (`aria-expanded`, `shown = signal(false)`), que despliega la lista por nombre con «2 de 3»; sin `missing`, «Todo entregado».
+- **Nuevo `teacher/history/history-page.ts`** y `.html`, con su spec (`HistoryPage`; el host es `@container block`):
+  - `grupo` y `bloque` como `input<string>()` (la URL); `groups = resource()` con `BlockService.listGroups()`; `group`, el de la URL o el primero, como `BlocksPage`; `history = resource()` con `params: () => this.group()?.id` y `StatsService.groupHistory()`; `started`, los bloques con `isStarted()`; `selected = computed(() => pickBlock(...))`; `trend = computed(() => hintTrend(...))`; `deadlines = computed(() => orderDeadlines(history.value().deadlines, this.now))`, con `now = Date.now()` al crear la página; `showAllDeadlines = signal(false)`; `selectGroup(id)` navega con `{ grupo: id, bloque: null }` y `queryParamsHandling: 'merge'`;
+  - cabecera: sobre el título, la asignatura (`eyebrow`); `h1`, «{grupo} · Histórico»; con más de un grupo, el selector (`mat-select` con «grupo · asignatura», como en Bloques);
+  - rejilla `grid gap-4 @4xl:grid-cols-3`. A dos tercios, la tarjeta de la gráfica: su título (`h2`), la frase de `trend` si la hay, `app-hint-chart`, la ayuda y, si algún bloque no es representativo, la nota del gris. En el tercio, la tarjeta del bloque elegido: «Bloque» (`eyebrow`), su título (`h2`), «N ejercicios · lo han trabajado M de T alumnos» y un `dl` con «Tiempo por ejercicio» (`formatDuration()`; no sale sin `medianSeconds`), «Ejercicios superados» («57 %» y «41 de 72») y, solo si no es cero, «Se atascaron en alguna prueba» («6 de 24»);
+  - «Entregas» (`h2`), solo con algún plazo: `DEADLINES_SHOWN` tarjetas en `grid gap-3 @4xl:grid-cols-3` y «Ver los N» o «Ver menos»;
+  - «Bloque a bloque» (`h2`): una tabla (`table` con `caption` `sr-only`, dentro de `overflow-x-auto`) con una fila por bloque empezado: el título como enlace que lo elige (`aria-current` en el elegido), los alumnos («23 de 24»), las pistas por ejercicio, el tiempo, los superados («83 %») y los que se atascaron (vacío si es cero);
+  - estados: esqueleto con la forma de la rejilla y la tabla (`h-72`, `h-72` y `h-48`), `LoadError` con reintento para los grupos y para el histórico, `EmptyState` sin grupos y `EmptyState` con el grupo sin ningún bloque empezado (las entregas, si las hay, salen igual debajo).
+- `teacher.routes.ts`: `HistoryPage` en lugar de `PlaceholderPage`. `route.history.heading` se borra de los tres ficheros de mensajes.
+- `e2e/screenshots/screens.ts`: `{ code: '09-historico', path: '/docente/historico', user: 'teacher' }`.
+- Textos (`messages.en.json` y `messages.ca.json`; después, `npm run i18n`; las filas con «/» son plurales ICU, `=1` y `other`):
+
+| ID                               | es                                                                                                                                   | en                                                                                                                                             | ca                                                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `history.title`                  | {grupo} · Histórico                                                                                                                  | {grupo} · History                                                                                                                              | {grupo} · Històric                                                                                                                     |
+| `history.group`                  | Grupo                                                                                                                                | Group                                                                                                                                          | Grup                                                                                                                                   |
+| `history.loading`                | Cargando el histórico…                                                                                                               | Loading the history…                                                                                                                           | S'està carregant l'històric…                                                                                                           |
+| `history.chart.heading`          | Pistas por ejercicio, bloque a bloque                                                                                                | Hints per exercise, block by block                                                                                                             | Pistes per exercici, bloc a bloc                                                                                                       |
+| `history.chart.help`             | La media de pistas que pide un alumno en un ejercicio. Cuenta el primer intento entregado de cada uno; las prácticas no.             | The mean of the hints a student asks for in an exercise. It counts the first submitted attempt at each one; practice does not.                 | La mitjana de pistes que demana un alumne en un exercici. Compta el primer intent lliurat de cadascun; les pràctiques no.              |
+| `history.chart.bar`              | {bloque}: {valor} pistas por ejercicio. Ver sus cifras                                                                               | {bloque}: {valor} hints per exercise. See its figures                                                                                          | {bloque}: {valor} pistes per exercici. Mostra'n les xifres                                                                             |
+| `history.chart.few`              | 1 alumno / {n} alumnos                                                                                                               | 1 student / {n} students                                                                                                                       | 1 alumne / {n} alumnes                                                                                                                 |
+| `history.chart.fewNote`          | En gris, los bloques que ha trabajado menos de media clase: no cuentan para la tendencia.                                            | In grey, the blocks less than half the class has worked on: they do not count for the trend.                                                   | En gris, els blocs que ha treballat menys de mitja classe: no compten per a la tendència.                                              |
+| `history.trend.falling`          | Las pistas bajan de {primero} a {ultimo} por ejercicio: el grupo recurre cada vez menos a la ayuda.                                  | Hints go down from {primero} to {ultimo} per exercise: the group turns to help less and less.                                                  | Les pistes baixen de {primero} a {ultimo} per exercici: el grup recorre cada cop menys a l'ajuda.                                      |
+| `history.trend.rising`           | Las pistas suben de {primero} a {ultimo} por ejercicio: los últimos bloques piden más ayuda.                                         | Hints go up from {primero} to {ultimo} per exercise: the latest blocks ask for more help.                                                      | Les pistes pugen de {primero} a {ultimo} per exercici: els últims blocs demanen més ajuda.                                             |
+| `history.trend.steady`           | El grupo pide las mismas pistas que al principio: unas {ultimo} por ejercicio.                                                       | The group asks for as many hints as at the start: about {ultimo} per exercise.                                                                 | El grup demana les mateixes pistes que al principi: unes {ultimo} per exercici.                                                        |
+| `history.block.eyebrow`          | Bloque                                                                                                                               | Block                                                                                                                                          | Bloc                                                                                                                                   |
+| `history.block.exercises`        | 1 ejercicio / {n} ejercicios                                                                                                         | 1 exercise / {n} exercises                                                                                                                     | 1 exercici / {n} exercicis                                                                                                             |
+| `history.block.worked`           | lo han trabajado {n} de {total} alumnos                                                                                              | {n} of {total} students have worked on it                                                                                                      | l'han treballat {n} de {total} alumnes                                                                                                 |
+| `history.figure.time`            | Tiempo por ejercicio                                                                                                                 | Time per exercise                                                                                                                              | Temps per exercici                                                                                                                     |
+| `history.figure.time.help`       | la mediana entre abrirlo y entregarlo                                                                                                | the median from opening it to submitting it                                                                                                    | la mediana entre obrir-lo i lliurar-lo                                                                                                 |
+| `history.figure.solved`          | Ejercicios superados                                                                                                                 | Exercises passed                                                                                                                               | Exercicis superats                                                                                                                     |
+| `history.figure.stuck`           | Se atascaron en alguna prueba                                                                                                        | Got stuck on a test                                                                                                                            | Es van encallar en alguna prova                                                                                                        |
+| `history.figure.stuck.help`      | fallaron la misma prueba varias veces seguidas                                                                                       | they failed the same test several times in a row                                                                                               | van fallar la mateixa prova diverses vegades seguides                                                                                  |
+| `history.of`                     | {n} de {total}                                                                                                                       | {n} of {total}                                                                                                                                 | {n} de {total}                                                                                                                         |
+| `history.deadlines.heading`      | Entregas                                                                                                                             | Submissions                                                                                                                                    | Lliuraments                                                                                                                            |
+| `history.deadline.onTime`        | {n} de {total} entregas a tiempo                                                                                                     | {n} of {total} submissions on time                                                                                                             | {n} de {total} lliuraments a temps                                                                                                     |
+| `history.deadline.lastHours`     | 1 llegó en las últimas {horas} horas / {n} llegaron en las últimas {horas} horas                                                     | 1 arrived in the last {horas} hours / {n} arrived in the last {horas} hours                                                                    | 1 va arribar en les últimes {horas} hores / {n} van arribar en les últimes {horas} hores                                               |
+| `history.deadline.late`          | 1 llegó después del plazo / {n} llegaron después del plazo                                                                           | 1 arrived after the deadline / {n} arrived after the deadline                                                                                  | 1 va arribar després del termini / {n} van arribar després del termini                                                                 |
+| `history.deadline.missing`       | 1 alumno con algo sin entregar / {n} alumnos con algo sin entregar                                                                   | 1 student with something not submitted / {n} students with something not submitted                                                             | 1 alumne amb alguna cosa sense lliurar / {n} alumnes amb alguna cosa sense lliurar                                                     |
+| `history.deadline.showWho`       | Ver quiénes                                                                                                                          | Show who                                                                                                                                       | Mostra qui                                                                                                                             |
+| `history.deadline.hideWho`       | Ocultar                                                                                                                              | Hide                                                                                                                                           | Amaga                                                                                                                                  |
+| `history.deadline.complete`      | Todo entregado                                                                                                                       | Everything submitted                                                                                                                           | Tot lliurat                                                                                                                            |
+| `history.deadlines.showAll`      | Ver los {n}                                                                                                                          | Show all {n}                                                                                                                                   | Mostra'ls tots ({n})                                                                                                                   |
+| `history.deadlines.showFewer`    | Ver menos                                                                                                                            | Show fewer                                                                                                                                     | Mostra'n menys                                                                                                                         |
+| `history.table.heading`          | Bloque a bloque                                                                                                                      | Block by block                                                                                                                                 | Bloc a bloc                                                                                                                            |
+| `history.table.caption`          | Cifras de cada bloque de {grupo}                                                                                                     | Figures of each block of {grupo}                                                                                                               | Xifres de cada bloc de {grupo}                                                                                                         |
+| `history.column.block`           | Bloque                                                                                                                               | Block                                                                                                                                          | Bloc                                                                                                                                   |
+| `history.column.students`        | Alumnos                                                                                                                              | Students                                                                                                                                       | Alumnes                                                                                                                                |
+| `history.column.hints`           | Pistas por ejercicio                                                                                                                 | Hints per exercise                                                                                                                             | Pistes per exercici                                                                                                                    |
+| `history.column.solved`          | Superados                                                                                                                            | Passed                                                                                                                                         | Superats                                                                                                                               |
+| `history.column.stuck`           | Se atascaron                                                                                                                         | Got stuck                                                                                                                                      | Es van encallar                                                                                                                        |
+| `history.empty.groups.heading`   | Aún no tienes grupos                                                                                                                 | You have no groups yet                                                                                                                         | Encara no tens grups                                                                                                                   |
+| `history.empty.groups.text`      | Cuando tengas un grupo con ejercicios, aquí verás cómo evoluciona.                                                                   | Once you have a group with exercises, you will see here how it evolves.                                                                        | Quan tinguis un grup amb exercicis, aquí veuràs com evoluciona.                                                                        |
+| `history.empty.activity.heading` | Este grupo aún no tiene actividad                                                                                                    | This group has no activity yet                                                                                                                 | Aquest grup encara no té activitat                                                                                                     |
+| `history.empty.activity.text`    | Cuando tus alumnos empiecen los ejercicios de un bloque, aquí verás cuántas pistas piden, cuánto tardan y qué les queda por superar. | Once your students start the exercises of a block, you will see here how many hints they ask for, how long they take and what is left to pass. | Quan els teus alumnes comencin els exercicis d'un bloc, aquí veuràs quantes pistes demanen, quant triguen i què els queda per superar. |
+
+- La columna del tiempo de la tabla usa `history.figure.time`; «N ejercicios» de una entrega, `history.block.exercises`; «2 de 3» y «6 de 24», `history.of`.
+- Comprobación en el navegador (datos simulados, como Marta): 1.º DAW A de Programación básica abre con cinco barras (1,1 · 0,6 · 0,3 · 0,0 y la recuperación, en gris, con 1,0 y «1 alumno»), la frase «Las pistas bajan de 1,1 a 0,0…» y «Tema 4: Cadenas y formato» elegido (6 min, 57 %, sin la cifra de atascos); al elegir el tema 1, 12 min, 100 % y «6 de 24»; en «Entregas», primero la recuperación (20 nov) y el tema 5 (27 nov) y después el tema 4 (6 nov: 40 de 72 a tiempo y 19 alumnos con algo sin entregar); el examen no sale hasta que se abre. El otro grupo de Marta (Desarrollo web) tiene un bloque con dos alumnos: sin frase y en gris. Con la administración se ven los cuatro grupos. A 375, 768, 1280 y 1920 px sin scroll horizontal de la página (la gráfica y la tabla se desplazan dentro de su tarjeta), en claro y oscuro, con axe sin infracciones y entera con el teclado.
+- Documentación al cerrar: la ficha `09-historico` con sus criterios marcados; 2.2 (la fila de la ruta con las figuras 10 y 19, y el detalle «Histórico» con las pistas por ejercicio, la mediana, las cifras del bloque elegido y «Entregas»); la fila de `StatsService` en 4.2 (`groupHistory()`; RPC `group_block_stats` y `group_deadline_stats`); `DECISIONES.md` (D-073); `PENDIENTES.md` (entregas de última hora y fuera de plazo en el seed para las capturas; los nombres de quien se atascó, con la ficha del alumno; la pestaña con el nombre del grupo); `E2E-PENDIENTES.md` (elegir un bloque desde una barra y desde la tabla, cambiar de grupo, «Ver quiénes», los estados vacíos y de error, y axe en claro y oscuro). Definición de terminado (5.4) y capturas: `npm run screenshots -- 4.4 09-historico`.
+
+Tests, en este orden:
+
+1. `shared/is-stuck.spec.ts`: `longestFailureStreak()` sin ejecuciones, con todo superado, con una racha en medio que después se supera, con dos pruebas de rachas distintas y con las ejecuciones desordenadas; los de `failureStreak()` siguen en verde. `shared/format-duration.spec.ts`, mudado.
+2. `group-history.spec.ts`, con tablas pequeñas: la práctica no cuenta (ni sus pistas); un alumno dado de baja del grupo no cuenta; una asignación oculta sin intentos no entra y una oculta con intentos sí; la mediana con número par e impar y `null` sin entregas; un atasco por debajo y en el umbral del ejercicio, y el mismo alumno en dos ejercicios cuenta una vez; un bloque sin intentos sale con todo a cero; los plazos (a tiempo, en el límite exacto de la fecha, en las últimas horas y un segundo antes de ellas, después, pendiente, dos fechas en un bloque, una asignación oculta y un bloque sin abrir fuera, sin alumnado ninguno) y su orden. Y con el seed, 1.º DAW A de Programación básica: 24 alumnos; tema 1 (48 intentos, 54 pistas, 48 superados, 720 s y 6 atascados), tema 2 (48, 27, 46, 540 s y 1), tema 3 (23 intentos de 23 alumnos, 8, 20, 540 s y 0), tema 4 (59, 0, 41, 360 s y 0) y la recuperación (2 asignaciones, 1 intento y 1 pista); el plazo del tema 4 (3 asignaciones, 40 a tiempo, 0 en las últimas horas, 0 después y 19 alumnos con algo pendiente).
+3. `mock-stats-service.spec.ts`: el docente lee su grupo y el administrador cualquiera; `not_found` con el grupo de otro docente y con uno que no existe; `forbidden` para un alumno y `unauthorized` sin sesión.
+4. `supabase-stats-service.spec.ts` (`unavailable`), y `provide-mock-data.spec.ts` y `provide-supabase-data.spec.ts` con `StatsService`.
+5. `history-figures.spec.ts`: `averageHints()` y `solvedPercent()` con y sin intentos; `isRepresentative()` en el límite (12 de 24) y sin alumnado; `formatAverage()` en español e inglés; `pickBlock()` con el de la URL, con uno sin intentos, con uno de otro grupo, sin representativos y sin ninguno empezado.
+6. `hint-trend.spec.ts`: baja, sube, igual (dentro de la tolerancia), un solo bloque, un bloque con un alumno al final que no cuenta y ningún bloque representativo.
+7. `deadline-order.spec.ts`: los que vienen antes y por cercanía, los pasados después y del más reciente al más antiguo, y uno que vence justo ahora.
+8. `hint-chart.spec.ts`: una serie descendente pinta N barras con sus valores y sus alturas (la más alta, 100 %); el bloque a cero mide su mínimo; el elegido lleva `aria-current`; el no representativo va en gris con sus alumnos; cada barra enlaza a su bloque conservando el grupo.
+9. `deadline-card.spec.ts`: las líneas a cero no salen; «Ver quiénes» despliega los nombres en orden con «2 de 3» y los vuelve a plegar; «Todo entregado».
+10. `history-page.spec.ts` (con un `StatsService` y un `BlockService` falsos): el título con el grupo y la asignatura; el selector solo con más de un grupo, y cambiar de grupo quita el bloque de la URL; la frase de cada tendencia y ninguna con un solo bloque; el bloque por defecto, el de la URL y el elegido desde la tabla; la cifra de atascos solo si no es cero y el tiempo solo si hay entregas; la tabla sin los bloques sin empezar; «Entregas» con 3 y «Ver los N», y sin la sección si no hay plazos; los esqueletos, el error con reintento de cada lectura y los dos estados vacíos.
+11. `staff-layout.spec.ts` y los tests de rutas, si nombran el marcador del histórico.
+
+**4.5 · Histórico con datos reales (≈2 h)**
+
+- RPC `group_block_stats` y `group_deadline_stats`, con test en pgTAP: el intento que cuenta de cada asignación, sin las prácticas (D-046).
+- `SupabaseStatsService` completo.
+
+✅ Con dos navegadores: el alumno trabaja y el docente lo ve en vivo; al entregar, el histórico lo cuenta.
+Commit: `feat(history): group history with real data (step 4.5)`.
+
+**Plan de implementación del 4.5** (17/11/2026; necesita el 4.4 hecho)
+
+Dudas resueltas:
+
+- **Qué queda de verdad.** El paso decía «gestión real de ejercicios, pruebas y asignaciones»: ya está hecha. `SupabaseExerciseService` y `SupabaseBlockService` implementan todos sus métodos desde el 4.3 al 4.3e (`save_exercise`, `create_block`, `assign_exercises`, `reorder_*`, `move_assignment`, las funciones `execute` y `translate`), y el panel en vivo es real desde el 4.1. En el código no hay nada más del área docente sin versión de Supabase que `StatsService`. El paso se queda en la estadística del histórico y baja de 3 a 2 horas.
+- **Dos RPC que devuelven tablas,** no un JSON: `npm run db:types` les da tipos y el servicio no convierte a ciegas. Los nombres de quien tiene algo pendiente viajan en tres vectores paralelos de la fila de su plazo, así ninguna respuesta se acerca al tope de 1000 filas de PostgREST (una fila por intento lo pasaría con 30 alumnos y 40 ejercicios).
+- **`security definer` con la comprobación al entrar:** agregar bajo la RLS llamaría a `can_read_attempt()` por cada evento del grupo. Las dos funciones empiezan por `is_admin() or teaches_group(target_group_id)` y, si no, lanzan `P0002`, que el cliente ya traduce a `not_found`, lo mismo que el servicio simulado. Solo devuelven agregados y nombres del alumnado del grupo, que su docente ya lee.
+- **El intento que cuenta, en SQL:** `distinct on (user_id, assignment_id)` ordenado por `(status = 'submitted') desc, number`, la misma regla que `countedAttempt()`, no un `number = 1` que solo coincide hoy.
+- **La racha de fallos, en SQL,** por islas: las ejecuciones de cada intento se numeran, las pruebas falladas se despliegan (`detail -> 'failedTestIds'`, como lo escribe `record_run`) y cada grupo de ejecuciones consecutivas de una misma prueba es una isla; cuenta la más larga.
+- **La mediana que no existe viaja como 0** (`coalesce`): los tipos generados no saben que una columna de una función puede ser nula, y ningún intento entregado tarda cero segundos. El servicio la devuelve como `null`.
+- **Las cifras del test de pgTAP son las del test del servicio simulado** (las del seed, en el plan del 4.4): los dos mundos comparten datos, y así se comprueba que las dos cuentas dicen lo mismo.
+- **La migración en la nube** la aplica el autor (`supabase db push --remote`, que pide confirmación), como dice `docs/DESPLIEGUE.md`; hasta entonces el histórico publicado enseña su estado de error.
+- **Sin decisión nueva:** D-073 gana un párrafo «Hecho así» con las dos funciones y por qué son `security definer`.
+
+Ficheros:
+
+- **Nueva migración `supabase/migrations/<fecha>_group_history.sql`,** con la fecha del día y posterior a todas las de la carpeta (también a las de la fase 5, si ya existen), y su test `supabase/tests/database/group_history.test.sql`. Las dos funciones, `language plpgsql`, `stable`, `security definer`, `set search_path = ''`, con `revoke execute … from public, anon` y `grant execute … to authenticated`, y todas las columnas calificadas con su alias (los nombres de la tabla que devuelven son variables dentro de la función):
+
+```sql
+create function public.group_block_stats(target_group_id uuid)
+returns table (
+  block_id uuid,
+  students integer,
+  assignments integer,
+  attempts integer,
+  active_students integer,
+  hints integer,
+  solved integer,
+  median_seconds integer,
+  stuck_students integer
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not (public.is_admin() or coalesce(public.teaches_group(target_group_id), false)) then
+    raise exception 'Group not found' using errcode = 'P0002';
+  end if;
+  return query
+  with enrolled as (
+    select e.user_id from public.enrollment e where e.group_id = target_group_id
+  ),
+  counted_assignment as (
+    select a.id, a.block_id, a.exercise_id
+    from public.exercise_assignment a
+    where a.group_id = target_group_id
+      and (not a.is_hidden or exists (select 1 from public.attempt t where t.assignment_id = a.id))
+  ),
+  counted as (
+    select distinct on (t.user_id, t.assignment_id)
+      t.id, t.user_id, t.status, t.started_at, t.finished_at, a.block_id, a.exercise_id
+    from public.attempt t
+    join counted_assignment a on a.id = t.assignment_id
+    join enrolled e on e.user_id = t.user_id
+    order by t.user_id, t.assignment_id, (t.status = 'submitted') desc, t.number
+  ),
+  run as (
+    select c.id as attempt_id, p.detail,
+      row_number() over (partition by c.id order by p.timestamp, p.id) as run_number
+    from counted c
+    join public.process_event p on p.attempt_id = c.id and p.type = 'run'
+  ),
+  failure as (
+    select r.attempt_id, failed.test_id,
+      r.run_number - row_number() over (
+        partition by r.attempt_id, failed.test_id order by r.run_number
+      ) as island
+    from run r
+    cross join lateral jsonb_array_elements_text(r.detail -> 'failedTestIds') as failed(test_id)
+  ),
+  streak as (
+    select i.attempt_id, max(i.runs) as longest
+    from (
+      select f.attempt_id, count(*) as runs
+      from failure f
+      group by f.attempt_id, f.test_id, f.island
+    ) i
+    group by i.attempt_id
+  ),
+  hint as (
+    select p.attempt_id, count(*) as hints
+    from public.process_event p
+    join counted c on c.id = p.attempt_id
+    where p.type = 'hint_requested'
+    group by p.attempt_id
+  )
+  select
+    b.id,
+    (select count(*) from enrolled)::integer,
+    (select count(*) from counted_assignment a where a.block_id = b.id)::integer,
+    count(c.id)::integer,
+    count(distinct c.user_id)::integer,
+    coalesce(sum(h.hints), 0)::integer,
+    (count(c.id) filter (where c.status in ('passed', 'submitted')))::integer,
+    coalesce(
+      round(
+        (percentile_cont(0.5) within group (
+          order by extract(epoch from c.finished_at - c.started_at)
+        ) filter (where c.status = 'submitted'))::numeric
+      ),
+      0
+    )::integer,
+    (count(distinct c.user_id) filter (where s.longest >= x.max_repeated_failures))::integer
+  from public.class_block b
+  left join counted c on c.block_id = b.id
+  left join public.exercise x on x.id = c.exercise_id
+  left join hint h on h.attempt_id = c.id
+  left join streak s on s.attempt_id = c.id
+  where b.group_id = target_group_id
+  group by b.id, b.position
+  order by b.position;
+end;
+$$;
+
+create function public.group_deadline_stats(target_group_id uuid)
+returns table (
+  block_id uuid,
+  due_at timestamptz,
+  assignments integer,
+  on_time integer,
+  last_hours integer,
+  late integer,
+  missing_ids uuid[],
+  missing_names text[],
+  missing_pending integer[]
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not (public.is_admin() or coalesce(public.teaches_group(target_group_id), false)) then
+    raise exception 'Group not found' using errcode = 'P0002';
+  end if;
+  return query
+  with dated as (
+    select a.id, a.block_id, a.due_at
+    from public.exercise_assignment a
+    where a.group_id = target_group_id
+      and a.due_at is not null
+      and public.is_visible_assignment(a.id)
+  ),
+  delivery as (
+    select d.block_id, d.due_at, u.id as user_id, u.name,
+      (
+        select t.finished_at from public.attempt t
+        where t.assignment_id = d.id and t.user_id = u.id and t.status = 'submitted'
+        order by t.number
+        limit 1
+      ) as submitted_at
+    from dated d
+    join public.enrollment e on e.group_id = target_group_id
+    join public.app_user u on u.id = e.user_id
+  ),
+  per_student as (
+    select v.block_id, v.due_at, v.user_id, v.name,
+      count(*) filter (where v.submitted_at is null) as pending,
+      count(*) filter (where v.submitted_at <= v.due_at) as on_time,
+      count(*) filter (
+        where v.submitted_at <= v.due_at and v.submitted_at > v.due_at - interval '24 hours'
+      ) as last_hours,
+      count(*) filter (where v.submitted_at > v.due_at) as late
+    from delivery v
+    group by v.block_id, v.due_at, v.user_id, v.name
+  )
+  select
+    p.block_id,
+    p.due_at,
+    (select count(*) from dated d where d.block_id = p.block_id and d.due_at = p.due_at)::integer,
+    sum(p.on_time)::integer,
+    sum(p.last_hours)::integer,
+    sum(p.late)::integer,
+    coalesce(array_agg(p.user_id order by p.name, p.user_id) filter (where p.pending > 0), '{}'),
+    coalesce(array_agg(p.name order by p.name, p.user_id) filter (where p.pending > 0), '{}'),
+    coalesce(
+      array_agg(p.pending::integer order by p.name, p.user_id) filter (where p.pending > 0),
+      '{}'
+    )
+  from per_student p
+  group by p.block_id, p.due_at
+  order by p.due_at, p.block_id;
+end;
+$$;
+```
+
+- El intervalo de `group_deadline_stats` lleva al lado un comentario que nombra `DEADLINE_LAST_HOURS` (`data/stats-service.ts`): si cambia uno, cambia el otro. Si Postgres rechaza algo de este SQL al aplicarlo, se corrige la sintaxis sin cambiar la regla, que es la de `groupHistoryOf()`.
+- `supabase/tests/database/function_privileges.test.sql` gana las dos funciones. Después, `npm run db:reset`, `npm run db:test` y `npm run db:types`.
+- `data/supabase/supabase-stats-service.ts` y su spec, completos. `groupHistory()`, con tres peticiones a la vez: `class_block` (`select('*')`, `eq('group_id', groupId)`), `rpc('group_block_stats', { target_group_id })` y `rpc('group_deadline_stats', { target_group_id })`. Los bloques, con `toClassBlock()` y por `position`; a cada uno, su fila de estadísticas por `block_id` (`medianSeconds` es `null` si `median_seconds` es 0); `students`, el de la primera fila, o 0 sin bloques; cada plazo, con `dueAt` por `toIso()` y `missing` montado desde los tres vectores y ordenado por nombre con `localeCompare` y `'es'`; los plazos, por `dueAt` y por la posición de su bloque. Un `P0002` de cualquiera de las dos funciones llega como `not_found` (`unwrap()`).
+- `docs/PLAN.md`: el título y las viñetas de este paso quedan como están aquí; en 4.2, la fila de `StatsService` ya nombra las dos RPC (4.4). `docs/DESPLIEGUE.md`: la migración nueva, con las demás.
+
+Tests, en este orden:
+
+1. `group_history.test.sql` (pgTAP, con `pg_temp.sign_in()` como los demás; Marta lleva 1.º DAW A, grupo `…001`):
+   - `group_block_stats` devuelve una fila por bloque del grupo, en orden, con 24 alumnos, y las cifras del seed de los temas 1 a 4 y de la recuperación (las del test 2 del 4.4); el repaso final, oculto y sin intentos, sale con 2 asignaciones y todo a cero;
+   - las prácticas no cuentan: tras añadir como `postgres` dos eventos `hint_requested` al intento número 2 de Lucía en el ejercicio 1, el tema 1 sigue en 54 pistas;
+   - tras borrar la matrícula de un alumno, `students` baja a 23 y sus intentos dejan de contar;
+   - una asignación oculta sin intentos no cuenta y, tras insertarle un intento, sí;
+   - `group_deadline_stats` da para el tema 4 (6 de noviembre) 3 asignaciones, 40 a tiempo, 0 en las últimas horas, 0 después y 19 nombres en orden, con los tres vectores del mismo largo. Se comprueba esa fila y no cuántas hay, porque el examen entra cuando se abre (`now()`);
+   - tras mover `finished_at` de una entrega a una hora antes del plazo y la de otra a una hora después, `last_hours` y `late` valen 1; tras ocultar el bloque, su plazo desaparece;
+   - Javier (otro docente) y Lucía (alumna) reciben `P0002` de las dos funciones con el grupo de Marta; la administración, las filas; un usuario sin sesión no puede ejecutarlas.
+2. `supabase-stats-service.spec.ts`, con `FakeSupabaseServer`: las tres peticiones y sus parámetros; los bloques en orden con sus cifras; la mediana 0 como `null`; un bloque sin fila de estadísticas no rompe (todo a cero); los plazos con sus nombres en orden; un grupo sin bloques (`students` 0); `P0002` como `not_found` y sin red, `network`.
+
+✅ `npm run check` y `npm run db:test`. En local (`npm run db:start` y `npm run start:local`), con dos navegadores: como Marta, el histórico de 1.º DAW A enseña las mismas cifras que con los datos simulados (la comprobación del 4.4); como Lucía, se resuelve y se entrega un ejercicio del tema 5 pidiendo una pista; Marta lo ve moverse en la sesión en vivo y, al recargar el histórico, el tema 5 aparece en la gráfica con un alumno y su plazo tiene una entrega a tiempo. Sin capturas nuevas: la pantalla es la del 4.4.
 
 #### Fase 5 · Administración (≈10 h, en cinco subpasos)
 
