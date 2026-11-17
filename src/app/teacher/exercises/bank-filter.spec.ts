@@ -1,7 +1,7 @@
 import type { BankExercise } from '../../data/exercise-service';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { OTHER_TEACHER_ID, TEACHER_ID } from '../../data/mock/fixtures/users';
-import { type BankFilters, filterBank, NO_FILTERS, pageOf } from './bank-filter';
+import { type BankFilters, filterBank, NO_FILTERS } from './bank-filter';
 
 const BANK: readonly BankExercise[] = SEED.exercises.map((exercise) => ({
   exercise,
@@ -53,21 +53,5 @@ describe('filterBank', () => {
         (exercise) => exercise.functionName,
       ),
     );
-  });
-});
-
-describe('pageOf', () => {
-  const rows = Array.from({ length: 45 }, (_, i) => i);
-
-  it('cuts the rows into pages of 20', () => {
-    expect(pageOf(rows, 0)).toEqual({ rows: rows.slice(0, 20), pageIndex: 0 });
-    expect(pageOf(rows, 2)).toEqual({ rows: [40, 41, 42, 43, 44], pageIndex: 2 });
-  });
-
-  it('shows the last page for a page past the end, and the first for nonsense', () => {
-    expect(pageOf(rows, 9).pageIndex).toBe(2);
-    expect(pageOf(rows, -1).pageIndex).toBe(0);
-    expect(pageOf(rows, Number.NaN).pageIndex).toBe(0);
-    expect(pageOf([], 3)).toEqual({ rows: [], pageIndex: 0 });
   });
 });

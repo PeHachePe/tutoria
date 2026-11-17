@@ -68,6 +68,21 @@ html {
     )
   );
 
+  // Tabs that filter a table and share their row with its search (4.1e): tighter, so they fit,
+  // and without their own divider: the row has one under the tabs and the search together.
+  .compact-tabs {
+    @include mat.tabs-overrides(
+      (
+        divider-height: 0,
+      )
+    );
+
+    .mat-mdc-tab-link {
+      min-width: 0;
+      padding-inline: 16px;
+    }
+  }
+
   // App surfaces: grey-green page with white panels in light mode; in dark mode panels are
   // lighter than the page so that elevation still reads.
   --app-canvas: light-dark(var(--mat-sys-surface-container), var(--mat-sys-surface));
@@ -82,6 +97,15 @@ html {
     --app-#{$name}-container: light-dark(#{map.get($palette, 90)}, #{map.get($palette, 30)});
     --app-on-#{$name}-container: light-dark(#{map.get($palette, 10)}, #{map.get($palette, 90)});
   }
+
+  // Charts of the live panel (4.1e, D-070): where each student is in an exercise. Vivid hues
+  // validated as a set (adjacent pairs apart with normal vision and with colour blindness, 3:1 on
+  // the panel), each with its own step for the dark panel. Marks, not text: the words beside them
+  // keep the text tokens.
+  --app-chart-progress: light-dark(#2a78d6, #3987e5);
+  --app-chart-fail: light-dark(#eb6834, #d95926);
+  --app-chart-pass: light-dark(#0e98a8, #17a0b0);
+  --app-chart-done: light-dark(#008300, #0ca30c);
 
   // The tutor's reactions (1.8): a vivid palette of their own, the same in both themes. They are
   // decorative shapes, not text, so they do not need the contrast of the status colours. The names

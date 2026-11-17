@@ -1,9 +1,10 @@
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { testEvents as e } from '../../data/process-event-testing';
-import { LiveQueue, QUEUE_SHOWN } from './live-queue';
+import { LiveQueue } from './live-queue';
 import type { QueuedRow } from './live-store';
 import {
   ago,
@@ -78,12 +79,12 @@ describe('LiveQueue', () => {
     expect(within(item).getByRole('link', { name: 'Ana' }).getAttribute('href')).toBe(
       '/docente/en-vivo/a1',
     );
-    expect(text(item)).toContain(
-      'Falla 3 veces seguidas la misma prueba y no ha pedido ninguna pista · ejercicio 1',
+    const call = `${GROUP_EXERCISES[0].exercise.functionName}([])`;
+    expect(text(item)).toBe(
+      'Ana Ahora Atendido Falla 3 veces seguidas la misma prueba y no ha pedido ninguna pista' +
+        ` · ejercicio 1 falla ${call}`,
     );
-    expect(text(item)).not.toContain('· b1');
-    expect(text(item)).toContain('Ahora');
-    expect(text(region)).not.toContain('Primero, quien se ha atascado con el código');
+    expect(within(item).getByText(call).getAttribute('title')).toBe(call);
   });
 
   it('names the block of an exercise that is not in the block shown', async () => {
@@ -98,12 +99,19 @@ describe('LiveQueue', () => {
     expect(text(within(region).getByRole('listitem'))).toContain('ejercicio 1 · b1');
   });
 
-  it('counts the waiting minutes and explains the order when there are several', async () => {
+  it('counts the students and the waiting minutes', async () => {
     const { region } = await renderQueue(stuckRows(2), NOW + 3 * MINUTE);
 
     expect(text(within(region).getByRole('heading'))).toBe('A quién atender 2');
-    expect(text(region)).toContain('Primero, quien se ha atascado con el código');
     expect(text(within(region).getAllByRole('listitem')[0])).toContain('Espera 8 min');
+  });
+
+  it('says nothing of a test when none fails', async () => {
+    const [row] = stuckRows(1);
+
+    const { region } = await renderQueue([{ ...row, failingTest: null }]);
+
+    expect(text(region)).not.toContain('falla');
   });
 
   it('tells which student was attended', async () => {
@@ -116,16 +124,34 @@ describe('LiveQueue', () => {
     expect(attend).toHaveBeenCalledWith('s0');
   });
 
-  it('shows the first ones and unfolds the rest', async () => {
-    const { region } = await renderQueue(stuckRows(QUEUE_SHOWN + 2));
-    const user = userEvent.setup();
-    expect(within(region).getAllByRole('listitem')).toHaveLength(QUEUE_SHOWN);
+  it('shows every student in a card that does not grow: it scrolls inside', async () => {
+    const { region } = await renderQueue(stuckRows(9));
 
-    await user.click(screen.getByRole('button', { name: `Ver los ${QUEUE_SHOWN + 2}` }));
-    expect(within(region).getAllByRole('listitem')).toHaveLength(QUEUE_SHOWN + 2);
+    expect(within(region).getAllByRole('listitem')).toHaveLength(9);
+    expect(region.classList).toContain('max-h-112');
+    expect(within(region).getByRole('list').classList).toContain('overflow-y-auto');
+    expect(screen.queryByRole('button', { name: /^Ver / })).toBeNull();
+  });
 
-    await user.click(screen.getByRole('button', { name: 'Ver menos' }));
-    expect(within(region).getAllByRole('listitem')).toHaveLength(QUEUE_SHOWN);
+  it('lets an entry come and go with its animations on', async () => {
+    TestBed.configureTestingModule({ animationsEnabled: true, providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(LiveQueue);
+    const set = (rows: readonly QueuedRow[]) => {
+      fixture.componentRef.setInput('rows', rows);
+      fixture.detectChanges();
+    };
+    fixture.componentRef.setInput('now', NOW);
+    fixture.componentRef.setInput('blocks', GROUPS[0].blocks);
+    fixture.componentRef.setInput('blockId', 'b1');
+    set(stuckRows(1));
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelectorAll('li')).toHaveLength(1);
+
+    set([]);
+    await fixture.whenStable();
+
+    expect(host.querySelector('li')).toBeNull();
+    expect(host.textContent).toContain('Todo en orden');
   });
 
   it('leaves out a row without an attempt at an exercise of the group', async () => {

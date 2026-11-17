@@ -52,6 +52,11 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { SettingsStore } from '../../student/settings/settings-store';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
+import { CommonFailure } from '../../teacher/live/common-failure';
+import { type BarSegment, LiveBar } from '../../teacher/live/live-bar';
+import { LiveChip, type LiveReason } from '../../teacher/live/live-reason';
+import { LiveClass } from '../../teacher/live/live-class';
+import { SAMPLE_OVERVIEW, SAMPLE_STRIP } from './live-class-sample';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
 import { ShowcaseTable } from './showcase-table';
@@ -101,6 +106,10 @@ import { ShowcaseTable } from './showcase-table';
     TutorActions,
     RunResults,
     Splitter,
+    LiveBar,
+    CommonFailure,
+    LiveChip,
+    LiveClass,
   ],
   templateUrl: './showcase-page.html',
 })
@@ -108,6 +117,23 @@ export class ShowcasePage {
   /** The root leads to the home of the signed-in role, or to the login. */
   protected readonly homePath = APP_PATHS.root;
   protected readonly theme = inject(ThemeService);
+
+  protected readonly classOverview = SAMPLE_OVERVIEW;
+  protected readonly classStrip = SAMPLE_STRIP;
+  protected readonly barSample: readonly BarSegment[] = [
+    { status: 'not_started', count: 3, names: 'Sin empezar: Iker, Lía y Max' },
+    { status: 'in_progress', count: 8, names: 'En curso: Aya, Hugo y 6 más' },
+    { status: 'tests_failed', count: 5, names: 'Con fallos: Noa, Pau y 3 más' },
+    { status: 'passed', count: 4, names: 'Superado: Rut, Sam y 2 más' },
+    { status: 'submitted', count: 4, names: 'Entregado: Teo, Uxue y 2 más' },
+  ];
+  protected readonly chipSamples: readonly LiveReason[] = [
+    { kind: 'hints_exhausted', since: 0 },
+    { kind: 'hint_rush', hints: 3, since: 0 },
+    { kind: 'away' },
+    { kind: 'paste_submit', chars: 400, runs: 0 },
+    { kind: 'breakthrough', failures: 5 },
+  ];
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   protected readonly settings = inject(SettingsStore);

@@ -88,4 +88,6 @@ export const TEACHER_PARAMS = {
   archived: 'archivados',
   /** The page of the bank, from 1. */
   page: 'pagina',
+  /** The filter of the students of the live panel (4.1e): `ayuda`, `parados`… */
+  filter: 'filtro',
 } as const;

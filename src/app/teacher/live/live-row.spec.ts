@@ -27,7 +27,6 @@ describe('liveRow', () => {
       position: null,
       repeating: false,
       status: 'not_started',
-      minutes: null,
       hints: 0,
       hintLevel: null,
       tests: null,
@@ -61,11 +60,8 @@ describe('liveRow', () => {
       exercise: BLOCK_EXERCISES[1],
       position: 2,
       status: 'in_progress',
-      minutes: 12,
       hints: 2,
       hintLevel: 2,
-      pastes: 1,
-      focusLosses: 1,
       tests: { passed: 4, total: 6 },
       failedTestIds: ['t1', 't2'],
       lastActivity: ago(2),
@@ -76,23 +72,11 @@ describe('liveRow', () => {
     });
   });
 
-  it('counts the time of a submitted attempt until its submission', () => {
-    const attempt = testAttempt('a1', 'ana', {
-      status: 'submitted',
-      startedAt: ago(25),
-      updatedAt: ago(5),
-      finishedAt: ago(5),
-    });
-
-    expect(row({ attempts: [attempt] }).minutes).toBe(20);
-  });
-
-  it('leaves an old attempt out of the session, with its time until its last activity', () => {
+  it('leaves an old attempt out of the session', () => {
     const attempt = testAttempt('a1', 'ana', { startedAt: ago(200), updatedAt: ago(180) });
 
     expect(row({ attempts: [attempt] })).toMatchObject({
       work: 'absent',
-      minutes: 20,
       reason: null,
       patterns: [],
     });

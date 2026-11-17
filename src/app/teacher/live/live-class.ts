@@ -1,149 +1,207 @@
-import { Component, computed, inject, input } from '@angular/core';
-import { MatIcon } from '@angular/material/icon';
+import { Component, computed, inject, input, output } from '@angular/core';
+import { MatButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 
+import { TEACHER_PARAMS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
 import type { AttemptStatus } from '../../data/attempt';
-import { exerciseText } from '../../data/localized-text';
-import { formatCall } from '../../shared/format-value';
-import { COMMON_FAILURE_STUDENTS, type ExerciseOverview } from './live-overview';
+import type { ClassBlock } from '../../data/exercise';
+import { blockTitle, exerciseText } from '../../data/localized-text';
+import { formatCall, formatValue } from '../../shared/format-value';
+import type { ClassStrip, StripStatus } from './class-strip';
+import { CommonFailure } from './common-failure';
+import { BAR_SEGMENT_OF, BAR_SEGMENTS, LiveBar } from './live-bar';
+import type { ChartFilter } from './live-filter';
+import { type ClassOverview, COMMON_FAILURE_STUDENTS, OVERVIEW_TOP } from './live-overview';
+import { otherBlockTitle } from './other-block';
+import { segmentNames } from './segment-names';
 
-/** The segments of each bar, in the order of the work, with their colour token and name. */
-const SEGMENTS: readonly {
-  readonly status: AttemptStatus;
-  readonly tone: string;
-  readonly label: string;
-}[] = [
-  {
-    status: 'not_started',
-    tone: 'bg-surface-container-highest',
-    label: $localize`:@@status.notStarted:Sin empezar`,
-  },
-  { status: 'in_progress', tone: 'bg-info', label: $localize`:@@status.inProgress:En curso` },
-  {
-    status: 'tests_failed',
-    tone: 'bg-warning',
-    label: $localize`:@@status.testsFailed:Con fallos`,
-  },
-  { status: 'passed', tone: 'bg-success/45', label: $localize`:@@status.passed:Superado` },
-  { status: 'submitted', tone: 'bg-success', label: $localize`:@@status.submitted:Entregado` },
+/** The order of the summary of each exercise: what calls for the teacher first. */
+const SUMMARY_ORDER: readonly AttemptStatus[] = [
+  'tests_failed',
+  'in_progress',
+  'passed',
+  'submitted',
+  'not_started',
 ];
 
+/** The segments of a column of the strip, from the bottom. */
+const STRIP_ORDER: readonly StripStatus[] = ['submitted', 'passed', 'in_progress', 'tests_failed'];
+
+/** Students out of class from whom the test failed most is worth a line: one is the queue's. */
+export const TOP_FAILURE_STUDENTS = 2;
+
 /**
- * «La clase en el bloque» (D-054): a bar per exercise with where every student is, and the test
- * most of them fail now, to decide whether to explain it to everybody. The bars grow and shrink
- * as the class works; the numbers are also in text, for screen readers.
+ * «Dónde está la clase» (D-054, D-068, D-070). With a block, a strip with a column per exercise
+ * and who is at it now, by status, read in a sentence that also names whoever is alone far from
+ * the bulk; it takes the same room with 6 exercises or 200. Under it, every exercise in the card's
+ * own scroll, the busiest first, each with its bar and its summary, whose parts say who and filter
+ * the table; «Para explicar a todos» when several students fail the same
+ * test now. With the whole class, the exercises in progress of any block. The colours are those
+ * of the charts.
  */
 @Component({
   selector: 'app-live-class',
-  imports: [MatIcon],
-  template: `
-    <div class="flex flex-col gap-1.5 border-b border-outline-variant px-4 py-3">
-      <h2 id="live-class-title" class="text-title-medium" i18n="@@live.class.heading">
-        La clase en el bloque
-      </h2>
-      <ul class="flex flex-wrap gap-x-2.5 gap-y-1" aria-hidden="true">
-        @for (segment of segments; track segment.status) {
-          <li class="flex items-center gap-1 text-body-small text-on-surface-variant">
-            <span
-              class="size-2.5 rounded-xs border border-outline-variant"
-              [class]="segment.tone"
-            ></span>
-            {{ segment.label }}
-          </li>
-        }
-      </ul>
-    </div>
-    <ol class="flex flex-col gap-4 p-4">
-      @for (item of items(); track item.id) {
-        <li class="flex flex-col gap-1.5">
-          <div class="flex flex-wrap items-baseline justify-between gap-x-3">
-            <h3 class="text-title-small" [attr.lang]="item.lang">{{ item.title }}</h3>
-            <p class="sr-only">{{ item.summary }}</p>
-          </div>
-          <div
-            class="flex h-3 overflow-hidden rounded-full bg-surface-container-high"
-            aria-hidden="true"
-          >
-            @for (segment of item.segments; track segment.status) {
-              <span
-                class="h-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                [class]="segment.tone"
-                [style.width.%]="segment.percent"
-              ></span>
-            }
-          </div>
-          @if (item.failure; as failure) {
-            <div class="flex flex-col items-start gap-1 text-body-medium">
-              @if (failure.common) {
-                <span
-                  class="inline-flex items-center gap-1 rounded-full bg-warning-container px-2 text-label-medium text-on-warning-container"
-                  ><mat-icon class="text-[1rem]! size-4!" aria-hidden="true">campaign</mat-icon
-                  ><span i18n="@@live.class.common">Para explicar a todos</span></span
-                >
-              }
-              <span class="text-on-surface-variant" i18n="@@live.class.topFailure"
-                >Más falla ahora:</span
-              >
-              <p class="flex flex-wrap items-center gap-x-2">
-                <code class="rounded bg-surface-container-high px-1.5 font-mono text-body-small">{{
-                  failure.call
-                }}</code>
-                @if (failure.hidden) {
-                  <span class="text-on-surface-variant" i18n="@@live.class.hiddenTest"
-                    >(prueba oculta)</span
-                  >
-                }
-                <span
-                  class="text-on-surface-variant"
-                  i18n="@@live.class.failing"
-                  >{failure.students, plural,
-                    =1 {· 1 alumno}
-                    other {· {{ failure.students }} alumnos}
-                  }</span
-                >
-              </p>
-            </div>
-          }
-        </li>
-      }
-    </ol>
-  `,
+  imports: [RouterLink, MatButton, MatTooltip, LiveBar, CommonFailure],
+  templateUrl: './live-class.html',
   host: {
     role: 'region',
     'aria-labelledby': 'live-class-title',
-    class: 'flex flex-col overflow-hidden rounded-2xl bg-panel',
+    // Never taller than the queue's maximum: the exercises scroll inside, under a fixed header
+    class: '@container flex max-h-112 flex-col overflow-hidden rounded-2xl bg-panel',
   },
 })
 export class LiveClass {
   private readonly locale = inject(LanguageService).locale;
 
-  readonly overview = input.required<readonly ExerciseOverview[]>();
+  readonly overview = input.required<ClassOverview>();
+  /** Where each student is in the block; null with the whole class. */
+  readonly strip = input<ClassStrip | null>(null);
+  /** «Avance del bloque», from 0 to 100; null with the whole class. */
+  readonly progress = input<number | null>(null);
+  /** The blocks of the group, to name the one of an exercise or of the line at the foot. */
+  readonly blocks = input.required<readonly ClassBlock[]>();
+  /** The block shown, or null with the whole class. */
+  readonly blockId = input.required<string | null>();
+  /** Somebody works now: «Para explicar a todos», or the test failed most out of class. */
+  readonly inClass = input.required<boolean>();
+  /** A part of a summary or «Ver quiénes»: the table keeps those students. */
+  readonly filter = output<ChartFilter>();
+  /** Another block of the line at the foot: its link goes away while the block loads. */
+  readonly blockChosen = output<void>();
 
-  protected readonly segments = SEGMENTS;
+  protected readonly legend = BAR_SEGMENTS.filter(({ status }) => status !== 'not_started');
+  protected readonly notStarted = BAR_SEGMENT_OF.not_started;
 
-  protected readonly items = computed(() =>
-    this.overview().map(({ exercise, position, students, total, topFailure }) => {
+  /** Every exercise with its bar and its summary, in the order of the strip or of the overview. */
+  protected readonly items = computed(() => {
+    const blocks = this.blocks();
+    const blockId = this.blockId();
+    return this.overview().exercises.map(({ exercise, position, students, topFailure }) => {
       const text = exerciseText(exercise.exercise, this.locale);
-      const count = (status: AttemptStatus) => students[status].length;
+      const names = (status: AttemptStatus) =>
+        segmentNames(BAR_SEGMENT_OF[status].label, students[status], this.locale);
+      const failing = topFailure?.students.length ?? 0;
+      const common = this.inClass() && failing >= COMMON_FAILURE_STUDENTS;
+      const showFailure = common || (!this.inClass() && failing >= TOP_FAILURE_STUDENTS);
       return {
         id: exercise.assignmentId,
+        position,
         title: `${position}. ${text.title}`,
         lang: text.locale === this.locale ? null : text.locale,
-        segments: SEGMENTS.map(({ status, tone }) => ({
+        block: blockId === null ? otherBlockTitle(blocks, exercise, blockId, this.locale) : null,
+        segments: BAR_SEGMENTS.map(({ status }) => ({
           status,
-          tone,
-          percent: total === 0 ? 0 : (count(status) / total) * 100,
+          count: students[status].length,
+          names: names(status),
         })),
-        summary: SEGMENTS.filter(({ status }) => count(status) > 0)
-          .map(({ status, label }) => `${label}: ${count(status)}`)
-          .join(', '),
-        failure: topFailure && {
-          call: formatCall(exercise.exercise.functionName, topFailure.test.input),
-          hidden: topFailure.test.isHidden,
-          students: topFailure.students.length,
-          common: topFailure.students.length >= COMMON_FAILURE_STUDENTS,
-        },
+        summary: SUMMARY_ORDER.filter((status) => students[status].length > 0).map((status) => ({
+          status,
+          count: students[status].length,
+          tone: BAR_SEGMENT_OF[status].tone,
+          names: names(status),
+        })),
+        failure:
+          topFailure && showFailure
+            ? {
+                testId: topFailure.test.id,
+                call: formatCall(exercise.exercise.functionName, topFailure.test.input),
+                expected: formatValue(topFailure.test.expectedOutput),
+                hidden: topFailure.test.isHidden,
+                students: failing,
+                common,
+              }
+            : null,
+      };
+    });
+  });
+
+  /**
+   * Every exercise, in the card's own scroll (D-070): with a strip, those with somebody at them now
+   * first, the most crowded first, and then the rest in order; otherwise, as the overview gives
+   * them (a block in order, or the whole class with the busiest exercise first).
+   */
+  protected readonly shown = computed(() => {
+    const items = this.items();
+    if (!this.drawStrip()) return items;
+    const strip = this.strip() as ClassStrip;
+    const here = new Map(
+      strip.columns.map((column) => [column.exercise.assignmentId, column.total]),
+    );
+    // Every exercise of the block has its column
+    const now = (id: string) => here.get(id) as number;
+    return [...items].sort((a, b) => now(b.id) - now(a.id) || a.position - b.position);
+  });
+
+  /**
+   * The strip only pays off with more exercises than rows: with up to `OVERVIEW_TOP`, every
+   * exercise has its row and the sentence says the rest.
+   */
+  protected readonly drawStrip = computed(() => (this.strip()?.columns.length ?? 0) > OVERVIEW_TOP);
+
+  /** The columns of the strip, with each segment as a share of the tallest one, and its names. */
+  protected readonly columns = computed(() => {
+    // Only drawn with a strip
+    const strip = this.strip() as ClassStrip;
+    const tallest = Math.max(1, ...strip.columns.map((column) => column.total));
+    const tags = this.tags();
+    return strip.columns.map((column) => {
+      const text = exerciseText(column.exercise.exercise, this.locale).title;
+      const parts = STRIP_ORDER.filter((status) => column.counts[status] > 0);
+      return {
+        id: column.exercise.assignmentId,
+        tooltip: `${column.position}. ${text}: ${column.total}`,
+        tag: tags.find((tag) => tag.position === column.position)?.label ?? null,
+        segments: parts.map((status) => ({
+          status,
+          tone: BAR_SEGMENT_OF[status].tone,
+          percent: (column.counts[status] / tallest) * 100,
+        })),
+      };
+    });
+  });
+
+  /** Who is alone far from the bulk, with their names joined: over their column and in the sentence. */
+  protected readonly tags = computed(() => {
+    const list = new Intl.ListFormat(this.locale, { type: 'conjunction' });
+    // Only read with a strip: over its columns and in its sentence
+    return (this.strip() as ClassStrip).outliers.map((outlier) => ({
+      ...outlier,
+      label: list.format(outlier.names),
+    }));
+  });
+
+  /** Every block of the group, to choose one when nobody works with the whole class. */
+  protected readonly blockLinks = computed(() =>
+    this.blocks().map((block) => {
+      const title = blockTitle(block, this.locale);
+      return {
+        id: block.id,
+        title: title.title,
+        lang: title.locale === this.locale ? null : title.locale,
+        query: { [TEACHER_PARAMS.block]: block.id },
       };
     }),
   );
+
+  /** «4 trabajan en otros bloques: Tema 2 (3) · Repaso (1)», or null with nobody elsewhere. */
+  protected readonly elsewhere = computed(() => {
+    const entries = this.overview().elsewhere.flatMap(({ blockId, students }) => {
+      const block = this.blocks().find((candidate) => candidate.id === blockId);
+      return block
+        ? [
+            {
+              id: blockId,
+              title: blockTitle(block, this.locale).title,
+              students,
+              query: { [TEACHER_PARAMS.block]: blockId },
+            },
+          ]
+        : [];
+    });
+    return entries.length === 0
+      ? null
+      : { students: entries.reduce((sum, entry) => sum + entry.students, 0), blocks: entries };
+  });
 }

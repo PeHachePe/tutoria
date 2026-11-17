@@ -1,54 +1,90 @@
 <div class="flex flex-col gap-6" [attr.aria-busy]="store.isLoading()">
-  <header class="flex flex-wrap items-end justify-between gap-4">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-headline-medium" i18n="@@live.heading">Sesión en vivo</h1>
-      <p class="flex flex-wrap items-center gap-x-2 text-body-large text-on-surface-variant">
-        <span class="relative flex size-3" aria-hidden="true">
-          <span
-            class="absolute inline-flex size-full rounded-full bg-error opacity-60 animate-ping motion-reduce:animate-none"
-          ></span>
-          <span class="relative inline-flex size-3 rounded-full bg-error"></span>
-        </span>
-        <span class="whitespace-nowrap" i18n="@@live.onAir">En directo</span>
-        @if (store.selection(); as selection) {
+  <header class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+    <!-- It takes the room the selectors leave, so they stay on its right while they fit -->
+    <div class="flex min-w-0 flex-1 basis-96 flex-col gap-1">
+      <p
+        class="flex flex-wrap items-center gap-x-2 text-label-large text-on-surface-variant"
+        ngPreserveWhitespaces
+      >
+        @if (ready()) {
+          @if (inClass()) {
+            <span class="relative flex size-2.5" aria-hidden="true">
+              <span
+                class="absolute inline-flex size-full rounded-full bg-error opacity-60 animate-ping motion-reduce:animate-none"
+              ></span>
+              <span class="relative inline-flex size-2.5 rounded-full bg-error"></span>
+            </span>
+            <span class="whitespace-nowrap" i18n="@@live.onAir">En directo</span>
+          } @else {
+            <span class="whitespace-nowrap" i18n="@@live.offAir">Fuera de clase</span>
+          }
+          @if (subject()) {
+            <span aria-hidden="true">·</span>
+          }
+        }
+        @if (subject(); as subject) {
+          <span [attr.lang]="subject.lang">{{ subject.name }}</span>
+        }
+        @if (ready() && !inClass() && store.figures().lastActivity; as last) {
           <span aria-hidden="true">·</span>
-          <!-- Polite and only when the figures change, not with every event -->
-          <span aria-live="polite">
-            <span i18n="@@live.inSession">{inSession(), plural,
-              =1 {1 en la sesión}
-              other {{{ inSession() }} en la sesión}
-            }</span>
-            @if (selection.blockId !== null && store.figures().finished > 0) {
-              <span aria-hidden="true"> · </span>
-              <span i18n="@@live.finished">{store.figures().finished, plural,
-                =1 {1 con el bloque entregado}
-                other {{{ store.figures().finished }} con el bloque entregado}
-              }</span>
-            }
-          </span>
+          <span i18n="@@live.offAir.last">última actividad: {{ last | date: 'EEE d MMM' }}</span>
         }
       </p>
+      <!-- Focusable from code: a link to another block goes away while it loads, so the focus comes here -->
+      <h1 #heading tabindex="-1" class="text-headline-medium" ngPreserveWhitespaces>
+        @if (store.group(); as group) {
+          {{ group.name }}
+          @if (shownBlock(); as block) {
+            <span aria-hidden="true">·</span>
+            <span [attr.lang]="block.lang">{{ block.title }}</span>
+          }
+        } @else {
+          <ng-container i18n="@@live.heading">Sesión en vivo</ng-container>
+        }
+      </h1>
     </div>
 
     @if (groupOptions().length > 0) {
-      <div class="flex flex-wrap gap-3">
-        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-96">
+      <div class="flex w-full flex-wrap gap-3 sm:w-auto sm:shrink-0">
+        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-48">
           <mat-label i18n="@@live.group">Grupo</mat-label>
-          <mat-select [value]="store.group()?.id" (selectionChange)="selectGroup($event.value)">
+          <mat-select
+            [value]="store.group()?.id"
+            [panelWidth]="null"
+            (selectionChange)="selectGroup($event.value)"
+          >
+            <mat-select-trigger>{{ store.group()?.name }}</mat-select-trigger>
             @for (option of groupOptions(); track option.id) {
               <mat-option [value]="option.id">{{ option.label }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
-        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-72">
+        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-88">
           <mat-label i18n="@@live.block">Bloque</mat-label>
-          <mat-select [value]="blockValue()" (selectionChange)="selectBlock($event.value)">
+          <mat-select
+            [value]="blockValue()"
+            [panelWidth]="null"
+            (selectionChange)="selectBlock($event.value)"
+          >
+            <!-- Only the title: the marks of the option would show in the field -->
+            <mat-select-trigger
+              ><span [attr.lang]="shownBlock()?.lang">{{
+                shownBlock()?.title
+              }}</span></mat-select-trigger
+            >
             @for (option of blockOptions(); track option.id) {
-              <!-- The space between the title and «(oculto)», also for its accessible name -->
+              <!-- The spaces between the title and its marks, also for its accessible name -->
               <mat-option [value]="option.id" ngPreserveWhitespaces
                 ><span [attr.lang]="option.lang">{{ option.title }}</span>
                 @if (option.hidden) {
                   <span class="text-on-surface-variant" i18n="@@live.block.hidden">(oculto)</span>
+                }
+                @if (option.active) {
+                  <span
+                    class="ms-1 inline-block size-2 rounded-full bg-success"
+                    aria-hidden="true"
+                  ></span
+                  ><span class="sr-only" i18n="@@live.block.active">con actividad ahora</span>
                 }
               </mat-option>
             }
@@ -57,6 +93,14 @@
       </div>
     }
   </header>
+
+  @if (ready() && inClass()) {
+    <app-live-rhythm
+      class="rounded-2xl bg-panel px-4 py-3"
+      [minutes]="store.activity()"
+      [reading]="store.rhythm()"
+    />
+  }
 
   @if (store.error(); as error) {
     <app-load-error [error]="error" (retry)="store.reload()" />
@@ -67,14 +111,16 @@
       text="Cuando administración te asigne un grupo, podrás seguir aquí su trabajo en directo."
       i18n-text="@@live.empty.groups.text"
     />
-  } @else if (!store.selection() || (store.isLoading() && store.rows().length === 0)) {
+  } @else if (!ready()) {
     <app-loading-skeleton label="Cargando la sesión…" i18n-label="@@live.loading">
-      <div class="flex flex-col gap-4">
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <app-skeleton class="h-56 rounded-2xl" />
-          <app-skeleton class="h-56 rounded-2xl" />
+      <!-- The shape of the page: the pace, the class next to the queue, and the students -->
+      <div class="flex flex-col gap-6">
+        <app-skeleton class="h-20 rounded-2xl" />
+        <div class="grid gap-4 @4xl:grid-cols-3">
+          <app-skeleton class="h-72 rounded-2xl @4xl:col-span-2" />
+          <app-skeleton class="h-72 rounded-2xl" />
         </div>
-        <app-skeleton class="h-96 w-full rounded-2xl" />
+        <app-skeleton class="h-96 rounded-2xl" />
       </div>
     </app-loading-skeleton>
   } @else if (store.blocks().length === 0) {
@@ -84,7 +130,7 @@
       text="Crea un bloque y asígnale ejercicios para seguir aquí su trabajo."
       i18n-text="@@live.empty.blocks.text"
     />
-  } @else if (store.blockExercises().length === 0 && store.selection()?.blockId === null) {
+  } @else if (store.blockExercises().length === 0 && blockId() === null) {
     <app-empty-state
       heading="Este grupo aún no tiene ejercicios"
       i18n-heading="@@live.empty.group.heading"
@@ -99,41 +145,136 @@
       i18n-text="@@live.empty.exercises.text"
     />
   } @else {
-    <div class="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <div class="flex min-w-0 flex-col gap-4">
+    <!-- Side by side, the queue and the class are as tall as the taller one, up to their maximum -->
+    <div class="grid gap-4 @4xl:grid-cols-3">
+      @if (inClass()) {
         <app-live-queue
+          class="@4xl:col-start-3 @4xl:row-start-1"
           [rows]="store.queue()"
           [blocks]="store.blocks()"
-          [blockId]="store.selection()?.blockId ?? null"
+          [blockId]="blockId()"
           [now]="store.now()"
           (attend)="store.attend($event)"
         />
-        <app-live-activity [minutes]="store.activity()" />
-      </div>
-      <div class="flex min-w-0 flex-col gap-4">
-        <app-live-class [overview]="store.overview().exercises" />
-        <app-live-feed-list [feed]="store.feed()" [now]="store.now()" />
-      </div>
+      }
+      <app-live-class
+        class="min-w-0 @4xl:col-start-1 @4xl:row-start-1"
+        [class]="inClass() ? '@4xl:col-span-2' : '@4xl:col-span-3'"
+        [overview]="store.overview()"
+        [strip]="store.strip()"
+        [progress]="store.figures().progress"
+        [blocks]="store.blocks()"
+        [blockId]="blockId()"
+        [inClass]="inClass()"
+        (filter)="showChart($event)"
+        (blockChosen)="heading.focus()"
+      />
     </div>
 
-    <section aria-labelledby="live-students-title" class="flex flex-col gap-3">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="live-students-title" class="text-title-large" i18n="@@live.students.heading">
-          Alumnado
-        </h2>
-        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-72">
-          <mat-icon matPrefix>search</mat-icon>
-          <mat-label i18n="@@live.search">Buscar alumno</mat-label>
-          <input matInput type="search" [value]="search()" (input)="onSearch($event)" />
-        </mat-form-field>
-      </div>
-      <app-live-table
-        [rows]="tableRows()"
-        [caption]="caption()"
-        [blocks]="store.blocks()"
-        [blockId]="store.selection()?.blockId ?? null"
-        [now]="store.now()"
-      />
-    </section>
+    @if (inClass() || blockId() !== null) {
+      <!-- The figures head the table they filter: pressing one never moves the page (D-070) -->
+      <section
+        aria-labelledby="live-students-title"
+        class="flex flex-col overflow-hidden rounded-2xl bg-panel"
+      >
+        <!-- The tabs say what the card is: its title is for screen readers only -->
+        <h2 id="live-students-title" class="sr-only" i18n="@@live.students.heading">Alumnado</h2>
+        <!-- The counts of the tabs change by themselves: said once, with their final values -->
+        <p class="sr-only" aria-live="polite">
+          {{ announcement() }}
+        </p>
+        <!-- One row: the tabs, each a link to its filter (the URL keeps it, and nothing moves),
+             and the search at their right (D-070) -->
+        <div class="flex flex-wrap items-center gap-x-4 border-b border-outline-variant">
+          <nav
+            mat-tab-nav-bar
+            class="compact-tabs min-w-0 flex-auto"
+            [tabPanel]="studentsPanel"
+            [mat-stretch-tabs]="false"
+            [attr.aria-label]="filterAction"
+          >
+            @for (tab of tabs(); track tab.filter) {
+              <a
+                mat-tab-link
+                [routerLink]="[]"
+                [queryParams]="tab.query"
+                queryParamsHandling="merge"
+                [active]="shownFilter() === tab.filter && !chartFilter()"
+                (click)="chartFilter.set(null)"
+              >
+                {{ tab.label }}
+                <span
+                  class="ms-2 rounded-full px-2 text-label-medium"
+                  [class]="
+                    tab.filter === 'help' && tab.count > 0
+                      ? 'bg-warning-container text-on-warning-container'
+                      : 'bg-surface-container-high text-on-surface-variant'
+                  "
+                  >{{ tab.count }}</span
+                >
+              </a>
+            }
+          </nav>
+          <!-- A search bar of its own: the native clear button of type=search does not follow the theme -->
+          <label
+            class="mx-4 my-1 flex h-10 w-full items-center gap-2 rounded-full bg-surface-container-high ps-3 pe-1 text-on-surface-variant transition-colors focus-within:bg-surface-container-highest focus-within:ring-1 focus-within:ring-primary motion-reduce:transition-none sm:w-60"
+          >
+            <mat-icon class="shrink-0" aria-hidden="true">search</mat-icon>
+            <input
+              type="search"
+              class="min-w-0 flex-1 bg-transparent text-body-large text-on-surface outline-none placeholder:text-on-surface-variant [&::-webkit-search-cancel-button]:appearance-none"
+              placeholder="Buscar alumno"
+              i18n-placeholder="@@live.search"
+              aria-label="Buscar alumno"
+              i18n-aria-label="@@live.search"
+              autocomplete="off"
+              spellcheck="false"
+              [value]="search()"
+              (input)="onSearch($event)"
+            />
+            @if (search()) {
+              <button
+                matIconButton
+                type="button"
+                class="size-8! shrink-0 p-1!"
+                aria-label="Borrar la búsqueda"
+                i18n-aria-label="@@live.search.clear"
+                (click)="search.set('')"
+              >
+                <mat-icon class="text-[1.25rem]! size-5!">close</mat-icon>
+              </button>
+            }
+          </label>
+        </div>
+        <mat-tab-nav-panel #studentsPanel class="flex flex-col">
+          @if (chartChip(); as chip) {
+            <span
+              class="mx-4 mt-3 inline-flex items-center gap-1 self-start rounded-full bg-secondary-container py-0.5 ps-3 text-label-large text-on-secondary-container"
+            >
+              {{ chip }}
+              <button
+                matIconButton
+                type="button"
+                class="size-8! p-1!"
+                (click)="chartFilter.set(null)"
+                aria-label="Quitar el filtro"
+                i18n-aria-label="@@live.filter.testRemove"
+              >
+                <mat-icon class="text-[1.125rem]! size-[1.125rem]!">close</mat-icon>
+              </button>
+            </span>
+          }
+          <app-live-table
+            [rows]="tableRows()"
+            [caption]="caption()"
+            [blocks]="store.blocks()"
+            [blockId]="blockId()"
+            [now]="store.now()"
+            [inClass]="inClass()"
+            [pageKey]="pageKey()"
+          />
+        </mat-tab-nav-panel>
+      </section>
+    }
   }
 </div>

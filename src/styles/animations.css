@@ -13,8 +13,10 @@
   --animate-tutor-typing: tutor-typing 1.2s ease-in-out infinite;
   --animate-tutor-caret: tutor-caret 1s steps(1) infinite;
 
-  /* Live session (step 4.1): a student who appears in a card slides in. */
+  /* Live session (step 4.1): a student who appears in a card slides in and, when the teacher
+     attends them (4.1e), slides out. */
   --animate-live-in: live-in 260ms ease-out both;
+  --animate-live-out: live-out 200ms ease-in both;
 
   @keyframes page-in {
     from {
@@ -46,6 +48,13 @@
     from {
       opacity: 0;
       translate: 0 -0.5rem;
+    }
+  }
+
+  @keyframes live-out {
+    to {
+      opacity: 0;
+      translate: 0.5rem 0;
     }
   }
 

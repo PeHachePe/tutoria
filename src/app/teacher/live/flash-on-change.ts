@@ -1,9 +1,9 @@
 import { Directive, effect, ElementRef, inject, input } from '@angular/core';
 
+import { prefersReducedMotion } from '../../shared/reduced-motion';
+
 /** How long the highlight of a changed row lasts. */
 export const FLASH_MS = 1200;
-
-const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 /**
  * Highlights its element for a moment each time `appFlashOnChange` changes, but not the first time:
@@ -26,7 +26,7 @@ export class FlashOnChange {
         first = false;
         return;
       }
-      if (window?.matchMedia?.(REDUCED_MOTION).matches || !element.animate) return;
+      if (prefersReducedMotion(window) || !element.animate) return;
       element.animate(
         [
           { backgroundColor: 'var(--mat-sys-primary-container)' },

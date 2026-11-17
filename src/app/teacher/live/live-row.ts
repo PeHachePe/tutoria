@@ -25,15 +25,8 @@ export interface LiveRow {
   /** The attempt is practice after a submission (2.5c): «Repitiendo». */
   readonly repeating: boolean;
   readonly status: AttemptStatus;
-  /**
-   * Minutes on the attempt: until it was submitted, until now in the session, or until its last
-   * activity. Until the 4.1e, with `pastes` and `focusLosses`: the old table shows them.
-   */
-  readonly minutes: number | null;
   readonly hints: number;
   readonly hintLevel: HintLevel | null;
-  readonly pastes: number;
-  readonly focusLosses: number;
   /** Tests passed in the latest run, or null before any. */
   readonly tests: TestCount | null;
   /** Tests failing in the latest run of the attempt; none before a run or with all passed. */
@@ -93,11 +86,8 @@ export function liveRow(
     position: exercise ? exercisePosition(exercises, exercise.assignmentId) : null,
     repeating: (attempt?.number ?? 1) > 1,
     status: attempt?.status ?? 'not_started',
-    minutes: attempt ? workMinutes(attempt, inSession ? now : activityOf(attempt)) : null,
     hints: hintLevels.length,
     hintLevel: hintLevels.length > 0 ? (Math.max(...hintLevels) as HintLevel) : null,
-    pastes: own.filter((event) => event.type === 'paste').length,
-    focusLosses: own.filter((event) => event.type === 'focus_lost').length,
     tests: lastRun
       ? { passed: lastRun.detail.passed, total: lastRun.detail.passed + lastRun.detail.failed }
       : null,
@@ -144,11 +134,6 @@ function latest(attempts: readonly Attempt[], time: (attempt: Attempt) => number
     (best, attempt) => (best === null || time(attempt) > time(best) ? attempt : best),
     null,
   );
-}
-
-function workMinutes(attempt: Attempt, until: number): number {
-  const end = attempt.finishedAt === null ? until : Date.parse(attempt.finishedAt);
-  return Math.max(0, Math.floor((end - Date.parse(attempt.startedAt)) / MINUTE_MS));
 }
 
 function eventTime(event: ProcessEvent): number {

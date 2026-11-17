@@ -68,6 +68,8 @@ describe('ShowcasePage', () => {
       'Progreso, avisos y diálogos',
       'Editor de código',
       'Resultados de las pruebas',
+      'Panel en vivo',
+      'Dónde está la clase',
       'Carga, vacío y error',
     ]);
   });
@@ -217,6 +219,20 @@ describe('ShowcasePage', () => {
     expect(text()).toContain('Aún no tienes ejercicios asignados');
     expect(text()).toContain('No hay conexión');
     expect(text()).toContain('Reintentos: 1');
+  });
+
+  it('shows the pieces of the live panel', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const section = element.querySelector('[aria-labelledby="live-title"]') as HTMLElement;
+
+    const strip = section.querySelector('app-live-class') as HTMLElement;
+    expect(strip.querySelectorAll('.h-16 > div')).toHaveLength(12);
+    expect(strip.textContent).toContain('Hugo sigue en el 2');
+    expect(
+      section.querySelector('app-live-class + div app-live-bar')?.querySelectorAll('span'),
+    ).toHaveLength(4);
+    expect(section.textContent).toContain('Para explicar a todos');
+    expect(section.querySelectorAll('app-live-chip')).toHaveLength(5);
   });
 
   it('shows a snack bar notice', async () => {

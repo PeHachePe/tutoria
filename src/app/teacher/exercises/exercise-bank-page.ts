@@ -40,6 +40,7 @@ import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
+import { pageOf } from '../../shared/page-of';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import {
@@ -47,7 +48,7 @@ import {
   type AssignDialogData,
   type AssignDialogResult,
 } from '../blocks/assign-dialog';
-import { BANK_PAGE_SIZE, type BankFilters, filterBank, pageOf } from './bank-filter';
+import { BANK_PAGE_SIZE, type BankFilters, filterBank } from './bank-filter';
 import { canEditExercise } from './can-edit-exercise';
 
 /** The option of the subject select for those of the user's groups, which has no parameter. */
@@ -211,7 +212,9 @@ export class ExerciseBankPage {
   });
 
   /** The page that is shown: only its rows are drawn, however big the bank grows. */
-  protected readonly page = computed(() => pageOf(this.matching(), Number(this.pagina() ?? 1) - 1));
+  protected readonly page = computed(() =>
+    pageOf(this.matching(), Number(this.pagina() ?? 1) - 1, BANK_PAGE_SIZE),
+  );
   protected readonly rows = computed(() => this.page().rows);
   protected readonly pageSize = BANK_PAGE_SIZE;
 

@@ -141,6 +141,31 @@ export function testDetail(overrides: Partial<LiveAttemptDetail> = {}): LiveAtte
   };
 }
 
+/** A row of a student who has not opened anything, with what a test needs changed. */
+export function testRow(overrides: Partial<LiveRow> = {}): LiveRow {
+  return {
+    student: STUDENTS[0],
+    attempt: null,
+    exercise: null,
+    position: null,
+    repeating: false,
+    status: 'not_started',
+    hints: 0,
+    hintLevel: null,
+    tests: null,
+    failedTestIds: [],
+    failingTest: null,
+    lastActivity: null,
+    work: 'absent',
+    away: null,
+    reason: null,
+    repeated: 0,
+    breakthrough: null,
+    patterns: [],
+    ...overrides,
+  };
+}
+
 /** The rows of a snapshot at NOW. */
 export function testRows(snapshot: LiveSnapshot): LiveRow[] {
   return [...liveState(snapshot).students.values()].map((activity) =>

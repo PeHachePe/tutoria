@@ -436,6 +436,33 @@
     </div>
   </section>
 
+  <section aria-labelledby="live-title" class="flex flex-col gap-3">
+    <h2 id="live-title" class="text-title-large">Panel en vivo</h2>
+    <app-live-class
+      [overview]="classOverview"
+      [strip]="classStrip"
+      [progress]="31"
+      [blocks]="[]"
+      blockId="sample"
+      [inClass]="true"
+    />
+    <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm">
+      <h3 class="text-title-medium">Barra apilada con nombres</h3>
+      <app-live-bar [segments]="barSample" />
+    </div>
+    <app-common-failure
+      call='isStrongPassword("abc12345")'
+      expected="false"
+      [hidden]="true"
+      [students]="4"
+    />
+    <div class="flex flex-wrap gap-2">
+      @for (reason of chipSamples; track reason.kind) {
+        <app-live-chip [reason]="reason" />
+      }
+    </div>
+  </section>
+
   <section aria-labelledby="states-title" class="flex flex-col gap-3">
     <h2 id="states-title" class="text-title-large">Carga, vacío y error</h2>
     <p class="text-body-medium text-on-surface-variant">

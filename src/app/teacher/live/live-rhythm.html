@@ -1,0 +1,119 @@
+<!-- One row the width of the page: the sentence, then the two sparklines sharing what is left -->
+<div class="flex flex-wrap items-center gap-x-8 gap-y-3 text-body-medium">
+  <h2 id="live-rhythm-title" class="sr-only" i18n="@@live.rhythm.heading">Ritmo de la clase</h2>
+  @if (chart(); as chart) {
+    <p class="flex max-w-md flex-col gap-0.5">
+      @switch (reading()) {
+        @case ('stuck') {
+          <span
+            class="inline-flex items-center gap-1.5 rounded-full bg-warning-container py-0.5 ps-2 pe-3 text-on-warning-container"
+          >
+            <mat-icon class="text-[1.125rem]! size-[1.125rem]!" aria-hidden="true"
+              >trending_down</mat-icon
+            >
+            <ng-container i18n="@@live.rhythm.stuck"
+              >Las pistas suben y las ejecuciones bajan: la clase se está atascando</ng-container
+            >
+          </span>
+        }
+        @case ('slowing') {
+          <span class="font-medium" i18n="@@live.rhythm.slowing"
+            >La actividad ha bajado: la clase ha parado o está terminando</span
+          >
+        }
+        @case ('starting') {
+          <span class="font-medium" i18n="@@live.rhythm.starting">La clase acaba de empezar</span>
+        }
+        @default {
+          <span class="font-medium" i18n="@@live.rhythm.steady">La clase trabaja a buen ritmo</span>
+        }
+      }
+      <span class="text-body-small text-on-surface-variant" i18n="@@live.rhythm.last"
+        >Todo el grupo · últimos {{ compared }} min, frente a los anteriores</span
+      >
+    </p>
+    <!-- Two sparklines of the same size, each with its own scale and its count over it -->
+    <div class="flex min-w-0 flex-1 flex-wrap gap-x-8 gap-y-2">
+      @for (item of chart.series; track item.measure) {
+        <div class="flex min-w-0 flex-1 basis-48 flex-col gap-1">
+          <p
+            class="flex items-center gap-1.5 text-body-small whitespace-nowrap"
+            ngPreserveWhitespaces
+          >
+            <span
+              class="inline-block h-0.5 w-3 rounded-full"
+              [class]="item.swatch"
+              aria-hidden="true"
+            ></span>
+            @if (item.measure === 'hints') {
+              <span class="font-medium" i18n="@@live.activity.hints">{item.now, plural,
+                =1 {1 pista}
+                other {{{ item.now }} pistas}
+              }</span>
+            } @else {
+              <span class="font-medium" i18n="@@live.activity.runs">{item.now, plural,
+                =1 {1 ejecución}
+                other {{{ item.now }} ejecuciones}
+              }</span>
+            }
+            @if (item.before !== null) {
+              <span class="text-on-surface-variant" i18n="@@live.rhythm.before"
+                >(antes: {{ item.before }})</span
+              >
+            }
+          </p>
+          <span class="relative block h-10 w-full" aria-hidden="true">
+            <svg
+              class="size-full overflow-visible"
+              [attr.viewBox]="chartBox"
+              preserveAspectRatio="none"
+            >
+              <line
+                x1="0"
+                [attr.y1]="baseline"
+                [attr.x2]="chartWidth"
+                [attr.y2]="baseline"
+                class="stroke-outline-variant"
+                vector-effect="non-scaling-stroke"
+              />
+              <polygon [attr.points]="item.area" [attr.class]="item.fill" />
+              <polyline
+                [attr.points]="item.line"
+                fill="none"
+                [attr.class]="item.stroke"
+                stroke-width="2"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
+              />
+            </svg>
+            <!-- A column per minute: hovering it marks the minute and says its counts -->
+            <span class="absolute inset-0 flex">
+              @for (minute of chart.minutes; track minute.start) {
+                <span class="group relative flex-1" [matTooltip]="minute.label">
+                  <span
+                    class="absolute inset-y-0 left-1/2 w-px bg-outline opacity-0 group-hover:opacity-100"
+                  ></span>
+                </span>
+              }
+            </span>
+            <!-- The last point beats: HTML over the SVG, which stretches and would deform it -->
+            <span
+              class="pointer-events-none absolute right-0 flex size-2 translate-x-1/2 -translate-y-1/2"
+              [style.top.%]="item.end"
+            >
+              <span
+                class="absolute inline-flex size-full rounded-full opacity-60 animate-ping motion-reduce:animate-none"
+                [class]="item.dot"
+              ></span>
+              <span class="relative inline-flex size-2 rounded-full" [class]="item.dot"></span>
+            </span>
+          </span>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="text-body-medium text-on-surface-variant" i18n="@@live.activity.empty">
+      Nadie ha ejecutado las pruebas ni pedido pistas en este rato.
+    </p>
+  }
+</div>

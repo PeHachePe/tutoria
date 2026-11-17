@@ -13,9 +13,10 @@ export const RHYTHM_DROP = 0.5;
 export type RhythmReading = 'starting' | 'stuck' | 'slowing' | 'steady';
 
 /**
- * The reading of the chart «Ritmo de la clase», comparing the last `RHYTHM_MINUTES` with the ones
- * before, or null without any run or hint. `minutes`, as `activityByMinute()` gives them: the
- * current one last.
+ * The reading of the chart «Ritmo de la clase», comparing the last `RHYTHM_MINUTES` complete ones
+ * with the ones before, or null without any run or hint. `minutes`, as `activityByMinute()` gives
+ * them: the current one last, which counts to know whether there is activity but not to compare,
+ * because it has not ended (its few seconds would always read as a drop).
  */
 export function rhythmReading(minutes: readonly ActivityMinute[]): RhythmReading | null {
   const total = (items: readonly ActivityMinute[]) =>
@@ -25,10 +26,11 @@ export function rhythmReading(minutes: readonly ActivityMinute[]): RhythmReading
     );
   const all = total(minutes);
   if (all.runs + all.hints === 0) return null;
-  const now = total(minutes.slice(-RHYTHM_MINUTES));
-  const earlier = total(minutes.slice(0, -RHYTHM_MINUTES));
+  const complete = minutes.slice(0, -1);
+  const now = total(complete.slice(-RHYTHM_MINUTES));
+  const earlier = total(complete.slice(0, -RHYTHM_MINUTES));
   if (earlier.runs + earlier.hints === 0) return 'starting';
-  const before = total(minutes.slice(-2 * RHYTHM_MINUTES, -RHYTHM_MINUTES));
+  const before = total(complete.slice(-2 * RHYTHM_MINUTES, -RHYTHM_MINUTES));
   if (now.hints > before.hints && now.runs < before.runs) return 'stuck';
   if (now.runs + now.hints < RHYTHM_DROP * (before.runs + before.hints)) return 'slowing';
   return 'steady';

@@ -1,0 +1,261 @@
+<div class="flex shrink-0 flex-col gap-1.5 border-b border-outline-variant px-4 py-3">
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <h2 id="live-class-title" class="text-title-medium" i18n="@@live.class.heading">
+      Dónde está la clase
+    </h2>
+    @if (progress(); as progress) {
+      <p class="text-body-medium text-on-surface-variant" ngPreserveWhitespaces>
+        <ng-container i18n="@@live.figure.progress">Avance del bloque</ng-container>
+        <span class="ms-1 font-medium text-on-surface">{{ progress }} %</span>
+      </p>
+    }
+  </div>
+  @if (items().length > 0) {
+    <ul class="flex flex-wrap gap-x-3 gap-y-1" aria-hidden="true">
+      @for (segment of legend; track segment.status) {
+        <li class="flex items-center gap-1.5 text-body-small text-on-surface-variant">
+          <span class="size-2.5 rounded-xs" [class]="segment.tone"></span>
+          {{ segment.label }}
+        </li>
+      }
+      <li class="flex items-center gap-1.5 text-body-small text-on-surface-variant">
+        <span class="size-2.5 rounded-xs" [class]="notStarted.tone"></span>
+        {{ notStarted.label }}
+      </li>
+    </ul>
+  }
+</div>
+
+@if (items().length === 0) {
+  <div class="flex flex-col gap-3 p-4">
+    <p class="text-body-large text-on-surface-variant" i18n="@@live.class.empty">
+      Ahora no hay nadie trabajando. Elige un bloque para ver cómo lo lleva el grupo.
+    </p>
+    <ul class="flex flex-wrap gap-2">
+      @for (block of blockLinks(); track block.id) {
+        <li>
+          <a
+            matButton="outlined"
+            [routerLink]="[]"
+            [queryParams]="block.query"
+            queryParamsHandling="merge"
+            (click)="blockChosen.emit()"
+            ><span [attr.lang]="block.lang">{{ block.title }}</span></a
+          >
+        </li>
+      }
+    </ul>
+  </div>
+} @else {
+  @if (strip(); as strip) {
+    <div class="flex shrink-0 flex-col gap-2 px-4 pt-3">
+      @if (drawStrip()) {
+        <!-- A drawing: the sentence under it says where the class is and who is far from it -->
+        <div class="mt-6 flex flex-col gap-1" aria-hidden="true">
+          <div class="flex h-16 items-end justify-between gap-px border-b border-outline-variant">
+            @for (column of columns(); track column.id) {
+              <div
+                class="relative flex h-full max-w-6 min-w-0.5 flex-1 flex-col-reverse gap-px"
+                [matTooltip]="column.tooltip"
+              >
+                @for (segment of column.segments; track segment.status) {
+                  <span
+                    class="block rounded-t-xs transition-[height] duration-500 ease-out motion-reduce:transition-none"
+                    [class]="segment.tone"
+                    [style.height.%]="segment.percent"
+                  ></span>
+                }
+                @if (column.tag; as tag) {
+                  <span
+                    class="absolute -top-6 left-1/2 -translate-x-1/2 text-label-medium whitespace-nowrap text-on-surface"
+                    >{{ tag }}</span
+                  >
+                }
+              </div>
+            }
+          </div>
+          <div class="flex justify-between text-label-small text-on-surface-variant">
+            <span>1</span>
+            <span>{{ columns().length }}</span>
+          </div>
+        </div>
+      }
+      <!-- The spaces between the sentences, which Angular would remove -->
+      <p class="text-body-medium" ngPreserveWhitespaces>
+        @if (strip.bulk; as bulk) {
+          @if (bulk.from === bulk.to) {
+            <span i18n="@@live.class.bulkOne">La mayoría está en el ejercicio {{ bulk.from }}</span>
+          } @else {
+            <span i18n="@@live.class.bulkRange"
+              >La mayoría está entre el ejercicio {{ bulk.from }} y el {{ bulk.to }}</span
+            >
+          }
+          @for (tag of tags(); track tag.position) {
+            <span aria-hidden="true">·</span>
+            @if (tag.side === 'behind') {
+              <span i18n="@@live.class.behind">{tag.names.length, plural,
+                =1 {{{ tag.label }} sigue en el {{ tag.position }}}
+                other {{{ tag.label }} siguen en el {{ tag.position }}}
+              }</span>
+            } @else {
+              <span i18n="@@live.class.ahead">{tag.names.length, plural,
+                =1 {{{ tag.label }} va por el {{ tag.position }}}
+                other {{{ tag.label }} van por el {{ tag.position }}}
+              }</span>
+            }
+          }
+        } @else if (inClass()) {
+          <span class="text-on-surface-variant" i18n="@@live.class.nobodyHere"
+            >Ahora nadie trabaja en este bloque.</span
+          >
+        } @else {
+          <span class="text-on-surface-variant" i18n="@@live.class.nobodyStarted"
+            >Nadie ha empezado este bloque todavía.</span
+          >
+        }
+      </p>
+    </div>
+  }
+
+  @if (shown().length > 0) {
+    <!-- One grid for every row, so every bar has the same width; it scrolls inside the card -->
+    <ol
+      class="grid min-h-0 flex-1 grid-cols-1 content-start gap-x-6 overflow-y-auto scroll-shadows px-4 pt-2 @2xl:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]"
+    >
+      @for (item of shown(); track item.id) {
+        <li
+          class="grid gap-y-1.5 border-t border-outline-variant py-3 first:border-t-0 @2xl:col-span-2 @2xl:grid-cols-subgrid @2xl:items-center"
+        >
+          <h3 class="flex min-w-0 flex-col text-title-small" ngPreserveWhitespaces>
+            <span class="truncate" [attr.lang]="item.lang" [title]="item.title">{{
+              item.title
+            }}</span>
+            @if (item.block) {
+              <span class="truncate text-body-small text-on-surface-variant">{{ item.block }}</span>
+            }
+          </h3>
+          <!-- The bar takes the room left, with its summary under it: no gap between the two -->
+          <div class="flex min-w-0 flex-col gap-1">
+            <app-live-bar [segments]="item.segments" />
+            <ul class="-mx-2 flex flex-wrap gap-x-1">
+              @for (part of item.summary; track part.status) {
+                <li>
+                  <button
+                    type="button"
+                    class="inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-full px-2 text-body-small text-on-surface-variant outline-offset-1 hover:text-on-surface hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                    [matTooltip]="part.names"
+                    (click)="
+                      filter.emit({ assignmentId: item.id, status: part.status, testId: null })
+                    "
+                  >
+                    <span class="size-2 rounded-full" [class]="part.tone" aria-hidden="true"></span>
+                    @switch (part.status) {
+                      @case ('tests_failed') {
+                        <ng-container i18n="@@live.class.count.testsFailed"
+                          >{{ part.count }} con fallos</ng-container
+                        >
+                      }
+                      @case ('in_progress') {
+                        <ng-container i18n="@@live.class.count.inProgress"
+                          >{{ part.count }} en curso</ng-container
+                        >
+                      }
+                      @case ('passed') {
+                        <ng-container i18n="@@live.class.count.passed">{part.count, plural,
+                          =1 {1 superado}
+                          other {{{ part.count }} superados}
+                        }</ng-container>
+                      }
+                      @case ('submitted') {
+                        <ng-container i18n="@@live.class.count.submitted">{part.count, plural,
+                          =1 {1 entregado}
+                          other {{{ part.count }} entregados}
+                        }</ng-container>
+                      }
+                      @default {
+                        <ng-container i18n="@@live.class.count.notStarted"
+                          >{{ part.count }} sin empezar</ng-container
+                        >
+                      }
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+          @if (item.failure; as failure) {
+            @if (failure.common) {
+              <app-common-failure
+                class="@2xl:col-span-2"
+                [call]="failure.call"
+                [expected]="failure.expected"
+                [hidden]="failure.hidden"
+                [students]="failure.students"
+                (show)="
+                  filter.emit({
+                    assignmentId: item.id,
+                    status: 'tests_failed',
+                    testId: failure.testId,
+                  })
+                "
+              />
+            } @else {
+              <p
+                class="flex flex-wrap items-baseline gap-x-1.5 text-body-medium @2xl:col-span-2"
+                ngPreserveWhitespaces
+              >
+                <span class="text-on-surface-variant" i18n="@@live.class.topFailed"
+                  >La prueba que más se falló:</span
+                >
+                <code
+                  class="rounded bg-surface-container-high px-1.5 font-mono text-body-small break-all"
+                  >{{ failure.call }}</code
+                >
+                @if (failure.hidden) {
+                  <span class="text-on-surface-variant"
+                    >·
+                    <ng-container i18n="@@live.class.hiddenTest">prueba oculta</ng-container></span
+                  >
+                }
+                <span
+                  class="text-on-surface-variant"
+                  i18n="@@live.class.failing"
+                  >{failure.students, plural,
+                    =1 {· 1 alumno}
+                    other {· {{ failure.students }} alumnos}
+                  }</span
+                >
+              </p>
+            }
+          }
+        </li>
+      }
+    </ol>
+  }
+}
+
+@if (elsewhere(); as elsewhere) {
+  <!-- The spaces between the sentence and the links, which Angular would remove -->
+  <p
+    class="mt-auto shrink-0 border-t border-outline-variant px-4 py-3 text-body-medium"
+    ngPreserveWhitespaces
+  >
+    <span class="text-on-surface-variant" i18n="@@live.class.elsewhere">{elsewhere.students, plural,
+      =1 {1 trabaja en otro bloque:}
+      other {{{ elsewhere.students }} trabajan en otros bloques:}
+    }</span>
+    @for (block of elsewhere.blocks; track block.id; let last = $last) {
+      <a
+        class="ms-1 font-medium text-primary underline-offset-2 hover:underline"
+        [routerLink]="[]"
+        [queryParams]="block.query"
+        queryParamsHandling="merge"
+        (click)="blockChosen.emit()"
+        >{{ block.title }} ({{ block.students }})</a
+      >
+      @if (!last) {
+        <span class="ms-1 text-on-surface-variant" aria-hidden="true">·</span>
+      }
+    }
+  </p>
+}

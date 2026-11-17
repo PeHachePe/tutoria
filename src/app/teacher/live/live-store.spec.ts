@@ -7,6 +7,7 @@ import { DataError } from '../../data/data-error';
 import { LiveService } from '../../data/live-service';
 import { testEvents as e } from '../../data/process-event-testing';
 import type { LiveSnapshot } from '../../data/live-service';
+import { LIVE_ACTIVITY_MINUTES } from './activity-by-minute';
 import { testInteraction } from './live-testing';
 import { LIVE_CLOCK_MS, LiveStore, pickSelection } from './live-store';
 import {
@@ -309,7 +310,7 @@ describe('LiveStore', () => {
     ]);
   });
 
-  it('tells the recent activity of the group, minute by minute, with its reading and as a feed', async () => {
+  it('tells the recent activity of the group, minute by minute, with its reading', async () => {
     service.snapshots = () =>
       Promise.resolve(
         groupSnapshot({
@@ -320,7 +321,7 @@ describe('LiveStore', () => {
 
     const store = await create();
 
-    expect(store.feed().map((entry) => entry.kind)).toEqual(['all_passed']);
+    expect(store.activity()).toHaveLength(LIVE_ACTIVITY_MINUTES + 1);
     expect(store.activity().at(-3)).toEqual({ start: ago(2), runs: 1, hints: 0 });
     expect(store.activity().at(-2)).toEqual({ start: ago(1), runs: 0, hints: 1 });
     expect(store.rhythm()).toBe('starting');
@@ -339,7 +340,6 @@ describe('LiveStore', () => {
     expect(store.exercises()).toEqual([]);
     expect(store.overview()).toEqual({ exercises: [], elsewhere: [] });
     expect(store.figures()).toMatchObject({ inClass: false, students: 0, progress: null });
-    expect(store.feed()).toEqual([]);
     expect(store.activity()).toEqual([]);
     expect(store.rhythm()).toBeNull();
   });

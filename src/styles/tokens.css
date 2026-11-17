@@ -54,6 +54,12 @@
   --color-info-container: var(--app-info-container);
   --color-on-info-container: var(--app-on-info-container);
 
+  /* Charts of the live panel (4.1e): bg-chart-progress, bg-chart-fail… */
+  --color-chart-progress: var(--app-chart-progress);
+  --color-chart-fail: var(--app-chart-fail);
+  --color-chart-pass: var(--app-chart-pass);
+  --color-chart-done: var(--app-chart-done);
+
   /* Vivid palette of the tutor's reactions (1.8) */
   --color-reaction-pink: var(--app-reaction-pink);
   --color-reaction-red: var(--app-reaction-red);

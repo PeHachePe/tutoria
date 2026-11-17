@@ -9,17 +9,20 @@ import { AppTitleStrategy } from './app-title-strategy';
 class Page {}
 
 describe('AppTitleStrategy', () => {
+  let harness: RouterTestingHarness;
+
   async function visit(url: string): Promise<string> {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
           { path: 'con-titulo', title: 'Acceso', component: Page },
           { path: 'sin-titulo', component: Page },
+          { path: 'otro', title: 'Otro', component: Page },
         ]),
         { provide: TitleStrategy, useExisting: AppTitleStrategy },
       ],
     });
-    const harness = await RouterTestingHarness.create();
+    harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(url);
     return document.title;
   }
@@ -38,5 +41,24 @@ describe('AppTitleStrategy', () => {
     TestBed.inject(AppTitleStrategy).setScreenTitle('Suma de los elementos de un vector');
 
     expect(document.title).toBe('Suma de los elementos de un vector · TutorIA');
+  });
+
+  it('keeps the title of the screen when only the query or the fragment change', async () => {
+    await visit('/con-titulo');
+    TestBed.inject(AppTitleStrategy).setScreenTitle('1.º DAW A · En vivo');
+
+    await harness.navigateByUrl('/con-titulo?bloque=b2');
+    await harness.navigateByUrl('/con-titulo?bloque=b2#alumnado');
+
+    expect(document.title).toBe('1.º DAW A · En vivo · TutorIA');
+  });
+
+  it('sets the title of the route again on another screen', async () => {
+    await visit('/con-titulo');
+    TestBed.inject(AppTitleStrategy).setScreenTitle('1.º DAW A · En vivo');
+
+    await harness.navigateByUrl('/otro?bloque=b2');
+
+    expect(document.title).toBe('Otro · TutorIA');
   });
 });

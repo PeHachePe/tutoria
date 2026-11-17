@@ -11,6 +11,50 @@
   }
 </ng-template>
 
+<ng-template #exercise let-item>
+  @if (item.exercise; as exercise) {
+    <span [attr.lang]="exercise.lang">{{ exercise.title }}</span>
+    @if (exercise.block) {
+      <span class="text-on-surface-variant"> · {{ exercise.block }}</span>
+    }
+    @if (item.row.repeating) {
+      <span
+        class="ms-1 rounded-full bg-success-container px-2 text-label-small text-on-success-container"
+        i18n="@@live.repeating"
+        >Repitiendo</span
+      >
+    }
+  }
+</ng-template>
+
+<ng-template #status let-item>
+  <span class="flex items-center gap-2 whitespace-nowrap">
+    <app-status-chip [status]="item.row.status" [testCount]="item.row.tests ?? undefined" />
+    @if (item.row.tests; as tests) {
+      <span
+        class="h-1 w-12 overflow-hidden rounded-full bg-surface-container-high"
+        aria-hidden="true"
+      >
+        <span
+          class="block h-full rounded-full bg-chart-done"
+          [style.width.%]="(tests.passed / tests.total) * 100"
+        ></span>
+      </span>
+    }
+  </span>
+</ng-template>
+
+<ng-template #hints let-item>
+  @if (item.row.hints > 0) {
+    {{ item.row.hints }}
+    @if (item.row.hintLevel) {
+      <span class="text-on-surface-variant" i18n="@@live.hintLevel"
+        >(nivel {{ item.row.hintLevel }})</span
+      >
+    }
+  }
+</ng-template>
+
 <ng-template #age let-item>
   @let rowAge = item.age;
   @switch (rowAge.kind) {
@@ -25,256 +69,220 @@
     @case ('date') {
       <span>{{ rowAge.kind === 'date' ? (rowAge.at | date: 'd MMM, HH:mm') : '' }}</span>
     }
-    @default {
-      <span class="text-on-surface-variant">—</span>
-    }
   }
 </ng-template>
 
-<!-- Desktop: a sortable table -->
-<div class="hidden overflow-x-auto rounded-2xl bg-panel @5xl:block">
-  <table
-    mat-table
-    matSort
-    class="w-full"
-    [dataSource]="sorted()"
-    [trackBy]="trackRow"
-    (matSortChange)="sortBy($event)"
-  >
-    <caption class="sr-only">
-      {{
-        caption()
-      }}
-    </caption>
-
-    <ng-container matColumnDef="student">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.student">Alumno</th>
-      <td mat-cell *matCellDef="let item" class="min-w-36">
-        <ng-container
-          [ngTemplateOutlet]="studentName"
-          [ngTemplateOutletContext]="{ $implicit: item }"
-        />
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="exercise">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.exercise">
-        Ejercicio
-      </th>
-      <td mat-cell *matCellDef="let item" class="min-w-36">
-        @if (item.exercise; as exercise) {
-          <span [attr.lang]="exercise.lang">{{ exercise.title }}</span>
-          @if (exercise.block) {
-            <span class="text-on-surface-variant"> · {{ exercise.block }}</span>
-          }
-          @if (item.row.repeating) {
-            <span
-              class="ms-1 rounded-full bg-success-container px-2 text-label-small text-on-success-container"
-              i18n="@@live.repeating"
-              >Repitiendo</span
-            >
-          }
-        } @else {
-          <span class="text-on-surface-variant">—</span>
-        }
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="status">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.status">Estado</th>
-      <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
-        <app-status-chip [status]="item.row.status" />
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="minutes">
-      <th
-        mat-header-cell
-        class="hidden @6xl:table-cell"
-        *matHeaderCellDef
-        mat-sort-header
-        i18n="@@live.column.minutes"
-      >
-        Tiempo
-      </th>
-      <td mat-cell *matCellDef="let item" class="hidden @6xl:table-cell">
-        @if (item.row.minutes !== null) {
-          <span i18n="@@live.minutes">{{ item.row.minutes }} min</span>
-        } @else {
-          <span class="text-on-surface-variant">—</span>
-        }
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="hints">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.hints">Pistas</th>
-      <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
-        {{ item.row.hints }}
-        @if (item.row.hintLevel) {
-          <span class="text-on-surface-variant" i18n="@@live.hintLevel"
-            >(nivel {{ item.row.hintLevel }})</span
-          >
-        }
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="pastes">
-      <th
-        mat-header-cell
-        class="hidden @6xl:table-cell"
-        *matHeaderCellDef
-        mat-sort-header
-        i18n="@@live.column.pastes"
-      >
-        Pegados
-      </th>
-      <td mat-cell *matCellDef="let item" class="hidden @6xl:table-cell">{{ item.row.pastes }}</td>
-    </ng-container>
-
-    <ng-container matColumnDef="focusLosses">
-      <th mat-header-cell class="hidden @6xl:table-cell" *matHeaderCellDef mat-sort-header>
-        <span i18n="@@live.column.focusLossesShort">Salidas</span
-        ><span class="sr-only" i18n="@@live.column.focusLossesHidden"> de la ventana</span>
-      </th>
-      <td mat-cell *matCellDef="let item" class="hidden @6xl:table-cell">
-        {{ item.row.focusLosses }}
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="tests">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.tests">Pruebas</th>
-      <td mat-cell *matCellDef="let item">
-        @if (item.row.tests; as tests) {
-          {{ tests.passed }}/{{ tests.total }}
-        } @else {
-          <span class="text-on-surface-variant">—</span>
-        }
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="lastActivity">
-      <th
-        mat-header-cell
-        *matHeaderCellDef
-        mat-sort-header
-        start="desc"
-        class="whitespace-nowrap"
-        i18n="@@live.column.lastActivity"
-      >
-        Última actividad
-      </th>
-      <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
-        <ng-container [ngTemplateOutlet]="age" [ngTemplateOutletContext]="{ $implicit: item }" />
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="signals">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.signals">
-        Observaciones
-      </th>
-      <td mat-cell *matCellDef="let item">
-        <span class="flex flex-wrap gap-1">
-          @for (reason of item.reasons; track reason.kind) {
-            <app-live-chip [reason]="reason" />
-          }
-        </span>
-      </td>
-    </ng-container>
-
-    <tr mat-header-row *matHeaderRowDef="columns"></tr>
-    <tr
-      mat-row
-      *matRowDef="let item; columns: columns"
-      [appFlashOnChange]="item.row.lastActivity"
-      [class.text-on-surface-variant]="item.row.work === 'absent'"
-    ></tr>
-  </table>
-</div>
-
-<!-- Phone and tablet: a card per student -->
-<ul class="grid gap-3 @xl:grid-cols-2 @5xl:hidden">
-  @for (item of sorted(); track item.row.student.id) {
-    <li
-      class="flex flex-col gap-2 rounded-2xl bg-panel p-4"
-      [appFlashOnChange]="item.row.lastActivity"
-      [class.text-on-surface-variant]="item.row.work === 'absent'"
-    >
-      <div class="flex items-start justify-between gap-2">
-        <span>
-          <ng-container
-            [ngTemplateOutlet]="studentName"
-            [ngTemplateOutletContext]="{ $implicit: item }"
-          />
-        </span>
-        <app-status-chip [status]="item.row.status" />
-      </div>
-      @if (item.exercise; as exercise) {
-        <span class="text-body-medium">
-          <span [attr.lang]="exercise.lang">{{ exercise.title }}</span>
-          @if (exercise.block) {
-            <span class="text-on-surface-variant"> · {{ exercise.block }}</span>
-          }
-          @if (item.row.repeating) {
-            <span
-              class="ms-1 rounded-full bg-success-container px-2 text-label-small text-on-success-container"
-              i18n="@@live.repeating"
-              >Repitiendo</span
-            >
-          }
-        </span>
+<ng-template #observations let-item>
+  @if (item.observations.length > 0) {
+    <span class="flex flex-wrap gap-1">
+      @for (reason of item.observations; track reason.kind) {
+        <app-live-chip [reason]="reason" />
       }
-      <dl class="grid grid-cols-3 gap-2 text-body-small">
-        <div>
-          <dt class="text-on-surface-variant" i18n="@@live.column.minutes">Tiempo</dt>
-          <dd>
-            @if (item.row.minutes !== null) {
-              <span i18n="@@live.minutes">{{ item.row.minutes }} min</span>
-            } @else {
-              —
-            }
-          </dd>
-        </div>
-        <div>
-          <dt class="text-on-surface-variant" i18n="@@live.column.hints">Pistas</dt>
-          <dd>{{ item.row.hints }}</dd>
-        </div>
-        <div>
-          <dt class="text-on-surface-variant" i18n="@@live.column.tests">Pruebas</dt>
-          <dd>
-            @if (item.row.tests; as tests) {
-              {{ tests.passed }}/{{ tests.total }}
-            } @else {
-              —
-            }
-          </dd>
-        </div>
-        <div>
-          <dt class="text-on-surface-variant" i18n="@@live.column.pastes">Pegados</dt>
-          <dd>{{ item.row.pastes }}</dd>
-        </div>
-        <div>
-          <dt class="text-on-surface-variant" i18n="@@live.column.focusLossesShort">Salidas</dt>
-          <dd>{{ item.row.focusLosses }}</dd>
-        </div>
-        <div>
-          <dt class="text-on-surface-variant" i18n="@@live.column.lastActivity">
+    </span>
+  }
+</ng-template>
+
+@if (sorted().length === 0) {
+  <p class="p-6 text-center text-body-large text-on-surface-variant" i18n="@@live.students.none">
+    Ningún alumno coincide con el filtro.
+  </p>
+} @else {
+  <!-- Desktop: a sortable table -->
+  <div class="hidden flex-col @5xl:flex">
+    <div class="overflow-x-auto">
+      <table
+        mat-table
+        matSort
+        class="w-full"
+        [dataSource]="tablePage().rows"
+        [trackBy]="trackRow"
+        (matSortChange)="sortBy($event)"
+      >
+        <caption class="sr-only">
+          {{
+            caption()
+          }}
+        </caption>
+
+        <ng-container matColumnDef="student">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.student">
+            Alumno
+          </th>
+          <td mat-cell *matCellDef="let item" class="min-w-36">
+            <ng-container
+              [ngTemplateOutlet]="studentName"
+              [ngTemplateOutletContext]="{ $implicit: item }"
+            />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="exercise">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.exercise">
+            Ejercicio
+          </th>
+          <td mat-cell *matCellDef="let item" class="min-w-36">
+            <ng-container
+              [ngTemplateOutlet]="exercise"
+              [ngTemplateOutletContext]="{ $implicit: item }"
+            />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.status">
+            Estado
+          </th>
+          <td mat-cell *matCellDef="let item">
+            <ng-container
+              [ngTemplateOutlet]="status"
+              [ngTemplateOutletContext]="{ $implicit: item }"
+            />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="hints">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@live.column.hints">
+            Pistas
+          </th>
+          <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
+            <ng-container
+              [ngTemplateOutlet]="hints"
+              [ngTemplateOutletContext]="{ $implicit: item }"
+            />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="lastActivity">
+          <th
+            mat-header-cell
+            *matHeaderCellDef
+            mat-sort-header
+            start="desc"
+            class="whitespace-nowrap"
+            i18n="@@live.column.lastActivity"
+          >
             Última actividad
-          </dt>
-          <dd>
+          </th>
+          <td mat-cell *matCellDef="let item" class="whitespace-nowrap">
             <ng-container
               [ngTemplateOutlet]="age"
               [ngTemplateOutletContext]="{ $implicit: item }"
             />
-          </dd>
-        </div>
-      </dl>
-      @if (item.reasons.length > 0) {
-        <span class="flex flex-wrap gap-1">
-          @for (reason of item.reasons; track reason.kind) {
-            <app-live-chip [reason]="reason" />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="observations">
+          <th
+            mat-header-cell
+            *matHeaderCellDef
+            mat-sort-header
+            start="desc"
+            i18n="@@live.column.signals"
+          >
+            Observaciones
+          </th>
+          <td mat-cell *matCellDef="let item">
+            <ng-container
+              [ngTemplateOutlet]="observations"
+              [ngTemplateOutletContext]="{ $implicit: item }"
+            />
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let item; columns: columns"
+          [appFlashOnChange]="item.row.lastActivity"
+          [class.text-on-surface-variant]="item.absent"
+        ></tr>
+      </table>
+    </div>
+    @if (sorted().length > tablePageSize) {
+      <mat-paginator
+        class="border-t border-outline-variant"
+        [length]="sorted().length"
+        [pageSize]="tablePageSize"
+        [pageIndex]="tablePage().pageIndex"
+        [hidePageSize]="true"
+        (page)="goToTablePage($event)"
+      />
+    }
+  </div>
+
+  <!-- Phone and tablet: a card per student -->
+  <div class="flex flex-col @5xl:hidden">
+    <ul class="flex flex-col divide-y divide-outline-variant">
+      @for (item of cardsPage().rows; track item.row.student.id) {
+        <li
+          class="flex flex-col gap-2 p-4"
+          [appFlashOnChange]="item.row.lastActivity"
+          [class.text-on-surface-variant]="item.absent"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <span>
+              <ng-container
+                [ngTemplateOutlet]="studentName"
+                [ngTemplateOutletContext]="{ $implicit: item }"
+              />
+            </span>
+            <ng-container
+              [ngTemplateOutlet]="status"
+              [ngTemplateOutletContext]="{ $implicit: item }"
+            />
+          </div>
+          @if (item.exercise) {
+            <span class="text-body-medium">
+              <ng-container
+                [ngTemplateOutlet]="exercise"
+                [ngTemplateOutletContext]="{ $implicit: item }"
+              />
+            </span>
           }
-        </span>
+          @if (item.row.hints > 0 || item.row.lastActivity !== null) {
+            <dl class="flex flex-wrap gap-x-6 gap-y-2 text-body-small">
+              @if (item.row.hints > 0) {
+                <div>
+                  <dt class="text-on-surface-variant" i18n="@@live.column.hints">Pistas</dt>
+                  <dd>
+                    <ng-container
+                      [ngTemplateOutlet]="hints"
+                      [ngTemplateOutletContext]="{ $implicit: item }"
+                    />
+                  </dd>
+                </div>
+              }
+              @if (item.row.lastActivity !== null) {
+                <div>
+                  <dt class="text-on-surface-variant" i18n="@@live.column.lastActivity">
+                    Última actividad
+                  </dt>
+                  <dd>
+                    <ng-container
+                      [ngTemplateOutlet]="age"
+                      [ngTemplateOutletContext]="{ $implicit: item }"
+                    />
+                  </dd>
+                </div>
+              }
+            </dl>
+          }
+          <ng-container
+            [ngTemplateOutlet]="observations"
+            [ngTemplateOutletContext]="{ $implicit: item }"
+          />
+        </li>
       }
-    </li>
-  }
-</ul>
+    </ul>
+    @if (sorted().length > cardsPageSize) {
+      <mat-paginator
+        class="border-t border-outline-variant"
+        [length]="sorted().length"
+        [pageSize]="cardsPageSize"
+        [pageIndex]="cardsPage().pageIndex"
+        [hidePageSize]="true"
+        (page)="goToCardsPage($event)"
+      />
+    }
+  </div>
+}

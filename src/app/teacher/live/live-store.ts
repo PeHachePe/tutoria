@@ -4,10 +4,10 @@ import { ActivatedRoute, type ParamMap } from '@angular/router';
 
 import { TEACHER_ALL_BLOCKS, TEACHER_PARAMS } from '../../core/app-paths';
 import { type LiveGroup, LiveService, type LiveUpdate } from '../../data/live-service';
-import { activityByMinute } from './activity-by-minute';
+import { activityByMinute, LIVE_ACTIVITY_MINUTES } from './activity-by-minute';
+import { classStrip } from './class-strip';
 import { defaultBlock } from './default-block';
 import { type AttentionReason, ATTENTION_ORDER } from './live-attention';
-import { liveFeed } from './live-feed';
 import { liveFigures } from './live-figures';
 import { exerciseOverview } from './live-overview';
 import { liveRow, type LiveRow } from './live-row';
@@ -203,16 +203,20 @@ export class LiveStore {
     ),
   );
 
-  /** What just happened in the group, the latest first (4.1b); it goes in the 4.1e. */
-  readonly feed = computed(() => {
-    const state = this.state();
-    return state ? liveFeed(state, this.nowState()) : [];
-  });
+  /** Where each student is in the block shown (D-070); null with the whole class. */
+  readonly strip = computed(() =>
+    this.selection()?.blockId
+      ? classStrip(this.rows(), this.blockExercises(), this.figures().inClass)
+      : null,
+  );
 
-  /** Runs and hints of the class in the last minutes, for the chart (4.1b). */
+  /**
+   * Runs and hints of the class minute by minute (4.1b): the last `LIVE_ACTIVITY_MINUTES` complete
+   * ones and the current one, which the chart and its reading leave out until it ends.
+   */
   readonly activity = computed(() => {
     const state = this.state();
-    return state ? activityByMinute(state, this.nowState()) : [];
+    return state ? activityByMinute(state, this.nowState(), LIVE_ACTIVITY_MINUTES + 1) : [];
   });
 
   /** The sentence that reads the rhythm of the class, or null without activity. */

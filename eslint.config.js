@@ -76,6 +76,8 @@ module.exports = defineConfig([
           ignoreTags: ['mat-icon'],
           ignoreAttributes: [
             'align',
+            'animate.enter',
+            'animate.leave',
             'appearance',
             'aria-controls',
             'aria-describedby',

@@ -2,7 +2,7 @@ import type { LiveState } from './live-state';
 
 const MINUTE_MS = 60_000;
 
-/** Minutes of recent activity the panel shows: the chart and the feed (4.1b). */
+/** Minutes of recent activity the panel shows: «Ritmo de la clase» (4.1b, 4.1e). */
 export const LIVE_ACTIVITY_MINUTES = 30;
 
 /** What the class did in a minute. */
