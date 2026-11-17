@@ -4,6 +4,9 @@ import type { ProcessEvent } from './process-event';
 import type { Subject } from './subject';
 import type { TutorInteraction } from './tutor';
 
+/** Minutes of the session: only what moved in them is live (D-054). */
+export const LIVE_WINDOW_MINUTES = 60;
+
 /** A group the teacher follows live, with what its selectors need. */
 export interface LiveGroup {
   readonly id: string;
@@ -21,24 +24,31 @@ export interface LiveStudent {
   readonly name: string;
 }
 
-/** An exercise of the block, as the panel reads it. */
+/** An exercise of the group, as the panel reads it. */
 export interface LiveExercise {
   readonly assignmentId: string;
+  /** The block it is assigned in. */
+  readonly blockId: string;
   /** With its thresholds, which decide when a student is stuck (2.7). */
   readonly exercise: Exercise;
   /** Visible and hidden tests, in order: the teacher sees which one the class fails. */
   readonly tests: readonly Test[];
 }
 
-/** What a block of a group looks like now: the starting point of the live updates. */
+/** What a group looks like now: the starting point of the live updates. */
 export interface LiveSnapshot {
   /** Sorted by name. */
   readonly students: readonly LiveStudent[];
-  /** In the order of the block. */
+  /** Every exercise of the group: by the position of its block and, inside it, by its own. */
   readonly exercises: readonly LiveExercise[];
-  /** Every attempt at the assignments of the block, practice included. */
+  /**
+   * The attempts of the group that changed in the session window and, with a block, every attempt
+   * at its assignments (its accumulated state). Practice included, none twice.
+   */
   readonly attempts: readonly Attempt[];
+  /** Every event and tutor interaction of those attempts, in no order. */
   readonly events: readonly ProcessEvent[];
+  readonly interactions: readonly TutorInteraction[];
 }
 
 /** A change in a group while the teacher watches it. */
@@ -67,8 +77,12 @@ export abstract class LiveService {
   /** The groups of the teacher, or every group for an administrator, sorted by name and subject. */
   abstract listGroups(): Promise<LiveGroup[]>;
 
-  /** The students, exercises, attempts and events of a block. */
-  abstract snapshot(groupId: string, blockId: string): Promise<LiveSnapshot>;
+  /**
+   * The students and exercises of a group, with the attempts of its session and, with `blockId`,
+   * every attempt at that block. Throws `DataError('not_found')` for a group of another teacher or
+   * a block of another group.
+   */
+  abstract snapshot(groupId: string, blockId: string | null): Promise<LiveSnapshot>;
 
   /**
    * An attempt at an assignment of a group of the teacher, with its events and interactions in

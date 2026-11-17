@@ -21,7 +21,8 @@ import { AttemptDetailView, type AttemptView } from './attempt-detail-view';
  * The detail of an attempt (/docente/en-vivo/:attemptId, ficha 07): how the student got here
  * (RF-12, CU-04 3a). It loads the attempt on its own, so a direct link works, and joins what the
  * `LiveStore` of the parent route hears while the student keeps working. The URL follows the group
- * and the block of the attempt, so the store watches them and «Volver a la sesión» returns there.
+ * of the attempt, so the store watches it and «Volver a la sesión» returns there; the block shown
+ * stays, as the panel follows the whole group (D-068).
  */
 @Component({
   selector: 'app-attempt-detail-page',
@@ -54,7 +55,7 @@ export class AttemptDetailPage {
     params: () => this.attemptId(),
     loader: async ({ params, abortSignal }) => {
       const detail = await this.live.attemptDetail(params);
-      await this.followBlock(detail);
+      await this.followGroup(detail);
       // The tab says whose attempt it is, not just «Detalle del intento» (WCAG 2.4.2): a teacher
       // may open several. After correcting the URL, whose navigation sets the title of the route
       // again, and not if the teacher already left for another attempt.
@@ -97,9 +98,10 @@ export class AttemptDetailPage {
     };
   });
 
+  /** The group of the attempt, merged with the block of the URL; until it loads, the URL as it is. */
   protected readonly backQuery = computed(() => {
     const view = this.view();
-    return view && { [TEACHER_PARAMS.group]: view.groupId, [TEACHER_PARAMS.block]: view.blockId };
+    return view && { [TEACHER_PARAMS.group]: view.groupId };
   });
 
   protected reload(): void {
@@ -107,20 +109,17 @@ export class AttemptDetailPage {
   }
 
   /**
-   * The URL takes the group and the block of the attempt, without a new entry in the history: the
-   * store then watches them, and «Volver a la sesión» returns there.
+   * The URL takes the group of the attempt, without a new entry in the history: the store then
+   * watches it, and «Volver a la sesión» returns there. A block of the URL belonged to another
+   * group, so it goes.
    */
-  private async followBlock({ groupId, blockId }: LiveAttemptDetail): Promise<void> {
-    const query = this.route.snapshot.queryParamMap;
-    if (
-      query.get(TEACHER_PARAMS.group) === groupId &&
-      query.get(TEACHER_PARAMS.block) === blockId
-    ) {
+  private async followGroup({ groupId }: LiveAttemptDetail): Promise<void> {
+    if (this.route.snapshot.queryParamMap.get(TEACHER_PARAMS.group) === groupId) {
       return;
     }
     await this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { [TEACHER_PARAMS.group]: groupId, [TEACHER_PARAMS.block]: blockId },
+      queryParams: { [TEACHER_PARAMS.group]: groupId, [TEACHER_PARAMS.block]: null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });

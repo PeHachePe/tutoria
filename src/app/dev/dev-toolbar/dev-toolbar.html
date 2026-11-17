@@ -114,11 +114,22 @@
           @if (simulator.target(); as target) {
             Simulando {{ target.label }}
           } @else if (canSimulate()) {
-            Alumnos al azar en el grupo y el bloque de la sesión en vivo.
+            Alumnos al azar en el grupo de la sesión en vivo.
           } @else {
             Entra como docente o administración para simular su clase.
           }
         </p>
+        <mat-button-toggle-group
+          aria-label="Reparto de la clase"
+          hideSingleSelectionIndicator
+          [value]="spread()"
+          [disabled]="!canSimulate()"
+          (change)="setSpread($event.value)"
+        >
+          @for (option of spreadOptions; track option.spread) {
+            <mat-button-toggle [value]="option.spread">{{ option.label }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
         <div class="flex flex-wrap gap-2">
           <button
             matButton="outlined"
@@ -136,6 +147,14 @@
             (click)="stuckOne()"
           >
             Atascar a un alumno
+          </button>
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="!canSimulate()"
+            (click)="chatStuckOne()"
+          >
+            Atascar en el chat
           </button>
           <button
             matButton="outlined"

@@ -2,7 +2,7 @@
 
 `/docente/en-vivo?grupo=&bloque=` · Docente y administrador · Capa 2 · 6 h (4.1) + 2 h (4.1b) + 6 h (4.1d y 4.1e, replanteo del 4.1c)
 
-> Replanteada en el paso 4.1c (D-068). Lo que describe esta ficha se construye en el 4.1d (datos y lógica) y el 4.1e (pantalla); hasta entonces, la aplicación tiene la versión del 4.1 y el 4.1b.
+> Replanteada en el paso 4.1c (D-068). El 4.1d hizo los datos y la lógica que describe esta ficha, con la pantalla del 4.1 y el 4.1b encima; la pantalla nueva llega en el 4.1e.
 
 ## Objetivo
 
@@ -22,7 +22,7 @@ Que el docente, en plena clase, decida cuatro cosas de un vistazo:
   - `snapshot(grupo, bloque | null)`: los alumnos matriculados, los bloques y ejercicios del grupo (con sus pruebas, visibles y ocultas), **los intentos de todo el grupo con actividad en la ventana de sesión**, con sus eventos y sus interacciones con el tutor, y, si se pide un bloque, además todos los intentos de ese bloque (su estado acumulado);
   - `watch(grupo, onUpdate)`: intentos que cambian, eventos e interacciones nuevos (con Supabase, Realtime de `attempt`, `process_event` y `tutor_interaction`, filtrado por la RLS; con datos simulados, los cambios de `MockDb`, también los de otra pestaña).
 - `LiveStore`, provisto en la ruta padre `en-vivo` para que lo comparta el detalle (ficha 07): lee el grupo y el bloque de la URL, carga la foto con `resource()`, aplica los cambios en vivo de forma inmutable (también los que llegan mientras carga) y tiene un reloj que avanza cada 15 s. Guarda en memoria a quién marcó el docente como atendido.
-- Funciones puras (TDD): el motivo de la cola (`attentionReason()`, sobre `stuckReason()` y `isStuckMessage()`), si el alumno trabaja o está parado (`workState()`), las cifras de la cabecera (`liveFigures()`), el resumen por ejercicio (`exerciseOverview()`), la actividad por minuto y su lectura (`activityByMinute()`, `rhythmReading()`), el bloque por defecto (`defaultBlock()`) y la fila de cada alumno.
+- Funciones puras (TDD): el motivo de la cola (`attentionReason()`, sobre `failureStreak()` y `isStuckMessage()`), si el alumno trabaja o está parado (`workState()`), las cifras de la cabecera (`liveFigures()`), el resumen por ejercicio (`exerciseOverview()`), la actividad por minuto y su lectura (`activityByMinute()`, `rhythmReading()`), el bloque por defecto (`defaultBlock()`) y la fila de cada alumno.
 - No escribe nada.
 
 ## Contenido y disposición
@@ -62,7 +62,7 @@ Que el docente, en plena clase, decida cuatro cosas de un vistazo:
 - **«Alumnado»:** una tabla compacta y **paginada** (8 por página, `mat-paginator`), nunca una lista que crece.
   - Filtros, los mismos que las cifras: «Todos», «Necesitan ayuda», «Parados y sin entrar» y «Han terminado»; pulsar una cifra de la cabecera activa su filtro y lleva a la tabla. Buscador por nombre (sin tildes ni mayúsculas).
   - Columnas: alumno (enlace a su intento), ejercicio (con su bloque si no es el elegido y «Repitiendo» si es una práctica), estado con las pruebas superadas («Con fallos · 3 de 6», con una barrita), pistas con su nivel (vacío si no ha pedido), última actividad («Ahora mismo», «Hace 5 min») y observaciones.
-  - Observaciones, como chips y solo si existen: el motivo de la cola, «Parado desde hace 12 min», «Fuera de la ventana», «Entregó tras pegar 400 caracteres», «Pegó al volver a la ventana», «Superó tras insistir», «Repite ejercicios». Las columnas de pegados, salidas y tiempo desaparecen: casi siempre valían cero, y cuando no, lo dice el chip.
+  - Observaciones, como chips y solo si existen: el motivo de la cola, «Parado desde hace 12 min», «Fuera de la ventana», «Entregó tras pegar 400 caracteres», «Pegó al volver a la ventana», «Ráfaga de entregas», «Superó tras insistir», «Repite ejercicios». Las columnas de pegados, salidas y tiempo desaparecen: casi siempre valían cero, y cuando no, lo dice el chip.
   - Ordenable por cualquier columna; por defecto, primero quien está en la cola y después quien se movió último. Quien no ha entrado sale al final, en gris.
 - **Fuera de clase** (nadie con actividad en la ventana): la pantalla no se queda vacía.
   - La cabecera dice «Fuera de clase · última actividad: jue 12 nov», sin el punto que late.
@@ -85,7 +85,7 @@ Que el docente, en plena clase, decida cuatro cosas de un vistazo:
 - **Buscar, filtrar, ordenar y paginar** la tabla; el orden lo anuncia el lector de pantalla y el tercer clic vuelve al orden por atención.
 - **Nombre del alumno** (cola o tabla): abre el detalle de su intento, conservando el grupo y el bloque. Sin intento, no es enlace.
 - **Reintentar** (error): vuelve a cargar.
-- Barra de desarrollo, «Simular la clase»: alumnos al azar que abren, ejecutan, piden pistas, preguntan, pegan, salen y entregan, con tres repartos para probar la pantalla: toda la clase en un bloque, medio grupo en dos bloques y cada alumno en un bloque distinto. «Atascar a un alumno» y «Provocar un patrón», como hasta ahora.
+- Barra de desarrollo, «Simular la clase»: alumnos al azar que abren, ejecutan, piden pistas, preguntan, pegan, salen y entregan, con tres repartos para probar la pantalla: toda la clase en un bloque, medio grupo en dos bloques y cada alumno en un bloque distinto. «Atascar a un alumno», «Atascar en el chat» (un alumno le dice dos veces al tutor que no sabe seguir) y «Provocar un patrón».
 
 ## Estados
 

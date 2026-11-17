@@ -1,12 +1,21 @@
 import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
-import type { LiveAttemptDetail, LiveGroup, LiveSnapshot, LiveUpdate } from '../live-service';
-import { LiveService } from '../live-service';
+import {
+  LIVE_WINDOW_MINUTES,
+  type LiveAttemptDetail,
+  type LiveExercise,
+  type LiveGroup,
+  LiveService,
+  type LiveSnapshot,
+  type LiveUpdate,
+} from '../live-service';
 import { canManageGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
 import type { MockTables } from './mock-tables';
 import { MockNetwork } from './mock-network';
+
+const MINUTE_MS = 60_000;
 
 /**
  * The live panel over MockDb. `watch()` compares the tables after each change: they are immutable,
@@ -25,24 +34,41 @@ export class MockLiveService extends LiveService {
     });
   }
 
-  snapshot(groupId: string, blockId: string): Promise<LiveSnapshot> {
+  snapshot(groupId: string, blockId: string | null): Promise<LiveSnapshot> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
       const tables = this.db.tables();
       const group = findRow(tables.groups, groupId);
-      const block = findRow(tables.classBlocks, blockId);
-      if (!canManageGroup(user, group) || block.groupId !== groupId) {
+      const blocks = tables.classBlocks
+        .filter((block) => block.groupId === groupId)
+        .sort((a, b) => a.position - b.position);
+      if (
+        !canManageGroup(user, group) ||
+        (blockId !== null && !blocks.some((block) => block.id === blockId))
+      ) {
         throw new DataError('not_found');
       }
       const studentIds = new Set(
         tables.enrollments.filter((e) => e.groupId === groupId).map((e) => e.userId),
       );
+      const blockOrder = blocks.map((block) => block.id);
       const assignments = tables.assignments
-        .filter((assignment) => assignment.blockId === blockId)
-        .sort((a, b) => a.position - b.position);
+        .filter((assignment) => assignment.groupId === groupId)
+        .sort(
+          (a, b) =>
+            blockOrder.indexOf(a.blockId) - blockOrder.indexOf(b.blockId) ||
+            a.position - b.position,
+        );
       const assignmentIds = new Set(assignments.map((assignment) => assignment.id));
+      const blockIds = new Set(
+        assignments.filter((a) => a.blockId === blockId).map((assignment) => assignment.id),
+      );
+      const from = Date.now() - LIVE_WINDOW_MINUTES * MINUTE_MS;
       const attempts = tables.attempts.filter(
-        (attempt) => attempt.assignmentId !== null && assignmentIds.has(attempt.assignmentId),
+        ({ assignmentId, updatedAt }) =>
+          assignmentId !== null &&
+          assignmentIds.has(assignmentId) &&
+          (Date.parse(updatedAt) >= from || blockIds.has(assignmentId)),
       );
       const attemptIds = new Set(attempts.map((attempt) => attempt.id));
       return {
@@ -50,15 +76,10 @@ export class MockLiveService extends LiveService {
           .filter((candidate) => studentIds.has(candidate.id))
           .map(({ id, name }) => ({ id, name }))
           .sort((a, b) => a.name.localeCompare(b.name, 'es')),
-        exercises: assignments.map((assignment) => ({
-          assignmentId: assignment.id,
-          exercise: findRow(tables.exercises, assignment.exerciseId),
-          tests: tables.tests
-            .filter((test) => test.exerciseId === assignment.exerciseId)
-            .sort((a, b) => a.position - b.position),
-        })),
+        exercises: assignments.map((assignment) => liveExercise(tables, assignment)),
         attempts,
         events: tables.events.filter((event) => attemptIds.has(event.attemptId)),
+        interactions: tables.interactions.filter((i) => attemptIds.has(i.attemptId)),
       };
     });
   }
@@ -78,13 +99,7 @@ export class MockLiveService extends LiveService {
         groupId: assignment.groupId,
         blockId: assignment.blockId,
         student: { id, name },
-        exercise: {
-          assignmentId: assignment.id,
-          exercise: findRow(tables.exercises, assignment.exerciseId),
-          tests: tables.tests
-            .filter((test) => test.exerciseId === assignment.exerciseId)
-            .sort((a, b) => a.position - b.position),
-        },
+        exercise: liveExercise(tables, assignment),
         attempt,
         events: tables.events
           .filter((event) => event.attemptId === attemptId)
@@ -128,6 +143,21 @@ export class MockLiveService extends LiveService {
       }
     });
   }
+}
+
+/** An assignment as the panel reads it: the exercise with its tests in order, and its block. */
+function liveExercise(
+  tables: MockTables,
+  assignment: MockTables['assignments'][number],
+): LiveExercise {
+  return {
+    assignmentId: assignment.id,
+    blockId: assignment.blockId,
+    exercise: findRow(tables.exercises, assignment.exerciseId),
+    tests: tables.tests
+      .filter((test) => test.exerciseId === assignment.exerciseId)
+      .sort((a, b) => a.position - b.position),
+  };
 }
 
 /**

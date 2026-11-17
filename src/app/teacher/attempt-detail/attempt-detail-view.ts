@@ -15,6 +15,7 @@ import { CodeEditor } from '../../shared/code-editor/code-editor';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { LiveReasonText } from '../live/live-reason';
+import { exercisePosition } from '../live/live-state';
 import { LiveStore } from '../live/live-store';
 import {
   attemptFigures,
@@ -87,9 +88,7 @@ export class AttemptDetailView {
   protected readonly context = computed(() => {
     const { exercise, groupId, blockId } = this.view();
     const text = exerciseText(exercise.exercise, this.locale);
-    const position = this.store
-      .exercises()
-      .findIndex((entry) => entry.assignmentId === exercise.assignmentId);
+    const position = exercisePosition(this.store.exercises(), exercise.assignmentId);
     const block = this.store
       .groups()
       .find((group) => group.id === groupId)
@@ -97,7 +96,7 @@ export class AttemptDetailView {
     return {
       exercise: text.title,
       exerciseLang: text.locale === this.locale ? null : text.locale,
-      position: position >= 0 ? position + 1 : null,
+      position,
       block: block ? blockTitle(block, this.locale).title : null,
     };
   });

@@ -4,7 +4,15 @@ import { render, screen } from '@testing-library/angular';
 import { exerciseOverview } from './live-overview';
 import { LiveClass } from './live-class';
 import { liveState } from './live-state';
-import { ago, BLOCK_EXERCISES, STUDENTS, testAttempt, testSnapshot } from './live-testing';
+import {
+  ago,
+  BLOCK_EXERCISES,
+  NOW,
+  STUDENTS,
+  testAttempt,
+  testRows,
+  testSnapshot,
+} from './live-testing';
 import { testEvents as e } from '../../data/process-event-testing';
 
 function text(element: Element | null): string {
@@ -13,7 +21,9 @@ function text(element: Element | null): string {
 
 async function renderClass(snapshot = testSnapshot(), locale = 'es') {
   await render(LiveClass, {
-    inputs: { overview: exerciseOverview(liveState(snapshot)) },
+    inputs: {
+      overview: exerciseOverview(liveState(snapshot), testRows(snapshot), 'b1', NOW).exercises,
+    },
     providers: [{ provide: LOCALE_ID, useValue: locale }],
   });
   return screen.getByRole('region', { name: 'La clase en el bloque' });
@@ -24,6 +34,16 @@ function itemOf(title: RegExp): HTMLElement {
 }
 
 describe('LiveClass', () => {
+  it('numbers each exercise by its position in its block', async () => {
+    const snapshot = testSnapshot({
+      attempts: [testAttempt('a2', 'ana', { assignmentId: 'as2', updatedAt: ago(1) })],
+    });
+    const { exercises } = exerciseOverview(liveState(snapshot), testRows(snapshot), null, NOW);
+    await render(LiveClass, { inputs: { overview: exercises } });
+
+    expect(screen.getByRole('heading', { level: 3 }).textContent).toMatch(/^2\. /);
+  });
+
   it('draws a bar per exercise with the legend, and says it in words', async () => {
     const region = await renderClass(
       testSnapshot({

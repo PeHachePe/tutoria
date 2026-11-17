@@ -82,9 +82,22 @@ describe('SupabaseLiveService', () => {
   });
 
   describe('snapshot', () => {
+    const exercise = (id: string, tests: ReturnType<typeof testRow>[] = []) => ({
+      ...exerciseRow({ id }),
+      test: tests,
+    });
+
     beforeEach(() => {
       server
-        .on('GET', '/rest/v1/class_block', { body: { id: 'b1' } })
+        .on('GET', '/rest/v1/class_group', {
+          body: {
+            id: 'daw',
+            class_block: [
+              { id: 'b2', position: 2 },
+              { id: 'b1', position: 1 },
+            ],
+          },
+        })
         .on('GET', '/rest/v1/enrollment', {
           body: [
             { app_user: { id: 'u2', name: 'Pablo' } },
@@ -93,46 +106,109 @@ describe('SupabaseLiveService', () => {
         })
         .on('GET', '/rest/v1/exercise_assignment', {
           body: [
+            { id: 'as3', block_id: 'b2', position: 1, exercise: exercise('exercise-3') },
+            { id: 'as2', block_id: 'b1', position: 5, exercise: exercise('exercise-2') },
             {
               id: 'as1',
-              exercise: {
-                ...exerciseRow(),
-                test: [testRow({ id: 't2', position: 2 }), testRow({ id: 't1', position: 1 })],
-              },
+              block_id: 'b1',
+              position: 2,
+              exercise: exercise('exercise-1', [
+                testRow({ id: 't2', position: 2 }),
+                testRow({ id: 't1', position: 1 }),
+              ]),
             },
-            { id: 'as2', exercise: { ...exerciseRow({ id: 'exercise-2' }), test: [] } },
           ],
         })
-        .on('GET', '/rest/v1/attempt', {
-          body: [{ ...attemptRow({ assignment_id: 'as1' }), process_event: [eventRow()] }],
-        });
+        // The attempts of the session, or every attempt of the block
+        .on('GET', '/rest/v1/attempt', (request) => ({
+          body: request.params.has('updated_at')
+            ? [
+                {
+                  ...attemptRow({ id: 'a3', assignment_id: 'as3' }),
+                  process_event: [eventRow({ id: 'e3', attempt_id: 'a3' })],
+                  tutor_interaction: [interactionRow({ id: 'i3', attempt_id: 'a3' })],
+                },
+                {
+                  ...attemptRow({ id: 'a1', assignment_id: 'as1' }),
+                  process_event: [eventRow({ id: 'e1', attempt_id: 'a1' })],
+                  tutor_interaction: [],
+                },
+              ]
+            : [
+                {
+                  ...attemptRow({ id: 'a1', assignment_id: 'as1' }),
+                  process_event: [eventRow({ id: 'e1', attempt_id: 'a1' })],
+                  tutor_interaction: [],
+                },
+                {
+                  ...attemptRow({ id: 'a2', assignment_id: 'as2' }),
+                  process_event: [],
+                  tutor_interaction: [interactionRow({ id: 'i2', attempt_id: 'a2' })],
+                },
+              ],
+        }));
     });
 
-    it('reads the students, the exercises with their tests and the attempts with their events', async () => {
-      const snapshot = await service.snapshot('daw', 'b1');
+    it('reads the students and every exercise of the group, by block and position', async () => {
+      const snapshot = await service.snapshot('daw', null);
 
       expect(snapshot.students).toEqual([
         { id: 'u1', name: 'Ana' },
         { id: 'u2', name: 'Pablo' },
       ]);
       expect(
-        snapshot.exercises.map((entry) => [entry.assignmentId, entry.tests.map((t) => t.id)]),
+        snapshot.exercises.map((entry) => [
+          entry.assignmentId,
+          entry.blockId,
+          entry.tests.map((t) => t.id),
+        ]),
       ).toEqual([
-        ['as1', ['t1', 't2']],
-        ['as2', []],
+        ['as1', 'b1', ['t1', 't2']],
+        ['as2', 'b1', []],
+        ['as3', 'b2', []],
       ]);
       expect(snapshot.exercises[0].exercise.maxIdleMinutes).toBe(4);
-      expect(snapshot.attempts.map((attempt) => attempt.id)).toEqual(['attempt-1']);
-      expect(snapshot.events.map((event) => event.id)).toEqual(['event-1']);
-      const assignments = server.sentTo('GET', '/rest/v1/exercise_assignment')[0].params;
-      expect(assignments.get('group_id')).toBe('eq.daw');
-      expect(assignments.get('block_id')).toBe('eq.b1');
-      expect(server.sentTo('GET', '/rest/v1/attempt')[0].params.get('assignment_id')).toBe(
-        'in.(as1,as2)',
+      expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('id')).toBe('eq.daw');
+      expect(server.sentTo('GET', '/rest/v1/exercise_assignment')[0].params.get('group_id')).toBe(
+        'eq.daw',
       );
     });
 
-    it('does not ask for attempts of a block without exercises', async () => {
+    it('without a block, reads only the attempts of the session, with their events and interactions', async () => {
+      const snapshot = await service.snapshot('daw', null);
+
+      expect(snapshot.attempts.map((attempt) => attempt.id)).toEqual(['a3', 'a1']);
+      expect(snapshot.events.map((event) => event.id)).toEqual(['e3', 'e1']);
+      expect(snapshot.interactions.map((interaction) => interaction.id)).toEqual(['i3']);
+      const requests = server.sentTo('GET', '/rest/v1/attempt');
+      expect(requests).toHaveLength(1);
+      expect(requests[0].params.get('assignment_id')).toBe('in.(as1,as2,as3)');
+      expect(requests[0].params.get('updated_at')).toMatch(/^gte\./);
+    });
+
+    it('with a block, also reads every attempt of it, joined without repeating any', async () => {
+      const snapshot = await service.snapshot('daw', 'b1');
+
+      expect(snapshot.attempts.map((attempt) => attempt.id)).toEqual(['a3', 'a1', 'a2']);
+      expect(snapshot.events.map((event) => event.id)).toEqual(['e3', 'e1']);
+      expect(snapshot.interactions.map((interaction) => interaction.id)).toEqual(['i3', 'i2']);
+      const block = server
+        .sentTo('GET', '/rest/v1/attempt')
+        .find((request) => !request.params.has('updated_at'));
+      expect(block?.params.get('assignment_id')).toBe('in.(as1,as2)');
+    });
+
+    it('reads only the attempts of the session for a block without exercises', async () => {
+      server.on('GET', '/rest/v1/exercise_assignment', {
+        body: [{ id: 'as1', block_id: 'b1', position: 1, exercise: exercise('exercise-1') }],
+      });
+
+      await service.snapshot('daw', 'b2');
+
+      expect(server.sentTo('GET', '/rest/v1/attempt')).toHaveLength(1);
+    });
+
+    it('does not ask for attempts of a group without exercises', async () => {
       server.on('GET', '/rest/v1/exercise_assignment', { body: [] });
 
       const snapshot = await service.snapshot('daw', 'b1');
@@ -141,10 +217,10 @@ describe('SupabaseLiveService', () => {
       expect(server.sentTo('GET', '/rest/v1/attempt')).toHaveLength(0);
     });
 
-    it('does not find a block of another group', async () => {
-      server.on('GET', '/rest/v1/class_block', { body: null });
-
+    it('does not find a group the RLS hides or a block of another group', async () => {
       await expect(service.snapshot('daw', 'b9')).rejects.toMatchObject({ kind: 'not_found' });
+      server.on('GET', '/rest/v1/class_group', { body: null });
+      await expect(service.snapshot('dam', null)).rejects.toMatchObject({ kind: 'not_found' });
     });
   });
 
@@ -182,7 +258,7 @@ describe('SupabaseLiveService', () => {
         groupId: 'daw',
         blockId: 'b1',
         student: { id: 'user-1', name: 'Ana' },
-        exercise: { assignmentId: 'as1', exercise: { maxIdleMinutes: 4 } },
+        exercise: { assignmentId: 'as1', blockId: 'b1', exercise: { maxIdleMinutes: 4 } },
       });
       expect(detail.exercise.tests.map((test) => test.id)).toEqual(['t1', 't2']);
       expect(detail.events.map((event) => event.id)).toEqual(['e1', 'e2']);

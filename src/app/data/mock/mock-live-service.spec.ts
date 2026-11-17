@@ -69,30 +69,95 @@ describe('MockLiveService', () => {
   });
 
   describe('snapshot', () => {
-    it('gives the students, exercises, attempts and events of a block', async () => {
+    /** The attempts of the seed at the assignments of 1.º DAW A in block `blockId`. */
+    const attemptsOfBlock = (blockId: string) => {
+      const ids = new Set(
+        SEED.assignments.filter((a) => a.blockId === blockId).map((assignment) => assignment.id),
+      );
+      return SEED.attempts.filter((attempt) => ids.has(attempt.assignmentId ?? ''));
+    };
+
+    /** Moves an attempt of the seed into the session, as if its student had just saved code. */
+    const touch = (attempt: Attempt) =>
+      db.update('attempts', (rows) =>
+        rows.map((row) =>
+          row.id === attempt.id ? { ...row, updatedAt: new Date().toISOString() } : row,
+        ),
+      );
+
+    it('gives the students and every exercise of the group, by block and position', async () => {
       db.setSession(TEACHER_ID);
 
-      const snapshot = await service.snapshot(DAW_GROUP_ID, FIRST_BLOCK);
+      const snapshot = await service.snapshot(DAW_GROUP_ID, null);
 
       expect(snapshot.students).toHaveLength(DAW_STUDENT_IDS.length);
       expect(snapshot.students[0].name.localeCompare(snapshot.students[1].name, 'es')).toBe(-1);
-      expect(snapshot.exercises.map((entry) => entry.assignmentId)).toEqual([
+      const blocks = SEED.classBlocks
+        .filter((block) => block.groupId === DAW_GROUP_ID)
+        .sort((a, b) => a.position - b.position)
+        .map((block) => block.id);
+      const order = snapshot.exercises.map((entry) => blocks.indexOf(entry.blockId));
+      expect(order).toEqual([...order].sort((a, b) => a - b));
+      expect(snapshot.exercises.slice(0, 2).map((entry) => entry.assignmentId)).toEqual([
         assignmentId(DAW_GROUP_ID, 1),
         assignmentId(DAW_GROUP_ID, 2),
       ]);
+      expect(new Set(snapshot.exercises.map((entry) => entry.blockId)).size).toBeGreaterThan(1);
       const positions = snapshot.exercises[0].tests.map((test) => test.position);
       expect(positions.length).toBeGreaterThan(1);
       expect(positions).toEqual([...positions].sort((a, b) => a - b));
-      const ids = new Set(snapshot.exercises.map((entry) => entry.assignmentId));
-      expect(snapshot.attempts.length).toBeGreaterThan(0);
-      expect(snapshot.attempts.every((attempt) => ids.has(attempt.assignmentId ?? ''))).toBe(true);
-      const attemptIds = new Set(snapshot.attempts.map((attempt) => attempt.id));
+    });
+
+    it('gives no attempt of the seed without a block: they are all older than the session', async () => {
+      db.setSession(TEACHER_ID);
+
+      const snapshot = await service.snapshot(DAW_GROUP_ID, null);
+
+      expect(snapshot).toMatchObject({ attempts: [], events: [], interactions: [] });
+    });
+
+    it('gives the attempts of the session in any block, with their events and interactions', async () => {
+      db.setSession(TEACHER_ID);
+      const talkative = SEED.attempts.find(
+        (attempt) =>
+          attemptsOfBlock(FIRST_BLOCK).includes(attempt) &&
+          SEED.interactions.some((i) => i.attemptId === attempt.id) &&
+          SEED.events.some((e) => e.attemptId === attempt.id),
+      ) as Attempt;
+      const other = attemptsOfBlock(fixtureId('block', 2))[0];
+      touch(talkative);
+      touch(other);
+
+      const snapshot = await service.snapshot(DAW_GROUP_ID, null);
+
+      expect(snapshot.attempts.map((attempt) => attempt.id).sort()).toEqual(
+        [talkative.id, other.id].sort(),
+      );
+      const ids = new Set([talkative.id, other.id]);
       expect(snapshot.events.length).toBeGreaterThan(0);
+      expect(snapshot.events.every((event) => ids.has(event.attemptId))).toBe(true);
+      expect(snapshot.interactions.length).toBeGreaterThan(0);
+      expect(snapshot.interactions.every((i) => ids.has(i.attemptId))).toBe(true);
+    });
+
+    it('adds every attempt of the block asked for, none twice', async () => {
+      db.setSession(TEACHER_ID);
+      const block = attemptsOfBlock(FIRST_BLOCK);
+      const other = attemptsOfBlock(fixtureId('block', 2))[0];
+      touch(block[0]);
+      touch(other);
+
+      const snapshot = await service.snapshot(DAW_GROUP_ID, FIRST_BLOCK);
+
+      expect(snapshot.attempts.map((attempt) => attempt.id).sort()).toEqual(
+        [...block.map((attempt) => attempt.id), other.id].sort(),
+      );
+      const attemptIds = new Set(snapshot.attempts.map((attempt) => attempt.id));
       expect(snapshot.events.every((event) => attemptIds.has(event.attemptId))).toBe(true);
     });
 
     it.each([
-      ['a group of another teacher', DAM_GROUP_ID, fixtureId('block', 7)],
+      ['a group of another teacher', DAM_GROUP_ID, null],
       ['a block of another group', DAW_GROUP_ID, fixtureId('block', 7)],
     ])('does not find %s', async (_, groupId, blockId) => {
       db.setSession(TEACHER_ID);
@@ -128,6 +193,7 @@ describe('MockLiveService', () => {
         name: SEED.users.find((user) => user.id === attempt.userId)?.name,
       });
       expect(detail.exercise.assignmentId).toBe(attempt.assignmentId);
+      expect(detail.exercise.blockId).toBe(assignment?.blockId);
       expect(detail.exercise.exercise.id).toBe(attempt.exerciseId);
       const positions = detail.exercise.tests.map((test) => test.position);
       expect(positions).toEqual([...positions].sort((a, b) => a - b));

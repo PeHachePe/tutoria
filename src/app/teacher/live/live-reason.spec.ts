@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { LiveChip, type LiveReason, LiveReasonText, reasonsOf } from './live-reason';
 import { liveRow } from './live-row';
-import { ago, BLOCK_EXERCISES, NOW, STUDENTS, testAttempt } from './live-testing';
+import { ago, BLOCK_EXERCISES, NOW, STUDENTS, testAttempt, testInteraction } from './live-testing';
 import { testEvents as e } from '../../data/process-event-testing';
 
 function text(element: Element): string {
@@ -18,7 +18,6 @@ function reasonText(reason: LiveReason, short = false): string {
 }
 
 const REASONS: [LiveReason, string, string][] = [
-  [{ kind: 'away', minutes: 3, since: 0 }, 'Fuera', 'Ha salido de la ventana'],
   [
     { kind: 'hints_exhausted', since: 0 },
     'Sin más pistas',
@@ -40,15 +39,9 @@ const REASONS: [LiveReason, string, string][] = [
     'Ha pedido 3 pistas seguidas sin ejecutar las pruebas',
   ],
   [
-    { kind: 'stuck_idle', minutes: 6, since: 0 },
-    'Sin avanzar',
-    'No escribe ni ejecuta desde hace un rato',
-  ],
-  [{ kind: 'not_started' }, 'Sin empezar', 'No ha abierto ningún ejercicio del bloque'],
-  [
-    { kind: 'inactive' },
-    'Sin actividad',
-    'Sin actividad en la última hora mientras la clase trabaja',
+    { kind: 'chat_stuck', messages: 2, since: 0 },
+    'No sabe seguir',
+    'Le ha dicho al tutor 2 veces que no sabe seguir',
   ],
   [
     { kind: 'paste_submit', chars: 400, runs: 0 },
@@ -101,7 +94,7 @@ describe('LiveReasonText', () => {
 
 describe('LiveChip', () => {
   it.each<[LiveReason, string, string]>([
-    [{ kind: 'stuck_idle', minutes: 6, since: 0 }, 'hourglass_empty', 'bg-warning-container'],
+    [{ kind: 'chat_stuck', messages: 2, since: 0 }, 'forum', 'bg-warning-container'],
     [{ kind: 'paste_on_return', chars: 250 }, 'content_paste_go', 'bg-info-container'],
     [{ kind: 'repeated', count: 2 }, 'replay', 'bg-success-container'],
   ])('shows %o with its icon and the colour of its tone', (reason, icon, background) => {
@@ -116,7 +109,7 @@ describe('LiveChip', () => {
 });
 
 describe('reasonsOf', () => {
-  it('lists the signal, then the patterns, then the perseverance', () => {
+  it('lists the reason, then the patterns, then the perseverance', () => {
     const submitted = testAttempt('a1', 'ana', {
       status: 'submitted',
       finishedAt: ago(30),
@@ -124,24 +117,25 @@ describe('reasonsOf', () => {
     });
     const practice = testAttempt('a2', 'ana', {
       number: 2,
-      status: 'passed',
+      status: 'tests_failed',
       startedAt: ago(9),
-      updatedAt: ago(1),
+      updatedAt: ago(2),
     });
     const events = [
       ...[5, 4, 3].map((m) => e.run('a2', ago(m), ['e1-t1'])),
-      e.run('a2', ago(2)),
-      e.focusLost('a2', ago(1)),
+      e.run('a2', ago(2), ['e1-t2']),
     ];
+    const interactions = [2, 1].map((m) =>
+      testInteraction('a2', ago(m), { trigger: 'question', studentMessage: 'no sé seguir' }),
+    );
     const row = liveRow(
-      { student: STUDENTS[0], attempts: [submitted, practice], events, interactions: [] },
+      { student: STUDENTS[0], attempts: [submitted, practice], events, interactions },
       BLOCK_EXERCISES,
       NOW,
-      true,
     );
 
     expect(reasonsOf(row).map((reason) => reason.kind)).toEqual([
-      'away',
+      'chat_stuck',
       'breakthrough',
       'repeated',
     ]);

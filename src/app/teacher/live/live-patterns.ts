@@ -17,10 +17,6 @@ const MINUTE_MS = 60_000;
  * behaviour, they do not prove anything. The teacher opens the attempt and judges.
  */
 export type LivePattern =
-  /** Nothing opened in the block while the class works. */
-  | { readonly kind: 'not_started' }
-  /** Opened something but did nothing in the session while the class works. */
-  | { readonly kind: 'inactive' }
   /** Submitted with a large paste and few runs. */
   | { readonly kind: 'paste_submit'; readonly chars: number; readonly runs: number }
   /** Pasted a lot soon after coming back to the window. */
@@ -30,22 +26,16 @@ export type LivePattern =
 
 /** What the patterns of a student look at. */
 export interface PatternInput {
-  readonly hasAttempts: boolean;
-  /** The student did something in the session window. */
-  readonly active: boolean;
-  /** Somebody in the class did something in the session window. */
-  readonly classActive: boolean;
   /** Events of the student in the session window. */
   readonly events: readonly ProcessEvent[];
   readonly submittedAttemptIds: ReadonlySet<string>;
 }
 
-/** The patterns of a student in the session, in the order the panel lists them. */
+/**
+ * The patterns of a student in the session, in the order the panel lists them. Whoever does not
+ * work is told by their state, not by a pattern (D-068).
+ */
 export function livePatterns(input: PatternInput): LivePattern[] {
-  if (!input.active) {
-    if (!input.classActive) return [];
-    return [{ kind: input.hasAttempts ? 'inactive' : 'not_started' }];
-  }
   const events = [...input.events].sort((a, b) => time(a) - time(b));
   return [
     pasteSubmit(events, input.submittedAttemptIds),

@@ -15,7 +15,10 @@ import type { TutorInteraction } from '../../data/tutor';
 import { liveRow, type LiveRow } from './live-row';
 import { liveState } from './live-state';
 
-/** Test helpers of the live panel: a block with two exercises and three students. */
+/**
+ * Test helpers of the live panel: a group with three students and two blocks, `b1` with two
+ * exercises and `b2` with one.
+ */
 
 export const NOW = Date.parse('2026-11-13T10:00:00.000Z');
 export const MINUTE = 60_000;
@@ -46,9 +49,21 @@ const tests = (exerciseId: string, count: number): Test[] =>
     position: index,
   }));
 
+/** The exercises of block `b1`. */
 export const BLOCK_EXERCISES: readonly LiveExercise[] = [
-  { assignmentId: 'as1', exercise: exercise(0), tests: tests('e1', 5) },
-  { assignmentId: 'as2', exercise: exercise(1), tests: tests('e2', 6) },
+  { assignmentId: 'as1', blockId: 'b1', exercise: exercise(0), tests: tests('e1', 5) },
+  { assignmentId: 'as2', blockId: 'b1', exercise: exercise(1), tests: tests('e2', 6) },
+];
+
+/** The exercise of block `b2`. */
+export const OTHER_BLOCK_EXERCISES: readonly LiveExercise[] = [
+  { assignmentId: 'as3', blockId: 'b2', exercise: exercise(2), tests: tests('e3', 4) },
+];
+
+/** Every exercise of the group, as a snapshot gives them. */
+export const GROUP_EXERCISES: readonly LiveExercise[] = [
+  ...BLOCK_EXERCISES,
+  ...OTHER_BLOCK_EXERCISES,
 ];
 
 export function testAttempt(
@@ -83,6 +98,7 @@ export function testSnapshot(overrides: Partial<LiveSnapshot> = {}): LiveSnapsho
     exercises: BLOCK_EXERCISES,
     attempts: [],
     events: [],
+    interactions: [],
     ...overrides,
   };
 }
@@ -125,10 +141,10 @@ export function testDetail(overrides: Partial<LiveAttemptDetail> = {}): LiveAtte
   };
 }
 
-/** The rows of a snapshot at NOW, with a class at work. */
+/** The rows of a snapshot at NOW. */
 export function testRows(snapshot: LiveSnapshot): LiveRow[] {
   return [...liveState(snapshot).students.values()].map((activity) =>
-    liveRow(activity, snapshot.exercises, NOW, true),
+    liveRow(activity, snapshot.exercises, NOW),
   );
 }
 
@@ -157,7 +173,8 @@ export const GROUPS: LiveGroup[] = [
 /** A LiveService whose answers each test decides, and whose live changes it sends. */
 export class FakeLiveService extends LiveService {
   groups: () => Promise<LiveGroup[]> = () => Promise.resolve(GROUPS);
-  snapshots: () => Promise<LiveSnapshot> = () => Promise.resolve(testSnapshot());
+  snapshots: (groupId: string, blockId: string | null) => Promise<LiveSnapshot> = () =>
+    Promise.resolve(testSnapshot());
   readonly snapshotCalls: string[] = [];
   listener: ((update: LiveUpdate) => void) | null = null;
   readonly stopped: string[] = [];
@@ -170,10 +187,10 @@ export class FakeLiveService extends LiveService {
 
   attemptDetail = vi.fn((attemptId: string) => this.details(attemptId));
 
-  snapshot(groupId: string, blockId: string): Promise<LiveSnapshot> {
-    this.snapshotCalls.push(`${groupId}/${blockId}`);
+  snapshot(groupId: string, blockId: string | null): Promise<LiveSnapshot> {
+    this.snapshotCalls.push(`${groupId}/${blockId ?? 'todos'}`);
     this.duringSnapshot();
-    return this.snapshots();
+    return this.snapshots(groupId, blockId);
   }
 
   watch(groupId: string, onUpdate: (update: LiveUpdate) => void): () => void {

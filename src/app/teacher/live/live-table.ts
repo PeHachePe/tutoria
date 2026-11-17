@@ -19,12 +19,14 @@ import { RouterLink } from '@angular/router';
 import { APP_PATHS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
 import type { AttemptStatus } from '../../data/attempt';
+import type { ClassBlock } from '../../data/exercise';
 import { exerciseText } from '../../data/localized-text';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { type ActivityAge, activityAge } from './activity-age';
 import { FlashOnChange } from './flash-on-change';
 import { LiveChip, type LiveReason, reasonsOf } from './live-reason';
 import type { LiveRow } from './live-row';
+import { otherBlockTitle } from './other-block';
 
 /** Columns of the table, in order. */
 const COLUMNS = [
@@ -68,7 +70,12 @@ const SORT_VALUES: Record<Column, (row: LiveRow) => number | string> = {
 /** A row with what the table shows of it. */
 interface TableItem {
   readonly row: LiveRow;
-  readonly exercise: { readonly title: string; readonly lang: string | null } | null;
+  readonly exercise: {
+    readonly title: string;
+    readonly lang: string | null;
+    /** The block of the exercise when it is not the one shown. */
+    readonly block: string | null;
+  } | null;
   readonly age: ActivityAge;
   readonly reasons: readonly LiveReason[];
 }
@@ -88,7 +95,7 @@ const COLUMN_NAMES: Record<Column, string> = {
 };
 
 /**
- * Every student of the block: a sortable table when it has room and a card each when it has not
+ * Every student of the group, wherever they work: a sortable table when it has room and a card each when it has not
  * (ficha 06). With less room, the table leaves out the times, pastes and absences.
  * Without a sort chosen, what needs attention comes first and then whoever moved last. A row
  * flashes when its student does something.
@@ -126,6 +133,10 @@ export class LiveTable {
   readonly rows = input.required<readonly LiveRow[]>();
   /** «1.º DAW A · Tema 1: Bucles». */
   readonly caption = input.required<string>();
+  /** The blocks of the group, to name the one of an exercise. */
+  readonly blocks = input.required<readonly ClassBlock[]>();
+  /** The block shown, or null with the whole class. */
+  readonly blockId = input.required<string | null>();
   /** The clock of the panel, for «hace 5 min». */
   readonly now = input.required<number>();
 
@@ -148,8 +159,7 @@ export class LiveTable {
       row,
       exercise: this.exerciseOf(row),
       age: activityAge(row.lastActivity, now),
-      // Not starting is already in the status
-      reasons: reasonsOf(row).filter((reason) => reason.kind !== 'not_started'),
+      reasons: reasonsOf(row),
     }));
   });
 
@@ -159,6 +169,7 @@ export class LiveTable {
     return {
       title: `${row.position}. ${text.title}`,
       lang: text.locale === this.locale ? null : text.locale,
+      block: otherBlockTitle(this.blocks(), row.exercise, this.blockId(), this.locale),
     };
   }
 
@@ -183,14 +194,11 @@ export class LiveTable {
   }
 }
 
-/** Patterns of whoever is not working: they go with the rest, after those who work. */
-const QUIET_PATTERNS: ReadonlySet<string> = new Set(['not_started', 'inactive']);
-
-/** Lower first: a signal, then something to review, then working now, then the rest. */
+/** Lower first: a reason of the queue, then something to review, then the session, then the rest. */
 function attention(row: LiveRow): number {
-  if (row.signal) return 0;
-  if (row.patterns.some((pattern) => !QUIET_PATTERNS.has(pattern.kind))) return 1;
-  return row.active ? 2 : 3;
+  if (row.reason) return 0;
+  if (row.patterns.length > 0) return 1;
+  return row.work === 'absent' ? 3 : 2;
 }
 
 /** What needs attention first, then whoever moved last, then by name. */

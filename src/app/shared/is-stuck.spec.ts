@@ -1,7 +1,7 @@
 import type { Attempt, StoredAttemptStatus } from '../data/attempt';
 import type { StuckThresholds } from '../data/exercise';
 import type { ProcessEvent } from '../data/process-event';
-import { failureStreak, isStuck, lastActivityAt, stuckReason } from './is-stuck';
+import { failingStreaks, failureStreak, isStuck, lastActivityAt, stuckReason } from './is-stuck';
 
 const NOW = Date.parse('2026-11-07T10:00:00.000Z');
 const MINUTE = 60_000;
@@ -191,5 +191,26 @@ describe('failureStreak', () => {
 
   it('is 0 without runs', () => {
     expect(failureStreak([])).toBe(0);
+  });
+});
+
+describe('failingStreaks', () => {
+  it('is empty without runs', () => {
+    expect(failingStreaks([])).toEqual(new Map());
+  });
+
+  it('is empty when every test passes in the latest run', () => {
+    expect(failingStreaks([run(2, ['t1']), run(1, [])])).toEqual(new Map());
+  });
+
+  it('gives each test failing in the latest run the runs in a row it has failed', () => {
+    const events = [run(4, ['t1']), run(3, ['t1', 't2']), run(2, ['t1']), run(1, ['t1', 't3'])];
+
+    expect(failingStreaks(events)).toEqual(
+      new Map([
+        ['t1', 4],
+        ['t3', 1],
+      ]),
+    );
   });
 });

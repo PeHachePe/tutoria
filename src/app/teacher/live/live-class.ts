@@ -122,25 +122,26 @@ export class LiveClass {
   protected readonly segments = SEGMENTS;
 
   protected readonly items = computed(() =>
-    this.overview().map(({ exercise, counts, students, topFailure }, index) => {
+    this.overview().map(({ exercise, position, students, total, topFailure }) => {
       const text = exerciseText(exercise.exercise, this.locale);
+      const count = (status: AttemptStatus) => students[status].length;
       return {
         id: exercise.assignmentId,
-        title: `${index + 1}. ${text.title}`,
+        title: `${position}. ${text.title}`,
         lang: text.locale === this.locale ? null : text.locale,
         segments: SEGMENTS.map(({ status, tone }) => ({
           status,
           tone,
-          percent: students === 0 ? 0 : (counts[status] / students) * 100,
+          percent: total === 0 ? 0 : (count(status) / total) * 100,
         })),
-        summary: SEGMENTS.filter(({ status }) => counts[status] > 0)
-          .map(({ status, label }) => `${label}: ${counts[status]}`)
+        summary: SEGMENTS.filter(({ status }) => count(status) > 0)
+          .map(({ status, label }) => `${label}: ${count(status)}`)
           .join(', '),
         failure: topFailure && {
           call: formatCall(exercise.exercise.functionName, topFailure.test.input),
           hidden: topFailure.test.isHidden,
-          students: topFailure.students,
-          common: topFailure.students >= COMMON_FAILURE_STUDENTS,
+          students: topFailure.students.length,
+          common: topFailure.students.length >= COMMON_FAILURE_STUDENTS,
         },
       };
     }),

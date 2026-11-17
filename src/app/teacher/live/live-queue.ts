@@ -4,10 +4,12 @@ import { RouterLink } from '@angular/router';
 
 import { APP_PATHS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
+import type { ClassBlock } from '../../data/exercise';
 import { exerciseText } from '../../data/localized-text';
 import { Mascot } from '../../shared/mascot/mascot';
 import { LiveReasonText, REASON_ICONS } from './live-reason';
-import type { LiveRow } from './live-row';
+import type { QueuedRow } from './live-store';
+import { otherBlockTitle } from './other-block';
 
 const MINUTE_MS = 60_000;
 
@@ -15,9 +17,10 @@ const MINUTE_MS = 60_000;
 export const QUEUE_SHOWN = 6;
 
 /**
- * «A quién atender» (D-054): the students who need the teacher where the tutor does not reach,
- * whoever has waited longest first, as raised hands. Each one says why, opens the attempt and
- * leaves the queue with «Atendido» until a new signal brings them back.
+ * «A quién atender» (D-054, D-068): the students of the whole group who need the teacher where the
+ * tutor does not reach, by reason and whoever has waited longest first, as raised hands. Each one
+ * says why and where (with its block if it is not the one shown), opens the attempt and leaves the
+ * queue with «Atendido» until a new reason brings them back.
  */
 @Component({
   selector: 'app-live-queue',
@@ -70,13 +73,16 @@ export const QUEUE_SHOWN = 6;
                 >{{ item.row.student.name }}</a
               >
               <p class="text-body-medium text-on-surface-variant">
-                <app-live-reason [reason]="item.signal" />
+                <app-live-reason [reason]="item.reason" />
                 <span [title]="item.exercise">
                   ·
                   <ng-container i18n="@@live.queue.exercise"
                     >ejercicio {{ item.position }}</ng-container
                   ></span
                 >
+                @if (item.block) {
+                  <span> · {{ item.block }}</span>
+                }
               </p>
             </div>
             <span class="ms-14 text-body-medium whitespace-nowrap text-on-surface-variant sm:ms-0">
@@ -124,7 +130,11 @@ export class LiveQueue {
   private readonly locale = inject(LanguageService).locale;
 
   /** The queue, in order. */
-  readonly rows = input.required<readonly LiveRow[]>();
+  readonly rows = input.required<readonly QueuedRow[]>();
+  /** The blocks of the group, to name the one of an exercise. */
+  readonly blocks = input.required<readonly ClassBlock[]>();
+  /** The block shown, or null with the whole class. */
+  readonly blockId = input.required<string | null>();
   /** The clock of the panel, for the waiting time. */
   readonly now = input.required<number>();
   readonly attend = output<string>();
@@ -137,17 +147,18 @@ export class LiveQueue {
 
   protected readonly items = computed(() =>
     this.rows().flatMap((row) => {
-      // A signal comes with an attempt at an exercise of the block
-      if (!row.signal || !row.attempt || !row.exercise) return [];
+      // A reason comes with an attempt at an exercise of the group
+      if (!row.attempt || !row.exercise) return [];
       return [
         {
           row,
-          signal: row.signal,
-          icon: REASON_ICONS[row.signal.kind],
+          reason: row.reason,
+          icon: REASON_ICONS[row.reason.kind],
           path: APP_PATHS.teacher.attempt(row.attempt.id),
           exercise: exerciseText(row.exercise.exercise, this.locale).title,
           position: row.position,
-          waiting: Math.max(0, Math.floor((this.now() - row.signal.since) / MINUTE_MS)),
+          block: otherBlockTitle(this.blocks(), row.exercise, this.blockId(), this.locale),
+          waiting: Math.max(0, Math.floor((this.now() - row.reason.since) / MINUTE_MS)),
         },
       ];
     }),

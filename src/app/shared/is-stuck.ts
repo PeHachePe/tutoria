@@ -56,12 +56,20 @@ export function stuckReason(
 
 /** Longest run of latest consecutive runs in which one same test failed. */
 export function failureStreak(events: readonly ProcessEvent[]): number {
+  return Math.max(0, ...failingStreaks(events).values());
+}
+
+/**
+ * Each test failing in the latest run, with the runs in a row, counting back from it, in which it
+ * failed. Empty before any run or with every test passed.
+ */
+export function failingStreaks(events: readonly ProcessEvent[]): ReadonlyMap<string, number> {
   const runs = events
     .flatMap((event) => (event.type === 'run' ? [event] : []))
     .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
     .map((run) => run.detail.failedTestIds);
   const failingNow = runs.at(-1) ?? [];
-  return Math.max(0, ...failingNow.map((testId) => trailingFailures(runs, testId)));
+  return new Map(failingNow.map((testId) => [testId, trailingFailures(runs, testId)]));
 }
 
 /** Runs in a row, counting back from the latest, in which `testId` failed. */

@@ -4,37 +4,59 @@ import userEvent from '@testing-library/user-event';
 
 import { testEvents as e } from '../../data/process-event-testing';
 import { LiveQueue, QUEUE_SHOWN } from './live-queue';
-import type { LiveRow } from './live-row';
-import { ago, MINUTE, NOW, testAttempt, testRows, testSnapshot } from './live-testing';
+import type { QueuedRow } from './live-store';
+import {
+  ago,
+  GROUP_EXERCISES,
+  GROUPS,
+  MINUTE,
+  NOW,
+  testAttempt,
+  testRows,
+  testSnapshot,
+} from './live-testing';
 
 function text(element: Element | null): string {
   return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
-async function renderQueue(rows: readonly LiveRow[], now = NOW) {
+async function renderQueue(rows: readonly QueuedRow[], now = NOW, blockId: string | null = 'b1') {
   const attend = vi.fn();
   await render(LiveQueue, {
-    inputs: { rows, now },
+    inputs: { rows, now, blocks: GROUPS[0].blocks, blockId },
     on: { attend },
     providers: [provideRouter([])],
   });
   return { attend, region: screen.getByRole('region', { name: /^A quién atender/ }) };
 }
 
-/** Rows of students stuck on the first exercise, idle for 9 minutes. */
-function idleRows(count: number): LiveRow[] {
+/** The rows of a snapshot that are in the queue. */
+function queued(...args: Parameters<typeof testSnapshot>): QueuedRow[] {
+  return testRows(testSnapshot(...args)).flatMap((row) =>
+    row.reason ? [{ ...row, reason: row.reason }] : [],
+  );
+}
+
+/** Rows of students failing the first test of `assignmentId` since 5 minutes ago. */
+function stuckRows(count: number, assignmentId = 'as1'): QueuedRow[] {
   const students = Array.from({ length: count }, (_, index) => ({
     id: `s${index}`,
     name: `Alumno ${index + 1}`,
   }));
-  return testRows(
-    testSnapshot({
-      students,
-      attempts: students.map((student) =>
-        testAttempt(`a-${student.id}`, student.id, { updatedAt: ago(9) }),
-      ),
-    }),
-  );
+  return queued({
+    students,
+    exercises: GROUP_EXERCISES,
+    attempts: students.map((student) =>
+      testAttempt(`a-${student.id}`, student.id, {
+        assignmentId,
+        status: 'tests_failed',
+        updatedAt: ago(5),
+      }),
+    ),
+    events: students.flatMap((student) =>
+      [7, 6, 5].map((m) => e.run(`a-${student.id}`, ago(m), ['t1'])),
+    ),
+  });
 }
 
 describe('LiveQueue', () => {
@@ -46,12 +68,10 @@ describe('LiveQueue', () => {
   });
 
   it('says who to help, why, at which exercise and for how long, with a link to the attempt', async () => {
-    const rows = testRows(
-      testSnapshot({
-        attempts: [testAttempt('a1', 'ana', { status: 'tests_failed', updatedAt: ago(1) })],
-        events: [3, 2, 1].map((m) => e.run('a1', ago(m), ['e1-t1'])),
-      }),
-    ).filter((row) => row.signal);
+    const rows = queued({
+      attempts: [testAttempt('a1', 'ana', { status: 'tests_failed', updatedAt: ago(1) })],
+      events: [3, 2, 1].map((m) => e.run('a1', ago(m), ['e1-t1'])),
+    });
     const { region } = await renderQueue(rows, ago(1));
 
     const [item] = within(region).getAllByRole('listitem');
@@ -61,12 +81,25 @@ describe('LiveQueue', () => {
     expect(text(item)).toContain(
       'Falla 3 veces seguidas la misma prueba y no ha pedido ninguna pista · ejercicio 1',
     );
+    expect(text(item)).not.toContain('· b1');
     expect(text(item)).toContain('Ahora');
     expect(text(region)).not.toContain('Primero, quien se ha atascado con el código');
   });
 
+  it('names the block of an exercise that is not in the block shown', async () => {
+    const { region } = await renderQueue(stuckRows(1, 'as3'));
+
+    expect(text(within(region).getByRole('listitem'))).toContain('ejercicio 1 · b2');
+  });
+
+  it('names the block of every exercise with the whole class', async () => {
+    const { region } = await renderQueue(stuckRows(1), NOW, null);
+
+    expect(text(within(region).getByRole('listitem'))).toContain('ejercicio 1 · b1');
+  });
+
   it('counts the waiting minutes and explains the order when there are several', async () => {
-    const { region } = await renderQueue(idleRows(2), NOW + 3 * MINUTE);
+    const { region } = await renderQueue(stuckRows(2), NOW + 3 * MINUTE);
 
     expect(text(within(region).getByRole('heading'))).toBe('A quién atender 2');
     expect(text(region)).toContain('Primero, quien se ha atascado con el código');
@@ -74,7 +107,7 @@ describe('LiveQueue', () => {
   });
 
   it('tells which student was attended', async () => {
-    const { attend } = await renderQueue(idleRows(1));
+    const { attend } = await renderQueue(stuckRows(1));
 
     await userEvent
       .setup()
@@ -84,7 +117,7 @@ describe('LiveQueue', () => {
   });
 
   it('shows the first ones and unfolds the rest', async () => {
-    const { region } = await renderQueue(idleRows(QUEUE_SHOWN + 2));
+    const { region } = await renderQueue(stuckRows(QUEUE_SHOWN + 2));
     const user = userEvent.setup();
     expect(within(region).getAllByRole('listitem')).toHaveLength(QUEUE_SHOWN);
 
@@ -95,8 +128,10 @@ describe('LiveQueue', () => {
     expect(within(region).getAllByRole('listitem')).toHaveLength(QUEUE_SHOWN);
   });
 
-  it('leaves out a row without a signal', async () => {
-    const { region } = await renderQueue(testRows(testSnapshot()));
+  it('leaves out a row without an attempt at an exercise of the group', async () => {
+    const [row] = stuckRows(1);
+
+    const { region } = await renderQueue([{ ...row, exercise: null }]);
 
     expect(text(region)).toContain('Todo en orden');
   });

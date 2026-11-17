@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { TEACHER_PARAMS } from '../../core/app-paths';
 import { DataError } from '../../data/data-error';
 import { LiveService } from '../../data/live-service';
+import { testEvents } from '../../data/process-event-testing';
 import { LOADING_INDICATOR_DELAY_MS } from '../../shared/skeleton/loading-skeleton';
 import { LivePage } from './live-page';
 import { LiveStore } from './live-store';
@@ -23,12 +24,13 @@ function text(element: Element | null): string {
   return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
-/** Ana working, Bea idle for 9 minutes and Cai with the block submitted. */
+/** Ana working, Bea failing the same test for 9 minutes and Cai with the block submitted. */
 const SNAPSHOT = testSnapshot({
   students: [{ id: 'ana', name: 'Álvaro' }, ...STUDENTS.slice(1)],
+  events: [11, 10, 9].map((m) => testEvents.run('a2', ago(m), ['e1-t1'])),
   attempts: [
     testAttempt('a1', 'ana', { updatedAt: ago(1) }),
-    testAttempt('a2', 'bea', { updatedAt: ago(9) }),
+    testAttempt('a2', 'bea', { status: 'tests_failed', updatedAt: ago(9) }),
     ...['as1', 'as2'].map((assignmentId, index) =>
       testAttempt(`c${index}`, 'cai', {
         assignmentId,
@@ -74,7 +76,22 @@ describe('LivePage', () => {
     expect(screen.getByRole('region', { name: 'La clase en el bloque' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Actividad' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Lo último' })).toBeTruthy();
-    expect(screen.getByRole('table', { name: '1.º DAW A · b2' })).toBeTruthy();
+    expect(screen.getByRole('table', { name: '1.º DAW A · b1' })).toBeTruthy();
+  });
+
+  it('follows the whole class from the selector, without the figure of the block', async () => {
+    const { fixture, router } = await renderPage();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    await user.click(screen.getByRole('combobox', { name: 'Bloque' }));
+    expect(screen.getAllByRole('option')[0].textContent?.trim()).toBe('Toda la clase');
+    await user.click(screen.getByRole('option', { name: 'Toda la clase' }));
+    await fixture.whenStable();
+
+    expect(router.url).toBe(`/?${TEACHER_PARAMS.group}=g1&${TEACHER_PARAMS.block}=todos`);
+    expect(screen.getByRole('table', { name: '1.º DAW A · Toda la clase' })).toBeTruthy();
+    expect(text(screen.getByText(/en la sesión/).parentElement)).toBe('3 en la sesión');
+    expect(text(screen.getByRole('combobox', { name: 'Bloque' }))).toBe('Toda la clase');
   });
 
   it('takes an attended student out of the queue', async () => {
@@ -103,7 +120,7 @@ describe('LivePage', () => {
     expect(within(table).getByRole('link', { name: 'Álvaro' })).toBeTruthy();
   });
 
-  it('changes the group and the block in the URL, the group at its latest block', async () => {
+  it('changes the group and the block in the URL, the group without a block', async () => {
     const hidden = { ...GROUPS[0].blocks[1], isHidden: true };
     service.groups = () =>
       Promise.resolve([{ ...GROUPS[0], blocks: [GROUPS[0].blocks[0], hidden] }, GROUPS[1]]);
@@ -112,9 +129,9 @@ describe('LivePage', () => {
 
     await user.click(screen.getByRole('combobox', { name: 'Bloque' }));
     expect(text(screen.getByRole('option', { name: /^b2/ }))).toBe('b2 (oculto)');
-    await user.click(screen.getByRole('option', { name: 'b1' }));
+    await user.click(screen.getByRole('option', { name: /^b2/ }));
     await fixture.whenStable();
-    expect(router.url).toBe(`/?${TEACHER_PARAMS.group}=g1&${TEACHER_PARAMS.block}=b1`);
+    expect(router.url).toBe(`/?${TEACHER_PARAMS.group}=g1&${TEACHER_PARAMS.block}=b2`);
 
     await user.click(screen.getByRole('combobox', { name: 'Grupo' }));
     await user.click(screen.getByRole('option', { name: /^1\.º DAM B/ }));
@@ -154,6 +171,13 @@ describe('LivePage', () => {
     await renderPage();
 
     expect(screen.getByText('Este bloque no tiene ejercicios')).toBeTruthy();
+  });
+
+  it('says so when the group has no exercises, with the whole class', async () => {
+    service.snapshots = () => Promise.resolve(testSnapshot({ exercises: [] }));
+    await renderPage({ [TEACHER_PARAMS.block]: 'todos' });
+
+    expect(screen.getByText('Este grupo aún no tiene ejercicios')).toBeTruthy();
   });
 
   it('shows the error and loads again on retry', async () => {

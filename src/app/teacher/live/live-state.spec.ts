@@ -1,6 +1,6 @@
 import { testEvents } from '../../data/process-event-testing';
-import { applyLiveUpdate, liveState } from './live-state';
-import { NOW, testAttempt, testInteraction, testSnapshot } from './live-testing';
+import { exercisePosition, applyLiveUpdate, liveState } from './live-state';
+import { GROUP_EXERCISES, NOW, testAttempt, testInteraction, testSnapshot } from './live-testing';
 
 describe('liveState', () => {
   it('gives every student their attempts and the events of those attempts', () => {
@@ -19,10 +19,43 @@ describe('liveState', () => {
     expect(state.students.get('bea')?.attempts).toEqual([]);
     expect([...state.students.keys()]).toEqual(['ana', 'bea', 'cai']);
   });
+
+  it('gives every student the tutor interactions of their attempts', () => {
+    const interaction = testInteraction('a1', NOW);
+    const state = liveState(
+      testSnapshot({
+        attempts: [testAttempt('a1', 'ana')],
+        interactions: [interaction, testInteraction('unknown', NOW)],
+      }),
+    );
+
+    expect(state.students.get('ana')?.interactions).toEqual([interaction]);
+    expect(state.students.get('bea')?.interactions).toEqual([]);
+  });
+});
+
+describe('exercisePosition', () => {
+  it('counts the position inside the block of the exercise', () => {
+    expect(exercisePosition(GROUP_EXERCISES, 'as2')).toBe(2);
+    expect(exercisePosition(GROUP_EXERCISES, 'as3')).toBe(1);
+  });
+
+  it('is null for an assignment that is not in the group', () => {
+    expect(exercisePosition(GROUP_EXERCISES, 'gone')).toBeNull();
+  });
 });
 
 describe('applyLiveUpdate', () => {
   const start = liveState(testSnapshot({ attempts: [testAttempt('a1', 'ana')] }));
+
+  it('adds an attempt opened at an assignment of another block of the group', () => {
+    const group = liveState(testSnapshot({ exercises: GROUP_EXERCISES }));
+    const attempt = testAttempt('a2', 'bea', { assignmentId: 'as3' });
+
+    expect(
+      applyLiveUpdate(group, { type: 'attempt', attempt }).students.get('bea')?.attempts,
+    ).toEqual([attempt]);
+  });
 
   it('adds an attempt opened at an assignment of the block', () => {
     const attempt = testAttempt('a2', 'bea', { assignmentId: 'as2' });
@@ -43,7 +76,7 @@ describe('applyLiveUpdate', () => {
   });
 
   it.each([
-    ['another block', testAttempt('a3', 'bea', { assignmentId: 'elsewhere' })],
+    ['another group', testAttempt('a3', 'bea', { assignmentId: 'elsewhere' })],
     ['a student of another group', testAttempt('a3', 'zoe')],
     ['no assignment', testAttempt('a3', 'bea', { assignmentId: null })],
   ])('ignores an attempt of %s', (_, attempt) => {

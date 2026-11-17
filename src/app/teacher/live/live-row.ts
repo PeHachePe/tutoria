@@ -1,57 +1,34 @@
 import type { Attempt, AttemptStatus } from '../../data/attempt';
-import type { LiveExercise, LiveStudent } from '../../data/live-service';
+import type { Test } from '../../data/exercise';
+import { LIVE_WINDOW_MINUTES, type LiveExercise, type LiveStudent } from '../../data/live-service';
 import type { ProcessEvent } from '../../data/process-event';
-import { type HintLevel, MAX_HINT_LEVEL } from '../../data/tutor';
+import type { HintLevel, TutorInteraction } from '../../data/tutor';
 import { awaySince } from '../../shared/away-since';
-import { failureStreak, lastActivityAt, stuckReason } from '../../shared/is-stuck';
+import { lastActivityAt } from '../../shared/is-stuck';
 import { type Breakthrough, lastBreakthrough } from '../../shared/last-breakthrough';
 import type { TestCount } from '../../shared/status-chip/status-chip';
-import type { StudentActivity } from './live-state';
+import { type AttentionReason, attentionReason, failingTest } from './live-attention';
 import { type LivePattern, livePatterns } from './live-patterns';
-
-/**
- * Minutes of the session: only what moved in them is live (D-054). Older work is history, and a
- * student who left an exercise days ago is not stuck now.
- */
-export const LIVE_WINDOW_MINUTES = 60;
+import { exercisePosition, type StudentActivity } from './live-state';
+import { workState, type WorkState } from './live-work';
 
 const MINUTE_MS = 60_000;
 
-/** Hints in a row, without running the tests between them, that read as asking instead of trying. */
-export const HINT_RUSH_COUNT = 3;
-
-/**
- * Why a student may need the teacher now, where the tutor does not reach (D-054), and since when,
- * in milliseconds: the queue serves first whoever has waited longest. Away comes first: nobody is
- * in front of the screen.
- */
-export type LiveSignal =
-  | { readonly kind: 'away'; readonly minutes: number; readonly since: number }
-  /** Reached the last hint level and keeps failing: the tutor has nothing more to give. */
-  | { readonly kind: 'hints_exhausted'; readonly since: number }
-  /** The same test fails again and again; `askedForHints` tells avoiding help apart. */
-  | {
-      readonly kind: 'stuck_failures';
-      readonly failures: number;
-      readonly askedForHints: boolean;
-      readonly since: number;
-    }
-  /** Asks for hints one after another without trying them. */
-  | { readonly kind: 'hint_rush'; readonly hints: number; readonly since: number }
-  | { readonly kind: 'stuck_idle'; readonly minutes: number; readonly since: number };
-
-/** A row of the live panel: a student and the attempt they are on now. */
+/** A row of the live panel: a student and the attempt they are on now, in any block of the group. */
 export interface LiveRow {
   readonly student: LiveStudent;
-  /** The attempt of the block that changed last, or null if they opened none. */
+  /** The attempt that moved last, in any block of the group, or null without any. */
   readonly attempt: Attempt | null;
   readonly exercise: LiveExercise | null;
-  /** Position of that exercise in the block, from 1. */
+  /** Position of that exercise in its block, from 1. */
   readonly position: number | null;
   /** The attempt is practice after a submission (2.5c): «Repitiendo». */
   readonly repeating: boolean;
   readonly status: AttemptStatus;
-  /** Minutes on the attempt: until it was submitted, until now while live, or until its last activity. */
+  /**
+   * Minutes on the attempt: until it was submitted, until now in the session, or until its last
+   * activity. Until the 4.1e, with `pastes` and `focusLosses`: the old table shows them.
+   */
   readonly minutes: number | null;
   readonly hints: number;
   readonly hintLevel: HintLevel | null;
@@ -59,43 +36,45 @@ export interface LiveRow {
   readonly focusLosses: number;
   /** Tests passed in the latest run, or null before any. */
   readonly tests: TestCount | null;
-  /** Latest activity in the whole block, in milliseconds, or null. */
+  /** Tests failing in the latest run of the attempt; none before a run or with all passed. */
+  readonly failedTestIds: readonly string[];
+  /** `failingTest()` of the attempt: the one to look at. */
+  readonly failingTest: Test | null;
+  /** The last thing the student did, in ms, or null. */
   readonly lastActivity: number | null;
-  /** Something moved in the session window. */
-  readonly active: boolean;
-  /** Only for active students. */
-  readonly signal: LiveSignal | null;
-  /** Assignments of the block with a submitted attempt. */
-  readonly submitted: number;
-  /** Assignments of the block the student is practising again after submitting them. */
+  readonly work: WorkState;
+  /** Since when they are out of the window, in ms; null if they are there or not in the session. */
+  readonly away: number | null;
+  /** Why they need the teacher; only for students in the session. */
+  readonly reason: AttentionReason | null;
+  /** Assignments of the group the student is practising again after submitting them. */
   readonly repeated: number;
   /** A test passed after failing it again and again, in the session window. */
   readonly breakthrough: Breakthrough | null;
   readonly patterns: readonly LivePattern[];
 }
 
-/**
- * What the panel says of a student now. `classActive` says whether anybody worked in the session
- * window: without a class going on, not starting is no pattern.
- */
+/** What the panel says of a student now. `exercises` are those of the group. */
 export function liveRow(
   activity: StudentActivity,
   exercises: readonly LiveExercise[],
   now: number,
-  classActive: boolean,
 ): LiveRow {
-  const { student, attempts, events } = activity;
+  const { student, attempts, events, interactions } = activity;
   const windowStart = now - LIVE_WINDOW_MINUTES * MINUTE_MS;
   const eventsOf = (attempt: Attempt) => events.filter((event) => event.attemptId === attempt.id);
-  const lastOf = (attempt: Attempt) =>
-    Math.max(lastActivityAt(attempt, eventsOf(attempt)), ...eventsOf(attempt).map(eventTime));
+  const interactionsOf = (attempt: Attempt) =>
+    interactions.filter((interaction) => interaction.attemptId === attempt.id);
+  const activityOf = (attempt: Attempt) =>
+    lastStudentActivity(attempt, eventsOf(attempt), interactionsOf(attempt));
 
-  const attempt = latest(attempts, lastOf);
-  const lastActivity = attempt ? lastOf(attempt) : null;
-  const active = lastActivity !== null && lastActivity >= windowStart;
-  const index = attempt ? exercises.findIndex((e) => e.assignmentId === attempt.assignmentId) : -1;
-  const exercise = index >= 0 ? exercises[index] : null;
+  const attempt = latest(attempts, activityOf);
+  const lastActivity = attempt ? activityOf(attempt) : null;
   const own = attempt ? eventsOf(attempt) : [];
+  const away = awaySince(own);
+  const work = workState(lastActivity, away !== null, now);
+  const inSession = work !== 'absent';
+  const exercise = exercises.find((entry) => entry.assignmentId === attempt?.assignmentId) ?? null;
   const lastRun = own
     .flatMap((event) => (event.type === 'run' ? [event] : []))
     .sort((a, b) => eventTime(a) - eventTime(b))
@@ -111,10 +90,10 @@ export function liveRow(
     student,
     attempt,
     exercise,
-    position: index >= 0 ? index + 1 : null,
+    position: exercise ? exercisePosition(exercises, exercise.assignmentId) : null,
     repeating: (attempt?.number ?? 1) > 1,
     status: attempt?.status ?? 'not_started',
-    minutes: attempt ? workMinutes(attempt, active ? now : lastOf(attempt)) : null,
+    minutes: attempt ? workMinutes(attempt, inSession ? now : activityOf(attempt)) : null,
     hints: hintLevels.length,
     hintLevel: hintLevels.length > 0 ? (Math.max(...hintLevels) as HintLevel) : null,
     pastes: own.filter((event) => event.type === 'paste').length,
@@ -122,82 +101,42 @@ export function liveRow(
     tests: lastRun
       ? { passed: lastRun.detail.passed, total: lastRun.detail.passed + lastRun.detail.failed }
       : null,
+    failedTestIds: lastRun?.detail.failedTestIds ?? [],
+    failingTest: exercise ? failingTest(own, exercise.tests) : null,
     lastActivity,
-    active,
-    signal: active && attempt && exercise ? signalOf(attempt, own, exercise, now) : null,
-    submitted: new Set(attempts.filter((a) => a.status === 'submitted').map((a) => a.assignmentId))
-      .size,
+    work,
+    away: inSession ? away : null,
+    reason:
+      inSession && attempt && exercise
+        ? attentionReason(attempt, own, interactionsOf(attempt), exercise.exercise)
+        : null,
     repeated: new Set(attempts.filter((a) => a.number > 1).map((a) => a.assignmentId)).size,
-    breakthrough: breakthrough && breakthrough.at >= windowStart ? breakthrough : null,
-    patterns: livePatterns({
-      hasAttempts: attempts.length > 0,
-      active,
-      classActive,
-      events: events.filter((event) => eventTime(event) >= windowStart),
-      submittedAttemptIds: new Set(
-        attempts.filter((a) => a.status === 'submitted').map((a) => a.id),
-      ),
-    }),
+    breakthrough: inSession && breakthrough && breakthrough.at >= windowStart ? breakthrough : null,
+    patterns: inSession
+      ? livePatterns({
+          events: events.filter((event) => eventTime(event) >= windowStart),
+          submittedAttemptIds: new Set(
+            attempts.filter((a) => a.status === 'submitted').map((a) => a.id),
+          ),
+        })
+      : [],
   };
 }
 
-function signalOf(
+/**
+ * The last thing the student did on an attempt (D-068): saving code, running, submitting, asking
+ * for a hint, pasting, coming back to the window or asking the tutor. Leaving the window and the
+ * interventions of the tutor are not the student's doing.
+ */
+function lastStudentActivity(
   attempt: Attempt,
   events: readonly ProcessEvent[],
-  { exercise }: LiveExercise,
-  now: number,
-): LiveSignal | null {
-  const away = awaySince(events);
-  if (away !== null) {
-    return { kind: 'away', minutes: minutesBetween(away, now), since: away };
-  }
-  const open = attempt.status === 'in_progress' || attempt.status === 'tests_failed';
-  if (!open) return null;
-  const sorted = [...events].sort((a, b) => eventTime(a) - eventTime(b));
-  const hints = sorted.filter((event) => event.type === 'hint_requested');
-  const lastHint = hints.at(-1);
-  if (lastHint?.type === 'hint_requested' && lastHint.detail.level === MAX_HINT_LEVEL) {
-    const failingAfter = sorted.find(
-      (event) =>
-        event.type === 'run' && eventTime(event) > eventTime(lastHint) && event.detail.failed > 0,
-    );
-    if (failingAfter && attempt.status === 'tests_failed') {
-      return { kind: 'hints_exhausted', since: eventTime(failingAfter) };
-    }
-  }
-  const reason = stuckReason(attempt, events, exercise, now);
-  if (reason === 'failures') {
-    const runs = sorted.filter((event) => event.type === 'run');
-    const failures = failureStreak(events);
-    // The run that reached the threshold, counting back from the latest
-    const reached = runs[runs.length - 1 - (failures - exercise.maxRepeatedFailures)];
-    return {
-      kind: 'stuck_failures',
-      failures,
-      askedForHints: hints.length > 0,
-      since: eventTime(reached),
-    };
-  }
-  const lastRun = sorted.filter((event) => event.type === 'run').at(-1);
-  const hintsSinceRun = hints.filter(
-    (hint) => lastRun === undefined || eventTime(hint) > eventTime(lastRun),
-  );
-  if (hintsSinceRun.length >= HINT_RUSH_COUNT) {
-    return {
-      kind: 'hint_rush',
-      hints: hintsSinceRun.length,
-      since: eventTime(hintsSinceRun[HINT_RUSH_COUNT - 1]),
-    };
-  }
-  if (reason === 'idle') {
-    const last = lastActivityAt(attempt, events);
-    return {
-      kind: 'stuck_idle',
-      minutes: minutesBetween(last, now),
-      since: last + exercise.maxIdleMinutes * MINUTE_MS,
-    };
-  }
-  return null;
+  interactions: readonly TutorInteraction[],
+): number {
+  const asked = interactions
+    .filter((interaction) => interaction.trigger !== 'proactive')
+    .map((interaction) => Date.parse(interaction.createdAt));
+  return Math.max(lastActivityAt(attempt, events), ...asked);
 }
 
 function latest(attempts: readonly Attempt[], time: (attempt: Attempt) => number): Attempt | null {
@@ -209,11 +148,7 @@ function latest(attempts: readonly Attempt[], time: (attempt: Attempt) => number
 
 function workMinutes(attempt: Attempt, until: number): number {
   const end = attempt.finishedAt === null ? until : Date.parse(attempt.finishedAt);
-  return minutesBetween(Date.parse(attempt.startedAt), end);
-}
-
-function minutesBetween(from: number, to: number): number {
-  return Math.max(0, Math.floor((to - from) / MINUTE_MS));
+  return Math.max(0, Math.floor((end - Date.parse(attempt.startedAt)) / MINUTE_MS));
 }
 
 function eventTime(event: ProcessEvent): number {

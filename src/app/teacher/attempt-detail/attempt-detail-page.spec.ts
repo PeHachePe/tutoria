@@ -16,7 +16,9 @@ import {
   ago,
   BLOCK_EXERCISES,
   FakeLiveService,
+  GROUP_EXERCISES,
   NOW,
+  OTHER_BLOCK_EXERCISES,
   testAttempt,
   testDetail,
   testInteraction,
@@ -131,26 +133,55 @@ describe('AttemptDetailPage', () => {
     expect(TestBed.inject(Title).getTitle()).toMatch(/^Bea · /);
   });
 
-  it('puts the group and the block of the attempt in the URL, and goes back to them', async () => {
+  it('puts the group of the attempt in the URL, and goes back to it', async () => {
     const { router } = await renderPage();
 
     const query = router.parseUrl(router.url).queryParamMap;
     expect(query.get(TEACHER_PARAMS.group)).toBe('g1');
-    expect(query.get(TEACHER_PARAMS.block)).toBe('b1');
-    expect(service.snapshotCalls).toContain('g1/b1');
+    expect(query.has(TEACHER_PARAMS.block)).toBe(false);
+    expect(service.snapshotCalls).toEqual(['g1/todos', 'g1/b1']);
     expect(screen.getByRole('link', { name: 'Volver a la sesión' }).getAttribute('href')).toBe(
-      '/docente/en-vivo?grupo=g1&bloque=b1',
+      '/docente/en-vivo?grupo=g1',
     );
   });
 
-  it('leaves the URL alone when it already has the group and the block', async () => {
-    const { router } = await renderPage('/?grupo=g1&bloque=b1');
-    const navigate = vi.spyOn(router, 'navigate');
+  it('takes out the block of another group when it corrects the group', async () => {
+    const { router } = await renderPage('/?grupo=g2&bloque=x9');
 
-    service.send({ type: 'event', event: e.run('a1', NOW) });
+    expect(router.url).toBe(`/?${TEACHER_PARAMS.group}=g1`);
+  });
 
-    expect(navigate).not.toHaveBeenCalled();
-    expect(service.snapshotCalls).toEqual(['g1/b1']);
+  it.each(['/?grupo=g1&bloque=b2', '/?grupo=g1'])(
+    'leaves the URL alone when it already has the group (%s)',
+    async (url) => {
+      const { router } = await renderPage(url);
+      const navigate = vi.spyOn(router, 'navigate');
+
+      service.send({ type: 'event', event: e.run('a1', NOW) });
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(router.url).toBe(url);
+    },
+  );
+
+  it('goes back to the session keeping the block shown', async () => {
+    await renderPage('/?grupo=g1&bloque=b2');
+
+    expect(screen.getByRole('link', { name: 'Volver a la sesión' }).getAttribute('href')).toBe(
+      '/docente/en-vivo?grupo=g1&bloque=b2',
+    );
+  });
+
+  it('numbers the exercise inside its own block', async () => {
+    const [exercise] = OTHER_BLOCK_EXERCISES;
+    const attempt = { ...ATTEMPT, assignmentId: exercise.assignmentId };
+    service.details = () => Promise.resolve(testDetail({ attempt, blockId: 'b2', exercise }));
+    service.snapshots = () =>
+      Promise.resolve(testSnapshot({ exercises: GROUP_EXERCISES, attempts: [attempt] }));
+
+    await renderPage('/?grupo=g1&bloque=todos');
+
+    expect(screen.getByText(/ejercicio 1/)).toBeTruthy();
   });
 
   it('adds what arrives live, sliding it in', async () => {

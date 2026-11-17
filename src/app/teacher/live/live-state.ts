@@ -3,41 +3,58 @@ import type { LiveExercise, LiveSnapshot, LiveStudent, LiveUpdate } from '../../
 import type { ProcessEvent } from '../../data/process-event';
 import type { TutorInteraction } from '../../data/tutor';
 
-/** What a student has done in the block: their attempts and the events of those attempts. */
+/**
+ * What a student has done in the group: their attempts, and the events and tutor interactions of
+ * those attempts.
+ */
 export interface StudentActivity {
   readonly student: LiveStudent;
   readonly attempts: readonly Attempt[];
   readonly events: readonly ProcessEvent[];
-  /**
-   * Tutor interactions that arrived live: the snapshot does not carry them, the panel does not need
-   * them, and the detail of the attempt (4.2) adds them to the ones it loads.
-   */
   readonly interactions: readonly TutorInteraction[];
 }
 
-/** A block followed live: its exercises and, by student id, what each one has done. */
+/** A group followed live: its exercises and, by student id, what each one has done. */
 export interface LiveState {
+  /** Every exercise of the group, by block and position, as the snapshot gives them. */
   readonly exercises: readonly LiveExercise[];
   /** In the order of the snapshot (by name). */
   readonly students: ReadonlyMap<string, StudentActivity>;
 }
 
-/** The state of a block from its snapshot. */
+/** The state of a group from its snapshot. */
 export function liveState(snapshot: LiveSnapshot): LiveState {
   const students = new Map(
     snapshot.students.map((student) => {
       const attempts = snapshot.attempts.filter((attempt) => attempt.userId === student.id);
       const attemptIds = new Set(attempts.map((attempt) => attempt.id));
       const events = snapshot.events.filter((event) => attemptIds.has(event.attemptId));
-      return [student.id, { student, attempts, events, interactions: [] }];
+      const interactions = snapshot.interactions.filter((interaction) =>
+        attemptIds.has(interaction.attemptId),
+      );
+      return [student.id, { student, attempts, events, interactions }];
     }),
   );
   return { exercises: snapshot.exercises, students };
 }
 
 /**
+ * Position of an exercise in its block, from 1, or null if it is not in the group: counted, as
+ * `exercise_assignment.position` may have gaps.
+ */
+export function exercisePosition(
+  exercises: readonly LiveExercise[],
+  assignmentId: string,
+): number | null {
+  const exercise = exercises.find((entry) => entry.assignmentId === assignmentId);
+  if (!exercise) return null;
+  const block = exercises.filter((entry) => entry.blockId === exercise.blockId);
+  return block.indexOf(exercise) + 1;
+}
+
+/**
  * The state after a live change, without mutating the previous one: only the student it concerns
- * gets a new entry. Changes of other blocks or groups, unknown attempts and repeated events leave
+ * gets a new entry. Changes of other groups, unknown attempts and repeated events leave
  * the very same state, so nothing derived from it recomputes.
  */
 export function applyLiveUpdate(state: LiveState, update: LiveUpdate): LiveState {
@@ -63,8 +80,8 @@ function applyInteraction(state: LiveState, interaction: TutorInteraction): Live
 
 function applyAttempt(state: LiveState, attempt: Attempt): LiveState {
   const activity = state.students.get(attempt.userId);
-  const inBlock = state.exercises.some((entry) => entry.assignmentId === attempt.assignmentId);
-  if (!activity || !inBlock) {
+  const inGroup = state.exercises.some((entry) => entry.assignmentId === attempt.assignmentId);
+  if (!activity || !inGroup) {
     return state;
   }
   const others = activity.attempts.filter((candidate) => candidate.id !== attempt.id);

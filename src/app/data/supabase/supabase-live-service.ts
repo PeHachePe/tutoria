@@ -2,7 +2,9 @@ import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
 import {
+  LIVE_WINDOW_MINUTES,
   type LiveAttemptDetail,
+  type LiveExercise,
   type LiveGroup,
   LiveService,
   type LiveSnapshot,
@@ -28,6 +30,11 @@ import {
  * `tutor_interaction` with the same RLS, published by the migrations `live_realtime` and
  * `attempt_detail_realtime`.
  */
+const MINUTE_MS = 60_000;
+
+/** An attempt with its events and tutor interactions, as the snapshot reads it. */
+const ATTEMPT_COLUMNS = '*, process_event(*), tutor_interaction(*)';
+
 @Service({ autoProvided: false })
 export class SupabaseLiveService extends LiveService {
   private readonly supabase = inject(SUPABASE_CLIENT);
@@ -52,51 +59,51 @@ export class SupabaseLiveService extends LiveService {
       );
   }
 
-  /** Three requests at once: the block (to know it is of the group), the students and the exercises. */
-  async snapshot(groupId: string, blockId: string): Promise<LiveSnapshot> {
-    const [block, enrollments, assignments] = await Promise.all([
+  /**
+   * Three requests at once (the group with its blocks, the students and the exercises), then the
+   * attempts of the session and, with a block, those of the block: two more at once, joined by id.
+   */
+  async snapshot(groupId: string, blockId: string | null): Promise<LiveSnapshot> {
+    const [group, enrollments, assignments] = await Promise.all([
       this.supabase
-        .from('class_block')
-        .select('id')
-        .eq('id', blockId)
-        .eq('group_id', groupId)
+        .from('class_group')
+        .select('id, class_block(id, position)')
+        .eq('id', groupId)
         .maybeSingle(),
       this.supabase.from('enrollment').select('app_user(id, name)').eq('group_id', groupId),
       this.supabase
         .from('exercise_assignment')
-        .select('id, exercise(*, test(*))')
-        .eq('group_id', groupId)
-        .eq('block_id', blockId)
-        .order('position'),
+        .select('id, block_id, position, exercise(*, test(*))')
+        .eq('group_id', groupId),
     ]);
-    if (unwrap(block) === null) {
+    const blocks = unwrap(group)?.class_block;
+    if (!blocks || (blockId !== null && !blocks.some((block) => block.id === blockId))) {
       throw new DataError('not_found');
     }
-    const exercises = unwrap(assignments).map(({ id, exercise }) => {
-      const { test, ...row } = exercise;
-      const tests = test.map(toTest).sort((a, b) => a.position - b.position);
-      return { assignmentId: id, exercise: toExercise(row), tests };
-    });
-    const attempts =
-      exercises.length === 0
-        ? []
-        : unwrap(
-            await this.supabase
-              .from('attempt')
-              .select('*, process_event(*)')
-              .in(
-                'assignment_id',
-                exercises.map((entry) => entry.assignmentId),
-              ),
-          );
+    const blockOrder = [...blocks].sort((a, b) => a.position - b.position).map((block) => block.id);
+    const exercises = unwrap(assignments)
+      .sort(
+        (a, b) =>
+          blockOrder.indexOf(a.block_id) - blockOrder.indexOf(b.block_id) ||
+          a.position - b.position,
+      )
+      .map(({ id, block_id, exercise }) => {
+        const { test, ...row } = exercise;
+        const tests = test.map(toTest).sort((a, b) => a.position - b.position);
+        return { assignmentId: id, blockId: block_id, exercise: toExercise(row), tests };
+      });
+    const attempts = await this.sessionAttempts(exercises, blockId);
     return {
       students: unwrap(enrollments)
         .map(({ app_user }) => ({ id: app_user.id, name: app_user.name }))
         .sort((a, b) => a.name.localeCompare(b.name, 'es')),
       exercises,
-      // toAttempt() reads the columns of the attempt and leaves its embedded events aside
+      // toAttempt() reads the columns of the attempt and leaves what is embedded aside
       attempts: attempts.map((attempt) => toAttempt(attempt)),
       events: attempts.flatMap(({ process_event }) => process_event.map(toProcessEvent)),
+      interactions: attempts.flatMap(({ tutor_interaction }) =>
+        tutor_interaction.map(toTutorInteraction),
+      ),
     };
   }
 
@@ -123,6 +130,7 @@ export class SupabaseLiveService extends LiveService {
       student: { id: row.app_user.id, name: row.app_user.name },
       exercise: {
         assignmentId: assignment.id,
+        blockId: assignment.block_id,
         exercise: toExercise(exercise),
         tests: test.map(toTest).sort((a, b) => a.position - b.position),
       },
@@ -162,6 +170,27 @@ export class SupabaseLiveService extends LiveService {
       )
       .subscribe();
     return () => void this.supabase.removeChannel(channel);
+  }
+
+  /**
+   * The attempts of the group that changed in the session window and, with a block, every one at
+   * its assignments: two requests at once rather than an `or()` with a date inside, joined by id.
+   */
+  private async sessionAttempts(exercises: readonly LiveExercise[], blockId: string | null) {
+    if (exercises.length === 0) return [];
+    const from = new Date(Date.now() - LIVE_WINDOW_MINUTES * MINUTE_MS).toISOString();
+    const ofBlock = exercises.filter((entry) => entry.blockId === blockId);
+    const attempts = (assignmentIds: readonly string[]) =>
+      this.supabase.from('attempt').select(ATTEMPT_COLUMNS).in('assignment_id', assignmentIds);
+    const [session, block] = await Promise.all([
+      attempts(exercises.map((entry) => entry.assignmentId)).gte('updated_at', from),
+      ofBlock.length > 0 ? attempts(ofBlock.map((entry) => entry.assignmentId)) : null,
+    ]);
+    const joined = new Map(unwrap(session).map((attempt) => [attempt.id, attempt]));
+    for (const attempt of block ? unwrap(block) : []) {
+      joined.set(attempt.id, attempt);
+    }
+    return [...joined.values()];
   }
 
   private async latestBlockId(groupId: string): Promise<string | null> {

@@ -17,7 +17,7 @@ import type { DataErrorKind } from '../../data/data-error';
 import { MockDb } from '../../data/mock/mock-db';
 import { DEFAULT_LATENCY, LatencyRange, MockNetwork } from '../../data/mock/mock-network';
 import type { AppUser } from '../../data/user';
-import { ClassSimulator } from '../class-simulator';
+import { ClassSimulator, type SimulationSpread } from '../class-simulator';
 import { DEV_PATHS } from '../dev-paths';
 import { describeEvent } from './describe-event';
 import { ToolInspector } from './tool-inspector';
@@ -43,6 +43,13 @@ const FAILURE_OPTIONS: readonly { readonly kind: DataErrorKind; readonly label: 
   { kind: 'unavailable', label: 'Servicio no disponible' },
   { kind: 'invalid', label: 'Datos no válidos' },
   { kind: 'unknown', label: 'Error desconocido' },
+];
+
+/** How the simulated class spreads over the blocks (D-068). */
+const SPREAD_OPTIONS: readonly { readonly spread: SimulationSpread; readonly label: string }[] = [
+  { spread: 'one_block', label: 'Un bloque' },
+  { spread: 'two_blocks', label: 'Dos bloques' },
+  { spread: 'scattered', label: 'Cada uno en el suyo' },
 ];
 
 /** The development pages of dev.routes.ts: no screen of the app links to them. */
@@ -94,6 +101,8 @@ export class DevToolbar {
   protected readonly pages = DEV_PAGES;
   protected readonly latencyOptions = LATENCY_OPTIONS;
   protected readonly failureOptions = FAILURE_OPTIONS;
+  protected readonly spreadOptions = SPREAD_OPTIONS;
+  protected readonly spread = signal<SimulationSpread>('one_block');
   protected readonly open = signal(false);
   protected readonly currentUser = this.db.currentUser;
   protected readonly failNext = computed(() => this.network.failNext() ?? NONE);
@@ -194,7 +203,16 @@ export class DevToolbar {
     this.network.failNextRequest(kind === NONE ? null : kind);
   }
 
-  /** Starts the simulated class on the block of the live panel, or stops it. */
+  /** Another spread of the class; a class running goes on with it. */
+  protected setSpread(spread: SimulationSpread): void {
+    this.spread.set(spread);
+    const target = this.simulationTarget();
+    if (this.simulator.running() && target) {
+      this.simulator.start(target);
+    }
+  }
+
+  /** Starts the simulated class on the group of the live panel, or stops it. */
   protected toggleSimulation(): void {
     const target = this.simulationTarget();
     if (this.simulator.running() || !target) {
@@ -209,14 +227,22 @@ export class DevToolbar {
     if (target) this.simulator.stuckOne(target);
   }
 
+  protected chatStuckOne(): void {
+    const target = this.simulationTarget();
+    if (target) this.simulator.chatStuckOne(target);
+  }
+
   protected patternOne(): void {
     const target = this.simulationTarget();
     if (target) this.simulator.patternOne(target);
   }
 
-  /** The group and the block of the URL of the live panel, or those it shows by default. */
+  /** The group of the URL of the live panel, or the first one, with the blocks of the spread. */
   private simulationTarget() {
-    return this.simulator.targetFor(this.router.parseUrl(this.router.url).queryParamMap);
+    return this.simulator.targetFor(
+      this.router.parseUrl(this.router.url).queryParamMap,
+      this.spread(),
+    );
   }
 
   protected resetData(): void {

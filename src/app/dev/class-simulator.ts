@@ -2,12 +2,12 @@ import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import type { ParamMap } from '@angular/router';
 
 import type { Attempt } from '../data/attempt';
-import type { ClassBlock } from '../data/exercise';
 import { canManageGroup } from '../data/mock/mock-access';
 import { MockDb } from '../data/mock/mock-db';
 import { mockLiveGroups } from '../data/mock/mock-live-service';
 import type { ProcessEvent } from '../data/process-event';
 import { MAX_HINT_LEVEL, type HintLevel, type TutorInteraction } from '../data/tutor';
+import { CHAT_STUCK_MESSAGES } from '../teacher/live/live-attention';
 import { pickSelection } from '../teacher/live/live-store';
 
 /** Time between two actions of the simulated class. */
@@ -24,10 +24,17 @@ const PATTERN_AWAY_MS = 90_000;
 
 /**
  * What a student does in a tick, as cumulative odds: a passed attempt is submitted half the time;
- * otherwise, runs the tests, asks for a hint, asks the tutor a question, pastes, or leaves or comes
- * back to the window (the rest).
+ * otherwise, runs the tests, asks for a hint, asks the tutor a question, tells the tutor they cannot
+ * go on, pastes, or leaves or comes back to the window (the rest).
  */
-const ODDS = { submitPassed: 0.5, run: 0.55, hint: 0.65, question: 0.7, paste: 0.8 } as const;
+const ODDS = {
+  submitPassed: 0.5,
+  run: 0.55,
+  hint: 0.65,
+  question: 0.7,
+  stuckQuestion: 0.73,
+  paste: 0.8,
+} as const;
 
 /** What the simulated tutor says for each hint level, as the server would record it. */
 const SIMULATED_HINTS: Record<HintLevel, string> = {
@@ -41,6 +48,10 @@ const SIMULATED_QUESTION = {
   message: '¿Por qué me sale undefined?',
   answer: 'Mira si tu función tiene un `return` en todos los caminos.',
 } as const;
+
+/** What a simulated student says when they cannot go on (D-068), and the answer of the tutor. */
+const SIMULATED_STUCK_MESSAGE = 'No sé cómo seguir';
+const SIMULATED_STUCK_ANSWER = 'Vamos por partes: ¿qué tiene que devolver la función?';
 
 /** Lines the simulated student writes, one more on every run, so the code changes as in class. */
 const SIMULATED_CODE = [
@@ -59,22 +70,30 @@ const TEST_FAILURE_ODDS = 0.35;
 /** Length of a small paste: from `min` to `min + spread` characters. */
 const SMALL_PASTE = { min: 10, spread: 50 } as const;
 
-/** The group and the block the simulator works on. */
+/**
+ * How the simulated class spreads over the blocks (D-068): all in one block, half the group in each
+ * of two, or each student in a different one, as far as there are blocks.
+ */
+export const SIMULATION_SPREADS = ['one_block', 'two_blocks', 'scattered'] as const;
+export type SimulationSpread = (typeof SIMULATION_SPREADS)[number];
+
+/** The group and the blocks the simulator works on. */
 export interface SimulationTarget {
   readonly groupId: string;
-  readonly blockId: string;
-  /** «1.º DAW A · Tema 1: Bucles», for the toolbar. */
+  /** The blocks the class is spread over, in order. */
+  readonly blockIds: readonly string[];
+  /** «1.º DAW A · Tema 1: Bucles», or «1.º DAW A · 3 bloques», for the toolbar. */
   readonly label: string;
 }
 
 type EventDraft = Omit<ProcessEvent, 'id' | 'attemptId' | 'timestamp'>;
 
 /**
- * Students of a block who work by themselves, for the live panel with mock data (4.1): every tick a
- * student at random opens an exercise, runs the tests, asks for a hint, pastes, leaves or comes back
- * to the window, or submits. It writes in MockDb as the server would, so the panel receives the
- * changes as with Realtime. «Atascar» and «Provocar un patrón» show the signals in a moment.
- * Development only.
+ * Students of a group who work by themselves, for the live panel with mock data (4.1, D-068): every
+ * tick a student at random opens an exercise of their block, runs the tests, asks for a hint, asks
+ * the tutor, pastes, leaves or comes back to the window, or submits. It writes in MockDb as the
+ * server would, so the panel receives the changes as with Realtime. «Atascar», «Atascar en el
+ * chat» and «Provocar un patrón» show the reasons in a moment. Development only.
  */
 @Service()
 export class ClassSimulator {
@@ -82,7 +101,7 @@ export class ClassSimulator {
   private readonly targetState = signal<SimulationTarget | null>(null);
   private timer: ReturnType<typeof setInterval> | undefined;
 
-  /** The block being simulated, or null while stopped. */
+  /** The blocks being simulated, or null while stopped. */
   readonly target = this.targetState.asReadonly();
   readonly running = computed(() => this.targetState() !== null);
 
@@ -91,19 +110,46 @@ export class ClassSimulator {
   }
 
   /**
-   * The block to simulate for the signed-in teacher: the one of the URL of the live panel or,
-   * without it, the first group and its latest block, as the panel picks them.
+   * The group of the live panel for the signed-in teacher (the one of the URL or the first one) and
+   * the blocks of `spread` among those the students see (neither hidden nor still closed) with
+   * exercises: the block of the URL, or the latest one, or the first; with two blocks, also the
+   * next one; scattered, all of them. Null without a group or such blocks.
    */
-  targetFor(query: ParamMap): SimulationTarget | null {
+  targetFor(query: ParamMap, spread: SimulationSpread = 'one_block'): SimulationTarget | null {
     const user = this.db.currentUser();
     if (!user) return null;
-    const groups = mockLiveGroups(this.db.tables(), (group) => canManageGroup(user, group));
-    const selection = pickSelection(groups, query);
-    if (!selection) return null;
-    const { group, blockId } = selection;
-    // pickSelection picks one of the blocks of the group
-    const block = group.blocks.find((candidate) => candidate.id === blockId) as ClassBlock;
-    return { groupId: group.id, blockId, label: `${group.name} · ${block.title}` };
+    const tables = this.db.tables();
+    const groups = mockLiveGroups(tables, (group) => canManageGroup(user, group));
+    const request = pickSelection(groups, query);
+    if (!request) return null;
+    const { group } = request;
+    const now = Date.now();
+    const candidates = group.blocks.filter(
+      (block) =>
+        !block.isHidden &&
+        (block.opensAt === null || Date.parse(block.opensAt) <= now) &&
+        tables.assignments.some((assignment) => assignment.blockId === block.id),
+    );
+    if (candidates.length === 0) return null;
+    // The block of the URL, or the latest one, or the first
+    const index =
+      [request.blockId, group.latestBlockId]
+        .map((id) => candidates.findIndex((block) => block.id === id))
+        .find((found) => found >= 0) ?? 0;
+    const blocks =
+      spread === 'scattered'
+        ? candidates
+        : spread === 'two_blocks'
+          ? [...new Set([candidates[index], candidates[(index + 1) % candidates.length]])]
+          : [candidates[index]];
+    return {
+      groupId: group.id,
+      blockIds: blocks.map((block) => block.id),
+      label:
+        blocks.length === 1
+          ? `${group.name} · ${blocks[0].title}`
+          : `${group.name} · ${blocks.length} bloques`,
+    };
   }
 
   start(target: SimulationTarget): void {
@@ -148,6 +194,8 @@ export class ClassSimulator {
         SIMULATED_QUESTION.message,
         SIMULATED_QUESTION.answer,
       );
+    } else if (roll < ODDS.stuckQuestion) {
+      this.sayStuck(attempt);
     } else if (roll < ODDS.paste) {
       const length = SMALL_PASTE.min + Math.floor(Math.random() * SMALL_PASTE.spread);
       this.record(attempt, { type: 'paste', detail: { length } });
@@ -168,6 +216,19 @@ export class ClassSimulator {
   }
 
   /**
+   * A student at random tells the tutor `CHAT_STUCK_MESSAGES` times that they cannot go on: they go
+   * to «A quién atender» (D-068).
+   */
+  chatStuckOne(target: SimulationTarget): void {
+    const student = this.pick(this.students(target));
+    const attempt = student && this.openAttempt(target, student)?.attempt;
+    if (!attempt) return;
+    for (let message = 0; message < CHAT_STUCK_MESSAGES; message++) {
+      this.sayStuck(attempt);
+    }
+  }
+
+  /**
    * A student at random leaves the window, comes back, pastes a lot and submits: observations of
    * the table.
    */
@@ -182,6 +243,21 @@ export class ClassSimulator {
     this.submit(this.attempt(attempt.id));
   }
 
+  private sayStuck(attempt: Attempt): void {
+    const level = this.reachedHintLevel(attempt);
+    this.answer(attempt, 'question', level, SIMULATED_STUCK_MESSAGE, SIMULATED_STUCK_ANSWER);
+  }
+
+  /**
+   * The block of a student: the blocks of the target split the enrollment of the group in equal
+   * parts, in its order.
+   */
+  private blockOf(target: SimulationTarget, userId: string): string {
+    const students = this.students(target);
+    const index = students.indexOf(userId);
+    return target.blockIds[Math.floor((index * target.blockIds.length) / students.length)];
+  }
+
   private students(target: SimulationTarget): string[] {
     return this.db
       .tables()
@@ -190,7 +266,7 @@ export class ClassSimulator {
   }
 
   /**
-   * The attempt of the block the student is on, or a new one at the first exercise they have not
+   * The attempt of their block the student is on, or a new one at the first exercise they have not
    * submitted, or practice at one they have (2.5c).
    */
   private openAttempt(
@@ -198,8 +274,9 @@ export class ClassSimulator {
     userId: string,
   ): { readonly attempt: Attempt; readonly isNew: boolean } | null {
     const { attempts, assignments } = this.db.tables();
+    const blockId = this.blockOf(target, userId);
     const block = assignments
-      .filter((assignment) => assignment.blockId === target.blockId)
+      .filter((assignment) => assignment.blockId === blockId)
       .sort((a, b) => a.id.localeCompare(b.id));
     const own = attempts.filter(
       (attempt) => attempt.userId === userId && block.some((a) => a.id === attempt.assignmentId),

@@ -2020,6 +2020,8 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 **Aprobación:** propuesta. El autor vio el boceto del replanteo y dejó el resto a criterio del agente, con dos condiciones: que sea útil de verdad para el docente y animado, y que no salgan datos por salir ni la salida de la ventana como algo que atender.
 
+**Hecho así (4.1d):** «Toda la clase» es `?bloque=todos`. Sin bloque en la URL, el `LiveStore` elige al abrir y guarda lo elegido en el valor de su `resource()`, no en la URL: el store no navega y no hay dos fuentes de verdad; recargar sin bloque vuelve a elegir, y lo que el docente elige en el selector sí va a la URL. Elegir cuesta dos lecturas como mucho: la del grupo (`snapshot(grupo, null)`) y, si sale un bloque, la del bloque. Un intento «está en la sesión» si su `updatedAt` cae en la ventana (`LIVE_WINDOW_MINUTES`, ahora en el contrato de `LiveService`), el mismo criterio en los datos simulados y en Supabase. Con bloque, Supabase lee a la vez los intentos de la ventana y los del bloque, y los une por id, en lugar de un `or()` con una fecha dentro. El motivo de la cola se apoya en `failureStreak()` (la mitad de `stuckReason()` que mira el código) y el atasco en el chat sigue la misma regla que el tutor (`stuckAgain()`).
+
 ## D-069 · El detalle del intento, replanteado: «Ahora», la evolución y nada a cero (17/11/2026)
 
 **Contexto:** el detalle del 4.2 abría con seis cifras, varias casi siempre a cero («Preguntas al tutor 0», «Pegados 0», «Fuera de la ventana 0») y repetidas en los recuentos de los filtros. Para saber dónde estaba atascado el alumno había que leer la línea temporal desde el principio. El autor pidió revisarlo (D-055, `PENDIENTES.md`).

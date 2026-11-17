@@ -65,11 +65,14 @@ export const STUDENT_PARAMS = {
 /** The value of `?asignatura=` that shows the whole bank (4.3). */
 export const ALL_SUBJECTS = 'todas';
 
+/** The value of `?bloque=` that follows the whole group in the live panel (D-068). */
+export const TEACHER_ALL_BLOCKS = 'todos';
+
 /** Query parameters of the teacher's screens (D-046), part of the URLs like the segments. */
 export const TEACHER_PARAMS = {
   /** The group followed live, or whose blocks are shown: its id. */
   group: 'grupo',
-  /** The block of that group: its id. */
+  /** The block of that group: its id, or `todos` for the whole group live. */
   block: 'bloque',
   /** The exercise a new one copies («Duplicar», 4.3): its id. */
   copy: 'copia',

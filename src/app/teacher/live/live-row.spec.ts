@@ -1,16 +1,23 @@
-import type { Attempt } from '../../data/attempt';
-import type { ProcessEvent } from '../../data/process-event';
 import { testEvents as e } from '../../data/process-event-testing';
 import { liveRow } from './live-row';
 import type { StudentActivity } from './live-state';
-import { ago, BLOCK_EXERCISES, NOW, STUDENTS, testAttempt } from './live-testing';
+import {
+  ago,
+  BLOCK_EXERCISES,
+  GROUP_EXERCISES,
+  NOW,
+  OTHER_BLOCK_EXERCISES,
+  STUDENTS,
+  testAttempt,
+  testInteraction,
+} from './live-testing';
 
 function activity(overrides: Partial<StudentActivity> = {}): StudentActivity {
   return { student: STUDENTS[0], attempts: [], events: [], interactions: [], ...overrides };
 }
 
-const row = (overrides: Partial<StudentActivity> = {}, classActive = true) =>
-  liveRow(activity(overrides), BLOCK_EXERCISES, NOW, classActive);
+const row = (overrides: Partial<StudentActivity> = {}) =>
+  liveRow(activity(overrides), GROUP_EXERCISES, NOW);
 
 describe('liveRow', () => {
   it('describes a student who has not opened anything', () => {
@@ -24,13 +31,15 @@ describe('liveRow', () => {
       hints: 0,
       hintLevel: null,
       tests: null,
+      failedTestIds: [],
+      failingTest: null,
       lastActivity: null,
-      active: false,
-      signal: null,
-      submitted: 0,
+      work: 'absent',
+      away: null,
+      reason: null,
       repeated: 0,
       breakthrough: null,
-      patterns: [{ kind: 'not_started' }],
+      patterns: [],
     });
   });
 
@@ -58,10 +67,11 @@ describe('liveRow', () => {
       pastes: 1,
       focusLosses: 1,
       tests: { passed: 4, total: 6 },
+      failedTestIds: ['t1', 't2'],
       lastActivity: ago(2),
-      active: true,
-      signal: null,
-      submitted: 1,
+      work: 'working',
+      away: null,
+      reason: null,
       patterns: [],
     });
   });
@@ -81,10 +91,10 @@ describe('liveRow', () => {
     const attempt = testAttempt('a1', 'ana', { startedAt: ago(200), updatedAt: ago(180) });
 
     expect(row({ attempts: [attempt] })).toMatchObject({
-      active: false,
+      work: 'absent',
       minutes: 20,
-      signal: null,
-      patterns: [{ kind: 'inactive' }],
+      reason: null,
+      patterns: [],
     });
   });
 
@@ -94,99 +104,131 @@ describe('liveRow', () => {
       testAttempt('a2', 'ana', { number: 2, updatedAt: ago(1) }),
     ];
 
-    expect(row({ attempts })).toMatchObject({ repeating: true, repeated: 1, submitted: 1 });
+    expect(row({ attempts })).toMatchObject({ repeating: true, repeated: 1 });
   });
 
-  it('ignores an attempt of an assignment that left the block', () => {
+  it('ignores an attempt of an assignment that left the group', () => {
     const attempt = testAttempt('a1', 'ana', { assignmentId: 'gone', updatedAt: ago(1) });
 
     expect(row({ attempts: [attempt] })).toMatchObject({
       exercise: null,
       position: null,
-      signal: null,
+      reason: null,
+      failingTest: null,
     });
   });
 
-  describe('signals', () => {
-    const signalOf = (attempt: Attempt, events: ProcessEvent[] = []) =>
-      row({ attempts: [attempt], events }).signal;
+  it('takes an attempt of another block, with its position in that block', () => {
+    const attempts = [
+      testAttempt('a1', 'ana', { updatedAt: ago(20) }),
+      testAttempt('a3', 'ana', { assignmentId: 'as3', updatedAt: ago(1) }),
+    ];
 
-    it('says a student is stuck on repeated failures, since the run that reached the threshold', () => {
-      const attempt = testAttempt('a1', 'ana', { status: 'tests_failed' });
-      const events = [4, 3, 2, 1].map((m) => e.run('a1', ago(m), ['t1']));
+    expect(row({ attempts })).toMatchObject({
+      attempt: attempts[1],
+      exercise: OTHER_BLOCK_EXERCISES[0],
+      position: 1,
+    });
+  });
 
-      expect(signalOf(attempt, events)).toEqual({
+  describe('last activity', () => {
+    const attempt = testAttempt('a1', 'ana', { updatedAt: ago(30) });
+
+    it('counts asking the tutor as activity', () => {
+      const question = testInteraction('a1', ago(2), { trigger: 'question' });
+
+      expect(row({ attempts: [attempt], interactions: [question] })).toMatchObject({
+        lastActivity: ago(2),
+        work: 'working',
+      });
+    });
+
+    it('does not count an intervention of the tutor or leaving the window', () => {
+      const proactive = testInteraction('a1', ago(2), { trigger: 'proactive' });
+      const events = [e.proactive('a1', ago(2)), e.focusLost('a1', ago(1))];
+
+      expect(row({ attempts: [attempt], events, interactions: [proactive] })).toMatchObject({
+        lastActivity: ago(30),
+        work: 'stopped',
+      });
+    });
+
+    it('picks the attempt of the latest question to the tutor', () => {
+      const other = testAttempt('a2', 'ana', { assignmentId: 'as2', updatedAt: ago(10) });
+      const question = testInteraction('a1', ago(3), { trigger: 'question' });
+
+      expect(row({ attempts: [attempt, other], interactions: [question] }).attempt).toBe(attempt);
+    });
+  });
+
+  describe('work', () => {
+    it('is stopped out of the window, since when it left', () => {
+      const attempt = testAttempt('a1', 'ana', { updatedAt: ago(2) });
+
+      expect(row({ attempts: [attempt], events: [e.focusLost('a1', ago(1))] })).toMatchObject({
+        work: 'stopped',
+        away: ago(1),
+      });
+    });
+
+    it('does not say a student out of the session is away', () => {
+      const attempt = testAttempt('a1', 'ana', { updatedAt: ago(90) });
+
+      expect(row({ attempts: [attempt], events: [e.focusLost('a1', ago(89))] })).toMatchObject({
+        work: 'absent',
+        away: null,
+      });
+    });
+  });
+
+  it('says which test to look at', () => {
+    const attempt = testAttempt('a1', 'ana', { status: 'tests_failed', updatedAt: ago(1) });
+    const events = [e.run('a1', ago(2), ['e1-t3']), e.run('a1', ago(1), ['e1-t2', 'e1-t3'])];
+
+    expect(row({ attempts: [attempt], events })).toMatchObject({
+      failedTestIds: ['e1-t2', 'e1-t3'],
+      failingTest: BLOCK_EXERCISES[0].tests[2],
+    });
+  });
+
+  describe('reason', () => {
+    const failing = [4, 3, 2].map((m) => e.run('a1', ago(m), ['e1-t1']));
+
+    it('says why a student of the session needs the teacher', () => {
+      const attempt = testAttempt('a1', 'ana', { status: 'tests_failed', updatedAt: ago(2) });
+
+      expect(row({ attempts: [attempt], events: failing }).reason).toMatchObject({
         kind: 'stuck_failures',
-        failures: 4,
-        askedForHints: false,
-        since: ago(2),
+        failures: 3,
       });
     });
 
-    it('tells whether the student stuck on failures asked for hints', () => {
-      const attempt = testAttempt('a1', 'ana', { status: 'tests_failed' });
-      const events = [e.hint('a1', ago(5)), ...[3, 2, 1].map((m) => e.run('a1', ago(m), ['t1']))];
-
-      expect(signalOf(attempt, events)).toMatchObject({ askedForHints: true, since: ago(1) });
-    });
-
-    it('says the hints ran out when the student fails after the last level', () => {
-      const attempt = testAttempt('a1', 'ana', { status: 'tests_failed' });
-      const events = [e.hint('a1', ago(3), 3), e.run('a1', ago(2), ['t1'])];
-
-      expect(signalOf(attempt, events)).toEqual({ kind: 'hints_exhausted', since: ago(2) });
-    });
-
-    it('does not say so while the tests after the last hint pass or are still open', () => {
-      const failing = testAttempt('a1', 'ana', { status: 'tests_failed', updatedAt: ago(1) });
-      const working = testAttempt('a1', 'ana', { updatedAt: ago(1) });
-
-      expect(signalOf(failing, [e.hint('a1', ago(3), 3), e.run('a1', ago(2))])).toBeNull();
-      expect(signalOf(working, [e.hint('a1', ago(3), 3), e.run('a1', ago(2), ['t1'])])).toBeNull();
-    });
-
-    it('says a student asks for hints one after another without trying them', () => {
-      const attempt = testAttempt('a1', 'ana');
-      const events = [
-        e.run('a1', ago(4), ['t1']),
-        e.hint('a1', ago(3)),
-        e.hint('a1', ago(2), 2),
-        e.hint('a1', ago(1), 2),
-      ];
-
-      expect(signalOf(attempt, events)).toEqual({ kind: 'hint_rush', hints: 3, since: ago(1) });
-    });
-
-    it('counts the hints in a row from the start when the student never ran the tests', () => {
-      const attempt = testAttempt('a1', 'ana');
-      const events = [3, 2, 1].map((m) => e.hint('a1', ago(m)));
-
-      expect(signalOf(attempt, events)).toMatchObject({ kind: 'hint_rush', hints: 3 });
-    });
-
-    it('says a student is stuck when idle, since the idle threshold passed', () => {
-      const attempt = testAttempt('a1', 'ana', { updatedAt: ago(6) });
-
-      expect(signalOf(attempt)).toEqual({ kind: 'stuck_idle', minutes: 6, since: ago(2) });
-    });
-
-    it('says a student who left the window is away rather than stuck', () => {
+    it('reads the tutor interactions of the attempt', () => {
       const attempt = testAttempt('a1', 'ana', { updatedAt: ago(9) });
+      const stuck = [5, 3].map((m) =>
+        testInteraction('a1', ago(m), { trigger: 'question', studentMessage: 'no sé seguir' }),
+      );
 
-      expect(signalOf(attempt, [e.focusLost('a1', ago(3))])).toEqual({
-        kind: 'away',
-        minutes: 3,
-        since: ago(3),
+      expect(row({ attempts: [attempt], interactions: stuck }).reason).toMatchObject({
+        kind: 'chat_stuck',
       });
     });
 
-    it('gives no signal to a student who is fine or has finished', () => {
-      expect(signalOf(testAttempt('a1', 'ana', { updatedAt: ago(1) }))).toBeNull();
-      expect(
-        signalOf(testAttempt('a1', 'ana', { status: 'passed', updatedAt: ago(9) }), [
-          e.run('a1', ago(9)),
-        ]),
-      ).toBeNull();
+    it('keeps the reason of a student who left the window', () => {
+      const attempt = testAttempt('a1', 'ana', { status: 'tests_failed', updatedAt: ago(2) });
+      const events = [...failing, e.focusLost('a1', ago(1))];
+
+      expect(row({ attempts: [attempt], events })).toMatchObject({
+        work: 'stopped',
+        reason: { kind: 'stuck_failures' },
+      });
+    });
+
+    it('gives no reason out of the session', () => {
+      const attempt = testAttempt('a1', 'ana', { status: 'tests_failed', updatedAt: ago(90) });
+      const old = [93, 92, 91].map((m) => e.run('a1', ago(m), ['e1-t1']));
+
+      expect(row({ attempts: [attempt], events: old }).reason).toBeNull();
     });
   });
 

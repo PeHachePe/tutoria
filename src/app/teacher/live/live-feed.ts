@@ -2,7 +2,7 @@ import type { Attempt } from '../../data/attempt';
 import type { LiveStudent } from '../../data/live-service';
 import type { ProcessEvent, RunDetail } from '../../data/process-event';
 import { LIVE_ACTIVITY_MINUTES } from './activity-by-minute';
-import type { LiveState } from './live-state';
+import { exercisePosition, type LiveState } from './live-state';
 
 const MINUTE_MS = 60_000;
 
@@ -18,7 +18,7 @@ interface FeedBase {
   readonly at: number;
   readonly student: LiveStudent;
   readonly attemptId: string;
-  /** The exercise in the block, from 1. */
+  /** The exercise in its block, from 1. */
   readonly position: number;
   /** Practice: the attempt repeats a submitted exercise (2.5c). */
   readonly practice: boolean;
@@ -41,14 +41,11 @@ export type FeedEntry = FeedBase &
  */
 export function liveFeed(state: LiveState, now: number, size = FEED_SIZE): FeedEntry[] {
   const from = now - LIVE_ACTIVITY_MINUTES * MINUTE_MS;
-  const positions = new Map(
-    state.exercises.map((exercise, index) => [exercise.assignmentId, index + 1]),
-  );
   const entries: FeedEntry[] = [];
   for (const { student, attempts, events } of state.students.values()) {
     for (const attempt of attempts) {
-      const position = positions.get(attempt.assignmentId ?? '');
-      if (position === undefined) continue;
+      const position = exercisePosition(state.exercises, attempt.assignmentId ?? '');
+      if (position === null) continue;
       const base = { student, attemptId: attempt.id, position, practice: attempt.number > 1 };
       // Opening the first exercise is arriving, and the whole class does it at once: only moving
       // on to another exercise, or repeating one, is news

@@ -1,7 +1,15 @@
 import { testEvents as e } from '../../data/process-event-testing';
 import { FEED_SIZE, liveFeed, RECOVERY_FAILURES } from './live-feed';
 import { liveState } from './live-state';
-import { ago, BLOCK_EXERCISES, NOW, STUDENTS, testAttempt, testSnapshot } from './live-testing';
+import {
+  ago,
+  BLOCK_EXERCISES,
+  GROUP_EXERCISES,
+  NOW,
+  STUDENTS,
+  testAttempt,
+  testSnapshot,
+} from './live-testing';
 
 const [T1, T2, T3] = BLOCK_EXERCISES[0].tests.map((test) => test.id);
 
@@ -29,6 +37,22 @@ describe('liveFeed', () => {
       }),
       expect.objectContaining({ kind: 'submitted', attemptId: 'a1', position: 1, at: ago(6) }),
       expect.objectContaining({ kind: 'all_passed', practice: false, at: ago(8) }),
+    ]);
+  });
+
+  it('counts the position of an exercise inside its own block', () => {
+    const state = liveState(
+      testSnapshot({
+        exercises: GROUP_EXERCISES,
+        attempts: [
+          testAttempt('a3', 'ana', { startedAt: ago(9), assignmentId: 'as3' }),
+          testAttempt('b3', 'bea', { startedAt: ago(8), assignmentId: 'as3', number: 2 }),
+        ],
+      }),
+    );
+
+    expect(liveFeed(state, NOW)).toEqual([
+      expect.objectContaining({ kind: 'started', attemptId: 'b3', position: 1 }),
     ]);
   });
 

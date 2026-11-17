@@ -1,10 +1,9 @@
 import type { Attempt } from '../../data/attempt';
-import type { LiveExercise } from '../../data/live-service';
+import { LIVE_WINDOW_MINUTES, type LiveExercise } from '../../data/live-service';
 import type { ProcessEvent } from '../../data/process-event';
 import { type HintLevel, type TutorInteraction } from '../../data/tutor';
 import { formatCall } from '../../shared/format-value';
 import type { TestCount } from '../../shared/status-chip/status-chip';
-import { LIVE_WINDOW_MINUTES } from '../live/live-row';
 
 const MINUTE_MS = 60_000;
 

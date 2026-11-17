@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { convertToParamMap } from '@angular/router';
 
-import { DAW_STUDENT_IDS, TEACHER_ID } from '../data/mock/fixtures/users';
+import { DAW_EXAM_BLOCK, DAW_HIDDEN_BLOCK, DAW_RESIT_BLOCK } from '../data/mock/fixtures/exercises';
+import { fixtureId } from '../data/mock/fixtures/fixture-id';
+import { DAW_GROUP_ID, DAW_STUDENT_IDS, TEACHER_ID } from '../data/mock/fixtures/users';
 import { MockDb } from '../data/mock/mock-db';
 import { TEACHER_PARAMS } from '../core/app-paths';
 import { testEvents } from '../data/process-event-testing';
+import { CHAT_STUCK_MESSAGES } from '../teacher/live/live-attention';
 import { ClassSimulator, SIMULATION_TICK_MS, type SimulationTarget } from './class-simulator';
 
 describe('ClassSimulator', () => {
@@ -43,13 +46,73 @@ describe('ClassSimulator', () => {
   }
 
   describe('targetFor', () => {
-    it('picks the block of the URL or, without it, the one the panel shows', () => {
-      expect(target.label).toMatch(/^1\.º DAW A · /);
+    const daw = (params: Record<string, string> = {}) =>
+      convertToParamMap({ [TEACHER_PARAMS.group]: DAW_GROUP_ID, ...params });
+    /** The blocks of 1.º DAW A the students see, in order. */
+    const visible = () =>
+      db
+        .tables()
+        .classBlocks.filter(
+          (block) =>
+            block.groupId === DAW_GROUP_ID &&
+            !block.isHidden &&
+            (block.opensAt === null || Date.parse(block.opensAt) <= Date.now()),
+        )
+        .sort((a, b) => a.position - b.position)
+        .map((block) => block.id);
 
-      const other = simulator.targetFor(
-        convertToParamMap({ [TEACHER_PARAMS.group]: target.groupId, [TEACHER_PARAMS.block]: 'x' }),
+    it('picks one block: the one of the URL, or the latest one', () => {
+      const first = visible()[0];
+
+      expect(target.label).toMatch(/^1\.º DAW A · /);
+      expect(simulator.targetFor(daw({ [TEACHER_PARAMS.block]: first }))?.blockIds).toEqual([
+        first,
+      ]);
+      // The seed has no attempts left: the latest block is the first one
+      expect(simulator.targetFor(daw({ [TEACHER_PARAMS.block]: 'x' }))?.blockIds).toEqual([first]);
+    });
+
+    it('picks the latest block of the group when the URL names none', () => {
+      db.reset();
+      db.setSession(TEACHER_ID);
+
+      expect(simulator.targetFor(daw())?.blockIds).toEqual([fixtureId('block', DAW_RESIT_BLOCK)]);
+    });
+
+    it('picks two blocks in a row, back to the first after the last', () => {
+      const blocks = visible();
+
+      const two = simulator.targetFor(daw({ [TEACHER_PARAMS.block]: blocks[0] }), 'two_blocks');
+      const last = simulator.targetFor(
+        daw({ [TEACHER_PARAMS.block]: blocks.at(-1) as string }),
+        'two_blocks',
       );
-      expect(other?.groupId).toBe(target.groupId);
+
+      expect(two).toMatchObject({ blockIds: blocks.slice(0, 2), label: '1.º DAW A · 2 bloques' });
+      expect(last?.blockIds).toEqual([blocks.at(-1), blocks[0]]);
+    });
+
+    it('scatters the class over every block the students see', () => {
+      const scattered = simulator.targetFor(daw(), 'scattered');
+
+      expect(scattered?.blockIds).toEqual(visible());
+      expect(scattered?.blockIds).not.toContain(fixtureId('block', DAW_HIDDEN_BLOCK));
+      expect(scattered?.blockIds).not.toContain(fixtureId('block', DAW_EXAM_BLOCK));
+    });
+
+    it('picks a single block for two when there is no other', () => {
+      const [only] = visible();
+      db.update('classBlocks', (blocks) =>
+        blocks.map((block) => (block.id === only ? block : { ...block, isHidden: true })),
+      );
+
+      expect(simulator.targetFor(daw(), 'two_blocks')?.blockIds).toEqual([only]);
+    });
+
+    it('has nothing to simulate without blocks the students see with exercises', () => {
+      db.update('assignments', () => []);
+
+      expect(simulator.targetFor(daw())).toBeNull();
     });
 
     it('has no block without a session or for whoever manages no group', () => {
@@ -59,6 +122,25 @@ describe('ClassSimulator', () => {
       db.setSession(null);
       expect(simulator.targetFor(convertToParamMap({}))).toBeNull();
     });
+  });
+
+  it('splits the students between the blocks, in the order of the group', () => {
+    const two = simulator.targetFor(
+      convertToParamMap({ [TEACHER_PARAMS.group]: target.groupId }),
+      'two_blocks',
+    ) as SimulationTarget;
+    const blockOf = () => {
+      const assignmentId = attempts().at(-1)?.assignmentId;
+      return db.tables().assignments.find((assignment) => assignment.id === assignmentId)?.blockId;
+    };
+
+    roll(0);
+    simulator.step(two);
+    expect(blockOf()).toBe(two.blockIds[0]);
+
+    roll(0.99);
+    simulator.step(two);
+    expect(blockOf()).toBe(two.blockIds[1]);
   });
 
   it('acts on every tick while it runs, and stops', () => {
@@ -146,6 +228,27 @@ describe('ClassSimulator', () => {
     expect(attempts()[0].currentCode.split('\n')).toHaveLength(7);
   });
 
+  it('tells the tutor now and then that they cannot go on', () => {
+    roll(0.71);
+    simulator.step(target);
+    simulator.step(target);
+
+    expect(eventTypes()).toEqual([]);
+    expect(db.tables().interactions.at(-1)).toMatchObject({
+      trigger: 'question',
+      studentMessage: 'No sé cómo seguir',
+    });
+  });
+
+  it('gets a student stuck in the chat', () => {
+    roll(0);
+    simulator.chatStuckOne(target);
+
+    expect(db.tables().interactions.map((i) => [i.trigger, i.studentMessage])).toEqual(
+      Array.from({ length: CHAT_STUCK_MESSAGES }, () => ['question', 'No sé cómo seguir']),
+    );
+  });
+
   it('pastes a little', () => {
     roll(0.75);
     simulator.step(target);
@@ -170,7 +273,7 @@ describe('ClassSimulator', () => {
     roll(0);
     const exercises = db
       .tables()
-      .assignments.filter((assignment) => assignment.blockId === target.blockId).length;
+      .assignments.filter((assignment) => assignment.blockId === target.blockIds[0]).length;
     for (let exercise = 0; exercise < exercises; exercise++) {
       simulator.patternOne(target);
     }
@@ -203,7 +306,8 @@ describe('ClassSimulator', () => {
     simulator.step({ ...target, groupId: 'nobody' });
     simulator.stuckOne({ ...target, groupId: 'nobody' });
     simulator.patternOne({ ...target, groupId: 'nobody' });
-    simulator.step({ ...target, blockId: 'empty' });
+    simulator.chatStuckOne({ ...target, groupId: 'nobody' });
+    simulator.step({ ...target, blockIds: ['empty'] });
 
     expect(attempts()).toEqual([]);
   });

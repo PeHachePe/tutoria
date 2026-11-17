@@ -1,11 +1,12 @@
 import { booleanAttribute, Component, computed, input } from '@angular/core';
 
+import type { AttentionReason } from './live-attention';
 import type { LivePattern } from './live-patterns';
-import type { LiveRow, LiveSignal } from './live-row';
+import type { LiveRow } from './live-row';
 
-/** Why a student appears in a card or carries a chip: a signal, a pattern or perseverance. */
+/** Why a student is in the queue or carries a chip: a reason, a pattern or perseverance. */
 export type LiveReason =
-  | LiveSignal
+  | AttentionReason
   | LivePattern
   | { readonly kind: 'repeated'; readonly count: number }
   | { readonly kind: 'breakthrough'; readonly failures: number };
@@ -16,13 +17,10 @@ export type LiveReasonKind = LiveReason['kind'];
 export type LiveTone = 'help' | 'review' | 'perseverance';
 
 export const REASON_TONES: Record<LiveReasonKind, LiveTone> = {
-  away: 'help',
   hints_exhausted: 'help',
   stuck_failures: 'help',
+  chat_stuck: 'help',
   hint_rush: 'help',
-  stuck_idle: 'help',
-  not_started: 'review',
-  inactive: 'review',
   paste_submit: 'review',
   paste_on_return: 'review',
   submit_burst: 'review',
@@ -32,13 +30,10 @@ export const REASON_TONES: Record<LiveReasonKind, LiveTone> = {
 
 /** Material Symbols of each reason, so a chip never says it only with its colour. */
 export const REASON_ICONS: Record<LiveReasonKind, string> = {
-  away: 'visibility_off',
   hints_exhausted: 'front_hand',
   stuck_failures: 'replay',
+  chat_stuck: 'forum',
   hint_rush: 'fast_forward',
-  stuck_idle: 'hourglass_empty',
-  not_started: 'radio_button_unchecked',
-  inactive: 'bedtime',
   paste_submit: 'content_paste',
   paste_on_return: 'content_paste_go',
   submit_burst: 'bolt',
@@ -65,7 +60,7 @@ export function perseveranceOf(row: LiveRow): LiveReason[] {
 
 /** Every reason of a row, in the order of the cards: help, review and perseverance. */
 export function reasonsOf(row: LiveRow): LiveReason[] {
-  return [...(row.signal ? [row.signal] : []), ...row.patterns, ...perseveranceOf(row)];
+  return [...(row.reason ? [row.reason] : []), ...row.patterns, ...perseveranceOf(row)];
 }
 
 /**
@@ -78,26 +73,17 @@ export function reasonsOf(row: LiveRow): LiveReason[] {
     @let r = reason();
     @if (short()) {
       @switch (r.kind) {
-        @case ('away') {
-          <ng-container i18n="@@live.chip.away">Fuera</ng-container>
-        }
         @case ('hints_exhausted') {
           <ng-container i18n="@@live.chip.hintsExhausted">Sin más pistas</ng-container>
         }
         @case ('stuck_failures') {
           <ng-container i18n="@@live.chip.stuckFailures">Atascado</ng-container>
         }
+        @case ('chat_stuck') {
+          <ng-container i18n="@@live.chip.chatStuck">No sabe seguir</ng-container>
+        }
         @case ('hint_rush') {
           <ng-container i18n="@@live.chip.hintRush">Pistas seguidas</ng-container>
-        }
-        @case ('stuck_idle') {
-          <ng-container i18n="@@live.chip.stuckIdle">Sin avanzar</ng-container>
-        }
-        @case ('not_started') {
-          <ng-container i18n="@@live.chip.notStarted">Sin empezar</ng-container>
-        }
-        @case ('inactive') {
-          <ng-container i18n="@@live.chip.inactive">Sin actividad</ng-container>
         }
         @case ('paste_submit') {
           <ng-container i18n="@@live.chip.pasteSubmit">Entrega con pegado</ng-container>
@@ -117,9 +103,6 @@ export function reasonsOf(row: LiveRow): LiveReason[] {
       }
     } @else {
       @switch (r.kind) {
-        @case ('away') {
-          <ng-container i18n="@@live.reason.away">Ha salido de la ventana</ng-container>
-        }
         @case ('hints_exhausted') {
           <ng-container i18n="@@live.reason.hintsExhausted"
             >Ya tuvo la pista de nivel 3 y sigue fallando</ng-container
@@ -137,24 +120,14 @@ export function reasonsOf(row: LiveRow): LiveReason[] {
             >
           }
         }
+        @case ('chat_stuck') {
+          <ng-container i18n="@@live.reason.chatStuck"
+            >Le ha dicho al tutor {{ r.messages }} veces que no sabe seguir</ng-container
+          >
+        }
         @case ('hint_rush') {
           <ng-container i18n="@@live.reason.hintRush"
             >Ha pedido {{ r.hints }} pistas seguidas sin ejecutar las pruebas</ng-container
-          >
-        }
-        @case ('stuck_idle') {
-          <ng-container i18n="@@live.reason.stuckIdle"
-            >No escribe ni ejecuta desde hace un rato</ng-container
-          >
-        }
-        @case ('not_started') {
-          <ng-container i18n="@@live.reason.notStarted"
-            >No ha abierto ningún ejercicio del bloque</ng-container
-          >
-        }
-        @case ('inactive') {
-          <ng-container i18n="@@live.reason.inactive"
-            >Sin actividad en la última hora mientras la clase trabaja</ng-container
           >
         }
         @case ('paste_submit') {

@@ -4,9 +4,6 @@ import { ago } from './live-testing';
 
 function input(overrides: Partial<PatternInput> = {}): PatternInput {
   return {
-    hasAttempts: true,
-    active: true,
-    classActive: true,
     events: [],
     submittedAttemptIds: new Set(),
     ...overrides,
@@ -14,26 +11,14 @@ function input(overrides: Partial<PatternInput> = {}): PatternInput {
 }
 
 describe('livePatterns', () => {
-  it('finds nothing in an active student who works step by step', () => {
+  it('finds nothing in a student who works step by step', () => {
     const events = [e.run('a', ago(9), ['t1']), e.paste('a', ago(8), 30), e.run('a', ago(7))];
 
     expect(livePatterns(input({ events }))).toEqual([]);
   });
 
-  describe('without activity in the session', () => {
-    it('says the student has not started while the class works', () => {
-      expect(livePatterns(input({ active: false, hasAttempts: false }))).toEqual([
-        { kind: 'not_started' },
-      ]);
-    });
-
-    it('says the student is inactive if they had opened something', () => {
-      expect(livePatterns(input({ active: false }))).toEqual([{ kind: 'inactive' }]);
-    });
-
-    it('says nothing when the whole class is quiet', () => {
-      expect(livePatterns(input({ active: false, classActive: false }))).toEqual([]);
-    });
+  it('finds nothing without events', () => {
+    expect(livePatterns(input())).toEqual([]);
   });
 
   describe('submission with a paste', () => {

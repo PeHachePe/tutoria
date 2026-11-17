@@ -9,7 +9,7 @@
     class="-ms-3 -mb-3 self-start"
     [routerLink]="livePath"
     [queryParams]="backQuery()"
-    [queryParamsHandling]="backQuery() ? '' : 'preserve'"
+    queryParamsHandling="merge"
   >
     <mat-icon>arrow_back</mat-icon>
     <ng-container i18n="@@detail.back">Volver a la sesión</ng-container>

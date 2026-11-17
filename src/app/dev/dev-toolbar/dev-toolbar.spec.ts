@@ -2,7 +2,10 @@ import { HarnessLoader } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
-import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
+import {
+  MatButtonToggleGroupHarness,
+  MatButtonToggleHarness,
+} from '@angular/material/button-toggle/testing';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { provideRouter } from '@angular/router';
@@ -193,7 +196,10 @@ describe('DevToolbar', () => {
       TestBed.inject(MockNetwork).setLatency({ min: 10, max: 20 });
       await openPanel();
 
-      const toggles = await loader.getAllHarnesses(MatButtonToggleHarness);
+      const latency = await loader.getHarness(
+        MatButtonToggleGroupHarness.with({ selector: '[aria-label="Latencia"]' }),
+      );
+      const toggles = await latency.getToggles();
       const checked = await Promise.all(toggles.map((toggle) => toggle.isChecked()));
       expect(checked).toEqual([false, false, false]);
     });
@@ -242,10 +248,11 @@ describe('DevToolbar', () => {
       db.setSession(TEACHER_ID);
       const simulator = TestBed.inject(ClassSimulator);
       const stuckOne = vi.spyOn(simulator, 'stuckOne').mockReturnValue();
+      const chatStuckOne = vi.spyOn(simulator, 'chatStuckOne').mockReturnValue();
       const patternOne = vi.spyOn(simulator, 'patternOne').mockReturnValue();
       const start = vi.spyOn(simulator, 'start');
       await openPanel();
-      expect(element().textContent).toContain('Alumnos al azar en el grupo y el bloque');
+      expect(element().textContent).toContain('Alumnos al azar en el grupo de la sesión en vivo.');
 
       await (await button(/Simular la clase/)).click();
       expect(start).toHaveBeenCalledOnce();
@@ -255,9 +262,31 @@ describe('DevToolbar', () => {
       expect(simulator.running()).toBe(false);
 
       await (await button(/Atascar a un alumno/)).click();
+      await (await button(/Atascar en el chat/)).click();
       await (await button(/Provocar un patrón/)).click();
       expect(stuckOne).toHaveBeenCalledOnce();
+      expect(chatStuckOne).toHaveBeenCalledOnce();
       expect(patternOne).toHaveBeenCalledOnce();
+    });
+
+    it('spreads the class over the blocks, also while it runs', async () => {
+      db.setSession(TEACHER_ID);
+      const simulator = TestBed.inject(ClassSimulator);
+      const start = vi.spyOn(simulator, 'start');
+      await openPanel();
+      const spread = (text: string) => loader.getHarness(MatButtonToggleHarness.with({ text }));
+      expect(await (await spread('Un bloque')).isChecked()).toBe(true);
+
+      await (await spread('Dos bloques')).check();
+      expect(start).not.toHaveBeenCalled();
+
+      await (await button(/Simular la clase/)).click();
+      expect(start.mock.lastCall?.[0].blockIds).toHaveLength(2);
+      await (await spread('Cada uno en el suyo')).check();
+
+      expect(start).toHaveBeenCalledTimes(2);
+      expect(start.mock.lastCall?.[0].blockIds.length).toBeGreaterThan(2);
+      expect(element().textContent).toMatch(/Simulando 1\.º DAW A · \d+ bloques/);
     });
 
     it('does nothing when the session ends with the panel open', async () => {
@@ -266,16 +295,26 @@ describe('DevToolbar', () => {
       const simulator = TestBed.inject(ClassSimulator);
       const start = vi.spyOn(simulator, 'start');
       const stuckOne = vi.spyOn(simulator, 'stuckOne');
+      const chatStuckOne = vi.spyOn(simulator, 'chatStuckOne');
       const patternOne = vi.spyOn(simulator, 'patternOne');
-      const component = fixture.componentInstance as unknown as Record<string, () => void>;
+      const component = fixture.componentInstance as unknown as Record<
+        string,
+        (value?: unknown) => void
+      >;
+      await (await button(/Simular la clase/)).click();
+      start.mockClear();
       db.setSession(null);
 
+      component['setSpread']('two_blocks');
+      component['toggleSimulation']();
       component['toggleSimulation']();
       component['stuckOne']();
+      component['chatStuckOne']();
       component['patternOne']();
 
       expect(start).not.toHaveBeenCalled();
       expect(stuckOne).not.toHaveBeenCalled();
+      expect(chatStuckOne).not.toHaveBeenCalled();
       expect(patternOne).not.toHaveBeenCalled();
     });
 

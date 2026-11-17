@@ -10,6 +10,8 @@ import { LiveTable } from './live-table';
 import {
   ago,
   BLOCK_EXERCISES,
+  GROUP_EXERCISES,
+  GROUPS,
   MINUTE,
   NOW,
   testAttempt,
@@ -45,9 +47,14 @@ const ROWS = testRows(
   }),
 );
 
-async function renderTable(rows: readonly LiveRow[] = ROWS, now = NOW, locale = 'es') {
+async function renderTable(
+  rows: readonly LiveRow[] = ROWS,
+  now = NOW,
+  locale = 'es',
+  blockId: string | null = 'b1',
+) {
   const view = await render(LiveTable, {
-    inputs: { rows, caption: '1.º DAW A · Tema 1', now },
+    inputs: { rows, caption: '1.º DAW A · Tema 1', now, blocks: GROUPS[0].blocks, blockId },
     providers: [provideRouter([]), { provide: LOCALE_ID, useValue: locale }],
   });
   const announcer = view.fixture.debugElement.injector.get(LiveAnnouncer);
@@ -109,7 +116,7 @@ describe('LiveTable', () => {
       'replay Atascado',
     ]);
     expect(bea[1]).toMatch(/Repitiendo$/);
-    expect(bea.at(-1)).toBe('hourglass_empty Sin avanzar replay Repite ejercicios');
+    expect(bea.at(-1)).toBe('replay Repite ejercicios');
     expect(cai).toEqual([
       'Cai',
       '—',
@@ -125,6 +132,31 @@ describe('LiveTable', () => {
     expect(within(table).getByRole('link', { name: 'Ana' }).getAttribute('href')).toBe(
       '/docente/en-vivo/a1',
     );
+  });
+
+  it('names the block of an exercise that is not in the block shown', async () => {
+    const rows = testRows(
+      testSnapshot({
+        exercises: GROUP_EXERCISES,
+        attempts: [
+          testAttempt('a1', 'ana', { updatedAt: ago(1) }),
+          testAttempt('b3', 'bea', { assignmentId: 'as3', updatedAt: ago(2) }),
+        ],
+      }),
+    );
+    const { table } = await renderTable(rows);
+    const [ana, bea] = bodyRows(table).map((row) => text(within(row).getAllByRole('cell')[1]));
+
+    expect(ana).not.toContain('·');
+    expect(bea).toMatch(/^1\. .* · b2$/);
+  });
+
+  it('greys out whoever has not come to the session', async () => {
+    const { table } = await renderTable();
+    const [, bea, cai] = bodyRows(table);
+
+    expect(bea.classList).not.toContain('text-on-surface-variant');
+    expect(cai.classList).toContain('text-on-surface-variant');
   });
 
   it('says «ahora mismo» for what happened this minute', async () => {
