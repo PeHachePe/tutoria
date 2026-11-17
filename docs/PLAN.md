@@ -2271,25 +2271,387 @@ Propuesto al cerrar el 4.3b (D-058). Al empezarlo, el autor cambió duplicar un 
 ✅ Con dos navegadores: el alumno trabaja y el docente lo ve en vivo.
 Commit: `feat: teacher panel`.
 
-#### Fase 5 · Administración (≈10 h)
+#### Fase 5 · Administración (≈10 h, en cinco subpasos)
 
-**5.1 · Usuarios** · ficha `10-usuarios`
+Planificada el 17/11/2026 (bitácora `5-plan`), tras leer la memoria (CU-06, CU-07, RF-16, RF-18 y RF-19), el modelo y la RLS de 2.3, `AdminService`, los servicios y la pantalla de bloques (el patrón que siguen estas pantallas) y la función `translate` (el patrón de `admin-users`). Cada subpaso es una sesión y trae los datos simulados y los reales a la vez, como el 4.3. Las fichas `10-usuarios`, `11-grupos` y `12-sistema` no existen: la sesión de cada pantalla (5.1b, 5.2b y 5.3) la escribe primero con la plantilla (5.3), a partir de su bloque «Plan de implementación», y el autor la valida con el plan corto.
 
-- Lista, alta (nombre, correo, rol y contraseña temporal), cambio de rol y activar o desactivar.
-- El administrador no puede quitarse su propio rol ni desactivarse, para que la aplicación no se quede sin administración (CU-06, flujo 3b); un correo repetido se rechaza (3a).
-- En real, mediante la Edge Function `admin-users`: comprueba que quien llama es administrador y usa la API de administración de Supabase Auth.
+Decisiones comunes, que se proponen como **D-072** al cerrar el 5.1a (y se amplían en el 5.2a y el 5.3):
 
-**5.2 · Grupos y matrícula** · ficha `11-grupos`
+- **La baja de una cuenta es el bloqueo en Supabase Auth más `status = disabled`** (2.10), como ya hace el seed. Se acepta que Auth diga «User is banned» con cualquier contraseña (el pendiente del 2.2): quien lo prueba solo aprende que ese correo tuvo una cuenta que ya no entra, lo frena el límite de intentos de Auth y, a cambio, quien fue dado de baja lee un mensaje claro en lugar de creer que olvidó la contraseña. La alternativa (no bloquear y cambiarle la contraseña por una aleatoria) esconde el dato, pero deja sesiones vivas que se renuevan y un mensaje engañoso. La sesión abierta de una cuenta desactivada deja de leer y de escribir al instante, porque `current_app_role()` y `claim_*_request` miran `status`.
+- **El rol solo se cambia a quien no tiene grupos a su cargo ni matrículas.** Un docente degradado dejaría grupos que nadie gestiona (`teaches_group()` exige el rol) y un alumno ascendido seguiría matriculado: antes se reasignan sus grupos o se le da de baja de ellos.
+- **Las reglas de las cuentas se escriben una vez,** en un fichero sin importaciones que usan la función `admin-users` y el servicio simulado, como `tutor-contract.ts`.
+- **El correo no se cambia** (es la identidad en Auth) y **la aplicación no envía correos:** la contraseña la pone la administración y se entrega en persona; también la restablece. Que cada usuario cambie la suya va a `PENDIENTES.md`.
+- **El docente busca alumnos de todo el centro para matricularlos** (RF-16), con una RPC que solo devuelve nombre y correo de alumnos activos, pide al menos dos letras y da 20 como mucho: no puede listar el centro entero.
+- **Un grupo no cambia de asignatura** y **solo se borra si nadie ha empezado nada en él,** como los bloques (D-058).
+- **El proveedor de IA solo se guarda después de probarlo** (CU-07, 3a): la prueba va al servidor, que es quien tiene las claves, y no guarda nada.
 
-- En `/docente/grupos` (RF-16): el docente crea sus grupos, cada uno de una asignatura (2.5c), y matricula en ellos a los alumnos que quiera; un alumno puede estar en grupos de varias asignaturas y con docentes distintos. El administrador ve todos y además cambia el docente de un grupo. Las cuentas solo las crea el administrador.
-- Las operaciones de grupos y matrícula pasan de `AdminService` a un servicio propio, porque ya no son solo del administrador.
+Fuera de la fase, a `PENDIENTES.md` al cerrar el subpaso que lo roza: cambiar la propia contraseña; matricular pegando una lista de correos; archivar los grupos de cursos pasados; copiar los bloques de un grupo en otro (ya apuntado, D-060); borrar asignaturas; el editor completo de respaldos de otros proveedores; los límites del tutor gestionables (ya apuntado, 3.1); más de 1000 usuarios (el tope de filas de PostgREST: la lista pasaría a paginarse en el servidor).
 
-**5.3 · Sistema** · ficha `12-sistema`
+**5.1a · Usuarios: servicio y función `admin-users` (≈2 h, sin pantalla)**
 
-- Adaptador de IA activo (URL base y modelo) y botón para probar la conexión.
+- `AdminService` con los usuarios, en sus dos versiones, y la Edge Function `admin-users`, que comprueba que quien llama es administrador y usa la API de administración de Supabase Auth.
+- El administrador no puede quitarse su propio rol ni desactivarse (CU-06, 3b); un correo repetido se rechaza (3a).
 
-🧪 e2e: el administrador crea un alumno, lo matricula y ese alumno ve su catálogo.
-Commit: `feat: admin`.
+**Plan de implementación del 5.1a** (17/11/2026, tras leer el código: quien lo implemente no tiene que decidir nada)
+
+- Dudas resueltas:
+  - el alta crea la cuenta en Auth con el correo ya confirmado (`email_confirm: true`) y el nombre en los metadatos; el disparador `create_app_user` crea la fila como alumno y la función le pone después el rol pedido. Si ese segundo paso falla, la función borra la cuenta recién creada y responde 500: no queda una cuenta a medias;
+  - desactivar: primero `status = disabled` (la RLS se cierra al instante) y después el bloqueo en Auth; activar, al revés. El bloqueo es `ban_duration` de `BAN_FOREVER = '876000h'` (cien años), y `'none'` lo quita;
+  - la función no tiene límite por minuto: no llama a ningún modelo y solo la usa la administración;
+  - la contraseña nunca se escribe en un log ni vuelve en la respuesta;
+  - en los datos simulados, la contraseña de una cuenta creada o restablecida se guarda en una tabla nueva (`passwords`), para que la demo deje entrar con ella; las del seed siguen con `MOCK_PASSWORD`.
+- **Nuevo `src/app/data/admin/user-rules.ts`** y su spec, sin importaciones (lo importa Deno):
+
+```ts
+export const MAX_USER_NAME_LENGTH = 100;
+export const MIN_PASSWORD_LENGTH = 8;
+/** What bcrypt reads of a password in Supabase Auth. */
+export const MAX_PASSWORD_LENGTH = 72;
+
+export type UserChangeProblem = 'own_role' | 'own_status' | 'has_groups' | 'has_enrollments';
+
+/** What ties a user to the classes: the groups they teach and their enrollments. */
+export interface UserLinks {
+  readonly groups: number;
+  readonly enrollments: number;
+}
+
+/** Why the change cannot be made, or null. `role` and `status` are those of the target now. */
+export function userChangeProblem(
+  callerId: string,
+  target: { readonly id: string; readonly role: string; readonly status: string },
+  changes: { readonly role?: string; readonly status?: string },
+  links: UserLinks,
+): UserChangeProblem | null;
+
+/** Trimmed and in lower case, as Supabase Auth keeps it. */
+export function normalizeEmail(email: string): string;
+```
+
+- Reglas de `userChangeProblem()`, en este orden: sobre uno mismo, un `role` distinto de `admin` es `own_role` y `status: 'disabled'`, `own_status`; un `role` distinto del actual con `links.groups > 0` es `has_groups` y con `links.enrollments > 0`, `has_enrollments`; lo demás, `null`. Un `role` o un `status` igual al actual no es un cambio.
+- `src/app/data/admin-service.ts`: `NewUser` gana `readonly password: string`; `UserChanges` gana `readonly password?: string` (la nueva contraseña). `listUsers()` los devuelve por nombre (`localeCompare` con `'es'`). `createUser()` lanza `invalid` con un correo repetido; `updateUser()`, `invalid` con cualquier `UserChangeProblem` y `not_found` sin el usuario. Los métodos de grupos, asignaturas y proveedor siguen abstractos hasta el 5.2a y el 5.3: las dos versiones los dejan en `throw new DataError('unavailable')`, con su test.
+- `src/app/data/mock/mock-tables.ts`: `readonly passwords: Readonly<Record<string, string>>` (por id de usuario); en `fixtures/seed.ts`, `passwords: {}` y `SEED_VERSION` sube en uno. `MockAuthService.signIn()` compara con `tables.passwords[user.id] ?? MOCK_PASSWORD`.
+- **Nuevo `src/app/data/mock/mock-admin-service.ts`** y su spec (`@Service({ autoProvided: false })`, con `MockDb` y `MockNetwork`): todo exige `db.requireUser('admin')`. `createUser()`: correo normalizado y único, `id` con `crypto.randomUUID()`, `status: 'active'`, `privacyNoticeSeenAt: null`, fechas `now()`, y la contraseña a `passwords`. `updateUser()`: `userChangeProblem()` con los grupos (`groups` por `teacherId`) y las matrículas del usuario; aplica `name`, `role` y `status`, y `password` a `passwords`; `updatedAt: now()`. Se añade a `provide-mock-data.ts`.
+- **Nueva función `supabase/functions/admin-users/`,** con el reparto de `translate`:
+  - `admin-users.ts`: `createAdminUsersHandler({ store })` y la interfaz `AdminUsersStore`:
+
+```ts
+export interface AdminUsersStore {
+  userOf(token: string): Promise<string | null>;
+  /** The row of `app_user`, or null. */
+  profileOf(userId: string): Promise<UserRow | null>;
+  linksOf(userId: string): Promise<UserLinks>;
+  /** The id of the new account, or `'email_exists'`. */
+  createAccount(account: { email: string; password: string; name: string }): Promise<string>;
+  deleteAccount(userId: string): Promise<void>;
+  /** Name, role and status of `app_user`; returns the row. */
+  updateProfile(userId: string, changes: ProfileChanges): Promise<UserRow>;
+  setBan(userId: string, banned: boolean): Promise<void>;
+  setPassword(userId: string, password: string): Promise<void>;
+}
+```
+
+- el cuerpo, con zod (`requestSchema`, unión por `action`): `{ action: 'create', name, email, role, password }` o `{ action: 'update', userId, changes: { name?, role?, status?, password? } }`, con los límites de `user-rules.ts`, `role` y `status` de sus enumerados, `userId` UUID y `changes` con al menos un campo. Se lee con `readJson(request, MAX_ADMIN_BODY_BYTES)` (`10_000`);
+- respuestas: 401 sin sesión; 403 si `profileOf(caller)` no es un administrador activo; 400 con un cuerpo que no encaja; 404 sin el usuario; 409 con `email_exists` o con un `UserChangeProblem` (el mensaje lo nombra); 200 con la fila de `app_user`, que el servicio convierte con `toAppUser()`;
+- `supabase-admin-users-store.ts`: con `service_role`; `createAccount()` usa `auth.admin.createUser()` y traduce el código `email_exists` de Auth; `setBan()` y `setPassword()`, `auth.admin.updateUserById()`; `linksOf()`, dos `count` con `head: true`;
+- `index.ts`, como el de `translate`, y en `supabase/config.toml`, `[functions.admin-users]` con `verify_jwt = true` y el `import_map`. Supabase local se reinicia para servirla.
+- **Nuevo `src/app/data/supabase/supabase-admin-service.ts`** y su spec: `listUsers()` lee `app_user` (la RLS da todos al administrador); `createUser()` y `updateUser()` llaman a la función con `functions.invoke` y `toFunctionDataError()` (el 409 ya es `invalid`). Se añade a `provide-supabase-data.ts`.
+- `docs/DESPLIEGUE.md`: desplegar `admin-users` con las otras funciones.
+- Tests, en este orden:
+  1. `user-rules.spec.ts`: cada problema por separado; sobre uno mismo, seguir de administrador y activo es `null`; `own_role` gana a `has_groups`; un rol igual al actual con grupos es `null`; `normalizeEmail()`.
+  2. `mock-admin-service.spec.ts`: solo el administrador (`forbidden` para un docente, `unauthorized` sin sesión); la lista por nombre; el alta y el correo repetido, también con otras mayúsculas; cada `UserChangeProblem` es `invalid`; desactivar y activar; el usuario que no existe.
+  3. `mock-auth-service.spec.ts`: la cuenta creada entra con su contraseña y no con `MOCK_PASSWORD`; tras restablecerla, solo con la nueva; una desactivada no entra (`forbidden`).
+  4. `admin-users.test.ts` (Deno, con un `AdminUsersStore` falso): 401, 403 (docente, administrador desactivado), 400, 404 y cada 409; el alta pone el rol y, si falla, borra la cuenta; el orden de desactivar y de activar; la contraseña no aparece en la respuesta; `OPTIONS` y los métodos que no son `POST`.
+  5. `supabase-admin-service.spec.ts`, con `FakeSupabaseServer`: la lista, el cuerpo de cada llamada y la traducción de 403, 404 y 409.
+
+✅ `npm run check`. En local, con `npm run db:start`: con la sesión de la administración, la función crea un alumno que entra con su contraseña; desactivado, deja de entrar. Sin capturas.
+Commit: `feat(admin): users service and the admin-users function (step 5.1a)`.
+
+**5.1b · Usuarios: la pantalla (≈2 h)** · ficha `10-usuarios` · Figura 13 del TFM
+
+- Lista, alta (nombre, correo, rol y contraseña), cambio de rol, restablecer la contraseña y activar o desactivar (RF-18, CU-06).
+
+**Plan de implementación del 5.1b** (17/11/2026; necesita el 5.1a hecho)
+
+- Dudas resueltas:
+  - el correo repetido se detecta en el formulario, contra la lista ya cargada, y el servidor lo rechaza igualmente; el rol y la baja propios aparecen deshabilitados con su explicación (`disabledInteractive`), no como un error tras pulsar;
+  - la búsqueda, los filtros y la página van en la URL (`ADMIN_PARAMS` en `core/app-paths.ts`: `search: 'buscar'`, `role: 'rol'`, `disabled: 'desactivados'` y `page: 'pagina'`), como en el banco de ejercicios, y todo se filtra en el cliente;
+  - las cuentas desactivadas no se ven hasta marcar «Ver las desactivadas»;
+  - no hay store: el estado es de la pantalla (`resource()` con `listUsers()`, cambiado en el sitio tras cada acción, como `BlocksPage`).
+- **Nuevo `src/app/admin/users/`:**
+  - `user-filter.ts` y su spec: `filterUsers(users, { search, role, disabled })` (el texto, sin mayúsculas ni tildes, en el nombre o el correo) y `USERS_PAGE_SIZE = 10`;
+  - `user-form.ts` y su spec: `UserFormModel` (`name`, `email`, `role`, `password`), `userSchema(takenEmails: () => ReadonlySet<string>, editing: boolean)` (nombre obligatorio; correo obligatorio, con forma de correo y sin repetir; contraseña entre `MIN_PASSWORD_LENGTH` y `MAX_PASSWORD_LENGTH`, solo en el alta), `toNewUser()` y `toUserChanges(user, model)` (solo lo que cambia);
+  - `generate-password.ts` y su spec: `generatePassword(random = crypto.getRandomValues.bind(crypto))`, 12 caracteres de un alfabeto sin los que se confunden (`0`, `O`, `1`, `l`, `I`);
+  - `user-dialog.ts` (`UserDialog`, Signal Forms con `submission`, como `BlockDialog`): en el alta, nombre, correo, rol y contraseña, con «Generar» y el botón de mostrarla u ocultarla; al editar, el correo se lee y no hay contraseña. `data.save` deja el diálogo abierto con el error si falla;
+  - `password-dialog.ts` (`PasswordDialog`): la contraseña nueva de una cuenta, con «Generar»;
+  - `users-page.ts` y `.html` (`UsersPage`): encabezado «Usuarios» y «Nuevo usuario»; buscador, filtro de rol (`mat-select`: todos, alumnado, profesorado, administración) y «Ver las desactivadas»; tabla (`mat-table`) con nombre, correo, rol y estado, un menú de acciones por fila («Editar», «Restablecer la contraseña», «Desactivar» o «Activar») y `mat-paginator`; en pantallas estrechas, la misma disposición que el banco de ejercicios (`exercise-bank-page.html`). «Tú» junto al nombre propio. El estado se dice con texto e icono, no solo con color;
+  - estados: esqueleto con la forma de la tabla, `LoadError` con reintento, vacío sin resultados («Ningún usuario coincide» con «Quitar los filtros») y con datos;
+  - desactivar pide confirmación (`confirmAction`); cada acción avisa con un `MatSnackBar` y con el `LiveAnnouncer`, y tras un fallo la lista se recarga.
+- `admin.routes.ts`: `UsersPage` en lugar de `PlaceholderPage`, y `provideSnackBarDefaults()` en el área.
+- Mensajes de error de una acción (`user-action-message.ts` y su spec): `invalid` al cambiar el rol, el de grupos y matrículas; `network`, sin conexión; lo demás, el genérico.
+- Textos (`{name}` y los demás entre llaves son los marcadores de cada mensaje, `{$name}` en los JSON; los de rol sirven también en el 5.2b):
+
+| ID                         | es                                                                                              | en                                                                                                 | ca                                                                                               |
+| -------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `users.new`                | Nuevo usuario                                                                                   | New user                                                                                           | Nou usuari                                                                                       |
+| `users.search`             | Buscar por nombre o correo                                                                      | Search by name or email                                                                            | Cerca per nom o correu                                                                           |
+| `users.role.all`           | Todos los roles                                                                                 | All roles                                                                                          | Tots els rols                                                                                    |
+| `role.student`             | Alumno                                                                                          | Student                                                                                            | Alumne                                                                                           |
+| `role.teacher`             | Docente                                                                                         | Teacher                                                                                            | Docent                                                                                           |
+| `role.admin`               | Administración                                                                                  | Administration                                                                                     | Administració                                                                                    |
+| `users.showDisabled`       | Ver las desactivadas                                                                            | Show disabled accounts                                                                             | Mostra les desactivades                                                                          |
+| `users.status.active`      | Activa                                                                                          | Active                                                                                             | Activa                                                                                           |
+| `users.status.disabled`    | Desactivada                                                                                     | Disabled                                                                                           | Desactivada                                                                                      |
+| `users.you`                | Tú                                                                                              | You                                                                                                | Tu                                                                                               |
+| `users.actions`            | Acciones de {name}                                                                              | Actions for {name}                                                                                 | Accions de {name}                                                                                |
+| `users.edit`               | Editar                                                                                          | Edit                                                                                               | Edita                                                                                            |
+| `users.resetPassword`      | Restablecer la contraseña                                                                       | Reset the password                                                                                 | Restableix la contrasenya                                                                        |
+| `users.disable`            | Desactivar                                                                                      | Disable                                                                                            | Desactiva                                                                                        |
+| `users.enable`             | Activar                                                                                         | Enable                                                                                             | Activa                                                                                           |
+| `users.disable.confirm`    | {name} dejará de poder entrar. Su trabajo se conserva y puedes activar la cuenta más tarde.     | {name} will no longer be able to sign in. Their work is kept and you can enable the account later. | {name} deixarà de poder entrar. La seva feina es conserva i pots activar el compte més tard.     |
+| `users.own.hint`           | No puedes quitarte tu propio rol ni desactivarte: la aplicación se quedaría sin administración. | You cannot remove your own role or disable yourself: the app would be left without administration. | No pots treure't el teu propi rol ni desactivar-te: l'aplicació es quedaria sense administració. |
+| `users.role.linked`        | No se puede cambiar el rol de quien tiene grupos a su cargo o matrículas: quítaselos antes.     | The role of someone with groups or enrollments cannot be changed: remove them first.               | No es pot canviar el rol de qui té grups a càrrec o matrícules: treu-los abans.                  |
+| `users.created`            | Cuenta creada. Entrégale la contraseña en persona.                                              | Account created. Hand over the password in person.                                                 | Compte creat. Dona-li la contrasenya en persona.                                                 |
+| `users.empty`              | Ningún usuario coincide                                                                         | No user matches                                                                                    | Cap usuari coincideix                                                                            |
+| `userDialog.email.taken`   | Ese correo ya tiene una cuenta                                                                  | That email already has an account                                                                  | Aquest correu ja té un compte                                                                    |
+| `userDialog.password.hint` | Entre 8 y 72 caracteres. La aplicación no envía correos: entrégasela en persona.                | Between 8 and 72 characters. The app sends no email: hand it over in person.                       | Entre 8 i 72 caràcters. L'aplicació no envia correus: dona-la-hi en persona.                     |
+| `userDialog.generate`      | Generar                                                                                         | Generate                                                                                           | Genera                                                                                           |
+
+- Tests, en este orden:
+  1. `user-filter.spec.ts`: por texto (sin tildes ni mayúsculas, en el nombre y en el correo), por rol, las desactivadas solo si se piden, y los tres a la vez.
+  2. `user-form.spec.ts`: cada validación; el correo repetido con otras mayúsculas; al editar, ni correo ni contraseña; `toUserChanges()` sin cambios es `{}`.
+  3. `generate-password.spec.ts`: la longitud, el alfabeto y que usa el generador que recibe.
+  4. `user-action-message.spec.ts`.
+  5. `users-page.spec.ts`: los cuatro estados; filtrar escribe la URL y la URL filtra; la página; el alta añade la fila y avisa; editar cambia la fila; restablecer llama con la contraseña; desactivar pide confirmación y la fila pasa a «Desactivada»; en la fila propia, el rol y «Desactivar» están deshabilitados con su explicación; un fallo avisa y recarga.
+  6. `user-dialog.spec.ts` y `password-dialog.spec.ts`: «Generar» rellena la contraseña; mostrarla y ocultarla; el diálogo sigue abierto con el error.
+- Definición de terminado (5.4) y capturas: `npm run screenshots -- 5.1b usuarios`. Los e2e (alta, correo repetido, rol propio y axe con el diálogo y el menú abiertos), a `docs/E2E-PENDIENTES.md`.
+
+Commit: `feat(admin): users screen (step 5.1b)`.
+
+**5.2a · Grupos y matrícula: permisos y servicio (≈1,5 h, sin pantalla)**
+
+- El docente crea sus grupos, cada uno de una asignatura (2.5c), y matricula en ellos a los alumnos que quiera (RF-16); el administrador gestiona todos y cambia el docente de un grupo. Las operaciones de grupos y matrícula pasan de `AdminService` a `GroupService`, porque ya no son solo del administrador.
+
+**Plan de implementación del 5.2a** (17/11/2026; necesita el 5.1a hecho)
+
+- Dudas resueltas:
+  - el docente de un grupo es un usuario activo con rol `teacher`: un administrador no figura como docente (ya ve todos los grupos);
+  - dar de baja a un alumno de un grupo borra su matrícula y conserva sus intentos: deja de ver el grupo, y su docente sigue viendo lo que hizo;
+  - se matricula a varios a la vez, en una sola petición.
+- **Nueva migración `supabase/migrations/20261118100000_groups_and_enrollment.sql`** y su test `supabase/tests/database/groups_and_enrollment.test.sql`:
+  - `is_started_group(target_group_id uuid)`: hay algún intento en una asignación del grupo; `is_active_student(target_user_id uuid)` e `is_active_teacher(target_user_id uuid)`. Las tres, `stable`, `security definer`, `set search_path = ''` y con `execute` solo para `authenticated`;
+  - `class_group`: se quita «Admins manage groups». Alta: el administrador, o un docente con `teacher_id = (select auth.uid())`. Cambio: `using (is_admin() or teaches_group(id))` y `with check (is_admin() or teacher_id = (select auth.uid()))`. Baja: `(is_admin() or teaches_group(id)) and not is_started_group(id)`. En el alta y en el cambio, además, `is_active_teacher(teacher_id)`. `revoke update` y `grant update (name, school_year, teacher_id)`: el grupo no cambia de asignatura. Un `check` nuevo: `school_year ~ '^\d{4}/\d{2}$'`;
+  - `enrollment`: se quita «Admins manage enrollments». Alta: `(is_admin() or teaches_group(group_id)) and is_active_student(user_id)`. Baja: `is_admin() or teaches_group(group_id)`. `revoke update`: una matrícula no se edita;
+  - `search_students(search text, target_group_id uuid)` devuelve `table (id uuid, name text, email text)`: `security definer`; `42501` si quien llama no es `is_admin()` ni `teaches_group(target_group_id)`; `22023` con menos de `2` caracteres tras `btrim`; alumnos activos que no están en el grupo y cuyo nombre o correo contiene el texto (`ilike`, con `%`, `_` y `\` escapados), por nombre, 20 como mucho;
+  - `group_student_counts()` devuelve `table (group_id uuid, student_count integer)` de los grupos que quien llama gestiona, como `assignment_student_counts`;
+  - `function_privileges.test.sql` gana las funciones nuevas. Después, `npm run db:reset`, `db:test` y `db:types`.
+- **Nuevo `src/app/data/group-service.ts`** (y `AdminService` pierde `GroupDraft`, `listGroups`, `saveGroup`, `listEnrollments`, `enroll` y `unenroll`):
+
+```ts
+/** A group as its screen shows it. */
+export interface ManagedGroup {
+  readonly group: ClassGroup;
+  readonly subject: Subject;
+  readonly teacherName: string;
+  readonly studentCount: number;
+  /** Somebody opened an attempt in it: it cannot be removed. */
+  readonly started: boolean;
+}
+
+/** A new group has no id yet; of an existing one, only name, year and teacher change. */
+export type GroupDraft = Omit<ClassGroup, 'id'> & { readonly id?: string };
+
+export interface StudentRef {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+}
+
+export interface EnrolledStudent {
+  readonly enrollmentId: string;
+  readonly student: StudentRef;
+}
+
+export const MIN_STUDENT_SEARCH_LENGTH = 2;
+export const MAX_STUDENT_SEARCH_RESULTS = 20;
+
+export abstract class GroupService {
+  /** Those the user teaches, or all for an administrator, by name and subject. */
+  abstract listGroups(): Promise<ManagedGroup[]>;
+  /** A teacher saves only groups of their own; `invalid` if the teacher is not an active one. */
+  abstract saveGroup(draft: GroupDraft): Promise<ManagedGroup>;
+  /** `invalid` if a student started anything in it. */
+  abstract removeGroup(groupId: string): Promise<void>;
+  /** By name. `not_found` for a group of others. */
+  abstract listStudents(groupId: string): Promise<EnrolledStudent[]>;
+  /** Active students who are not in the group; none with a search shorter than the minimum. */
+  abstract searchStudents(groupId: string, search: string): Promise<StudentRef[]>;
+  abstract enroll(groupId: string, userIds: readonly string[]): Promise<EnrolledStudent[]>;
+  /** Their attempts are kept. */
+  abstract unenroll(enrollmentId: string): Promise<void>;
+  /** The active teachers, for the administrator to choose one; `forbidden` for others. */
+  abstract listTeachers(): Promise<StudentRef[]>;
+}
+```
+
+- **Nuevo `src/app/data/mock/mock-group-service.ts`** y su spec, con las mismas reglas que la RLS: `canManageGroup()` de `mock-access.ts`; un docente que guarda un grupo con otro `teacherId` es `forbidden`; el cambio conserva `subjectId`; `removeGroup()` borra con el grupo sus matrículas, bloques y asignaciones; `searchStudents()` sin tildes ni mayúsculas. Y **nuevo `src/app/data/supabase/supabase-group-service.ts`** y su spec: `listGroups()` con `class_group` (`subject(*)` y el nombre del docente), `group_student_counts` y si está empezado; `enroll()` inserta todas las filas de una vez y las devuelve con su alumno. Los dos, a `provide-mock-data.ts` y `provide-supabase-data.ts`.
+- `docs/PLAN.md` §2.3, la viñeta del docente en la RLS: gestiona sus grupos y su matrícula.
+- Tests, en este orden:
+  1. pgTAP: un docente crea un grupo suyo y no uno de otro; no cambia el docente ni la asignatura; el administrador cambia el docente, y no por un alumno ni por uno desactivado; se borra el grupo sin intentos y no el empezado; un docente matricula y da de baja en su grupo y no en el de otro; no se matricula a un docente ni a un alumno desactivado; `search_students` (su permiso, el mínimo, sin los ya matriculados, los comodines escapados y el tope); `group_student_counts`.
+  2. `mock-group-service.spec.ts`: lo mismo, más el orden de las listas y la baja que conserva los intentos.
+  3. `supabase-group-service.spec.ts`: las peticiones y la traducción de `42501`, `22023` y `23505` (ya matriculado).
+  4. `mock-admin-service.spec.ts` y `supabase-admin-service.spec.ts`: sin los métodos que se van.
+
+✅ `npm run check` y `npm run db:test`. Sin capturas.
+Commit: `feat(groups): teachers manage their groups and enrollment (step 5.2a)`.
+
+**5.2b · Grupos y matrícula: la pantalla (≈2 h)** · ficha `11-grupos`
+
+- En `/docente/grupos`: los grupos del docente (el administrador, todos) con su matrícula.
+
+**Plan de implementación del 5.2b** (17/11/2026; necesita el 5.2a hecho)
+
+- Dudas resueltas:
+  - una sola pantalla: cada grupo es un panel que se despliega (`mat-accordion`, uno abierto cada vez) y enseña su matrícula, que se pide al abrirlo. El abierto va en la URL (`?grupo=`, `TEACHER_PARAMS.group`) y sobrevive a recargar;
+  - el curso por defecto de un grupo nuevo sale de la fecha: de septiembre en adelante, el que empieza ese año;
+  - las asignaturas del desplegable salen de `ExerciseService.listSubjects()`, que ya leen todos los usuarios con sesión.
+- **Nuevo `src/app/teacher/groups/`:**
+  - `school-year.ts` y su spec: `schoolYearOf(date: Date): string` («2026/27» del 1 de septiembre de 2026 al 31 de agosto de 2027) y `SCHOOL_YEAR_PATTERN`;
+  - `group-form.ts` y su spec: `GroupFormModel` (`name`, `schoolYear`, `subjectId`, `teacherId`), `groupSchema()` (todo obligatorio y el curso con su patrón) y `toGroupDraft()`;
+  - `group-dialog.ts` (`GroupDialog`): nombre, curso, asignatura (solo se elige al crear; al editar se lee) y, para el administrador, docente (`listTeachers()`); el docente no ve ese campo y el grupo es suyo;
+  - `enroll-dialog.ts` (`EnrollDialog`): un buscador que busca al dejar de escribir (`SEARCH_DELAY_MS = 300`: un `setTimeout` en el manejador de `input` fija la señal `search`, parámetro del `resource()`, y se cancela con la tecla siguiente y en `DestroyRef`; no `debounced()`, que en Angular 22 es experimental), los resultados como casillas con nombre y correo, los elegidos como chips que se quitan, y «Matricular (n)». Con menos de dos letras, la pista; sin resultados, «Ningún alumno coincide» y que las cuentas las crea la administración;
+  - `groups-page.ts` y `.html` (`GroupsPage`): encabezado «Grupos y matrícula» y «Nuevo grupo»; por grupo, en la cabecera del panel, el nombre, la asignatura, el curso, «N alumnos» y, para el administrador, su docente; dentro, «Matricular alumnos», el menú («Editar», «Ver sus bloques», que lleva a `/docente/bloques?grupo=`, y «Eliminar», deshabilitado con su motivo si está empezado) y la lista del alumnado por nombre, con su correo y «Dar de baja del grupo»;
+  - estados: esqueleto de tres paneles; `LoadError`; sin grupos, `EmptyState` «Aún no tienes grupos» con el botón; un grupo sin alumnos, su propio vacío con «Matricular alumnos»; la matrícula de un panel carga y falla por separado, con su reintento.
+- `teacher.routes.ts`: `GroupsPage` en lugar de `PlaceholderPage`.
+- Textos:
+
+| ID                          | es                                                                          | en                                                                                  | ca                                                                             |
+| --------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `groups.new`                | Nuevo grupo                                                                 | New group                                                                           | Nou grup                                                                       |
+| `groups.students`           | {count, plural, =0 {Sin alumnos} =1 {1 alumno} other {{count} alumnos}}     | {count, plural, =0 {No students} =1 {1 student} other {{count} students}}           | {count, plural, =0 {Sense alumnes} =1 {1 alumne} other {{count} alumnes}}      |
+| `groups.teacher`            | Docente: {name}                                                             | Teacher: {name}                                                                     | Docent: {name}                                                                 |
+| `groups.enroll`             | Matricular alumnos                                                          | Enroll students                                                                     | Matricula alumnes                                                              |
+| `groups.blocks`             | Ver sus bloques                                                             | See its blocks                                                                      | Mostra els seus blocs                                                          |
+| `groups.remove`             | Eliminar                                                                    | Delete                                                                              | Elimina                                                                        |
+| `groups.remove.started`     | No se puede eliminar: ya hay alumnos con trabajo en este grupo.             | It cannot be deleted: students already have work in this group.                     | No es pot eliminar: ja hi ha alumnes amb feina en aquest grup.                 |
+| `groups.remove.confirm`     | Se eliminará «{name}» con sus bloques y su matrícula. No se puede deshacer. | «{name}» will be deleted with its blocks and its enrollment. This cannot be undone. | S'eliminarà «{name}» amb els seus blocs i la seva matrícula. No es pot desfer. |
+| `groups.unenroll`           | Dar de baja del grupo                                                       | Remove from the group                                                               | Dona de baixa del grup                                                         |
+| `groups.unenroll.confirm`   | {name} dejará de ver este grupo. Su trabajo se conserva.                    | {name} will no longer see this group. Their work is kept.                           | {name} deixarà de veure aquest grup. La seva feina es conserva.                |
+| `groups.empty`              | Aún no tienes grupos                                                        | You have no groups yet                                                              | Encara no tens grups                                                           |
+| `groups.noStudents`         | Este grupo aún no tiene alumnos                                             | This group has no students yet                                                      | Aquest grup encara no té alumnes                                               |
+| `groupDialog.year`          | Curso                                                                       | School year                                                                         | Curs                                                                           |
+| `groupDialog.year.hint`     | Como 2026/27                                                                | Such as 2026/27                                                                     | Com ara 2026/27                                                                |
+| `groupDialog.subject.fixed` | Un grupo no cambia de asignatura: crea otro grupo para otra.                | A group does not change its subject: create another group for another one.          | Un grup no canvia d'assignatura: crea un altre grup per a una altra.           |
+| `enrollDialog.search`       | Buscar alumnos por nombre o correo                                          | Search students by name or email                                                    | Cerca alumnes per nom o correu                                                 |
+| `enrollDialog.search.hint`  | Escribe al menos dos letras                                                 | Type at least two letters                                                           | Escriu almenys dues lletres                                                    |
+| `enrollDialog.none`         | Ningún alumno coincide. Las cuentas las crea la administración.             | No student matches. Accounts are created by the administration.                     | Cap alumne coincideix. Els comptes els crea l'administració.                   |
+| `enrollDialog.submit`       | Matricular ({count})                                                        | Enroll ({count})                                                                    | Matricula ({count})                                                            |
+
+- Tests, en este orden:
+  1. `school-year.spec.ts`: el 31 de agosto y el 1 de septiembre, y el cambio de siglo del sufijo (`2099/00`).
+  2. `group-form.spec.ts`.
+  3. `groups-page.spec.ts`: los estados; abrir un panel pide su matrícula y escribe la URL, y la URL abre el suyo; el docente no ve el docente del grupo y el administrador sí; crear añade el panel; editar lo cambia; eliminar pide confirmación, y está deshabilitado con su motivo en un grupo empezado; dar de baja quita la fila y baja la cuenta; matricular las añade en orden y sube la cuenta; un fallo avisa y recarga.
+  4. `group-dialog.spec.ts` (la asignatura fija al editar; el campo del docente solo para el administrador) y `enroll-dialog.spec.ts` (el mínimo, elegir y quitar, sin resultados, «Matricular (2)» devuelve los dos).
+- Definición de terminado (5.4) y capturas: `npm run screenshots -- 5.2b grupos`. A `docs/E2E-PENDIENTES.md`: el e2e de la fase (el administrador crea un alumno, un docente lo matricula y ese alumno ve su catálogo) y axe con un panel y cada diálogo abiertos.
+
+Commit: `feat(groups): groups and enrollment screen (step 5.2b)`.
+
+**5.3 · Sistema: proveedor de IA y asignaturas (≈2,5 h)** · ficha `12-sistema` · Figura 13 del TFM
+
+- Adaptador de IA activo (URL base y modelo), con sus alternativas y un botón para probar la conexión (RF-19, CU-07); y las asignaturas de los grupos (2.5c), que hasta ahora solo existían en el seed. Es lo primero que se recorta si falta tiempo.
+
+**Plan de implementación del 5.3** (17/11/2026; necesita el 5.1a hecho)
+
+- Dudas resueltas:
+  - las «alternativas disponibles» de CU-07 son una lista fija de proveedores con la API de chat de OpenAI (`AI_PROVIDER_PRESETS`), que rellena la URL, el secreto y el formato; «Otro» deja escribirlos;
+  - el formulario edita el modelo principal y los respaldos del mismo proveedor (nombre y tiempo máximo). Un respaldo de otro proveedor (con su `baseUrl`) se enseña en una línea de solo lectura y se conserva al guardar;
+  - la clave nunca se escribe aquí: el formulario solo nombra el secreto (`AI_API_KEY`, `AI_<NOMBRE>_API_KEY`) y lo dice;
+  - la prueba llama a cada modelo por separado, en orden, y responde por modelo; «Guardar» solo se habilita con la prueba del borrador actual superada por el principal, y cualquier cambio la invalida. Un respaldo que falla avisa, pero deja guardar;
+  - en los datos simulados, la prueba va bien salvo con un modelo cuyo nombre contiene `fail` (`not_found`), para ver y probar el fallo.
+- `src/app/data/ai-provider-setting.ts` gana:
+
+```ts
+export type AiCheckProblem =
+  | 'invalid' // not the shape of a provider
+  | 'host_not_allowed' // not the host of the project nor one of AI_ALLOWED_HOSTS
+  | 'no_key' // the secret it names is not set
+  | 'unauthorized'
+  | 'not_found' // the provider does not know the model
+  | 'rate_limited'
+  | 'timeout'
+  | 'unavailable';
+
+export interface AiModelCheck {
+  readonly model: string;
+  /** Milliseconds it took to answer, if it did. */
+  readonly ms?: number;
+  /** Absent when the model answered. */
+  readonly problem?: AiCheckProblem;
+}
+
+export interface AiProviderPreset {
+  readonly id: string;
+  readonly baseUrl: string;
+  readonly keySecret: string | null;
+  readonly responseFormat: AiResponseFormat;
+}
+
+/** Gemini (the provider of the project), Groq, OpenRouter and a local Ollama. */
+export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[];
+```
+
+- `AdminService`: `checkAiProvider(setting: AiProviderSetting): Promise<AiModelCheck[]>` (uno por modelo, en orden; con `invalid` o `host_not_allowed`, uno solo); `getAiProvider()`, `setAiProvider()`, `listSubjects()` y `saveSubject()` dejan de ser `unavailable` en las dos versiones. En Supabase: `app_setting` y `subject` con su RLS de administrador (un ajuste sin la forma de un proveedor es `23514`, `invalid`).
+- **Nueva migración `20261119100000_ai_check.sql`:** `alter type public.staff_request_kind add value 'ai_check'`, y `StaffRequestKind` en `_shared/staff-requests.ts`.
+- **Nueva función `supabase/functions/ai-check/`** (`ai-check.ts`, `supabase-ai-check-store.ts`, `index.ts`, `ai-check.test.ts`; `[functions.ai-check]` en `config.toml`): solo un administrador activo (403); `staff.claim(userId, 'ai_check', AI_CHECKS_PER_MINUTE = 5)`; el cuerpo es el ajuste a probar. `providerSettingOf(value, () => true)` nulo es `invalid`; con `allowedHosts()` de verdad, nulo es `host_not_allowed`. Por cada modelo: sin su secreto en el entorno, `no_key`; si no, un `OpenAICompatibleProvider` solo de ese modelo al que se pide una respuesta mínima (`CHECK_MESSAGES` y `CHECK_FORMAT`) y se cronometra; un `ProviderError` se traduce por su estado (401 y 403, `unauthorized`; 404, `not_found`; 429, `rate_limited`; sin respuesta a tiempo, `timeout`; lo demás, `unavailable`). No guarda nada y no devuelve el texto del modelo ni el de su error.
+- **Nuevo `src/app/admin/system/`:**
+  - `provider-form.ts` y su spec: `ProviderFormModel` (`presetId`, `baseUrl`, `model`, `keySecret`, `responseFormat`, `timeoutSeconds` y `fallbacks: { model, timeoutSeconds }[]`), `toProviderFormModel(setting)` (el preset se deduce de la URL), `toProviderSetting(model, kept)` (con los respaldos de otros proveedores que se conservan), `providerSchema()` (URL web, modelo obligatorio, el secreto con la forma `AI_…_API_KEY` o vacío, el tiempo de 1 a 120 s y cinco respaldos como mucho, contando los conservados) y `applyPreset()`;
+  - `check-message.ts` y su spec: el texto de cada `AiCheckProblem`;
+  - `subject-form.ts` y su spec y `subject-dialog.ts` (`SubjectDialog`): nombre, idioma en que se escribe y traducciones opcionales, como `block-form.ts` y `BlockDialog`;
+  - `system-page.ts` y `.html` (`SystemPage`): dos secciones con su `h2`. «Proveedor de IA»: el formulario, «Probar la conexión» (dice «Probando…», y el resultado es una lista con cada modelo, su icono, su tiempo o su problema, en una región `role="status"`), «Guardar» y «Descartar los cambios». «Asignaturas»: la lista por nombre en el idioma de la interfaz (con `lang` si es otro), «Nueva asignatura» y «Editar» en cada una. Cada sección carga y falla por separado.
+- `admin.routes.ts`: `SystemPage` en lugar de `PlaceholderPage`. `docs/DESPLIEGUE.md`: desplegar `ai-check`. `docs/PLAN.md` §2.3: `staff_request.kind` gana `ai_check`.
+- Textos:
+
+| ID                            | es                                                                                                       | en                                                                                                        | ca                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `system.provider`             | Proveedor de IA                                                                                          | AI provider                                                                                               | Proveïdor d'IA                                                                                    |
+| `system.provider.intro`       | El modelo que responde como tutor y traduce los ejercicios. El cambio se aplica a la siguiente petición. | The model that answers as the tutor and translates the exercises. The change applies to the next request. | El model que respon com a tutor i tradueix els exercicis. El canvi s'aplica a la petició següent. |
+| `system.preset`               | Proveedor                                                                                                | Provider                                                                                                  | Proveïdor                                                                                         |
+| `system.preset.other`         | Otro                                                                                                     | Other                                                                                                     | Un altre                                                                                          |
+| `system.baseUrl`              | URL base                                                                                                 | Base URL                                                                                                  | URL base                                                                                          |
+| `system.model`                | Modelo                                                                                                   | Model                                                                                                     | Model                                                                                             |
+| `system.keySecret`            | Nombre del secreto con la clave                                                                          | Name of the secret with the key                                                                           | Nom del secret amb la clau                                                                        |
+| `system.keySecret.hint`       | La clave nunca se escribe aquí: vive en los secretos del servidor.                                       | The key is never written here: it lives in the secrets of the server.                                     | La clau no s'escriu mai aquí: viu als secrets del servidor.                                       |
+| `system.timeout`              | Tiempo máximo de respuesta (segundos)                                                                    | Maximum response time (seconds)                                                                           | Temps màxim de resposta (segons)                                                                  |
+| `system.fallbacks`            | Modelos de respaldo, en orden                                                                            | Fallback models, in order                                                                                 | Models de reserva, en ordre                                                                       |
+| `system.fallbacks.add`        | Añadir un respaldo                                                                                       | Add a fallback                                                                                            | Afegeix una reserva                                                                               |
+| `system.fallbacks.kept`       | De otro proveedor ({host}): se conserva                                                                  | From another provider ({host}): it is kept                                                                | D'un altre proveïdor ({host}): es conserva                                                        |
+| `system.check`                | Probar la conexión                                                                                       | Test the connection                                                                                       | Prova la connexió                                                                                 |
+| `system.checking`             | Probando…                                                                                                | Testing…                                                                                                  | Provant…                                                                                          |
+| `system.check.ok`             | Responde en {ms} ms                                                                                      | Answers in {ms} ms                                                                                        | Respon en {ms} ms                                                                                 |
+| `system.check.first`          | Prueba la conexión antes de guardar                                                                      | Test the connection before saving                                                                         | Prova la connexió abans de desar                                                                  |
+| `system.check.failed`         | El modelo principal no responde: se mantiene el proveedor anterior.                                      | The main model does not answer: the previous provider is kept.                                            | El model principal no respon: es manté el proveïdor anterior.                                     |
+| `system.problem.host`         | Ese servidor no está permitido: añádelo al secreto AI_ALLOWED_HOSTS.                                     | That host is not allowed: add it to the AI_ALLOWED_HOSTS secret.                                          | Aquest servidor no està permès: afegeix-lo al secret AI_ALLOWED_HOSTS.                            |
+| `system.problem.noKey`        | Falta el secreto con su clave en el servidor.                                                            | The secret with its key is missing on the server.                                                         | Falta el secret amb la seva clau al servidor.                                                     |
+| `system.problem.unauthorized` | El proveedor rechaza la clave.                                                                           | The provider rejects the key.                                                                             | El proveïdor rebutja la clau.                                                                     |
+| `system.problem.notFound`     | El proveedor no conoce ese modelo.                                                                       | The provider does not know that model.                                                                    | El proveïdor no coneix aquest model.                                                              |
+| `system.problem.rateLimited`  | El proveedor ha agotado su cuota por ahora.                                                              | The provider has run out of quota for now.                                                                | El proveïdor ha esgotat la quota per ara.                                                         |
+| `system.problem.timeout`      | No ha respondido a tiempo.                                                                               | It did not answer in time.                                                                                | No ha respost a temps.                                                                            |
+| `system.problem.unavailable`  | El proveedor no está disponible.                                                                         | The provider is unavailable.                                                                              | El proveïdor no està disponible.                                                                  |
+| `system.saved`                | Proveedor de IA guardado                                                                                 | AI provider saved                                                                                         | Proveïdor d'IA desat                                                                              |
+| `system.subjects`             | Asignaturas                                                                                              | Subjects                                                                                                  | Assignatures                                                                                      |
+| `system.subjects.new`         | Nueva asignatura                                                                                         | New subject                                                                                               | Nova assignatura                                                                                  |
+
+- Tests, en este orden:
+  1. `provider-form.spec.ts`: ida y vuelta del ajuste del seed sin cambiarlo; el preset deducido y «Otro»; los respaldos de otro proveedor se conservan en su sitio; cada validación; `applyPreset()`.
+  2. `check-message.spec.ts` y `subject-form.spec.ts`.
+  3. `mock-admin-service.spec.ts`: leer y guardar el proveedor; la prueba (bien, y `fail`); las asignaturas por nombre, crear y editar; solo el administrador.
+  4. `ai-check.test.ts` (Deno, con un proveedor y un `fetch` falsos): 401, 403 y 429; `invalid`; `host_not_allowed`; `no_key`; cada estado del proveedor; el orden y un resultado por modelo; nada del texto del modelo en la respuesta.
+  5. `supabase-admin-service.spec.ts`: las peticiones de cada método y `23514`.
+  6. `system-page.spec.ts`: los estados de cada sección; elegir un preset rellena los campos; «Guardar» deshabilitado hasta probar, y de nuevo tras cambiar algo; la prueba que falla lo dice y no deja guardar; guardar avisa; añadir y quitar un respaldo; la asignatura nueva aparece en su orden.
+  7. `subject-dialog.spec.ts`.
+- Definición de terminado (5.4) y capturas: `npm run screenshots -- 5.3 sistema`. A `docs/E2E-PENDIENTES.md`: probar y guardar el proveedor, y axe con el resultado de la prueba y el diálogo abiertos. El pendiente del 2.5c (gestión de asignaturas) queda hecho.
+
+Commit: `feat(admin): system settings, with the AI provider check and the subjects (step 5.3)`.
 
 #### Fase 6 · Capas 3 y 4 (≈14 h, más ≈6 h si se hace el 6.3 y ≈3,5 h si hace falta el 6.1d)
 
