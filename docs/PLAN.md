@@ -2191,13 +2191,326 @@ Diseñado en el 4.1c (D-069). Se hace después del 4.1e.
 
 - «Ahora» en lugar de las seis cifras (`attemptNow()`): las pruebas que fallan en la última ejecución, con lo que esperan y desde cuántas ejecuciones, y la última ayuda del tutor con su nivel. Con el intento entregado, «Cómo lo resolvió».
 - El resumen en una línea y los chips (`attemptSummary()`, que sustituye a `attemptFigures()`): nada que valga cero.
-- «Evolución» (`attemptRuns()` y un SVG propio): una columna por ejecución y una marca por pista y por pegado; pulsar una lleva a su entrada de la línea temporal.
+- «Evolución» (`attemptRuns()` y una gráfica propia, sin librería): una columna por ejecución y una marca por pista y por pegado; pulsar una lleva a su entrada de la línea temporal.
 - La línea temporal, con lo más reciente arriba, las ejecuciones seguidas iguales agrupadas y sin los filtros vacíos.
 - Definición de terminado (5.4), también a 1024 y 1920 px, y capturas nuevas de `07-detalle`.
 
 🧪 `attemptNow()` (sin ejecuciones, con fallos y su racha, todo superado, entregado, con y sin ayuda del tutor); `attemptSummary()` sin partes a cero; `attemptRuns()` con sus marcas; el agrupado de ejecuciones iguales y el orden de `attemptTimeline()`; component tests de «Ahora», de la evolución (una columna lleva a su entrada) y de los filtros.
 
 Commit: `feat(live): the attempt detail, rethought (step 4.2b)`.
+
+**Plan de implementación del 4.2b** (17/11/2026; necesita el 4.1d y el 4.1e hechos: está escrito contra el código tal como lo dejan)
+
+Lo que da por hecho de esos dos pasos, que al escribir esto no están implementados (si algo no está así al empezar, se pregunta antes de seguir):
+
+- **Del 4.1d:** `LIVE_WINDOW_MINUTES` en `data/live-service.ts`; `LiveExercise.blockId`; `failingStreaks()` en `shared/is-stuck.ts`; `exercisePosition()` en `live-state.ts`; `LiveRow.work` (`WorkState`) y `LiveRow.reason`; `QueuedRow` con `reason` (ya no `signal`); `followGroup()` y `backQuery = { grupo }` en `attempt-detail-page.ts`; el estado del panel con las interacciones de la foto.
+- **Del 4.1e:** `LiveReasonText` recibe un `AttentionReason` y no tiene `short`; `animate-live-in` y `animate-live-out` en el tema; siguen los ID `live.age.now`, `live.age.minutes`, `live.queue.attend`, `live.queue.attendLabel` y `live.queue.showFewer`; la sección «Panel en vivo» del muestrario.
+- **Del 4.4, nada:** `format-duration.ts` sigue en `teacher/attempt-detail/` (el 4.4 lo muda después).
+
+Dudas resueltas:
+
+- **«Un SVG propio» del paso pasa a ser una gráfica en HTML con Tailwind,** como las barras del 4.1e y del 4.4. La ficha pide que columnas y marcas sean botones con nombre que se recorren con el teclado: un `button` de verdad trae el foco, el tooltip y el tamaño mínimo (24 px, WCAG 2.5.8) sin rehacerlos sobre `<g role="button">`, y lo que se pinta son rectángulos. Ni la ficha ni D-069 hablan de SVG; la viñeta del paso ya está corregida.
+- **La evolución va por orden, no a escala de tiempo:** una casilla por ejecución, pista o pegado, en el orden en que pasaron. A escala, un intento abierto el lunes y seguido el jueves aplastaría las columnas. La hora está en el nombre de cada botón.
+- **La gráfica no hace crecer la página:** cada casilla mide lo mismo y, si no caben, la gráfica se desplaza dentro de su zona, que se coloca al final (lo último) al crearse y cuando llega una casilla. Es un `afterRenderEffect()`: la frontera con una API imperativa (el desplazamiento del DOM), con su comentario. Sin tope de ejecuciones.
+- **Tres títulos, no dos.** La ficha da «Ahora» (en curso) y «Cómo lo resolvió» (entregado), pero casi todos los intentos del seed son de hace semanas y sin entregar: «Ahora» sería falso. Un intento sin entregar cuyo alumno no está en la sesión se titula **«Dónde lo dejó»**. Añadirlo a la ficha al cerrar.
+- **Quién «está en la sesión» y quién «trabaja»** lo dice la fila del panel (`store.rows()`): si el intento de la fila del alumno es este, su `work`; si no (otro intento más reciente, el panel cargando o el alumno ya sin matrícula), `absent`. «En directo» sale solo con `working`; «Ahora», con `working` o `stopped`.
+- **Las pruebas ocultas enseñan su llamada y lo que esperan, con «(prueba oculta)»,** como el panel (4.1e) y la línea temporal de hoy: esta pantalla solo la ve el docente. El «comprobación oculta» de la ficha se corrige al cerrar.
+- **Qué pruebas lista «Ahora»:** las que fallan en la última ejecución, primero la que lleva más ejecuciones fallando (la primera en el orden del ejercicio si empatan: es `failingTest()` del panel). Se ven 4 (`NOW_TESTS_SHOWN`) y «Ver las N».
+- **Qué se enseña con el intento entregado:** «Superó las N pruebas» y, si alguna falló en alguna ejecución, «Fallaron antes de superarlas:» con cada una y en cuántas ejecuciones falló, la que más primero. Describe dónde costó sin decir «le costó». La última ayuda, igual, con «No pidió ayuda al tutor» si no hubo.
+- **«La última ayuda» es lo último que le dijo el tutor,** lo pidiera o no: una pista, la respuesta a una pregunta (con lo que preguntó, en una línea) o una intervención por su cuenta. Sale de la línea temporal, que ya empareja cada respuesta con su evento: así una pista cuya respuesta no se guardó también cuenta (sin texto) y «No ha pedido ayuda al tutor» nunca es falso. Una intervención en la que el tutor calló no es ayuda.
+- **«Minutos de trabajo» no cuenta las horas entre dos sentadas:** es la suma de los ratos entre dos momentos seguidos del intento (abrirlo, cada evento, cada turno con el tutor, el último guardado y el final) que duran menos que la ventana de sesión (`LIVE_WINDOW_MINUTES`). En un intento de una sola clase da lo mismo que hoy; en uno retomado tres días después, no dice «3 d de trabajo». El final es la entrega, ahora (si está en la sesión) o nada más.
+- **El resumen calla lo que vale cero:** el tiempo sale desde 1 minuto; las ejecuciones y las pistas, desde 1; con todo a cero no hay línea. Los chips, igual. «Fuera de la ventana» suma las salidas ya cerradas (`awayMs`).
+- **Qué es «igual» al agrupar:** dos ejecuciones se agrupan si fallan exactamente las mismas pruebas (también ninguna), si no hay ninguna otra entrada entre ellas (una pista o un pegado en medio cortan el grupo: importa qué pasó entre una y otra) y si no las separa un silencio de `TIMELINE_GAP_MINUTES`, que se sigue viendo. Desde 2.
+- **El recuento de cada filtro son las entradas que enseña** (un grupo cuenta una): las ejecuciones ya las dice el resumen. Sin ninguna entrada de pruebas, tutor ni navegador, el grupo de filtros no sale; «Nada de esto en este intento» ya no puede darse y se borra.
+- **Pulsar una columna, una marca o «Ver entera»:** el filtro vuelve a «Todo» si la entrada no está en el elegido; tras pintar (`afterNextRender` con el `Injector`), la lista la trae a la vista (`scrollIntoView({ block: 'nearest' })`), le da el foco (`li` con `tabindex="-1"`, con el contorno en `focus:` y no en `focus-visible:`, para que se vea también tras un clic) y la destella con `element.animate()` si no hay `prefers-reduced-motion`, como `FlashOnChange`. Se llama desde el manejador del clic: sin `effect()`.
+- **Orden en el DOM: la línea temporal antes que el código,** porque el escritorio es el dispositivo del docente y el editor se queda con Tab (Esc y Tab para salir). Por debajo de `@4xl`, el código sube con `order-first` dentro de su rejilla, como pide la ficha.
+- **La página ya no cabe en una pantalla:** fuera el alto fijo desde `xl`. La línea temporal y el código miden lo mismo (`h-144` desde `@4xl`) y se desplazan por dentro; la página, entera.
+- **Los demás intentos de un intento que no es del bloque elegido** (fila que el 4.1d apunta en `PENDIENTES.md`): se resuelve. `attemptDetail()` devuelve también los intentos del alumno en esa asignación (`siblings`), y la página los une con los que oye el panel. Los enlaces dejan de depender de qué bloque sigue el panel.
+- **Las columnas y las marcas son paradas de tabulación,** sin `roving tabindex`: son botones normales y la región tiene su encabezado para saltarla.
+- **El simulador no cambia:** «Atascar a un alumno» ya escribe 4 ejecuciones iguales seguidas (una entrada), y la clase simulada, pistas, pegados y preguntas.
+- **Sin decisión nueva:** al cerrar, D-069 gana un párrafo «Hecho así» con la gráfica en HTML, el tercer título, los minutos de trabajo, la regla del agrupado y `siblings`.
+
+Ficheros:
+
+- `data/live-service.ts`:
+
+```ts
+/** Another attempt of the same student at the same assignment: what its link needs. */
+export interface AttemptRef {
+  readonly id: string;
+  readonly number: number;
+}
+
+export interface LiveAttemptDetail extends AttemptHistory {
+  // …as today, and:
+  /** Every attempt of the student at this assignment, this one included, by number. */
+  readonly siblings: readonly AttemptRef[];
+}
+```
+
+- `data/mock/mock-live-service.ts`: `siblings`, los intentos con el mismo `userId` y `assignmentId`, por `number`.
+- `data/supabase/supabase-live-service.ts`: la misma petición, con `attempt(id, number, user_id)` embebido dentro de `exercise_assignment(…)` (la relación de vuelta `attempt.assignment_id`); `siblings` son los de `user_id` igual al del intento, por `number`. Si PostgREST o los tipos generados no admiten ese embebido, una segunda petición (`from('attempt').select('id, number')` con `eq('assignment_id')`, `eq('user_id')` y `order('number')`) tras la primera.
+- `teacher/live/live-testing.ts`: `testDetail()` con `siblings: [{ id: 'a1', number: 1 }]`.
+- `teacher/attempt-detail/attempt-timeline.ts`: fuera `attemptFigures()`, `AttemptFigures` y el import de `LIVE_WINDOW_MINUTES`. Cambia:
+
+```ts
+/** Runs in a row with the same result that the timeline tells as one entry. */
+export const RUN_GROUP_MIN = 2;
+
+interface EntryBase {
+  readonly id: string;
+  /** Milliseconds; of a group of runs, the latest. */
+  readonly at: number;
+  /** Minutes of silence before it, when it was long; null otherwise. */
+  readonly gapMinutes: number | null;
+  /** The process events it tells: every run of a group, or the hint or intervention of an answer. */
+  readonly eventIds: readonly string[];
+}
+
+// The run entry:
+| {
+    readonly kind: 'run';
+    readonly passed: number;
+    readonly total: number;
+    readonly failing: readonly FailingTest[];
+    /** Runs in a row with this same result; 1 for a single one. */
+    readonly count: number;
+    /** When the first of them ran: `at` for a single one. */
+    readonly from: number;
+  }
+
+/** The latest first. */
+export function attemptTimeline(attempt, events, interactions, exercise): TimelineEntry[];
+
+/** The id of the entry that tells an event or an interaction, or null. */
+export function entryIdOf(timeline: readonly TimelineEntry[], id: string): string | null;
+```
+
+- Reglas de `attemptTimeline()`: como hoy hasta ordenar por tiempo y calcular `gapMinutes` (sobre las entradas sin agrupar); después:
+  1. `eventIds`: el del evento de cada entrada; en una entrada `tutor`, el del evento que `takeAnswer()` emparejó (ninguno en una pregunta); en `start`, ninguno. Para eso `takeAnswer()` devuelve la interacción y la entrada `tutor` se completa con ese id;
+  2. agrupado: recorriendo en orden, una ejecución se une a la entrada anterior si esa es `run`, tiene los mismos `failing` (mismos id, en el mismo orden) y la nueva tiene `gapMinutes === null`. El grupo conserva el `id`, el `from` y el `gapMinutes` de la primera, toma el `at` de la última, suma `count` y acumula `eventIds`;
+  3. se invierte: lo más reciente primero.
+- `entryIdOf()`: la entrada cuyo `id` es ese o cuyos `eventIds` lo incluyen.
+- **Nuevo `teacher/attempt-detail/attempt-now.ts`** y su spec:
+
+```ts
+/** Failing tests «Ahora» lists before «Ver las N». */
+export const NOW_TESTS_SHOWN = 4;
+
+/** `now`: the student is in the session with it; `left`: not submitted and not there; `solved`: submitted. */
+export type AttemptMode = 'now' | 'left' | 'solved';
+
+export interface NowTest {
+  readonly id: string;
+  /** `isStrongPassword("abc12345")`. */
+  readonly call: string;
+  /** What it expects, as `formatValue()` writes it. */
+  readonly expected: string;
+  readonly hidden: boolean;
+  /** `now` and `left`: runs in a row it has failed, the latest included. `solved`: runs it failed in. */
+  readonly runs: number;
+}
+
+export interface LastHelp {
+  /** The entry of the timeline that tells it whole. */
+  readonly entryId: string;
+  readonly trigger: TutorTrigger;
+  readonly level: HintLevel;
+  readonly at: number;
+  /** What the student asked, for a question. */
+  readonly question: string | null;
+  /** What the tutor said; null for a hint whose answer was not recorded. */
+  readonly text: string | null;
+}
+
+export interface AttemptNow {
+  readonly mode: AttemptMode;
+  /** The latest run, or null before any. */
+  readonly lastRun: TestCount | null;
+  /** `now` and `left`: failing in the latest run. `solved`: failed in some run. The longest first. */
+  readonly tests: readonly NowTest[];
+  readonly help: LastHelp | null;
+}
+
+/** `timeline`, as `attemptTimeline()` gives it; `work`, of the row of the student if it is on this attempt. */
+export function attemptNow(
+  attempt: Pick<Attempt, 'status'>,
+  events: readonly ProcessEvent[],
+  timeline: readonly TimelineEntry[],
+  exercise: LiveExercise,
+  work: WorkState,
+): AttemptNow;
+```
+
+- Reglas de `attemptNow()`:
+  - `mode`: `solved` con `status === 'submitted'`; si no, `now` con `work !== 'absent'`; si no, `left`;
+  - `lastRun`: la última ejecución por `timestamp` (`passed` y `passed + failed`);
+  - `tests` en `now` y `left`: de `failingStreaks(events)`, cada prueba del ejercicio que falla en la última ejecución con su racha; por racha de mayor a menor y, si empatan, por el orden del ejercicio. En `solved`: cada prueba que aparece en los `failedTestIds` de alguna ejecución, con el número de ejecuciones en que falló, con el mismo orden. Una prueba que ya no existe en el ejercicio no sale;
+  - `help`: la primera entrada de `timeline` (la más reciente) que sea `tutor` (su `trigger`, `hintLevel`, `studentMessage` solo si es `question`, `transcript`) o `hint` (`trigger: 'hint'`, su `level`, `text: null`); `entryId`, el `id` de la entrada; `null` sin ninguna.
+- **Nuevo `teacher/attempt-detail/attempt-summary.ts`** y su spec:
+
+```ts
+export interface AttemptSummary {
+  /** Milliseconds of work: without the time between two sittings. */
+  readonly workMs: number;
+  readonly runs: number;
+  readonly hints: number;
+  /** The highest level asked for, or null without hints. */
+  readonly hintLevel: HintLevel | null;
+  readonly questions: number;
+  readonly pastedChars: number;
+  /** Out of the window, in the absences that ended. */
+  readonly awayMs: number;
+}
+
+export function attemptSummary(
+  attempt: Attempt,
+  events: readonly ProcessEvent[],
+  interactions: readonly TutorInteraction[],
+  mode: AttemptMode,
+  now: number,
+): AttemptSummary;
+```
+
+- Reglas de `attemptSummary()`: los momentos son `startedAt`, el `timestamp` de cada evento, el `createdAt` de cada interacción, `updatedAt` y, en `solved`, `finishedAt`; en `now`, además `now`. Ordenados, `workMs` suma las diferencias entre dos seguidos menores que `LIVE_WINDOW_MINUTES` minutos. `runs`, `hints` y `hintLevel`, de los eventos `run` y `hint_requested`; `questions`, las interacciones con `trigger === 'question'`; `pastedChars`, la suma de `paste.detail.length`; `awayMs`, la de `focus_gained.detail.awayMs`.
+- **Nuevo `teacher/attempt-detail/attempt-runs.ts`** y su spec:
+
+```ts
+/** What the evolution draws, in the order it happened. */
+export type EvolutionItem =
+  | {
+      readonly kind: 'run';
+      /** The id of its event. */
+      readonly id: string;
+      readonly at: number;
+      readonly passed: number;
+      readonly total: number;
+    }
+  | { readonly kind: 'hint'; readonly id: string; readonly at: number; readonly level: HintLevel }
+  | { readonly kind: 'paste'; readonly id: string; readonly at: number; readonly length: number };
+
+export interface AttemptRuns {
+  /** Empty without runs: the chart does not show. */
+  readonly items: readonly EvolutionItem[];
+  readonly runs: number;
+  readonly hints: number;
+  readonly pastes: number;
+}
+
+export function attemptRuns(events: readonly ProcessEvent[]): AttemptRuns;
+```
+
+- Reglas de `attemptRuns()`: los eventos `run`, `hint_requested` y `paste` por `timestamp` (orden estable); sin ninguna ejecución, `items` vacío y las tres cuentas a cero aunque haya pistas o pegados.
+- **Nuevo `teacher/attempt-detail/attempt-evolution.ts`** y su spec (`app-attempt-evolution`, plantilla en línea; el host, `role="region"` con `aria-labelledby` de su `h2` y `flex flex-col gap-3 rounded-2xl bg-panel p-4`):
+  - inputs `runs: AttemptRuns` y `liveSince` (ms, como la lista); output `chosen = output<string>()` (el id del evento);
+  - `h2` «Evolución»; un párrafo `sr-only` con la alternativa: «Ejecuciones: 3 de 6, 3 de 6, 5 de 6 y 6 de 6; 2 pistas y 1 pegado» (`Intl.ListFormat` del idioma para las dos listas; sin la segunda parte si no hay pistas ni pegados);
+  - la zona (`#zone`, `overflow-x-auto scroll-shadows`) con un `ol` (`flex w-max items-end gap-1`, con nombre `detail.evolution.list`) y un `li` por casilla, cada una un `button type="button"` con `[attr.aria-label]` y `[matTooltip]` del mismo texto, `rounded-md outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary`:
+    - **ejecución** (`w-9`): un carril `flex h-24 w-5 items-end rounded-sm bg-surface-container-high` con la barra dentro (`data-testid="run-bar"`, `w-full min-h-0.5 rounded-sm`, altura en porcentaje `passed / total`, `bg-primary` o `bg-success` si las supera todas, y `origin-bottom animate-column-in motion-reduce:animate-none` si `at > liveSince`); debajo, «3/6» (`text-label-small tabular-nums`, `aria-hidden`); con todas superadas, además el icono `check` sobre el carril;
+    - **pista** (`w-6`, alineada abajo): el icono `lightbulb` (`text-tertiary`) y debajo su nivel;
+    - **pegado** (`w-6`): el icono `content_paste` (`text-on-surface-variant`) y debajo un espacio del mismo alto;
+  - la leyenda (`text-label-medium text-on-surface-variant`): «Pruebas superadas, de 6» y, solo si existen, «Pista, con su nivel» y «Pegado», cada una con su icono;
+  - `afterRenderEffect()` que lee `runs().items.length` y pone `zone.scrollLeft = zone.scrollWidth`.
+- `src/styles/animations.css`: `--animate-column-in: column-in 400ms ease-out both;` con `@keyframes column-in` (de `scale: 1 0` a `scale: 1 1`), junto a `live-in`.
+- **Nuevo `teacher/attempt-detail/attempt-now-card.ts`** y `.html`, con su spec (`app-attempt-now-card`; el host, `role="region"`, `aria-labelledby` de su `h2` y `@container flex flex-col gap-4 rounded-2xl bg-panel p-4`):
+  - inputs `now: AttemptNow`, `summary: AttemptSummary` y `clock` (ms); output `showHelp = output<string>()` (el `entryId`); `showAll = signal(false)`;
+  - `h2`: «Ahora», «Dónde lo dejó» o «Cómo lo resolvió» según `mode`;
+  - rejilla `grid gap-4 @2xl:grid-cols-2`:
+    - **Pruebas** (`h3`): sin `lastRun`, «Todavía no ha ejecutado las pruebas» (`now`) o «No llegó a ejecutar las pruebas». Con ella: «3 de 6 superadas en la última ejecución» y su barrita (`h-1.5 rounded-full bg-surface-container-high`, la parte en `bg-success`, `aria-hidden`); con todas superadas, «Supera todas las pruebas» o, en `solved`, «Superó las 6 pruebas». Debajo, la lista (`ul`): en `solved` y con alguna, antes «Fallaron antes de superarlas:»; cada prueba, la llamada (`font-mono`, sobre `bg-error-container text-on-error-container` en `now` y `left`, y `bg-surface-container-high` en `solved`), «espera `valor`», «(prueba oculta)» si lo es y «falla desde hace 5 ejecuciones» o, en `solved`, «falló en 3 ejecuciones». Con más de `NOW_TESTS_SHOWN`, «Ver las N» y «Ver menos» (`aria-expanded`);
+    - **La última ayuda del tutor** (`h3`): sin `help`, «No ha pedido ayuda al tutor» (`now`) o «No pidió ayuda al tutor». Con ella: su icono (`lightbulb`, `chat` o `campaign`) y «Pista de nivel 2», «Respuesta a una pregunta» o «Intervino por su cuenta»; « · » y hace cuánto (`activityAge(help.at, clock)`: «Ahora mismo», «Hace 5 min» o la fecha con `d MMM, HH:mm`); con `question`, «Preguntó: …» en una línea (`truncate`); el texto en `line-clamp-2` (texto plano, sin `TutorMessage`) o «No se guardó la respuesta.»; y el botón «Ver entera» (solo con texto), que emite `showHelp`;
+  - la línea de resumen (`p`, `text-body-large`): las partes que no valen cero unidas con « · »: «27 min de trabajo» (`formatDuration(workMs)`, desde 60 000 ms), «4 ejecuciones» y «3 pistas (nivel 3)»; sin ninguna, no hay línea;
+  - los chips (`ul`, `flex flex-wrap gap-2`; cada uno `inline-flex items-center gap-1 rounded-full bg-surface-container-high px-2.5 py-0.5 text-label-medium text-on-surface-variant` con su icono): «2 preguntas al tutor» (`chat`), «Pegó 320 caracteres» (`content_paste`) y «8 min fuera de la ventana» (`visibility_off`, con `formatDuration(awayMs)`); sin ninguno, no hay lista.
+- `teacher/attempt-detail/attempt-timeline-list.ts`:
+  - el `ol` lleva `reversed`; cada `li`, `#row`, `[attr.data-entry]="entry.id"`, `tabindex="-1"` y `rounded-lg focus:outline-2 focus:-outline-offset-2 focus:outline-primary`;
+  - el silencio se pinta **debajo** de su entrada (pasó antes que ella, y lo anterior está debajo);
+  - la hora de un grupo: «10:02 – 10:14», con dos `<time>`; `newDay` compara con la entrada de debajo (la anterior en el tiempo) y la última de la lista siempre dice su día;
+  - la entrada `run` con `count > 1`: «Ejecutó 4 veces · 3 de 6, fallan las mismas» o «Ejecutó 3 veces · superó las 6»; con `count === 1`, como hoy, y con todas superadas, «Superó todas las pruebas»;
+  - `reveal(entryId: string): void`: busca la fila en `viewChildren<ElementRef<HTMLElement>>('row')` por `dataset['entry']`; si está, `scrollIntoView({ block: 'nearest' })`, `focus({ preventScroll: true })` y, sin `prefers-reduced-motion` y con `element.animate`, el destello de `FlashOnChange` (mismos colores y `FLASH_MS`, importado de `live/flash-on-change`).
+- `teacher/attempt-detail/attempt-detail-view.ts` y `.html`:
+  - `AttemptView.attempts` pasa a `readonly AttemptRef[]`;
+  - el host es `flex flex-col gap-5` (fuera lo de `xl`);
+  - `context`: la posición sale de `exercisePosition()` (4.1d);
+  - `work = computed(() => { const row = store.rows().find((r) => r.student.id === view().student.id); return row?.attempt?.id === view().attempt.id ? row.work : 'absent'; })`;
+  - `timeline`, como hoy; `now = computed(() => attemptNow(attempt, events, timeline(), exercise, work()))`; `summary = computed(() => attemptSummary(attempt, events, interactions, now().mode, store.now()))`; `runs = computed(() => attemptRuns(events))`; fuera `figures`;
+  - `filters = computed(...)`: «Todo» y las categorías con alguna entrada, con su recuento; `showFilters`, si hay alguna categoría; `filter` vuelve a `all` si el elegido deja de estar (`linkedSignal` sobre `filters`);
+  - `goToEntry(id: string)`: `const entryId = entryIdOf(timeline(), id)`; sin ella, nada; si no está entre `shownEntries()`, `filter.set('all')`; y `afterNextRender(() => this.list()?.reveal(entryId), { injector })`, con `list = viewChild(AttemptTimelineList)`;
+  - plantilla, en este orden: la cabecera de hoy (el chip de estado con `now().lastRun`; «En directo» con `work() === 'working'`; los enlaces de `view().attempts`); la franja de la cola (`row.reason`); `<app-attempt-now-card [now] [summary] [clock]="store.now()" (showHelp)="goToEntry($event)" />`; `<app-attempt-evolution>` solo con `runs().items.length > 0`, con `(chosen)="goToEntry($event)"`; y la rejilla `grid gap-4 @4xl:grid-cols-2` con la línea temporal (`max-h-144 @4xl:h-144`, sus filtros solo con `showFilters()`, sin la rama vacía) y el código (`order-first min-h-80 @4xl:order-none @4xl:h-144`), los dos como hoy por dentro.
+- `teacher/attempt-detail/attempt-detail-page.ts` y `.html`: `attempts` es `mergeById(loaded.siblings, losDelPanelEnEsaAsignación)` por `number` (`mergeById<AttemptRef>`); el contenedor pierde el alto fijo de `xl`; el esqueleto toma la forma nueva: la cabecera (`h-6 w-80`), «Ahora» (`h-48`), la evolución (`h-40`) y la rejilla de dos (`h-96`).
+- `dev/showcase/showcase-page.ts` y `.html`: sección «Detalle del intento» con un `app-attempt-evolution` (cuatro ejecuciones, 3/6, 3/6, 5/6 y 6/6, dos pistas y un pegado; un botón «Añadir una ejecución» para ver crecer la columna) y dos `app-attempt-now-card` (uno en `now` con dos pruebas que fallan y una pista; otro en `solved`).
+- `e2e/screenshots/screens.ts`: la entrada de `07-detalle` no cambia (el intento 11 del seed: entregado, con dos ejecuciones iguales, tres pistas y una intervención).
+- Textos nuevos o que cambian (`messages.en.json` y `messages.ca.json`; después, `npm run i18n`; las filas con «/» son plurales ICU, `=1` y `other`):
+
+| ID                                | es                                                                        | en                                                         | ca                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `detail.now.heading`              | Ahora                                                                     | Now                                                        | Ara                                                                       |
+| `detail.left.heading`             | Dónde lo dejó                                                             | Where they left it                                         | On ho va deixar                                                           |
+| `detail.solved.heading`           | Cómo lo resolvió                                                          | How they solved it                                         | Com ho va resoldre                                                        |
+| `detail.now.tests`                | Pruebas                                                                   | Tests                                                      | Proves                                                                    |
+| `detail.now.passed`               | {n} de {total} superadas en la última ejecución                           | {n} of {total} passed in the latest run                    | {n} de {total} superades en l'última execució                             |
+| `detail.now.allPassed`            | Supera todas las pruebas                                                  | Passes every test                                          | Supera totes les proves                                                   |
+| `detail.solved.allPassed`         | Superó las {n} pruebas                                                    | Passed all {n} tests                                       | Va superar les {n} proves                                                 |
+| `detail.now.noRuns`               | Todavía no ha ejecutado las pruebas                                       | Has not run the tests yet                                  | Encara no ha executat les proves                                          |
+| `detail.left.noRuns`              | No llegó a ejecutar las pruebas                                           | Never ran the tests                                        | No va arribar a executar les proves                                       |
+| `detail.now.expects`              | espera                                                                    | expects                                                    | espera                                                                    |
+| `detail.now.failingSince`         | falla desde la última ejecución / falla desde hace {n} ejecuciones        | failing since the latest run / failing for {n} runs        | falla des de l'última execució / falla des de fa {n} execucions           |
+| `detail.solved.failedBefore`      | Fallaron antes de superarlas:                                             | Failed before passing:                                     | Van fallar abans de superar-les:                                          |
+| `detail.solved.failedRuns`        | falló en 1 ejecución / falló en {n} ejecuciones                           | failed in 1 run / failed in {n} runs                       | va fallar en 1 execució / va fallar en {n} execucions                     |
+| `detail.now.showAll`              | Ver las {n}                                                               | Show all {n}                                               | Mostra-les totes ({n})                                                    |
+| `detail.help.heading`             | La última ayuda del tutor                                                 | The tutor's latest help                                    | L'última ajuda del tutor                                                  |
+| `detail.help.hint`                | Pista de nivel {n}                                                        | Level {n} hint                                             | Pista de nivell {n}                                                       |
+| `detail.help.question`            | Respuesta a una pregunta                                                  | Answer to a question                                       | Resposta a una pregunta                                                   |
+| `detail.help.proactive`           | Intervino por su cuenta                                                   | Stepped in on its own                                      | Va intervenir pel seu compte                                              |
+| `detail.help.asked`               | Preguntó:                                                                 | Asked:                                                     | Va preguntar:                                                             |
+| `detail.help.unrecorded`          | No se guardó la respuesta.                                                | The answer was not recorded.                               | No es va desar la resposta.                                               |
+| `detail.help.more`                | Ver entera                                                                | See it whole                                               | Mostra-la sencera                                                         |
+| `detail.help.none`                | No ha pedido ayuda al tutor                                               | Has not asked the tutor for help                           | No ha demanat ajuda al tutor                                              |
+| `detail.help.nonePast`            | No pidió ayuda al tutor                                                   | Did not ask the tutor for help                             | No va demanar ajuda al tutor                                              |
+| `detail.summary.work`             | {duración} de trabajo                                                     | {duración} of work                                         | {duración} de feina                                                       |
+| `detail.summary.runs`             | 1 ejecución / {n} ejecuciones                                             | 1 run / {n} runs                                           | 1 execució / {n} execucions                                               |
+| `detail.summary.hints`            | 1 pista (nivel {nivel}) / {n} pistas (nivel {nivel})                      | 1 hint (level {nivel}) / {n} hints (level {nivel})         | 1 pista (nivell {nivel}) / {n} pistes (nivell {nivel})                    |
+| `detail.chip.questions`           | 1 pregunta al tutor / {n} preguntas al tutor                              | 1 question to the tutor / {n} questions to the tutor       | 1 pregunta al tutor / {n} preguntes al tutor                              |
+| `detail.chip.pasted`              | Pegó {n} caracteres                                                       | Pasted {n} characters                                      | Va enganxar {n} caràcters                                                 |
+| `detail.chip.away`                | {duración} fuera de la ventana                                            | {duración} out of the window                               | {duración} fora de la finestra                                            |
+| `detail.evolution.heading`        | Evolución                                                                 | Progress                                                   | Evolució                                                                  |
+| `detail.evolution.list`           | Ejecuciones, pistas y pegados, en orden                                   | Runs, hints and pastes, in order                           | Execucions, pistes i enganxats, en ordre                                  |
+| `detail.evolution.text`           | Ejecuciones: {lista}                                                      | Runs: {lista}                                              | Execucions: {lista}                                                       |
+| `detail.evolution.count`          | {n} de {total}                                                            | {n} of {total}                                             | {n} de {total}                                                            |
+| `detail.evolution.hints`          | 1 pista / {n} pistas                                                      | 1 hint / {n} hints                                         | 1 pista / {n} pistes                                                      |
+| `detail.evolution.pastes`         | 1 pegado / {n} pegados                                                    | 1 paste / {n} pastes                                       | 1 enganxat / {n} enganxats                                                |
+| `detail.evolution.run`            | Ejecución de las {hora}: {n} de {total} superadas. Ir a la línea temporal | Run at {hora}: {n} of {total} passed. Go to the timeline   | Execució de les {hora}: {n} de {total} superades. Ves a la línia temporal |
+| `detail.evolution.hint`           | Pista de nivel {n} a las {hora}. Ir a la línea temporal                   | Level {n} hint at {hora}. Go to the timeline               | Pista de nivell {n} a les {hora}. Ves a la línia temporal                 |
+| `detail.evolution.paste`          | Pegó {n} caracteres a las {hora}. Ir a la línea temporal                  | Pasted {n} characters at {hora}. Go to the timeline        | Va enganxar {n} caràcters a les {hora}. Ves a la línia temporal           |
+| `detail.evolution.legend.passed`  | Pruebas superadas, de {total}                                             | Tests passed, out of {total}                               | Proves superades, de {total}                                              |
+| `detail.evolution.legend.hint`    | Pista, con su nivel                                                       | Hint, with its level                                       | Pista, amb el seu nivell                                                  |
+| `detail.evolution.legend.paste`   | Pegado                                                                    | Paste                                                      | Enganxat                                                                  |
+| `detail.entry.runs`               | Ejecutó {n} veces · {superadas} de {total}, fallan las mismas             | Ran {n} times · {superadas} of {total}, the same ones fail | Va executar {n} vegades · {superadas} de {total}, fallen les mateixes     |
+| `detail.entry.runsPassed`         | Ejecutó {n} veces · superó las {total}                                    | Ran {n} times · passed all {total}                         | Va executar {n} vegades · va superar les {total}                          |
+| `detail.entry.runPassed` (cambia) | Superó todas las pruebas                                                  | Passed every test                                          | Va superar totes les proves                                               |
+
+- La hora de los nombres de la evolución es `HH:mm` (`formatDate` con el idioma de la interfaz). «Ver menos» usa `live.queue.showFewer`; «hace cuánto», `live.age.now` y `live.age.minutes`; «(prueba oculta)», `detail.hiddenTest`.
+- Se borran de los tres ficheros: `detail.figures`, `detail.figures.time`, `detail.figures.minutes`, `detail.figures.runs`, `detail.figures.lastRun`, `detail.figures.hints`, `detail.figures.level`, `detail.figures.questions`, `detail.figures.pastes`, `detail.figures.chars`, `detail.figures.away` y `detail.filter.empty`.
+- Comprobación en el navegador (datos simulados, como Marta, con el menú abierto):
+  - el intento 11 del seed (`…000000000011`, Hugo, «Suma de los elementos de un vector»): «Cómo lo resolvió», «Superó las 6 pruebas», «Fallaron antes de superarlas» con tres pruebas, la última ayuda «Pista de nivel 3», el resumen «27 min de trabajo · 4 ejecuciones · 3 pistas (nivel 3)» sin chips, la evolución con cuatro columnas (3/6, 3/6, 5/6 y 6/6) y tres pistas, y arriba de la línea temporal «Entregó el ejercicio», con «Ejecutó 2 veces · 3 de 6, fallan las mismas» casi al final;
+  - el 12 (Hugo, «Máximo de un vector»): «Dónde lo dejó», 4 de 6, `maximum([-5, -2, -8])` y `maximum([])` con «falla desde hace 4 ejecuciones», y un grupo de tres ejecuciones más una suelta (la intervención y la pista cortan el grupo);
+  - el 14 (Hugo, sin actividad): «No llegó a ejecutar las pruebas», sin evolución, sin resumen ni filtros y solo «Abrió el ejercicio»;
+  - el 24 (Daniel): el salto de 1/5 a todas tras un pegado, con los chips del pegado y del tiempo fuera;
+  - con el simulador y un alumno de la cola abierto: «Ahora», «En directo», las columnas y las entradas llegan solas y la gráfica se queda al final; «Atascar a un alumno» da una sola entrada «Ejecutó 4 veces»; «Atendido» quita la franja;
+  - pulsar una columna, una marca y «Ver entera», con un filtro puesto y con el teclado: la entrada queda a la vista, con el foco y destellando; con `prefers-reduced-motion` (emulado), sin destello ni columnas que crecen;
+  - un enlace directo sin grupo corrige la URL; «Volver a la sesión» conserva el bloque; con el panel en un bloque y el intento en otro, salen todos los intentos del alumno en el ejercicio (Lucía, ejercicio 1, con su práctica);
+  - a 375, 768, 1024, 1280, 1440 y 1920 px sin scroll horizontal de la página (la evolución y los filtros se desplazan en su zona); claro y oscuro; axe sin infracciones en los tres títulos; `/dev/ui` con las piezas nuevas. Con Supabase local (`start:local`), que el detalle carga con sus `siblings`.
+- Documentación al cerrar: ficha 07 (criterios marcados; el tercer título «Dónde lo dejó»; «(prueba oculta)» en lugar de «comprobación oculta»; la evolución por orden y en HTML; el recuento de los filtros; `siblings` en «Datos»; fuera la nota de «se construye en el 4.2b»), 2.2 (fuera «hasta el 4.1e y el 4.2b la aplicación tiene la versión…»), el «Hecho así» de este paso, D-069 («Hecho así»), `PENDIENTES.md` (fuera la fila de los demás intentos que dejó el 4.1d; la fila del 2.5f y la del 4.2 siguen, ya sin esperar a este paso) y `E2E-PENDIENTES.md` (los tres títulos; una columna y «Ver entera» llevan a su entrada con el foco; el agrupado con «Atascar a un alumno»; los filtros que no salen; axe en claro y oscuro a 375, 1024 y 1920 px; sustituye lo que la fila del 4.2 dice de las cifras). Definición de terminado (5.4), con el punto 3 también a 1024 y 1920 px, y capturas: `npm run screenshots -- 4.2b 07-detalle`.
+
+Tests, en este orden:
+
+1. `attempt-timeline.spec.ts`: lo más reciente primero, con «Abrió el ejercicio» al final; dos, tres y cuatro ejecuciones iguales seguidas, una entrada con su `count`, `from`, `at` y `eventIds`; no se agrupan con pruebas distintas, con una pista, un pegado o una pregunta en medio, ni con un silencio de 5 minutos entre ellas (que se sigue marcando); se agrupan las que lo superan todo; `eventIds` de una respuesta emparejada con su pista, de una pregunta (ninguno) y de una pista sin respuesta; `entryIdOf()` con el id de una ejecución de dentro de un grupo, de una pista emparejada, de una interacción y con uno desconocido; `gapMinutes` del grupo, el de su primera ejecución. Fuera los de `attemptFigures()`; los demás, adaptados al orden nuevo.
+2. `attempt-now.spec.ts`: sin ejecuciones (en `now` y en `left`); con fallos y su racha, la más larga primero y el empate por el orden del ejercicio; una prueba oculta; todo superado; entregado, con las pruebas que fallaron en alguna ejecución y sus cuentas, y sin ninguna; los tres modos según el estado y `work`; la ayuda con una pista, con una pregunta (con lo que preguntó), con una intervención, con una pista sin respuesta guardada (`text` nulo), sin ayuda y con una intervención callada que no cuenta; una prueba borrada del ejercicio no sale.
+3. `attempt-summary.spec.ts`: un intento de una sentada (igual que el final menos el principio); uno retomado al día siguiente (sin las horas de en medio); el límite de la ventana (59 min cuenta, 60 no); hasta `now` solo en `now`, hasta la entrega en `solved`; ejecuciones, pistas y su nivel más alto, preguntas, caracteres pegados y tiempo fuera; todo a cero en un intento recién abierto.
+4. `attempt-runs.spec.ts`: ejecuciones, pistas y pegados en orden aunque lleguen desordenados; las cuentas; sin ejecuciones, vacío aunque haya pistas; las preguntas y las salidas no entran.
+5. `attempt-evolution.spec.ts`: una columna por ejecución con su altura y su «3/6»; la que lo supera todo, con su tono y su icono; cada marca con su icono y su nivel; cada botón con su nombre y `chosen` con el id de su evento; la alternativa en texto con y sin pistas ni pegados, y en inglés con su conjunción; la leyenda solo con lo que existe; la columna que llega en vivo lleva `animate-column-in motion-reduce:animate-none` y las cargadas no; al llegar una casilla, la zona va al final (`scrollWidth` simulado).
+6. `attempt-now-card.spec.ts`: los tres títulos; las pruebas que fallan con lo que esperan y desde cuándo; 4 y «Ver las N», que despliega y pliega; los textos sin ejecuciones y con todo superado en cada modo; «Fallaron antes de superarlas»; la ayuda de cada tipo, hace cuánto, «Ver entera» emite su entrada y no sale sin texto; los dos textos sin ayuda; el resumen sin las partes a cero y sin línea con todo a cero; cada chip solo si existe.
+7. `attempt-timeline-list.spec.ts`: la lista es `reversed`; el grupo con sus dos horas y sus dos frases; «Superó todas las pruebas»; el silencio debajo de su entrada; el día, respecto a la entrada de debajo; `reveal()` da el foco a su fila y la trae a la vista (`scrollIntoView` espiado), destella con `element.animate` simulado y no con `prefers-reduced-motion` ni sin `animate`, y no hace nada con un id desconocido.
+8. `mock-live-service.spec.ts` y `supabase-live-service.spec.ts`: `siblings` con un intento y con una práctica, por número, y sin los de otros alumnos (en Supabase, el `select` con el embebido).
+9. `attempt-detail-page.spec.ts` (y lo que cubra de la vista): «Ahora» en lugar de las cifras y ninguna cifra a cero; los tres títulos según la fila del panel; «En directo» solo con el alumno trabajando; la evolución no sale sin ejecuciones; una columna lleva a su entrada, cambia el filtro a «Todo» si hace falta y le da el foco; «Ver entera», igual; los filtros sin entradas no salen y sin ninguno no hay grupo; el filtro vuelve a «Todo» si el suyo desaparece al cambiar de intento; los enlaces a los demás intentos salen de `siblings` aunque el panel no los tenga, y uno nuevo llega en vivo; lo que llega en vivo entra arriba deslizando; el esqueleto nuevo; lo demás (la URL, la franja, el código, no encontrado y error), como tras el 4.1d.
+10. `showcase-page.spec.ts`: la sección «Detalle del intento» con sus piezas y el botón que añade una ejecución.
 
 **4.3 · Banco de ejercicios y formulario (≈5 h)** · ficha `08-ejercicios` · Figuras 11 y 20 del TFM
 
