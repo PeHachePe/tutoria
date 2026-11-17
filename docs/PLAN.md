@@ -1556,7 +1556,7 @@ La app que ya funciona en local, publicada en Supabase en la nube y en Vercel, c
 
 Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
-#### Fase 4 · Panel docente (capa 2, ≈41 h)
+#### Fase 4 · Panel docente (capa 2, ≈42 h)
 
 **4.1 · Sesión en vivo, con datos simulados y reales (≈6 h)** · ficha `06-en-vivo` · Figuras 9 y 18 del TFM
 
@@ -2185,7 +2185,7 @@ Tests, en este orden:
 
 - **Hecho así (D-055):** `LiveService.attemptDetail()` (simulado y Supabase, en una petición) con el alumno, el ejercicio con sus pruebas, el grupo y el bloque; el directo llega por el `LiveStore` de la ruta padre y la URL se corrige al grupo y bloque del intento; `tutor_interaction` en Realtime (migración `attempt_detail_realtime`); línea temporal pura (`attemptTimeline()`), con cada respuesta del tutor emparejada con su evento, salidas con su vuelta, silencios marcados y filtros; cifras del intento; franja de la cola con «Atendido»; enlaces a los demás intentos; código en solo lectura con «Ver el actual» (D-029); `AttemptDetailPage` (carga y estados) y `AttemptDetailView` (el intento); `TutorMessage` en `shared/`; el simulador escribe respuestas del tutor y código. El autor quiere revisarlo más adelante (pendientes), y propuso una ficha del alumno.
 
-**4.2b · El detalle del intento, replanteado (≈2,5 h)** · ficha `07-detalle`
+**4.2b · El detalle del intento, replanteado (≈3,5 h)** · ficha `07-detalle`
 
 Diseñado en el 4.1c (D-069). Se hace después del 4.1e.
 

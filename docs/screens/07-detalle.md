@@ -1,6 +1,6 @@
 # 07 · Detalle del intento
 
-`/docente/en-vivo/:attemptId?grupo=&bloque=` · Docente y administrador · Capa 2 · 3 h (4.2) + 2,5 h (4.2b, replanteo del 4.1c)
+`/docente/en-vivo/:attemptId?grupo=&bloque=` · Docente y administrador · Capa 2 · 3 h (4.2) + 3,5 h (4.2b, replanteo del 4.1c)
 
 > Replanteada en el paso 4.1c (D-069). Lo que describe esta ficha se construye en el 4.2b; hasta entonces, la aplicación tiene la versión del 4.2.
 
