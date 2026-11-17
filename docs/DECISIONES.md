@@ -1631,6 +1631,8 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 **Aprobación:** el plan del paso, aprobado por el autor; la disposición, el filtro del feed y la región no viva, por delegación del autor.
 
+**Sustituida en la parte del feed por D-068 (4.1e):** «Lo último» y `liveFeed()` ya no existen. La gráfica sigue, como «Ritmo de la clase», con una frase que la lee y solo con los minutos completos (D-070).
+
 ## D-057 · El banco de ejercicios: por asignaturas, de su autor y con el código en inglés (15/11/2026)
 
 **Contexto:** el paso 4.3 construye el banco de ejercicios y su formulario. El banco es común a todo el centro y a todas sus asignaturas (D-029), y hasta ahora cualquier docente podía editar o borrar cualquier ejercicio. El tutor escribía el esqueleto de la función con los nombres de parámetros que proponía el modelo, que podían salir en español (`count(palabra)`). El paso era demasiado grande para una sesión: los pendientes que apuntaban a él lo doblaban.
@@ -2014,11 +2016,13 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 - `docs/PLAN.md` §2.2 y los pasos 4.1c, 4.1d y 4.1e; la ficha `06-en-vivo`, reescrita.
 - `LiveService.snapshot()` pasa a leer el grupo entero en la ventana de sesión, con las interacciones del tutor; el bloque de la URL es opcional.
-- `liveFeed()` y su lista se borran en el 4.1e: D-056 sigue valiendo para la gráfica de actividad, no para el feed.
+- `liveFeed()` y su lista se borran en el 4.1e: D-056 sigue valiendo para la gráfica de actividad, no para el feed (hecho).
 - Las figuras 9 y 18 de la memoria cambian: capturas nuevas en el 4.1e.
 - La fila de «Llamar al profesor» sigue en `PENDIENTES.md`: cuando se haga, será el primer motivo de la cola.
 
 **Aprobación:** propuesta. El autor vio el boceto del replanteo y dejó el resto a criterio del agente, con dos condiciones: que sea útil de verdad para el docente y animado, y que no salgan datos por salir ni la salida de la ventana como algo que atender.
+
+**Hecho así (4.1e):** la pantalla de la ficha, con los cambios de D-070.
 
 **Hecho así (4.1d):** «Toda la clase» es `?bloque=todos`. Sin bloque en la URL, el `LiveStore` elige al abrir y guarda lo elegido en el valor de su `resource()`, no en la URL: el store no navega y no hay dos fuentes de verdad; recargar sin bloque vuelve a elegir, y lo que el docente elige en el selector sí va a la URL. Elegir cuesta dos lecturas como mucho: la del grupo (`snapshot(grupo, null)`) y, si sale un bloque, la del bloque. Un intento «está en la sesión» si su `updatedAt` cae en la ventana (`LIVE_WINDOW_MINUTES`, ahora en el contrato de `LiveService`), el mismo criterio en los datos simulados y en Supabase. Con bloque, Supabase lee a la vez los intentos de la ventana y los del bloque, y los une por id, en lugar de un `or()` con una fecha dentro. El motivo de la cola se apoya en `failureStreak()` (la mitad de `stuckReason()` que mira el código) y el atasco en el chat sigue la misma regla que el tutor (`stuckAgain()`).
 
@@ -2047,3 +2051,35 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Capturas nuevas de `07-detalle` en el 4.2b.
 
 **Aprobación:** propuesta, a revisión del autor, que dejó el diseño a criterio del agente.
+
+## D-070 · El panel en vivo, la pantalla: lo que cambió al construirla (17/11/2026)
+
+**Contexto:** el paso 4.1e construía la pantalla diseñada en el 4.1c (D-068) con su plan de implementación. Una revisión del plan contra el código, pedida por el autor, encontró seis fallos antes de escribir nada. Ya con la pantalla hecha, el autor la probó y la rehízo en varias iteraciones: las tarjetas de cifras que filtraban no se entendían, la página daba saltos al filtrar, las tarjetas de al lado medían distinto y crecían sin tope, sobraba espacio, «Dónde está la clase» no escalaba a muchos ejercicios y los colores eran apagados.
+
+**Decisión:**
+
+- **Filtros: pestañas con su número sobre la tabla,** sin tarjetas de cifras ni números que cuentan. «Todos 24 · Necesitan ayuda 5 · Trabajando ahora 14 · Parados y sin entrar 10 · Han terminado 2», una pestaña por filtro y cada una un enlace a su `?filtro=`: un solo control, la activa se ve, «Todos» quita el filtro y nada se mueve al pulsar. Comparten fila con un buscador en píldora propio (sin la X nativa); el título «Alumnado» queda para el lector de pantalla. «Avance del bloque», que no filtra, va en la cabecera de «Dónde está la clase». Se descartaron las tarjetas que filtran (había que adivinar que eran botones y cómo se quitaba el filtro, y la de avance no filtraba) y unas cifras solo para leer con chips en la tabla (los números salían dos veces).
+- **La tabla no mueve la página:** guarda el alto de una página, porque filtrar acortaba la página y el navegador subía el scroll. Su orden por defecto es la cola, la sesión y quien no ha entrado, por nombre dentro de cada parte: con páginas, ordenar por la última actividad pasaba a los alumnos de una página a otra cada pocos segundos. El gris de «no ha entrado», solo en clase. Sin chip de «parado», que repetía la última actividad.
+- **«Dónde está la clase» escala:** una fila por ejercicio, con la barra a todo el ancho que queda (igual en todas las filas) y su resumen debajo, cuyas partes son los botones que dicen los nombres y filtran la tabla (`ChartFilter`, también para «Ver quiénes»). Los tramos de la barra no son botones: serían dianas de menos de 24 px (WCAG 2.5.8). Con un bloque, una frase dice dónde está la mayoría y nombra a quien va solo lejos del grueso (`classStrip()`: uno o dos alumnos a más de dos ejercicios, en clases de 6 o más), como un hecho (D-054). Con más de 5 ejercicios, encima, una franja con una columna por ejercicio, que mide lo mismo con 6 que con 200. Fuera de clase, «La prueba que más se falló» solo desde 2 alumnos.
+- **Lado a lado, la gráfica y la cola miden lo mismo** (lo que pida la más alta, con un tope de 28 rem) y se desplazan por dentro: ni «Ver los otros N» ni «Ver los N», que con un scroll no tienen sentido. La cola, más compacta: «Atendido» en la línea del nombre y la llamada que falla en una línea, entera al pasar el ratón.
+- **El ritmo, una tarjeta baja bajo la cabecera,** todo de datos: a la izquierda la frase, que dice que es de todo el grupo; a la derecha, dos minigráficas del mismo tamaño, ejecuciones y pistas, cada una con su escala (en una sola, las pistas salían planas; dos escalas en un eje engañarían), su número de los 10 últimos minutos y el de los 10 anteriores, y el minuto al pasar el ratón. Compara solo minutos completos: el minuto en curso hacía caer siempre el final de la línea y la frase se inclinaba a «se está atascando».
+- **Paleta propia de gráficas,** validada para daltonismo y para el modo oscuro, en tokens del tema (`chart-progress`, `-fail`, `-pass`, `-done`): azul, naranja, turquesa y verde. Los colores de estado de la aplicación no cambian.
+- **La pestaña del navegador sigue al grupo** con un `effect()`, la frontera con el título del documento. `AppTitleStrategy` no lo pisa cuando la navegación solo cambia la query o el fragmento (el mismo criterio que `HeadingFocus`): cambiar de bloque o de filtro dejaba «Sesión en vivo».
+- **Fuera de clase con toda la clase,** la foto no trae intentos: sin tabla (serían 24 filas vacías), y «Dónde está la clase» ofrece un enlace a cada bloque, que lleva el foco al título.
+
+**Alternativas:**
+
+- **Las cifras como tarjetas-botón con un chip para quitar el filtro,** o junto a la tabla: el autor las rechazó tras probarlas.
+- **Un tabulador por barra y flechas entre tramos:** resolvía las paradas de tabulador, no el tamaño de las dianas.
+- **Congelar el orden de la tabla mientras se mira otra página, o un aviso «Reordenar»:** el orden dependería de lo que hace el docente.
+- **El título en un `ResolveFn` de la ruta:** pediría los grupos en cada navegación.
+- **La franja siempre, también con 3 ejercicios:** columnas enormes que no dicen nada que no digan las filas.
+
+**Consecuencias:**
+
+- La ficha 06 describe la pantalla final; la memoria (figuras 9 y 18) la tomará de ella.
+- `AppTitleStrategy` cambia para toda la aplicación: una página que pone su propio título lo conserva mientras solo cambie su query.
+- `pageOf()` y `prefersReducedMotion()` pasan a `shared/`. `theme.scss` gana los tokens de gráficas y el estilo de las pestañas apretadas (`compact-tabs`), sin su línea propia.
+- El plan del 4.2b daba por hechos algunos ID de la cola que ya no existen: corregido en su punto «Del 4.1e».
+
+**Aprobación:** la revisión del plan, aprobada por el autor («Sí, adelante»); la pantalla final, construida con él iteración a iteración y aprobada al cerrar («Sí, ciérralo»).
