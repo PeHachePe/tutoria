@@ -1601,6 +1601,358 @@ Al probar el 4.1, el 4.1b y el 4.2, el autor no los vio útiles: no se sabía en
 
 Commit: `feat(live): the live panel follows the whole group (step 4.1d)`.
 
+**Plan de implementación del 4.1d** (17/11/2026, tras leer el código: quien lo implemente no tiene que decidir nada)
+
+Dudas resueltas:
+
+- **«Toda la clase» en la URL es `bloque=todos`** (`TEACHER_ALL_BLOCKS` en `core/app-paths.ts`). Sin `bloque`, o con un id que no es del grupo, el store elige al abrir; lo elegido **no** se escribe en la URL: viaja en el valor del `resource()` del store, así no hay navegación dentro del store ni una segunda fuente de verdad. Recargar sin `bloque` vuelve a elegir («se elige al abrir»); lo que el docente elige en el selector sí va a la URL y se conserva.
+- **Elegir al abrir cuesta dos lecturas como mucho:** `snapshot(grupo, null)` da quién trabaja y dónde; con eso, `defaultBlock()`; si sale un bloque, `snapshot(grupo, bloque)`. Con `bloque` en la URL, una sola.
+- **Qué intento «está en la sesión» para la foto:** el que tiene `updatedAt` dentro de la ventana (`LIVE_WINDOW_MINUTES`, que pasa a `data/live-service.ts` porque ahora es parte del contrato). Cada guardado del código y cada cambio de estado lo mueven; es el mismo criterio en la versión simulada y en Supabase, y una sola condición en la consulta.
+- **Los bloques no viajan en la foto:** ya están en `LiveGroup.blocks`. La foto lleva **todos los ejercicios del grupo**, cada uno con su `blockId`, ordenados por la posición del bloque y, dentro, por la suya. La posición de un ejercicio en su bloque se calcula (`exercisePosition()`), porque `exercise_assignment.position` puede tener huecos.
+- **Supabase lee los intentos en dos peticiones a la vez cuando hay bloque** (los de la ventana y los del bloque) y los une por id: más claro y más fácil de probar que un `or()` con una fecha dentro. Sin migración: la RLS ya deja leer `tutor_interaction` al docente (lo usa `attemptDetail()`).
+- **`attentionReason()` no recibe el reloj:** usa `failureStreak()` de `shared/is-stuck.ts`, la mitad de `stuckReason()` que mira el código; la otra mitad, la inactividad, es justo lo que sale de la cola. Corregir en la ficha 06 «sobre `stuckReason()`» por «sobre `failureStreak()`».
+- **Un motivo no depende de si el alumno trabaja ahora:** basta con que esté en la sesión (no «sin entrar»). Quien falla cuatro veces y sale de la ventana sigue en la cola: el docente puede acercarse igual.
+- **Atasco en el chat, la misma regla que el tutor** (`stuckAgain()` de `tutor-contract.ts`): cuentan los turnos que no son proactivos, y una pista o una pregunta que no es de atasco cortan la racha. Solo con el intento abierto (en curso o con fallos).
+- **«La prueba que falla» de una entrada** es, de las que fallan en la última ejecución, la que lleva más ejecuciones seguidas fallando (la primera en el orden del ejercicio si empatan); sin ejecuciones o con todo superado, ninguna.
+- **«Última actividad» ya no cuenta salir de la ventana ni una intervención proactiva:** es lo último que hizo el alumno (guardar código, ejecutar, entregar, pedir pista, pegar, volver a la ventana o preguntar al tutor). Con eso se decide «trabajando», «parado» y «sin entrar»; el límite de 5 minutos cuenta como trabajando.
+- **Salen ya los patrones «Sin empezar» y «Sin actividad»** (`not_started`, `inactive`) y el parámetro `classActive`: lo dice el estado del alumno. `submit_burst` («Ráfaga de entregas») no está en la lista de chips de la ficha, pero D-068 no la quita: se queda, y se añade a la ficha.
+- **«Fallan ahora» en clase son los intentos actuales** (el de la fila de cada alumno en la sesión), no los de la semana pasada; fuera de clase, el acumulado («la prueba que más se falló»). Así «Ver quiénes» del 4.1e enseña exactamente a quienes cuenta el aviso.
+- **«Han terminado» con toda la clase** cuenta las entregas de la sesión (eventos `submit` en la ventana); su filtro del 4.1e son los alumnos que entregaron algo en ella.
+- **`rhythmReading()`:** la actividad «ha bajado» cuando los últimos 10 minutos tienen menos de la mitad que los 10 anteriores (`RHYTHM_DROP = 0.5`); sin ninguna ejecución ni pista en los 30 minutos, no hay frase (`null`).
+- **Grupo sin bloques:** ahora tiene selección (con «Toda la clase»), para que la cabecera pueda decir el grupo; la página enseña el estado vacío de siempre.
+- **El detalle del intento** deja de poner el bloque en la URL. Si tiene que corregir el grupo, quita el `bloque` que hubiera (era de otro grupo). Los «demás intentos» de un intento que no es del bloque elegido son solo los de la ventana: a `PENDIENTES.md`, para el 4.2b.
+- **Simulador:** un botón más, «Atascar en el chat», para comprobar el criterio de la ficha sin esperar al azar; además, uno de cada treinta turnos al azar es un «No sé cómo seguir». Solo simula bloques que el alumnado ve (ni ocultos ni sin abrir) y con ejercicios.
+- **Sin decisión nueva:** al cerrar, D-068 gana un párrafo «Hecho así» con lo de la URL, la ventana y las dos peticiones.
+
+Ficheros:
+
+- `core/app-paths.ts`: `export const TEACHER_ALL_BLOCKS = 'todos';` junto a `TEACHER_PARAMS`, con su comentario (el valor de `bloque` que pide todo el grupo).
+- `data/live-service.ts`:
+
+```ts
+/** Minutes of the session: only what moved in them is live (D-054). */
+export const LIVE_WINDOW_MINUTES = 60;
+
+export interface LiveExercise {
+  readonly assignmentId: string;
+  /** The block it is assigned in. */
+  readonly blockId: string;
+  readonly exercise: Exercise;
+  readonly tests: readonly Test[];
+}
+
+/** What a group looks like now: the starting point of the live updates. */
+export interface LiveSnapshot {
+  /** Sorted by name. */
+  readonly students: readonly LiveStudent[];
+  /** Every exercise of the group: by the position of its block and, inside it, by its own. */
+  readonly exercises: readonly LiveExercise[];
+  /**
+   * The attempts of the group that changed in the session window and, with a block, every attempt
+   * at its assignments (its accumulated state). Practice included, none twice.
+   */
+  readonly attempts: readonly Attempt[];
+  /** Every event and tutor interaction of those attempts, in no order. */
+  readonly events: readonly ProcessEvent[];
+  readonly interactions: readonly TutorInteraction[];
+}
+
+abstract snapshot(groupId: string, blockId: string | null): Promise<LiveSnapshot>;
+```
+
+- `data/mock/mock-live-service.ts`: `snapshot()` con `not_found` si el docente no lleva el grupo o si el bloque pedido no es del grupo; asignaciones de todo el grupo en orden; intentos con `Date.parse(updatedAt) >= Date.now() - LIVE_WINDOW_MINUTES * 60_000` o de una asignación del bloque pedido; sus eventos e interacciones. `attemptDetail()` rellena `exercise.blockId`. Una función privada del fichero monta cada `LiveExercise` para los dos métodos.
+- `data/supabase/supabase-live-service.ts`, `snapshot()`:
+  1. a la vez: `class_group` (`select('id, class_block(id, position)')`, `eq('id', groupId)`, `maybeSingle()`), `enrollment` (como ahora) y `exercise_assignment` (`select('id, block_id, position, exercise(*, test(*))')`, `eq('group_id', groupId)`);
+  2. `not_found` si no hay grupo o si `blockId` no está entre sus bloques;
+  3. ejercicios ordenados por la posición de su bloque y la suya;
+  4. sin ejercicios, ningún intento. Si no, con `ATTEMPT_COLUMNS = '*, process_event(*), tutor_interaction(*)'`: los de la ventana (`in('assignment_id', todos)` y `gte('updated_at', new Date(desde).toISOString())`) y, con bloque y si tiene asignaciones, los del bloque (`in('assignment_id', losDelBloque)`), a la vez y unidos por id;
+  5. `events` e `interactions` salen de lo incrustado (`toProcessEvent`, `toTutorInteraction`). `attemptDetail()` rellena `exercise.blockId` con `block_id`.
+- `shared/is-stuck.ts`: nueva `failingStreaks(events): ReadonlyMap<string, number>` (cada prueba que falla en la última ejecución, con las ejecuciones seguidas que lleva fallando); `failureStreak()` pasa a ser su máximo.
+- `teacher/live/live-state.ts`: `liveState()` reparte también las interacciones; los comentarios hablan del grupo; `applyAttempt()` acepta cualquier asignación del grupo (el código no cambia: `exercises` ya es todo el grupo). Nueva `exercisePosition(exercises, assignmentId): number | null` (desde 1, dentro de su bloque).
+- **Nuevo `teacher/live/live-attention.ts`** y su spec (`HINT_RUSH_COUNT` se muda aquí desde `live-row.ts`):
+
+```ts
+/** Messages in a row telling the tutor they do not know how to go on (D-068). */
+export const CHAT_STUCK_MESSAGES = 2;
+export const HINT_RUSH_COUNT = 3;
+
+/** Why a student needs the teacher, where the tutor does not reach, and since when (ms). */
+export type AttentionReason =
+  | { readonly kind: 'hints_exhausted'; readonly since: number }
+  | {
+      readonly kind: 'stuck_failures';
+      readonly failures: number;
+      readonly askedForHints: boolean;
+      readonly since: number;
+    }
+  | { readonly kind: 'chat_stuck'; readonly messages: number; readonly since: number }
+  | { readonly kind: 'hint_rush'; readonly hints: number; readonly since: number };
+
+export type AttentionKind = AttentionReason['kind'];
+
+/** The order of the queue, and of the reasons of one student. */
+export const ATTENTION_ORDER: readonly AttentionKind[] = [
+  'hints_exhausted',
+  'stuck_failures',
+  'chat_stuck',
+  'hint_rush',
+];
+
+/** `events` and `interactions` are those of the attempt. */
+export function attentionReason(
+  attempt: Pick<Attempt, 'status'>,
+  events: readonly ProcessEvent[],
+  interactions: readonly TutorInteraction[],
+  thresholds: Pick<StuckThresholds, 'maxRepeatedFailures'>,
+): AttentionReason | null;
+
+/** The test to look at: of those failing in the latest run, the one failing longest. */
+export function failingTest(events: readonly ProcessEvent[], tests: readonly Test[]): Test | null;
+```
+
+- Reglas de `attentionReason()`: si el intento no está en curso ni con fallos, `null`; si no, la primera que se cumpla, en este orden:
+  1. `hints_exhausted`, como hoy en `signalOf()`: la última pista pedida es de nivel `MAX_HINT_LEVEL`, hay una ejecución con fallos después y el estado es `tests_failed`; `since`, esa ejecución;
+  2. `stuck_failures`: `failureStreak(events) >= maxRepeatedFailures`; `since`, la ejecución que alcanzó el umbral (como hoy);
+  3. `chat_stuck`: interacciones por `createdAt`, sin las `proactive`; racha final de `trigger === 'question'` con `isStuckMessage(studentMessage)`; desde `CHAT_STUCK_MESSAGES`, `messages` es la racha y `since`, el `createdAt` del mensaje que la alcanzó (el segundo);
+  4. `hint_rush`, como hoy.
+- **Nuevo `teacher/live/live-work.ts`** y su spec:
+
+```ts
+/** Minutes without doing anything after which a student of the session is stopped. */
+export const ACTIVE_MINUTES = 5;
+export type WorkState = 'working' | 'stopped' | 'absent';
+
+/** `lastActivity` in ms or null; `away`, out of the browser window. */
+export function workState(lastActivity: number | null, away: boolean, now: number): WorkState;
+```
+
+- `absent` sin actividad o con la última antes de `now - LIVE_WINDOW_MINUTES`; `working` si no está fuera y `now - lastActivity <= ACTIVE_MINUTES`; si no, `stopped`.
+- `teacher/live/live-patterns.ts`: `LivePattern` pierde `not_started` e `inactive`; `PatternInput` queda en `{ events, submittedAttemptIds }`.
+- `teacher/live/live-row.ts`: fuera `LiveSignal`, `signalOf()`, `LIVE_WINDOW_MINUTES` y `HINT_RUSH_COUNT`. `liveRow(activity, exercises, now)` (sin `classActive`):
+
+```ts
+export interface LiveRow {
+  readonly student: LiveStudent;
+  /** The attempt that moved last, in any block of the group, or null without any. */
+  readonly attempt: Attempt | null;
+  readonly exercise: LiveExercise | null;
+  /** Position of that exercise in its block, from 1. */
+  readonly position: number | null;
+  readonly repeating: boolean;
+  readonly status: AttemptStatus;
+  /** Until the 4.1e, with `pastes` and `focusLosses`: the old table shows them. */
+  readonly minutes: number | null;
+  readonly hints: number;
+  readonly hintLevel: HintLevel | null;
+  readonly pastes: number;
+  readonly focusLosses: number;
+  readonly tests: TestCount | null;
+  /** Tests failing in the latest run of the attempt; none before a run or with all passed. */
+  readonly failedTestIds: readonly string[];
+  /** `failingTest()` of the attempt. */
+  readonly failingTest: Test | null;
+  /** The last thing the student did, in ms, or null. */
+  readonly lastActivity: number | null;
+  readonly work: WorkState;
+  /** Since when they are out of the window, in ms; null if they are there or not in the session. */
+  readonly away: number | null;
+  /** Only for students in the session. */
+  readonly reason: AttentionReason | null;
+  readonly repeated: number;
+  readonly breakthrough: Breakthrough | null;
+  readonly patterns: readonly LivePattern[];
+}
+```
+
+- En `liveRow()`: la actividad de un intento es `max(lastActivityAt(attempt, susEventos), createdAt de sus interacciones no proactivas)`; el intento de la fila es el de mayor actividad; `work = workState(lastActivity, awaySince(susEventos) !== null, now)`; `reason`, `away`, `breakthrough` y `patterns`, solo con `work !== 'absent'`; `minutes` cuenta hasta `now` con el alumno en la sesión. Salen `active` y `submitted`.
+- **Nuevo `teacher/live/live-figures.ts`** y su spec:
+
+```ts
+export interface LiveFigures {
+  /** Somebody did something in the session window: live, or «Fuera de clase». */
+  readonly inClass: boolean;
+  readonly students: number;
+  readonly working: number;
+  readonly stopped: number;
+  readonly absent: number;
+  /** The size of the queue. */
+  readonly needHelp: number;
+  /** With a block, who has it whole submitted; with the whole class, who submitted in the session. */
+  readonly finishedIds: ReadonlySet<string>;
+  /** With a block, the size of `finishedIds`; with the whole class, the submissions of the session. */
+  readonly finished: number;
+  /** With a block: submitted exercises over students × exercises, 0 to 100, rounded; else null. */
+  readonly progress: number | null;
+  /** With a block, who has an attempt at it («Han empezado», out of class); else empty. */
+  readonly startedIds: ReadonlySet<string>;
+  /** The latest activity of the rows, for «Fuera de clase · última actividad», or null. */
+  readonly lastActivity: number | null;
+}
+
+export function liveFigures(
+  state: LiveState,
+  rows: readonly LiveRow[],
+  blockId: string | null,
+  needHelp: number,
+  now: number,
+): LiveFigures;
+```
+
+- `progress` es `null` también con un bloque sin ejercicios o un grupo sin alumnos. «Entregado» es tener un intento `submitted` en esa asignación.
+- `teacher/live/live-overview.ts`:
+
+```ts
+export const COMMON_FAILURE_STUDENTS = 3;
+/** Exercises the whole class shows before «Ver los N». */
+export const OVERVIEW_TOP = 5;
+
+export interface ExerciseOverview {
+  readonly exercise: LiveExercise;
+  /** In its block, from 1. */
+  readonly position: number;
+  /** Who is in each status, in the order of the class. */
+  readonly students: Readonly<Record<AttemptStatus, readonly LiveStudent[]>>;
+  /** Students in the bar. */
+  readonly total: number;
+  /** The test most students fail, with who fails it; the first in order on a tie. */
+  readonly topFailure: { readonly test: Test; readonly students: readonly LiveStudent[] } | null;
+}
+
+export interface ClassOverview {
+  readonly exercises: readonly ExerciseOverview[];
+  /** With a block: students of the session whose attempt is in another block, in block order. */
+  readonly elsewhere: readonly { readonly blockId: string; readonly students: number }[];
+}
+
+export function exerciseOverview(
+  state: LiveState,
+  rows: readonly LiveRow[],
+  blockId: string | null,
+  now: number,
+): ClassOverview;
+```
+
+- Reglas de `exerciseOverview()` (en clase: alguna fila con `work !== 'absent'`):
+  - **con un bloque:** sus ejercicios en orden; cada alumno del grupo cuenta una vez, por su intento de mayor `number` en el ejercicio (`not_started` si no tiene); `total`, los alumnos del grupo;
+  - **con toda la clase:** los ejercicios de cualquier bloque en los que algún alumno tiene su último intento con `updatedAt` en la ventana; solo cuentan esos alumnos (`not_started` vacío); primero el de más alumnos y, si empatan, el orden de la foto. La función los devuelve todos: `OVERVIEW_TOP` lo aplica la pantalla;
+  - **`topFailure` en clase:** de las filas en la sesión cuyo ejercicio es este y cuyo estado es `tests_failed`, sus `failedTestIds`; **fuera de clase:** como hoy, la última ejecución del último intento con `tests_failed` de cada alumno;
+  - **`elsewhere`:** con bloque, las filas en la sesión cuyo ejercicio es de otro bloque, contadas por bloque; con toda la clase, vacío.
+- **Nuevo `teacher/live/rhythm-reading.ts`** y su spec:
+
+```ts
+/** Minutes compared with the same number before them. */
+export const RHYTHM_MINUTES = 10;
+/** The activity has dropped under this share of the minutes before. */
+export const RHYTHM_DROP = 0.5;
+export type RhythmReading = 'starting' | 'stuck' | 'slowing' | 'steady';
+
+/** `minutes`, as `activityByMinute()` gives them: the current one last. */
+export function rhythmReading(minutes: readonly ActivityMinute[]): RhythmReading | null;
+```
+
+- Reglas, en orden, con «ahora» los últimos `RHYTHM_MINUTES` y «antes» los `RHYTHM_MINUTES` anteriores: sin ejecuciones ni pistas en toda la serie, `null`; sin nada antes de «ahora» en toda la serie, `starting`; más pistas y menos ejecuciones ahora que antes, `stuck`; el total de ahora por debajo de `RHYTHM_DROP` del de antes, `slowing`; si no, `steady`.
+- **Nuevo `teacher/live/default-block.ts`** y su spec: `defaultBlock(rows: readonly LiveRow[], group: LiveGroup): string | null`. Con alumnos en la sesión, el bloque del ejercicio de más de la mitad de ellos, o `null`; sin nadie en la sesión, `group.latestBlockId` si sigue entre sus bloques, si no el primero, y `null` sin bloques.
+- **Nuevo `teacher/live/other-block.ts`** y su spec: `otherBlockTitle(blocks, exercise, blockId, locale): string | null`, el título (`blockTitle()`) del bloque del ejercicio si no es el elegido (siempre con toda la clase); `null` si es el elegido, sin ejercicio o si el bloque ya no existe.
+- `teacher/live/live-store.ts`:
+
+```ts
+export type QueuedRow = LiveRow & { readonly reason: AttentionReason };
+
+/** What the panel shows: `blockId` null is the whole class. */
+export interface LiveSelection {
+  readonly group: LiveGroup;
+  readonly blockId: string | null;
+}
+
+/** What the URL asks for: `blockId` undefined when it names no block and the store picks one. */
+export interface LiveRequest {
+  readonly group: LiveGroup;
+  readonly blockId: string | null | undefined;
+}
+
+export function pickSelection(
+  groups: readonly LiveGroup[],
+  query: ParamMap | undefined,
+): LiveRequest | undefined;
+```
+
+- `pickSelection()`: el grupo, como hoy; `bloque=todos` o un grupo sin bloques, `null`; un id del grupo, ese; lo demás, `undefined`.
+- En el store:
+  - `request = computed(pickSelection)` con el `equal` de hoy; `group = computed(() => request()?.group)`;
+  - `stateResource` con `params: () => this.request()` y un valor `{ state: LiveState; blockId: string | null }`. El cargador, tras empezar a escuchar como hoy: `snapshot(group.id, blockId ?? null)`; si `blockId` era `undefined`, `defaultBlock(filas de esa foto, group)` y, si da un bloque, `snapshot(group.id, eseBloque)`; aplica los cambios pendientes y devuelve el estado con el bloque. Los cambios en vivo actualizan solo `state`;
+  - `selection`: sin `request`, `undefined`; con bloque en la URL, ese; si no, el del valor cargado, y `undefined` mientras carga;
+  - `exercises` (todo el grupo) y `blockExercises` (los del bloque elegido; todos con toda la clase);
+  - `rows` sin la doble pasada; `queue`, las filas con `reason` posterior al «Atendido», por `ATTENTION_ORDER` y por `since` (fuera `QUEUE_TIERS`);
+  - `figures` (sustituye a `summary` y `LiveSummary`), `overview` (`ClassOverview`), `activity` y `rhythm = computed(() => rhythmReading(this.activity()))`; `feed` sigue hasta el 4.1e;
+  - `activityOf()`, `queuedFor()`, `attend()` y `reload()`, como hoy.
+- `teacher/live/live-feed.ts`: la posición de cada ejercicio sale de `exercisePosition()` (el fichero se borra en el 4.1e).
+- `teacher/live/live-reason.ts`: `LiveReason = AttentionReason | LivePattern | repeated | breakthrough`. Salen `away`, `stuck_idle`, `not_started` e `inactive` de los tres registros y de las dos plantillas; entra `chat_stuck` (tono `help`, icono `forum`). `reasonsOf()` lee `row.reason`.
+- La pantalla del 4.1, con lo mínimo:
+  - `live-page.ts` y `.html`: el selector de bloque empieza por «Toda la clase» (valor `TEACHER_ALL_BLOCKS`) y su valor es `selection().blockId ?? TEACHER_ALL_BLOCKS`; el de grupo lee `store.group()`; `selectBlock(value)` navega con ese valor. La cabecera dice «N en la sesión» (`working + stopped`) y, solo con bloque, «N con el bloque entregado». Estados vacíos: `group.blocks.length === 0`, el de los bloques; `blockExercises().length === 0`, el del bloque sin ejercicios con un bloque elegido y el nuevo «Este grupo aún no tiene ejercicios» con toda la clase. `caption`: «1.º DAW A · Toda la clase» sin bloque. A la cola y a la tabla les pasa `[blocks]` y `[blockId]`; a `LiveClass`, `store.overview().exercises`;
+  - `live-queue.ts`: entradas `{ row, reason }` de `QueuedRow`; tras «ejercicio N», « · » y `otherBlockTitle()` si lo hay. Lo demás, igual (`QUEUE_SHOWN` sigue en 6);
+  - `live-class.ts`: el número del título es `item.position`; las cuentas, `students[status].length`; el total, `total`; `topFailure.students.length`;
+  - `live-table.ts` y `.html`: el bloque junto al ejercicio (`otherBlockTitle()`), `row.work === 'absent'` en lugar de `!row.active`, sin el filtro de `not_started`, y `attention()` = 0 con motivo, 1 con algún patrón, 2 en la sesión y 3 si no.
+- `teacher/live/live-testing.ts`: `BLOCK_EXERCISES` con `blockId: 'b1'` y un `OTHER_BLOCK_EXERCISES` (`as3`, en `b2`); `testSnapshot()` con `interactions: []`; `testRows()` sin `classActive`; `FakeLiveService.snapshot(groupId, blockId)` apunta `` `${groupId}/${blockId ?? 'todos'}` `` y `snapshots` recibe los dos argumentos.
+- `teacher/attempt-detail/attempt-detail-page.ts` y `.html`: `followBlock()` pasa a `followGroup()`: si la URL ya lleva el grupo del intento, no navega; si no, navega con el grupo y `bloque: null` (`merge`, `replaceUrl`). `backQuery` es `{ grupo }` y el enlace usa siempre `queryParamsHandling="merge"`. `attempt-detail-view.ts`: la posición sale de `exercisePosition(store.exercises(), assignmentId)`.
+- `dev/class-simulator.ts`:
+
+```ts
+export const SIMULATION_SPREADS = ['one_block', 'two_blocks', 'scattered'] as const;
+export type SimulationSpread = (typeof SIMULATION_SPREADS)[number];
+
+export interface SimulationTarget {
+  readonly groupId: string;
+  /** The blocks the class is spread over, in order. */
+  readonly blockIds: readonly string[];
+  /** «1.º DAW A · Tema 1: Bucles», or «1.º DAW A · 3 bloques». */
+  readonly label: string;
+}
+
+targetFor(query: ParamMap, spread: SimulationSpread = 'one_block'): SimulationTarget | null;
+chatStuckOne(target: SimulationTarget): void;
+```
+
+- Reglas del simulador:
+  - bloques candidatos: los del grupo que no están ocultos, ya abiertos (`opensAt`) y con alguna asignación; sin ninguno, `null`;
+  - `one_block`: el de la URL si es candidato; si no, `latestBlockId` si lo es; si no, el primero. `two_blocks`: ese y el candidato siguiente (el primero si era el último; uno solo si no hay más). `scattered`: todos;
+  - el bloque de cada alumno: `blockIds[Math.floor((índice * blockIds.length) / alumnos)]`, con el índice del alumno en la matrícula del grupo: un bloque para todos, mitades, o partes iguales;
+  - `ODDS` gana `stuckQuestion: 0.73` entre `question` (0.7) y `paste` (0.8): pregunta `SIMULATED_STUCK_MESSAGE = 'No sé cómo seguir'` con la respuesta `SIMULATED_STUCK_ANSWER = 'Vamos por partes: ¿qué tiene que devolver la función?'`;
+  - `chatStuckOne()`: un alumno al azar escribe `CHAT_STUCK_MESSAGES` veces ese mensaje.
+- `dev/dev-toolbar/dev-toolbar.ts` y `.html`: `spread = signal<SimulationSpread>('one_block')`; sobre los botones, un `mat-button-toggle-group` (`aria-label="Reparto de la clase"`) con «Un bloque», «Dos bloques» y «Cada uno en el suyo»; `simulationTarget()` pasa `spread()`; botón «Atascar en el chat». La ayuda dice «Alumnos al azar en el grupo de la sesión en vivo.».
+- Textos (`messages.en.json` y `messages.ca.json`; después, `npm run i18n`):
+
+| ID                         | es                                                                         | en                                                                    | ca                                                                 |
+| -------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `live.block.all`           | Toda la clase                                                              | The whole class                                                       | Tota la classe                                                     |
+| `live.chip.chatStuck`      | No sabe seguir                                                             | Cannot go on                                                          | No sap continuar                                                   |
+| `live.reason.chatStuck`    | Le ha dicho al tutor {n} veces que no sabe seguir                          | Has told the tutor {n} times that they cannot go on                   | Ha dit al tutor {n} vegades que no sap continuar                   |
+| `live.empty.group.heading` | Este grupo aún no tiene ejercicios                                         | This group has no exercises yet                                       | Aquest grup encara no té exercicis                                 |
+| `live.empty.group.text`    | Asigna ejercicios a un bloque para seguir aquí cómo los resuelve el grupo. | Assign exercises to a block to follow here how the group solves them. | Assigna exercicis a un bloc per seguir aquí com els resol el grup. |
+
+- Se borran de los tres ficheros: `live.chip.away`, `live.chip.stuckIdle`, `live.chip.notStarted`, `live.chip.inactive`, `live.reason.away`, `live.reason.stuckIdle`, `live.reason.notStarted` y `live.reason.inactive`. Los textos de la barra de desarrollo no se traducen.
+- Comprobación en el navegador (datos simulados, como Marta): con el seed, el panel abre en el bloque de actividad más reciente y sin cola; con «Un bloque», la cola y la clase se mueven; con «Dos bloques» se abre «Toda la clase» y, al elegir un bloque, la cola y la tabla tienen alumnos de los dos con su bloque; «Atascar a un alumno» y «Atascar en el chat» ponen a alguien en la cola; quien sale de la ventana no entra. Con Supabase local (`start:local`), que la foto carga con y sin bloque.
+- Documentación al cerrar: ficha 06 (`failureStreak()`, el botón «Atascar en el chat» y el chip «Ráfaga de entregas»), 4.1 si nombra los ficheros de `teacher/live/`, D-068 («Hecho así»), `PENDIENTES.md` (fuera la fila del 2.5d del atasco en el chat; nueva, los demás intentos del detalle fuera del bloque elegido, para el 4.2b), `E2E-PENDIENTES.md` (el panel con medio grupo en dos bloques; el motivo del chat). Sin capturas: la pantalla es la de antes.
+
+Tests, en este orden:
+
+1. `shared/is-stuck.spec.ts`: `failingStreaks()` sin ejecuciones, con todo superado y con dos pruebas de rachas distintas; los de `failureStreak()` siguen en verde.
+2. `live-attention.spec.ts`: cada motivo con su `since`; fallos seguidos con y sin pistas pedidas; pistas agotadas solo con una ejecución con fallos después y en `tests_failed`; el chat con 2 y con 3 mensajes, cortado por una pista, por una pregunta normal y no por una intervención proactiva, y `since` en el segundo mensaje; pistas en ráfaga con y sin ejecuciones; el orden cuando se cumplen varios (cada pareja vecina de `ATTENTION_ORDER`); un intento superado o entregado, una salida de la ventana y un parón no dan motivo. `failingTest()`: la de racha más larga, la primera si empatan, `null` sin ejecuciones y con todo superado.
+3. `live-work.spec.ts`: trabajando (hace 2 min), el límite (5 min justos, trabajando; un milisegundo más, parado), parado por estar fuera, sin entrar (`null` y hace 61 min) y el límite de la ventana (60 min justos, en la sesión).
+4. `live-patterns.spec.ts`: fuera los tests de `not_started` e `inactive`; sin eventos, ningún patrón.
+5. `live-state.spec.ts`: las interacciones de la foto van a su alumno; un intento de otro bloque del grupo se aplica y uno de otro grupo no; `exercisePosition()` en dos bloques y con una asignación desconocida.
+6. `live-row.spec.ts`: el intento de la fila puede ser de otro bloque, con su `position` en él; una pregunta al tutor cuenta como actividad y una intervención proactiva o una salida no; `work` y `away`; `failedTestIds` y `failingTest`; `reason` solo en la sesión; quien sale de la ventana conserva su motivo; fuera los tests de `away`, `stuck_idle`, `active` y `submitted`.
+7. `live-figures.spec.ts`: en directo con un bloque (trabajando, parados, sin entrar, cola, terminados y avance), con toda la clase (entregas de la sesión, `finishedIds`, `progress` nulo y `startedIds` vacío) y fuera de clase (`inClass` falso, empezados, terminados, avance y última actividad); bloque sin ejercicios.
+8. `live-overview.spec.ts`: con un bloque (cada alumno una vez, por su último intento, con sus nombres), con toda la clase (solo ejercicios con actividad en la ventana, el de más alumnos primero y sin «sin empezar»), con alumnos en otros bloques (`elsewhere` por bloque y vacío con toda la clase), la prueba que más falla en clase (solo intentos actuales) y fuera de clase (acumulado), y el empate.
+9. `rhythm-reading.spec.ts`: las cuatro frases, `null` sin actividad, y que con actividad antes de los últimos 10 minutos ya no es «acaba de empezar».
+10. `default-block.spec.ts`: los tres repartos (todos en un bloque, mitad y mitad, cada uno en uno), dos tercios en un bloque, fuera de clase con y sin `latestBlockId` válido, y un grupo sin bloques.
+11. `other-block.spec.ts`: bloque elegido, otro bloque, toda la clase, sin ejercicio y bloque desaparecido.
+12. `mock-live-service.spec.ts`: la foto sin bloque (solo intentos de la ventana, de cualquier bloque, con eventos e interacciones; con el seed, ninguno) y con bloque (además todos los del bloque, ninguno repetido); los ejercicios de todo el grupo en orden y con su bloque; `not_found` con un grupo ajeno y con un bloque de otro grupo; el detalle con `exercise.blockId`.
+13. `supabase-live-service.spec.ts`: sin bloque, una petición de intentos con `updated_at=gte.…` y todas las asignaciones; con bloque, dos, unidas sin repetir (la ruta de `attempt` responde según lleve `updated_at`); el orden de los ejercicios por bloque y posición; eventos e interacciones; grupo sin ejercicios, ninguna petición de intentos; `not_found` sin grupo y con un bloque que no es suyo; el detalle con `exercise.blockId`.
+14. `live-store.spec.ts`: `pickSelection()` (`todos`, un id del grupo, uno ajeno, sin parámetro y grupo sin bloques); sin bloque en la URL lee el grupo, elige y lee el bloque (dos lecturas; una si sale toda la clase); con bloque en la URL, una; `selection` es `undefined` mientras elige; la cola por `ATTENTION_ORDER` y por espera, con alumnos de dos bloques; «Atendido» hasta un motivo nuevo; `figures`, `overview`, `rhythm` y `blockExercises`; un cambio en vivo de otro bloque del grupo llega a la fila; lo demás, como hoy.
+15. Componentes de la pantalla de antes: `live-reason.spec.ts` (el chip y la frase del chat; fuera los cuatro que salen), `live-queue.spec.ts` (el bloque junto al ejercicio), `live-class.spec.ts`, `live-table.spec.ts` (el bloque junto al ejercicio; gris con `absent`), `live-feed.spec.ts` (posiciones por bloque) y `live-page.spec.ts` («Toda la clase» en el selector y en la URL, los tres estados vacíos, la cabecera sin «con el bloque entregado» con toda la clase).
+16. `attempt-detail-page.spec.ts` y el de la vista: corrige solo el grupo y quita un bloque ajeno; no navega con el grupo correcto, tenga o no bloque; «Volver a la sesión» conserva el bloque; la posición del ejercicio en su bloque.
+17. `class-simulator.spec.ts` y `dev-toolbar.spec.ts`: los tres repartos (qué bloques y qué alumno va a cuál), sin bloques visibles, la etiqueta, la pregunta de atasco (`roll(0.71)`), `chatStuckOne()`, el selector de reparto y el botón nuevo.
+
 **4.1e · El panel en vivo, la pantalla nueva (≈3 h)** · ficha `06-en-vivo`
 
 - Cabecera con la asignatura, el grupo y el bloque como título, y los selectores compactos.
@@ -1617,6 +1969,212 @@ Commit: `feat(live): the live panel follows the whole group (step 4.1d)`.
 🧪 Component tests: el título con el grupo y el bloque; una cifra filtra la tabla; la cola enseña 4 y despliega el resto; «Ver quiénes» filtra por la prueba; la tabla pagina y no pinta columnas vacías; fuera de clase no hay cola ni ritmo; nada se anima con `prefers-reduced-motion`.
 
 Commit: `feat(live): the new live panel (step 4.1e)`.
+
+**Plan de implementación del 4.1e** (17/11/2026; necesita el 4.1d hecho)
+
+Dudas resueltas:
+
+- **Las cuatro cifras y los cuatro filtros:** «Trabajando ahora» activa «Parados y sin entrar» (es la pregunta «quién no está trabajando»); «Necesitan ayuda» y «Han terminado», el suyo; «Avance del bloque» vuelve a «Todos». Pulsar una cifra con su filtro ya activo vuelve a «Todos». Las tres primeras llevan `aria-pressed`; la cuarta, no. Fuera de clase son «Han empezado» (filtro propio), «Han terminado» y «Avance del bloque», y los filtros, «Todos», «Han empezado» y «Han terminado».
+- **«Necesitan ayuda» filtra por la cola** (sin los atendidos), para que la tabla tenga a los mismos que cuenta la cifra. El chip del motivo sí se queda en la fila aunque el docente lo haya atendido: describe.
+- **El anuncio de las cifras** es un párrafo `sr-only` con `aria-live="polite"` y los valores finales; el número que cuenta es `aria-hidden` y el nombre del botón lleva el valor final. Un lector de pantalla no anuncia de forma fiable los cambios de `aria-label` dentro de una región viva.
+- **La cuenta de las cifras** es una directiva (`CountUp`) con `setInterval`, como `FlashOnChange` con `element.animate()`: `effect()` en la frontera con una API imperativa. La primera vez y con `prefers-reduced-motion` escribe el valor sin contar.
+- **«Con las animaciones desactivadas»** de la ficha es solo `prefers-reduced-motion`: el ajuste de animaciones es del alumno (`SettingsStore`) y el docente no tiene ajustes (fila del 4.2 en `PENDIENTES.md`). Corregir la frase de la ficha.
+- **Los tramos de las barras reciben el foco,** así que la barra no puede ser `aria-hidden` (axe, `aria-hidden-focus`): es una lista, y cada tramo con alumnos, un elemento con `tabindex="0"`, su nombre accesible y un `matTooltip` con el mismo texto («Con fallos: Aya, Hugo y 3 más»). El resumen de debajo es texto visible. Corregir el punto de accesibilidad de la ficha.
+- **Los nombres de un tramo** son el primer nombre de cada alumno: hasta tres, todos; con más, los dos primeros y «N más», unidos con `Intl.ListFormat`.
+- **«Para explicar a todos» y «Ver quiénes» solo existen en clase.** Fuera de clase, bajo el ejercicio, una línea sin botón: «La prueba que más se falló: … · N alumnos». Una prueba oculta enseña también su llamada y lo que espera (el docente las ve todas), con la marca «prueba oculta».
+- **«Ver quiénes» guarda la asignación y la prueba,** no una lista de alumnos: el filtro se recalcula con cada cambio (`failedTestIds` de la fila) y, si nadie la falla ya, la tabla queda vacía con su mensaje y el chip para quitarlo.
+- **Fuera de clase con «Toda la clase»** no hay nada acumulado que enseñar: sin cifras, y «Dónde está la clase» dice «Ahora no hay nadie trabajando. Elige un bloque para ver cómo lo lleva el grupo.»; la tabla, con todo el alumnado.
+- **Tabla y tarjetas, las dos en el DOM como hoy** (una se oculta con la container query), cada una con su página y su `mat-paginator` (8 y 6): así no hace falta un `ResizeObserver`. La página vuelve a la primera al cambiar el filtro o la búsqueda, no con cada cambio en vivo.
+- **`pageOf()` pasa a `shared/`** (ya lo usa el banco) con el tamaño de página obligatorio.
+- **Las pruebas de la columna de estado** usan `StatusChip` con `testCount` («Con fallos · 3/6», con su texto para el lector de pantalla) y una barrita al lado: sin texto nuevo.
+- **La cola no crece:** la tarjeta tiene un alto máximo (`max-h-112`) y su lista se desplaza por dentro al desplegar. Las entradas llegan y se van con `animate.enter` y `animate.leave` de Angular (estables en la 22; en los tests no se animan, `animationsEnabled` es falso por defecto).
+- **Orden en el DOM:** primero la cola y después la gráfica (es la primera decisión, y con poco ancho va arriba); desde `@4xl` la gráfica se coloca a la izquierda con `col-start` y `row-start`.
+- **Los selectores:** el del grupo enseña solo el nombre del grupo (`mat-select-trigger`; la asignatura está sobre el título) y mide `sm:w-48`; el del bloque, `sm:w-88`; los dos con `[panelWidth]="null"`, para que el panel se abra al ancho de sus opciones.
+- **La pestaña** («1.º DAW A · En vivo · TutorIA») la pone `LivePage` con un `effect()` sobre `store.group()`: la frontera con el título del documento (`AppTitleStrategy.setScreenTitle()`), con su comentario. No va en el store, que comparte el detalle.
+- **La mascota** de «Todo en orden» usa el estado `joy` que ya tiene y entra con `animate-live-in`: no se crea un estado nuevo.
+- **`LiveReasonText` se queda solo con los motivos de la cola** (los usan la cola y la franja del detalle); las frases largas de los patrones ya no se usaban y se borran. `LiveChip` pinta todas las observaciones.
+- **Capturas:** con el seed sale «Fuera de clase»; es la captura del paso. La del panel en directo necesita que `capture.spec.ts` arranque el simulador: a `PENDIENTES.md`, para las figuras 9 y 18 (3.2).
+
+Ficheros:
+
+- **Nuevo `shared/page-of.ts`** y su spec (sale de `teacher/exercises/bank-filter.ts`, que lo importa y le pasa `BANK_PAGE_SIZE`): `pageOf<Row>(rows, pageIndex, pageSize)`.
+- `teacher/live/live-row.ts`: salen `minutes`, `pastes` y `focusLosses` (y `workMinutes()`).
+- `teacher/live/live-store.ts`: sale `feed`. **Se borran** `live-feed.ts`, `live-feed-list.ts` y `.html`, `live-activity.ts` y `.html`, con sus specs.
+- `teacher/live/live-reason.ts`:
+
+```ts
+/** What a chip of the table says: the reason of the queue or something worth knowing. */
+export type LiveReason =
+  | AttentionReason
+  | LivePattern
+  | { readonly kind: 'stopped'; readonly minutes: number }
+  | { readonly kind: 'away' }
+  | { readonly kind: 'repeated'; readonly count: number }
+  | { readonly kind: 'breakthrough'; readonly failures: number };
+
+export type LiveTone = 'help' | 'review' | 'perseverance' | 'neutral';
+```
+
+- `stopped` (icono `pause_circle`) y `away` (`visibility_off`) van en `neutral` (`bg-surface-container-high text-on-surface-variant`). `LiveReasonText` recibe un `AttentionReason` y pierde `short`; `LiveChip` lleva el `@switch` de las etiquetas cortas. Salen `reasonsOf()` y `perseveranceOf()`.
+- **Nuevo `teacher/live/live-observations.ts`** y su spec: `liveObservations(row: LiveRow, now: number): LiveReason[]`, en este orden: `row.reason`; `stopped` con los minutos desde `lastActivity` (parado y sin estar fuera); `away` (con `row.away`); los patrones; `breakthrough`; `repeated`.
+- **Nuevo `teacher/live/live-filter.ts`** y su spec:
+
+```ts
+export type LiveFilter = 'all' | 'help' | 'idle' | 'finished' | 'started';
+
+/** «Ver quiénes»: the students failing a test now. */
+export interface TestFilter {
+  readonly assignmentId: string;
+  readonly testId: string;
+  /** `isStrongPassword("abc12345")`, for its chip. */
+  readonly call: string;
+}
+
+export interface FilterCriteria {
+  readonly filter: LiveFilter;
+  /** As typed. */
+  readonly search: string;
+  readonly test: TestFilter | null;
+  readonly queuedIds: ReadonlySet<string>;
+  readonly finishedIds: ReadonlySet<string>;
+  readonly startedIds: ReadonlySet<string>;
+}
+
+export const LIVE_FILTERS: readonly LiveFilter[] = ['all', 'help', 'idle', 'finished'];
+export const OFF_CLASS_FILTERS: readonly LiveFilter[] = ['all', 'started', 'finished'];
+
+export function filterRows(rows: readonly LiveRow[], criteria: FilterCriteria): LiveRow[];
+```
+
+- `filterRows()`: el nombre con `searchable()`; `idle` es `work !== 'working'`; `help`, `finished` y `started`, por su conjunto; con `test`, además, filas cuyo ejercicio es esa asignación, con estado `tests_failed` y la prueba entre sus `failedTestIds`.
+- **Nuevo `teacher/live/segment-names.ts`** y su spec: `NAMES_SHOWN = 2` y `segmentNames(label: string, students: readonly LiveStudent[], locale: string): string` («Con fallos: Aya, Hugo y 3 más»).
+- **Nuevo `teacher/live/count-up.ts`** y su spec: directiva `[appCountUp]` (`input.required<number>()`) que escribe el número en su elemento. `COUNT_STEP_MS = 50` y `COUNT_MAX_STEPS = 12`: al cambiar, avanza desde lo que enseña hasta el valor en pasos iguales (de uno en uno si la diferencia cabe en 12 pasos; si no, de `Math.ceil(diferencia / 12)`), y un cambio a mitad de cuenta sigue desde lo que se ve. `DestroyRef` para el temporizador.
+- **Nuevo `teacher/live/live-figure.ts`** y su spec (`app-live-figure`, plantilla en línea): un `button` con la etiqueta, el número (`appCountUp`, `aria-hidden`), el sufijo, el detalle y, con `progress`, una barra fina (`h-1`, con `transition-[width]`).
+
+```ts
+readonly label = input.required<string>();
+readonly value = input.required<number>();
+/** After the number: «de 24», «%». */
+readonly suffix = input('');
+/** Under it: «3 parados · 3 sin entrar». */
+readonly detail = input('');
+/** A thin bar under the number, from 0 to 100. */
+readonly progress = input<number | null>(null);
+/** Its filter is on; undefined for a figure without a filter of its own. */
+readonly pressed = input<boolean>();
+/** What pressing it does: «Filtrar el alumnado». */
+readonly action = input.required<string>();
+readonly chosen = output<void>();
+```
+
+- Su nombre accesible es `` `${label}: ${value}${suffix ? ' ' + suffix : ''}. ${action}` `` y `aria-pressed` solo sale con `pressed` definido. Clases del botón: `flex flex-col items-start gap-1 rounded-2xl bg-panel p-4 text-start outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary`, y `ring-2 ring-primary` si está pulsado.
+- **Nuevo `teacher/live/live-bar.ts`** y su spec (`app-live-bar`): `BAR_SEGMENTS` (lo que hoy es `SEGMENTS` en `live-class.ts`) y `segments = input.required<readonly BarSegment[]>()`, con `BarSegment { status; count; names }`. Un `ul` (`flex h-3 overflow-hidden rounded-full bg-surface-container-high`) con un `li` por tramo con alumnos: ancho en porcentaje sobre la suma, `transition-[width] duration-500 ease-out motion-reduce:transition-none`, `tabindex="0"`, `[attr.aria-label]` y `[matTooltip]` con `names`, y `focus-visible:outline-2 focus-visible:-outline-offset-2`.
+- **Nuevo `teacher/live/common-failure.ts`** y su spec (`app-common-failure`): `call`, `expected` (ya con `formatValue()`), `hidden` y `students` como inputs, y `show = output<void>()`. Sobre `bg-warning-container text-on-warning-container rounded-xl p-3`: icono `campaign`, «Para explicar a todos», «N alumnos fallan `llamada`», «espera `valor`», « · prueba oculta» si lo es, y el botón «Ver quiénes».
+- `teacher/live/live-class.ts` y su spec («Dónde está la clase»), reescrito:
+  - inputs `overview: ClassOverview`, `group: LiveGroup`, `blockId: string | null` e `inClass: boolean`; output `showFailing = output<TestFilter>()`;
+  - la leyenda de `BAR_SEGMENTS` (sin «Sin empezar» con toda la clase);
+  - por ejercicio: «2. Título» (y « · Tema 2» con toda la clase), `app-live-bar` con `segmentNames()`, el resumen visible en el orden con fallos, en curso, superados, entregados y sin empezar, sin los ceros; en clase y con `topFailure.students.length >= COMMON_FAILURE_STUDENTS`, `app-common-failure`; fuera de clase y con `topFailure`, la línea «La prueba que más se falló»;
+  - con toda la clase, `OVERVIEW_TOP` ejercicios y «Ver los N» / «Ver menos» (`showAll = signal(false)`); sin ninguno, el texto de «nadie trabajando»;
+  - con `elsewhere`, la línea al pie: cada bloque, un enlace `[routerLink]="[]"` con `[queryParams]="{ bloque: id }"` y `queryParamsHandling="merge"`: «Tema 2 (3)».
+- `teacher/live/live-queue.ts` y su spec, reescrito: inputs `rows: readonly QueuedRow[]`, `now`, `blocks` y `blockId`; `QUEUE_SHOWN = 4`. Cada entrada (`animate.enter="animate-live-in motion-reduce:animate-none"`, `animate.leave="animate-live-out motion-reduce:animate-none"`): arriba, el nombre (enlace al intento, `queryParamsHandling="preserve"`) y «Espera N min» o «Ahora»; debajo, el motivo (`app-live-reason`), «ejercicio N» con su bloque si no es el elegido (`otherBlockTitle()`) y, con `failingTest`, «falla `llamada`»; a la derecha, «Atendido». «Ver los otros N» (N, los que no se ven) y «Ver menos». El host: `flex max-h-112 flex-col overflow-hidden rounded-2xl bg-panel`; la lista, `min-h-0 flex-1 overflow-y-auto scroll-shadows`. Sale la frase «Primero, quien se ha atascado con el código».
+- **Nuevo `teacher/live/live-rhythm.ts`** y `.html`, con su spec («Ritmo de la clase», a partir de `live-activity`): inputs `minutes` y `reading: RhythmReading | null`. Encima, la frase de `reading`; los totales y la gráfica, como hoy; sale la frase del minuto con más actividad. El último punto de cada línea es un `span` absoluto sobre el SVG (`right-0`, `top` en porcentaje, `size-2 rounded-full`, `bg-primary` o `bg-tertiary`) con otro dentro en `animate-ping motion-reduce:animate-none`. Sin actividad, el texto de hoy.
+- `teacher/live/live-table.ts` y `.html`, y su spec, reescritos:
+  - inputs `rows` (ya filtradas), `caption`, `now`, `blocks`, `blockId` y `pageKey: string` (al cambiar, las dos páginas vuelven a 0 con `linkedSignal`);
+  - columnas `student`, `exercise`, `status`, `hints`, `lastActivity` y `observations`; `LIVE_TABLE_PAGE = 8` y `LIVE_CARDS_PAGE = 6`;
+  - ejercicio: «2. Título», su bloque si no es el elegido y «Repitiendo»; estado: `app-status-chip` con `[testCount]="row.tests ?? undefined"` y, con pruebas, una barrita (`h-1 w-12 rounded-full bg-surface-container-high` con su parte en `bg-success`, `aria-hidden`); pistas: «3 (nivel 2)» o nada; observaciones: `liveObservations()` como chips;
+  - orden por defecto: con motivo, después en la sesión por última actividad, y al final quien no ha entrado, en gris (`work === 'absent'`); el ejercicio ordena por la posición de su bloque y la suya;
+  - `mat-paginator` (`hidePageSize`, `showFirstLastButtons` no) bajo la tabla y bajo las tarjetas, solo si hay más de una página; sin filas, «Ningún alumno coincide con el filtro.»;
+  - las tarjetas: nombre y estado, ejercicio, «Pistas» y «Última actividad», y los chips.
+- `teacher/live/live-page.ts` y `.html`, y su spec, reescritos. El host es `@container block`.
+  - estado: `search`, `filter = signal<LiveFilter>('all')` y `testFilter = signal<TestFilter | null>(null)`; `filters = computed(() => (figures().inClass ? LIVE_FILTERS : OFF_CLASS_FILTERS))`; `shownFilter`, el elegido si está entre ellos y, si no, `all`; `tableRows = computed(() => filterRows(store.rows(), …))` con `queuedIds` de `store.queue()`; `pageKey`, el filtro, la búsqueda y la prueba juntos;
+  - `chooseFigure(filter)`: lo activa (o vuelve a `all` si ya lo estaba), quita `testFilter` y lleva el foco a la sección del alumnado (`viewChild`, `tabindex="-1"`, `focus()` y `scrollIntoView({ block: 'nearest' })`); `showFailing(test)`: `testFilter.set(test)`, filtro `all` y el mismo foco;
+  - cabecera: sobre el título, en clase el punto que late (el de hoy) y «En directo · {asignatura}»; fuera de clase, sin punto, «Fuera de clase · última actividad: jue 12 nov» (`date: 'EEE d MMM'`; sin fecha, solo «Fuera de clase»). `h1`: «{grupo} · {bloque}» o «{grupo} · Toda la clase»; mientras se elige el bloque, solo el grupo. Selectores: «Toda la clase» primero, «(oculto)» y, en los bloques con alumnos de la sesión, un punto `size-2 rounded-full bg-success` con «con actividad ahora» en `sr-only`;
+  - cifras (`grid grid-cols-2 gap-3 @4xl:grid-cols-4`) y, antes, el párrafo `sr-only` con `aria-live="polite"`. En clase: «Trabajando ahora» (valor `working`, sufijo «de 24», detalle «3 parados · 3 sin entrar» sin los ceros); «Necesitan ayuda»; «Han terminado» (sufijo «de 24») o, con toda la clase, «Entregas en esta clase»; con bloque, «Avance del bloque» (sufijo «%», con `progress`). Fuera de clase y con bloque: «Han empezado» (`startedIds.size`, «de 24»), «Han terminado» y «Avance del bloque»;
+  - rejilla `grid gap-4 @4xl:grid-cols-3`: la cola (`@4xl:col-start-3 @4xl:row-start-1`) y la gráfica (`@4xl:col-span-2 @4xl:col-start-1 @4xl:row-start-1`); fuera de clase, solo la gráfica (`@4xl:col-span-3`);
+  - «Ritmo de la clase», solo en clase;
+  - «Alumnado»: el `mat-button-toggle-group` de los filtros (`hideSingleSelectionIndicator`, con el nombre «Filtrar el alumnado»), el buscador, el chip de la prueba («Fallan `llamada`», con un botón de icono `close` «Quitar el filtro») y la tabla;
+  - los esqueletos toman la forma nueva: cuatro cifras (`h-24`), la rejilla (`h-72`), el ritmo (`h-40`) y la tabla (`h-96`).
+- `src/styles/animations.css`: `--animate-live-out: live-out 200ms ease-in both;` con `@keyframes live-out` (a `opacity: 0` y `translate: 0.5rem 0`), junto a `live-in`.
+- `dev/showcase/showcase-page.ts` y `.html`: sección «Panel en vivo» con tres `app-live-figure` (una pulsada y una con `progress`; un botón «Sumar uno» cambia un valor para ver la cuenta), un `app-live-bar` con los cinco tramos y un `app-common-failure`.
+- `e2e/screenshots/screens.ts`: la entrada de `06-en-vivo` no cambia (grupo y bloque por defecto, fuera de clase).
+- Textos nuevos o que cambian (`messages.en.json` y `messages.ca.json`; después, `npm run i18n`):
+
+| ID                                 | es                                                                              | en                                                                         | ca                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `live.title`                       | {grupo} · En vivo                                                               | {grupo} · Live                                                             | {grupo} · En directe                                                        |
+| `live.offAir`                      | Fuera de clase                                                                  | Out of class                                                               | Fora de classe                                                              |
+| `live.offAir.last`                 | última actividad: {fecha}                                                       | last activity: {fecha}                                                     | última activitat: {fecha}                                                   |
+| `live.block.active`                | con actividad ahora                                                             | active now                                                                 | amb activitat ara                                                           |
+| `live.figures.announce`            | Trabajando ahora: {n} de {total}. Necesitan ayuda: {cola}.                      | Working now: {n} of {total}. Need help: {cola}.                            | Treballant ara: {n} de {total}. Necessiten ajuda: {cola}.                   |
+| `live.figure.working`              | Trabajando ahora                                                                | Working now                                                                | Treballant ara                                                              |
+| `live.figure.of`                   | de {total}                                                                      | of {total}                                                                 | de {total}                                                                  |
+| `live.figure.stopped`              | 1 parado / {n} parados                                                          | 1 stopped / {n} stopped                                                    | 1 aturat / {n} aturats                                                      |
+| `live.figure.absent`               | {n} sin entrar                                                                  | {n} not in yet                                                             | {n} sense entrar                                                            |
+| `live.figure.help`                 | Necesitan ayuda                                                                 | Need help                                                                  | Necessiten ajuda                                                            |
+| `live.figure.finished`             | Han terminado                                                                   | Have finished                                                              | Han acabat                                                                  |
+| `live.figure.submissions`          | Entregas en esta clase                                                          | Submissions in this class                                                  | Lliuraments en aquesta classe                                               |
+| `live.figure.progress`             | Avance del bloque                                                               | Progress of the block                                                      | Avenç del bloc                                                              |
+| `live.figure.started`              | Han empezado                                                                    | Have started                                                               | Han començat                                                                |
+| `live.figure.filter`               | Filtrar el alumnado                                                             | Filter the students                                                        | Filtra l'alumnat                                                            |
+| `live.figure.showAll`              | Ver todo el alumnado                                                            | Show every student                                                         | Mostra tot l'alumnat                                                        |
+| `live.class.heading` (cambia)      | Dónde está la clase                                                             | Where the class is                                                         | On és la classe                                                             |
+| `live.class.count.testsFailed`     | {n} con fallos                                                                  | {n} with failing tests                                                     | {n} amb errors                                                              |
+| `live.class.count.inProgress`      | {n} en curso                                                                    | {n} in progress                                                            | {n} en curs                                                                 |
+| `live.class.count.passed`          | 1 superado / {n} superados                                                      | {n} passed                                                                 | 1 superat / {n} superats                                                    |
+| `live.class.count.submitted`       | 1 entregado / {n} entregados                                                    | {n} submitted                                                              | 1 lliurat / {n} lliurats                                                    |
+| `live.class.count.notStarted`      | {n} sin empezar                                                                 | {n} not started                                                            | {n} sense començar                                                          |
+| `live.names.more`                  | {n} más                                                                         | {n} more                                                                   | {n} més                                                                     |
+| `live.class.commonFailing`         | {n} alumnos fallan                                                              | {n} students fail                                                          | {n} alumnes fallen                                                          |
+| `live.class.expects`               | espera                                                                          | expects                                                                    | espera                                                                      |
+| `live.class.hiddenTest` (cambia)   | prueba oculta                                                                   | hidden test                                                                | prova oculta                                                                |
+| `live.class.showWho`               | Ver quiénes                                                                     | Show who                                                                   | Mostra qui                                                                  |
+| `live.class.showWhoLabel`          | Ver quiénes fallan {llamada}                                                    | Show who fails {llamada}                                                   | Mostra qui falla {llamada}                                                  |
+| `live.class.topFailed`             | La prueba que más se falló:                                                     | The test failed most:                                                      | La prova que més es va fallar:                                              |
+| `live.class.showAll`               | Ver los {n}                                                                     | Show all {n}                                                               | Mostra'ls tots ({n})                                                        |
+| `live.class.showFewer`             | Ver menos                                                                       | Show fewer                                                                 | Mostra'n menys                                                              |
+| `live.class.elsewhere`             | 1 trabaja en otro bloque: / {n} trabajan en otros bloques:                      | 1 works in another block: / {n} work in other blocks:                      | 1 treballa en un altre bloc: / {n} treballen en altres blocs:               |
+| `live.class.empty`                 | Ahora no hay nadie trabajando. Elige un bloque para ver cómo lo lleva el grupo. | Nobody is working right now. Choose a block to see how the group is doing. | Ara no hi ha ningú treballant. Tria un bloc per veure com el porta el grup. |
+| `live.queue.showAll` (cambia)      | Ver los otros {n}                                                               | Show the other {n}                                                         | Mostra els altres {n}                                                       |
+| `live.queue.test`                  | falla                                                                           | fails                                                                      | falla                                                                       |
+| `live.rhythm.heading`              | Ritmo de la clase                                                               | Pace of the class                                                          | Ritme de la classe                                                          |
+| `live.rhythm.steady`               | La clase trabaja a buen ritmo                                                   | The class is working at a good pace                                        | La classe treballa a bon ritme                                              |
+| `live.rhythm.stuck`                | Las pistas suben y las ejecuciones bajan: la clase se está atascando            | Hints are going up and runs are going down: the class is getting stuck     | Les pistes pugen i les execucions baixen: la classe s'està encallant        |
+| `live.rhythm.slowing`              | La actividad ha bajado: la clase ha parado o está terminando                    | Activity has dropped: the class has stopped or is finishing                | L'activitat ha baixat: la classe s'ha aturat o està acabant                 |
+| `live.rhythm.starting`             | La clase acaba de empezar                                                       | The class has just started                                                 | La classe acaba de començar                                                 |
+| `live.filter.all`                  | Todos                                                                           | All                                                                        | Tots                                                                        |
+| `live.filter.idle`                 | Parados y sin entrar                                                            | Stopped and not in yet                                                     | Aturats i sense entrar                                                      |
+| `live.filter.test`                 | Fallan {llamada}                                                                | Failing {llamada}                                                          | Fallen {llamada}                                                            |
+| `live.filter.testRemove`           | Quitar el filtro                                                                | Remove the filter                                                          | Treu el filtre                                                              |
+| `live.students.none`               | Ningún alumno coincide con el filtro.                                           | No student matches the filter.                                             | Cap alumne coincideix amb el filtre.                                        |
+| `live.chip.stopped`                | Parado desde hace {n} min                                                       | Stopped for {n} min                                                        | Aturat des de fa {n} min                                                    |
+| `live.chip.away`                   | Fuera de la ventana                                                             | Out of the window                                                          | Fora de la finestra                                                         |
+| `live.chip.pasteSubmit` (cambia)   | Entregó tras pegar {n} caracteres                                               | Submitted after pasting {n} characters                                     | Ha lliurat després d'enganxar {n} caràcters                                 |
+| `live.chip.pasteOnReturn` (cambia) | Pegó al volver a la ventana                                                     | Pasted on coming back to the window                                        | Ha enganxat en tornar a la finestra                                         |
+
+- Las filas con «/» son plurales ICU (`=1` y `other`). El anuncio de las cifras termina, según el caso, con «Han terminado: {n}.» o «Entregas en esta clase: {n}.», que se montan con los textos de sus cifras. Los filtros «Necesitan ayuda», «Han terminado» y «Han empezado» usan los ID de sus cifras, y el grupo de filtros, `live.figure.filter`.
+- Se borran de los tres ficheros: `live.heading`, `live.inSession`, `live.finished`, `live.queue.order`, `live.class.topFailure`, `live.activity.heading`, `live.activity.peakNow`, `live.activity.peak`, todos los `live.feed.*`, `live.column.minutes`, `live.minutes`, `live.column.pastes`, `live.column.focusLosses`, `live.column.focusLossesShort`, `live.column.focusLossesHidden`, `live.column.tests`, `live.reason.pasteSubmit`, `live.reason.pasteOnReturn`, `live.reason.submitBurst`, `live.reason.repeated` y `live.reason.breakthrough`. Siguen con su ID los textos que no cambian (`live.activity.window`, `runs`, `hints`, `from`, `to` y `empty`; los de la cola, las columnas que quedan y los chips).
+- Comprobación en el navegador (datos simulados, como Marta, con el menú abierto): los criterios «Del replanteo» de la ficha 06, uno a uno, con los tres repartos del simulador; `prefers-reduced-motion` (emulado); el móvil, 1024, 1280, 1440 y 1920 px sin scroll horizontal; claro y oscuro; axe sin infracciones en clase y fuera de clase; el foco tras pulsar una cifra y el recorrido con el teclado por los tramos de una barra. `/dev/ui` con las tres piezas.
+- Documentación al cerrar: ficha 06 (criterios marcados; las dos correcciones de accesibilidad y animaciones; «Avance del bloque» vuelve a «Todos»), 2.2 si cambia algo, D-056 («sustituida en la parte del feed por D-068») y D-068 («Hecho así»), `PENDIENTES.md` (la captura del panel en directo para las figuras 9 y 18) y `E2E-PENDIENTES.md` (una cifra filtra la tabla, «Ver quiénes», la cola desplegada, la paginación, fuera de clase y axe en los dos estados). Capturas: `npm run screenshots -- 4.1e 06-en-vivo`.
+
+Tests, en este orden:
+
+1. `shared/page-of.spec.ts` (los que ya tiene `bank-filter.spec.ts`, mudados) y `bank-filter.spec.ts` sin ellos.
+2. `segment-names.spec.ts`: uno, tres (todos) y seis alumnos («y 4 más»); el primer nombre; en inglés usa su conjunción.
+3. `live-observations.spec.ts`: sin nada que decir, ninguna; el motivo primero; parado con sus minutos; fuera de la ventana y no «parado» a la vez; cada patrón; «Superó tras insistir» y «Repite ejercicios»; quien no ha entrado no tiene ninguna.
+4. `live-filter.spec.ts`: cada filtro; la búsqueda sin tildes ni mayúsculas; la prueba (solo quien la falla ahora en ese ejercicio); filtro, búsqueda y prueba a la vez.
+5. `live-row.spec.ts`: sin los campos que salen.
+6. `count-up.spec.ts` (temporizadores falsos): el primer valor, sin contar; de 17 a 18, un paso; de 0 a 24, 12 pasos hasta el valor exacto; hacia abajo; un cambio a mitad de cuenta; con `prefers-reduced-motion`, de golpe; al destruirse, para.
+7. `live-figure.spec.ts`: el nombre accesible con el valor final; `aria-pressed` solo con `pressed`; el detalle y la barra, solo si existen; `chosen` al pulsar.
+8. `live-bar.spec.ts`: un tramo por estado con alumnos, con su ancho; ninguno para los ceros; cada tramo recibe el foco y dice sus nombres.
+9. `common-failure.spec.ts`: la llamada, lo que espera, cuántos y «Ver quiénes»; la marca de la prueba oculta.
+10. `live-reason.spec.ts`: las cuatro frases de la cola; un chip por cada tipo de observación, con su icono y su tono.
+11. `live-class.spec.ts`: con un bloque (título, resumen sin ceros, leyenda completa); el aviso desde 3 alumnos y no con 2, y «Ver quiénes» emite la prueba; con toda la clase, el bloque de cada ejercicio, 5 y «Ver los N»; la línea de los otros bloques con sus enlaces; fuera de clase, «La prueba que más se falló» sin aviso; sin nadie, el texto vacío.
+12. `live-queue.spec.ts`: la mascota sin nadie; cada entrada con su motivo, su ejercicio, su bloque si es otro y la prueba que falla; 4 y «Ver los otros N», que despliega y pliega; «Atendido» emite y nombra al alumno.
+13. `live-rhythm.spec.ts`: cada frase; los totales; los dos puntos que laten, con `motion-reduce:animate-none`; sin actividad, el texto vacío y ninguna frase.
+14. `live-table.spec.ts`: sin columnas de tiempo, pegados ni salidas; 8 por página y el paginador solo con más; las tarjetas, de 6 en 6; la página vuelve a la primera al cambiar `pageKey` y no con filas nuevas; el orden por defecto y por columna, con su anuncio; el bloque junto al ejercicio; las pistas vacías; los chips; sin filas, el mensaje.
+15. `live-store.spec.ts`: sin `feed`.
+16. `live-page.spec.ts`: el título con el grupo y el bloque, «Toda la clase» y la asignatura; la pestaña; una cifra filtra la tabla, mueve el foco y se desactiva al pulsarla otra vez; «Avance del bloque» vuelve a «Todos»; «Ver quiénes» filtra por la prueba y su chip lo quita; el buscador; fuera de clase no hay cola ni ritmo, y las cifras y los filtros son los acumulados; fuera de clase con toda la clase; el anuncio de las cifras; el punto de los bloques con actividad; los estados vacíos, el error y los esqueletos de siempre; con `prefers-reduced-motion`, las cifras no cuentan y lo animado lleva `motion-reduce:animate-none`.
+17. `showcase-page.spec.ts`: la sección «Panel en vivo» con sus tres piezas.
 
 **4.2 · Detalle del intento (≈3 h)** · ficha `07-detalle`
 
