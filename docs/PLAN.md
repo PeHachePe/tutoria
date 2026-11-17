@@ -121,7 +121,7 @@ TutorIA es una aplicación web educativa para aprender programación en Formaci�
 | `/alumno/ajustes`       | Ajustes: tema, animaciones, proactividad, voz                             | Alumno          | 1        | —                       |
 | `/alumno/datos`         | Datos registrados: qué se registra, qué no, para qué y quién lo ve        | Alumno          | 1        | Figuras 14 y 23         |
 | `/docente/en-vivo`      | Sesión en vivo, con detalle por intento en `/docente/en-vivo/:attemptId`  | Docente y admin | 2        | Figuras 11–12 del TFM   |
-| `/docente/historico`    | Histórico del grupo                                                       | Docente y admin | 2        | Figuras 13–14 del TFM   |
+| `/docente/historico`    | Histórico del grupo                                                       | Docente y admin | 2        | Figuras 10 y 19 del TFM |
 | `/docente/ejercicios`   | Gestión de ejercicios y asignaciones                                      | Docente y admin | 2        | Figuras 11 y 20 del TFM |
 | `/docente/grupos`       | Grupos y matrícula: el docente, los suyos; el administrador, todos        | Docente y admin | 2        | —                       |
 | `/admin/usuarios`       | Usuarios: alta, rol, activar o desactivar                                 | Admin           | —        | —                       |
@@ -1556,7 +1556,7 @@ La app que ya funciona en local, publicada en Supabase en la nube y en Vercel, c
 
 Etiqueta: `v0.9` (la versión entregada en la PEC3).
 
-#### Fase 4 · Panel docente (capa 2, ≈32 h)
+#### Fase 4 · Panel docente (capa 2, ≈41 h)
 
 **4.1 · Sesión en vivo, con datos simulados y reales (≈6 h)** · ficha `06-en-vivo` · Figuras 9 y 18 del TFM
 
@@ -2270,7 +2270,7 @@ Commit: `feat(history): group history with mock data (step 4.4)`.
 Dudas resueltas:
 
 - **La ficha `09-historico` no existe.** La sesión la escribe primero con la plantilla (5.3), a partir de este bloque, y el autor la valida con el plan corto.
-- **Las figuras de la memoria son la 10 (boceto) y la 19 (prototipo),** no la 13 y la 14, que son la administración y los datos registrados. La 19 trae la gráfica a la izquierda con su frase («La tendencia descendente sugiere una autonomía creciente…») y tres cifras a la derecha. Al cerrar se corrige la fila de `/docente/historico` en 2.2.
+- **Las figuras de la memoria son la 10 (boceto) y la 19 (prototipo),** no la 13 y la 14, que son la administración y los datos registrados. La 19 trae la gráfica a la izquierda con su frase («La tendencia descendente sugiere una autonomía creciente…») y tres cifras a la derecha. La fila de `/docente/historico` en 2.2 ya las cita.
 - **La pantalla responde a tres decisiones del docente fuera de clase,** con la regla del panel (D-068): si el grupo gana autonomía (la gráfica y la frase que la lee), qué bloque conviene repasar (las cifras del bloque elegido y la tabla) y a quién recordarle una entrega («Entregas»). Lo que vale cero no se enseña y nada clasifica a nadie: ni rankings ni orden por cifras, las listas de personas van por nombre.
 - **«Media de pistas» es por alumno y ejercicio:** las pistas pedidas (eventos `hint_requested`) en los intentos que cuentan del bloque, entre esos intentos. Por alumno y bloque, un bloque con tres ejercicios saldría más alto que uno con uno aunque el grupo pida menos ayuda. Es lo que ya comprueba `fixtures.spec.ts` y con el seed baja: 1,1 · 0,6 · 0,3 · 0,0.
 - **El tiempo es la mediana, no la media,** de lo que pasa entre abrir un ejercicio y entregarlo (`finishedAt − startedAt` de los intentos que cuentan ya entregados): un ejercicio abierto el lunes y entregado el jueves no puede contar tres días. La cifra se llama «Tiempo por ejercicio». Al cerrar, 2.2 dice «tiempo por ejercicio (mediana)».
@@ -2469,7 +2469,7 @@ export function hintTrend(blocks: readonly BlockStats[], students: number): Hint
 
 - La columna del tiempo de la tabla usa `history.figure.time`; «N ejercicios» de una entrega, `history.block.exercises`; «2 de 3» y «6 de 24», `history.of`.
 - Comprobación en el navegador (datos simulados, como Marta): 1.º DAW A de Programación básica abre con cinco barras (1,1 · 0,6 · 0,3 · 0,0 y la recuperación, en gris, con 1,0 y «1 alumno»), la frase «Las pistas bajan de 1,1 a 0,0…» y «Tema 4: Cadenas y formato» elegido (6 min, 57 %, sin la cifra de atascos); al elegir el tema 1, 12 min, 100 % y «6 de 24»; en «Entregas», primero la recuperación (20 nov) y el tema 5 (27 nov) y después el tema 4 (6 nov: 40 de 72 a tiempo y 19 alumnos con algo sin entregar); el examen no sale hasta que se abre. El otro grupo de Marta (Desarrollo web) tiene un bloque con dos alumnos: sin frase y en gris. Con la administración se ven los cuatro grupos. A 375, 768, 1280 y 1920 px sin scroll horizontal de la página (la gráfica y la tabla se desplazan dentro de su tarjeta), en claro y oscuro, con axe sin infracciones y entera con el teclado.
-- Documentación al cerrar: la ficha `09-historico` con sus criterios marcados; 2.2 (la fila de la ruta con las figuras 10 y 19, y el detalle «Histórico» con las pistas por ejercicio, la mediana, las cifras del bloque elegido y «Entregas»); la fila de `StatsService` en 4.2 (`groupHistory()`; RPC `group_block_stats` y `group_deadline_stats`); `DECISIONES.md` (D-073); `PENDIENTES.md` (entregas de última hora y fuera de plazo en el seed para las capturas; los nombres de quien se atascó, con la ficha del alumno; la pestaña con el nombre del grupo); `E2E-PENDIENTES.md` (elegir un bloque desde una barra y desde la tabla, cambiar de grupo, «Ver quiénes», los estados vacíos y de error, y axe en claro y oscuro). Definición de terminado (5.4) y capturas: `npm run screenshots -- 4.4 09-historico`.
+- Documentación al cerrar: la ficha `09-historico` con sus criterios marcados; 2.2 (el detalle «Histórico» con las pistas por ejercicio, la mediana, las cifras del bloque elegido y «Entregas»); la fila de `StatsService` en 4.2 (`groupHistory()`; RPC `group_block_stats` y `group_deadline_stats`); `DECISIONES.md` (D-073); `PENDIENTES.md` (entregas de última hora y fuera de plazo en el seed para las capturas; los nombres de quien se atascó, con la ficha del alumno; la pestaña con el nombre del grupo); `E2E-PENDIENTES.md` (elegir un bloque desde una barra y desde la tabla, cambiar de grupo, «Ver quiénes», los estados vacíos y de error, y axe en claro y oscuro). Definición de terminado (5.4) y capturas: `npm run screenshots -- 4.4 09-historico`.
 
 Tests, en este orden:
 
