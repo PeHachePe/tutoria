@@ -2,7 +2,7 @@
 
 `/docente/en-vivo/:attemptId?grupo=&bloque=` · Docente y administrador · Capa 2 · 3 h (4.2) + 3,5 h (4.2b, replanteo del 4.1c)
 
-> Replanteada en el paso 4.1c (D-069). Lo que describe esta ficha se construye en el 4.2b; hasta entonces, la aplicación tiene la versión del 4.2.
+> Replanteada en el paso 4.1c (D-069) y construida en el 4.2b.
 
 ## Objetivo
 
@@ -12,7 +12,7 @@ Sigue la regla del panel (ficha 06): cada dato responde a algo que el docente qu
 
 ## Datos
 
-- `LiveService.attemptDetail(id)` (simulado y Supabase): el intento con su alumno, su ejercicio (con las pruebas, visibles y ocultas), el grupo y el bloque de su asignación, sus eventos y sus interacciones con el tutor. Lo lee la RLS del docente (sus alumnos; el administrador, todos). Un intento ajeno o inexistente da `not_found`.
+- `LiveService.attemptDetail(id)` (simulado y Supabase): el intento con su alumno, su ejercicio (con las pruebas, visibles y ocultas), el grupo y el bloque de su asignación, sus eventos y sus interacciones con el tutor, y los intentos del alumno en esa asignación (`siblings`, para los enlaces a los demás). Lo lee la RLS del docente (sus alumnos; el administrador, todos). Un intento ajeno o inexistente da `not_found`.
 - `LiveStore` (el de la ruta padre `en-vivo`): los cambios en vivo del intento (estado, código, eventos e interacciones con el tutor), el motivo del alumno en la cola con «Atendido» y los demás intentos del alumno en la misma asignación.
 - Si la URL no lleva el grupo del intento, se corrige sin añadir una entrada al historial. El bloque ya no hace falta: el panel sigue a todo el grupo (ficha 06), y «Volver a la sesión» conserva el bloque que hubiera.
 - Funciones puras (TDD): lo que pasa ahora (`attemptNow()`), la evolución ejecución a ejecución (`attemptRuns()`), la línea temporal con las ejecuciones iguales agrupadas (`attemptTimeline()`), el resumen en una línea (`attemptSummary()`, que sustituye a `attemptFigures()`) y la mezcla de lo cargado con lo que llega en vivo (`mergeById()`).
@@ -22,11 +22,11 @@ Sigue la regla del panel (ficha 06): cada dato responde a algo que el docente qu
 
 - **Cabecera:** «Volver a la sesión»; el `h1` con el nombre del alumno; debajo, el ejercicio (con su posición en el bloque), el bloque, «Intento N · Repitiendo» si es una práctica, el chip de estado y, si el alumno trabaja ahora, «En directo» con el punto que late. Con más de un intento en la asignación, enlaces a los demás.
 - **Si el alumno está en la cola:** una franja con su motivo («Falla 4 veces seguidas la misma prueba») y «Atendido».
-- **«Ahora»** (sustituye a las seis cifras; con el intento entregado se titula «Cómo lo resolvió» y habla en pasado). Dos piezas, una al lado de otra en escritorio:
-  - **Pruebas:** «3 de 6 superadas» con su barrita y, debajo, cada prueba que falla en la última ejecución con su llamada, lo que se espera y desde cuándo (`isStrongPassword("abc12345")` · espera `false` · falla desde hace 5 ejecuciones); una oculta dice «comprobación oculta». Sin ejecuciones, «Todavía no ha ejecutado las pruebas». Con todo superado, «Supera todas las pruebas».
-  - **La última ayuda del tutor:** el nivel de la pista, hace cuánto y el texto (dos líneas, con «Ver entera», que lleva a su entrada de la línea temporal). Sin ayuda, «No ha pedido ayuda al tutor».
+- **«Ahora»** (sustituye a las seis cifras). Si el alumno no está en la sesión y el intento no está entregado, se titula «Dónde lo dejó»; con el intento entregado, «Cómo lo resolvió». En los dos casos habla en pasado. Dos piezas, una al lado de otra en escritorio:
+  - **Pruebas:** «3 de 6 superadas en la última ejecución» con su barrita y, debajo, cada prueba que falla en la última ejecución con su llamada, lo que se espera y desde cuándo (`isStrongPassword("abc12345")` · espera `false` · falla desde hace 5 ejecuciones), la que más lleva fallando primero; una oculta dice «(prueba oculta)». Un valor largo se corta con «…» y sale entero al pasar el ratón. Se ven 4 como mucho; el resto, con «y N más en la línea temporal». Sin ejecuciones, «Todavía no ha ejecutado las pruebas» (o «No llegó a ejecutarlas»). Con todo superado, «Supera todas las pruebas»; entregado, «Superó las 6 pruebas» y «Fallaron antes de superarlas:», con cada una y en cuántas ejecuciones falló.
+  - **La última ayuda del tutor** (lo último que dijo, lo pidiera el alumno o no): la pista con su nivel, la respuesta a una pregunta (con lo que preguntó) o la intervención por su cuenta, hace cuánto y el texto (dos líneas, con «Ver entera», que lleva a su entrada de la línea temporal). Sin ayuda, «No ha pedido ayuda al tutor».
   - Debajo, **una línea de resumen** con lo que siempre dice algo: «27 min de trabajo · 4 ejecuciones · 3 pistas (nivel 3)», sin las partes que valgan cero. Y, solo si existen, chips: «2 preguntas al tutor», «Pegó 320 caracteres», «8 min fuera de la ventana».
-- **«Evolución»:** la gráfica del intento. Una columna por ejecución sobre el eje del tiempo, tan alta como las pruebas superadas (de 0 al total) y con otro tono cuando las supera todas; entre las columnas, una marca por cada pista (con su nivel) y por cada pegado. De un vistazo se ve si avanza, si lleva cinco ejecuciones igual o si saltó de 2 a 6 justo después de un pegado, sin que la pantalla lo diga.
+- **«Evolución»:** la gráfica del intento, en HTML. Una columna por ejecución, en el orden en que pasaron (no a escala de tiempo), tan alta como las pruebas superadas (de 0 al total) y con otro tono y una marca cuando las supera todas; entre las columnas, una marca por cada pista (con su nivel) y por cada pegado. Si no cabe, se desplaza en su zona, que se queda al final. De un vistazo se ve si avanza, si lleva cinco ejecuciones igual o si saltó de 2 a 6 justo después de un pegado, sin que la pantalla lo diga.
   - Pulsar una columna o una marca lleva a su entrada de la línea temporal.
   - La columna nueva crece al llegar. Sin ejecuciones, la gráfica no sale.
 - **Línea temporal** (izquierda en escritorio, con su propio desplazamiento): una lista con **lo más reciente arriba**, porque el docente la abre para saber qué pasa ahora y la gráfica ya cuenta la historia en orden. Cada entrada, con su hora:
@@ -35,7 +35,7 @@ Sigue la regla del panel (ficha 06): cada dato responde a algo que el docente qu
   - «Pegó 120 caracteres» y «Salió de la ventana · 2 min» (la salida y su vuelta, juntas);
   - «Entregó el ejercicio» y, al final, «Abrió el ejercicio».
   - Entre dos entradas separadas por 5 minutos o más, «12 min sin actividad».
-  - Filtros: «Todo», «Pruebas», «Tutor» y «Pegados y salidas», cada uno con su recuento; un filtro sin entradas no sale.
+  - Filtros: «Todo», «Pruebas», «Tutor» y «Pegados y salidas», cada uno con las entradas que enseña (un grupo cuenta una); un filtro sin entradas no sale y, sin ninguna entrada que filtrar, no hay filtros.
 - **Código** (derecha en escritorio, la misma altura): `<app-code-editor>` en solo lectura dentro de `@defer`, con el código final si está entregado o el actual si no. Si el alumno lo cambia mientras se mira, «El código ha cambiado» con «Ver el actual», que crea el editor de nuevo (D-029).
 - **Ancho disponible** (container queries): «Ahora» en dos piezas y la línea temporal junto al código desde `@4xl`; por debajo, todo en una columna, en este orden: ahora, evolución, código y línea temporal.
 - **Animaciones** (quietas con `prefers-reduced-motion`): el punto en directo, la columna nueva de la evolución y la entrada nueva de la línea temporal, que llega deslizando.
@@ -64,7 +64,7 @@ Sigue la regla del panel (ficha 06): cada dato responde a algo que el docente qu
 
 - Al llegar, el foco va al `h1`; la pestaña dice el alumno y el ejercicio («Ana García · Validar un correo electrónico · TutorIA»).
 - «Ahora», «Evolución», la línea temporal y el código son regiones con nombre.
-- La evolución tiene su alternativa en texto para el lector de pantalla («Ejecuciones: 3 de 6, 3 de 6, 5 de 6 y 6 de 6; 2 pistas y 1 pegado»); sus columnas y marcas son botones con nombre («Ejecución de las 10:12: 3 de 6 superadas. Ir a la línea temporal») y se recorren con el teclado.
+- La evolución tiene su alternativa en texto para el lector de pantalla («Ejecuciones: 3 de 6, 3 de 6, 5 de 6 y 6 de 6; 2 pistas y 1 pegado»); sus columnas y marcas son botones con nombre que incluye lo que se ve («Ejecución de las 10:12: 3/6 superadas. Ir a la línea temporal») y se recorren con el teclado. La entrada a la que lleva toma el foco.
 - La línea temporal es una lista (`ol` con `reversed`) con nombre; cada entrada empieza por su hora en un `<time>`.
 - Los filtros son un grupo de opciones (`mat-button-toggle-group`, que expone `radiogroup`) con nombre, y cada una dice su recuento («Tutor 4»).
 - Las entradas nuevas no se anuncian una a una; el código en solo lectura se puede recorrer con el teclado y Esc seguido de Tab sale de él.
@@ -74,13 +74,13 @@ Sigue la regla del panel (ficha 06): cada dato responde a algo que el docente qu
 
 Del replanteo (4.2b):
 
-- [ ] No hay ninguna cifra que valga cero: el resumen y los chips solo dicen lo que existe.
-- [ ] «Ahora» dice qué pruebas fallan, qué esperan y desde cuántas ejecuciones, y la última ayuda del tutor con su nivel; en un intento entregado se titula «Cómo lo resolvió».
-- [ ] La evolución pinta una columna por ejecución y una marca por pista y por pegado; pulsar una lleva a su entrada de la línea temporal.
-- [ ] Cuatro ejecuciones seguidas con el mismo resultado salen como una entrada.
-- [ ] La línea temporal enseña lo más reciente arriba y, con el simulador, las entradas y las columnas nuevas llegan solas.
-- [ ] Un enlace directo sin grupo abre el detalle y corrige la URL; «Volver a la sesión» conserva el bloque.
-- [ ] Responsive a 375, 768, 1024, 1280, 1440 y 1920 px con el menú abierto, sin scroll horizontal; claro y oscuro, axe sin infracciones.
+- [x] No hay ninguna cifra que valga cero: el resumen y los chips solo dicen lo que existe.
+- [x] «Ahora» dice qué pruebas fallan, qué esperan y desde cuántas ejecuciones, y la última ayuda del tutor con su nivel; en un intento entregado se titula «Cómo lo resolvió».
+- [x] La evolución pinta una columna por ejecución y una marca por pista y por pegado; pulsar una lleva a su entrada de la línea temporal.
+- [x] Cuatro ejecuciones seguidas con el mismo resultado salen como una entrada.
+- [ ] La línea temporal enseña lo más reciente arriba y, con el simulador, las entradas y las columnas nuevas llegan solas. Lo más reciente arriba, comprobado. La llegada en directo está cubierta por los tests de la página y de la gráfica, pero no se ha visto en el navegador: en un minuto de simulación el simulador no movió el intento abierto, porque elige alumnos al azar.
+- [x] Un enlace directo sin grupo abre el detalle y corrige la URL; «Volver a la sesión» conserva el bloque.
+- [x] Responsive a 375, 768, 1024, 1280, 1440 y 1920 px con el menú abierto, sin scroll horizontal; claro y oscuro, axe sin infracciones.
 
 Ya cumplidos en el 4.2, y que siguen valiendo:
 
