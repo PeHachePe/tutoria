@@ -2119,4 +2119,4 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - El modelo de datos asigna cada bloque a todo el grupo: una recuperación cuenta como pendientes a quienes no la necesitan. Lo recoge `PENDIENTES.md`.
 - La lección de proceso: una pantalla nueva se boceta con los datos del seed y se valida antes de construirla, aunque el plan la deje atada.
 
-**Aprobación:** el boceto, aprobado por el autor; la pantalla, pendiente de su revisión.
+**Aprobación:** el boceto y la pantalla final, aprobados por el autor.
