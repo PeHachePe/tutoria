@@ -747,6 +747,36 @@ export type Database = {
           student_count: number;
         }[];
       };
+      group_deadline_stats: {
+        Args: { target_group_id: string };
+        Returns: {
+          assignments: number;
+          block_id: string;
+          due_at: string;
+          last_hours: number;
+          late: number;
+          missing_ids: string[];
+          missing_names: string[];
+          missing_pending: number[];
+          on_time: number;
+        }[];
+      };
+      group_work_stats: {
+        Args: { target_group_id: string };
+        Returns: {
+          active_students: number;
+          assignments: number;
+          attempts: number;
+          block_id: string;
+          hints: number;
+          id: string;
+          is_block: boolean;
+          median_seconds: number;
+          solved: number;
+          stuck_students: number;
+          students: number;
+        }[];
+      };
       hidden_test_count: { Args: { target_exercise_id: string }; Returns: number };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_assigned_by_others: { Args: { target_exercise_id: string }; Returns: boolean };
