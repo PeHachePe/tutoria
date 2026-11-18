@@ -11,6 +11,7 @@ import { AttemptDetailPage } from './attempt-detail/attempt-detail-page';
 import { BlocksPage } from './blocks/blocks-page';
 import { ExerciseBankPage } from './exercises/exercise-bank-page';
 import { ExerciseFormPage } from './exercises/exercise-form-page';
+import { HistoryPage } from './history/history-page';
 import { LivePage } from './live/live-page';
 import { LiveStore } from './live/live-store';
 
@@ -43,8 +44,7 @@ export const teacherRoutes: Routes = [
       {
         path: SEGMENTS.teacher.history,
         title: $localize`:@@route.history.title:Histórico`,
-        component: PlaceholderPage,
-        data: { heading: $localize`:@@route.history.heading:Histórico`, step: '4.4' },
+        component: HistoryPage,
       },
       {
         path: SEGMENTS.teacher.exercises,

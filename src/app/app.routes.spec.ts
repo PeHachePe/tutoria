@@ -10,11 +10,13 @@ import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
 import { provideLocalizedPaginator } from './core/i18n/localized-paginator-intl';
 import { AttemptService } from './data/attempt-service';
+import { BlockService } from './data/block-service';
 import { CodeRunnerService } from './data/code-runner-service';
 import { EventService } from './data/event-service';
 import { DataError } from './data/data-error';
 import { ExerciseService } from './data/exercise-service';
 import { LiveService } from './data/live-service';
+import { StatsService } from './data/stats-service';
 import { TutorService } from './data/tutor-service';
 import type { Role } from './data/user';
 import { studentRoutes } from './student/student.routes';
@@ -51,6 +53,8 @@ describe('app routes', () => {
           provide: LiveService,
           useValue: { listGroups: () => Promise.resolve([]), watch: () => () => undefined },
         },
+        { provide: BlockService, useValue: { listGroups: () => Promise.resolve([]) } },
+        { provide: StatsService, useValue: {} },
       ],
     });
     await restoreSession();
@@ -97,9 +101,9 @@ describe('app routes', () => {
   });
 
   it('tells which step builds each placeholder screen', async () => {
-    await visit('teacher', '/docente/historico');
+    await visit('teacher', '/docente/grupos');
 
-    expect(screen.getByText('Esta pantalla se construye en el paso 4.4.')).toBeTruthy();
+    expect(screen.getByText('Esta pantalla se construye en el paso 5.2.')).toBeTruthy();
   });
 
   it.each<[Role, string]>([

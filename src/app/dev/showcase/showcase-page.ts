@@ -58,6 +58,8 @@ import { CommonFailure } from '../../teacher/live/common-failure';
 import { type BarSegment, LiveBar } from '../../teacher/live/live-bar';
 import { LiveChip, type LiveReason } from '../../teacher/live/live-reason';
 import { LiveClass } from '../../teacher/live/live-class';
+import { BlockDeadlines } from '../../teacher/history/block-deadlines';
+import { HintChart } from '../../teacher/history/hint-chart';
 import {
   nextRun,
   sampleRuns,
@@ -68,6 +70,7 @@ import {
   SAMPLE_SOLVED,
   SAMPLE_SOLVED_SUMMARY,
 } from './attempt-detail-sample';
+import { SAMPLE_DEADLINE, SAMPLE_HISTORY_BLOCKS, SAMPLE_HISTORY_STUDENTS } from './history-sample';
 import { SAMPLE_OVERVIEW, SAMPLE_STRIP } from './live-class-sample';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
@@ -119,6 +122,8 @@ import { ShowcaseTable } from './showcase-table';
     RunResults,
     Splitter,
     LiveBar,
+    HintChart,
+    BlockDeadlines,
     CommonFailure,
     LiveChip,
     LiveClass,
@@ -134,6 +139,10 @@ export class ShowcasePage {
 
   protected readonly classOverview = SAMPLE_OVERVIEW;
   protected readonly classStrip = SAMPLE_STRIP;
+  protected readonly historyBlocks = SAMPLE_HISTORY_BLOCKS;
+  protected readonly historyStudents = SAMPLE_HISTORY_STUDENTS;
+  protected readonly deadlineSample = [SAMPLE_DEADLINE];
+
   protected readonly barSample: readonly BarSegment[] = [
     { status: 'not_started', count: 3, names: 'Sin empezar: Iker, Lía y Max' },
     { status: 'in_progress', count: 8, names: 'En curso: Aya, Hugo y 6 más' },

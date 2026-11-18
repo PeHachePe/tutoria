@@ -7,7 +7,7 @@ import { prefersReducedMotion } from '../../shared/reduced-motion';
 import { TutorMessage } from '../../shared/tutor-message/tutor-message';
 import { FLASH_MS } from '../live/flash-on-change';
 import { RUN_GROUP_MIN, type TimelineEntry } from './attempt-timeline';
-import { formatDuration } from './format-duration';
+import { formatDuration } from '../../shared/format-duration';
 
 /** What the tutor did with each of its tools, as the teacher reads it (2.5e, 2.5f). */
 const TOOL_LABELS: Record<string, string> = {

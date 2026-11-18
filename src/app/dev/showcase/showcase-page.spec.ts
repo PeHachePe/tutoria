@@ -70,6 +70,7 @@ describe('ShowcasePage', () => {
       'Resultados de las pruebas',
       'Panel en vivo',
       'Dónde está la clase',
+      'Histórico',
       'Detalle del intento',
       'Ahora',
       'Cómo lo resolvió',
@@ -237,6 +238,20 @@ describe('ShowcasePage', () => {
     ).toHaveLength(4);
     expect(section.textContent).toContain('Para explicar a todos');
     expect(section.querySelectorAll('app-live-chip')).toHaveLength(5);
+  });
+
+  it('shows the pieces of the history', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const section = element.querySelector(
+      '[aria-labelledby="history-sample-title"]',
+    ) as HTMLElement;
+
+    expect(section.querySelectorAll('[data-testid="hint-bar"]')).toHaveLength(5);
+    expect(section.querySelector('[aria-current="true"]')?.getAttribute('aria-label')).toBe(
+      'Tema 4: Cadenas: 0,0 pistas por ejercicio. Ver sus cifras',
+    );
+    expect(section.textContent).toContain('14 en las últimas 24 horas');
+    expect(section.textContent).toContain('Hugo Martín (falta 1 de 3)');
   });
 
   it('shows the pieces of the attempt detail, and grows the evolution with a run more', async () => {

@@ -1,0 +1,93 @@
+<div class="flex flex-col gap-6" [attr.aria-busy]="groups.isLoading() || history.isLoading()">
+  <header class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+    <div class="flex min-w-0 flex-col gap-1">
+      @if (subject(); as subject) {
+        <p class="eyebrow" [attr.lang]="subject.lang">{{ subject.name }}</p>
+      }
+      <h1 class="text-headline-medium">
+        @if (group(); as group) {
+          <ng-container i18n="@@history.title">{{ group.name }} · Histórico</ng-container>
+        } @else {
+          <ng-container i18n="@@history.heading">Histórico</ng-container>
+        }
+      </h1>
+    </div>
+    @if (groupOptions().length > 1) {
+      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-[30rem]">
+        <mat-label i18n="@@history.group">Grupo</mat-label>
+        <mat-select [value]="group()?.id" (selectionChange)="selectGroup($event.value)">
+          @for (option of groupOptions(); track option.id) {
+            <mat-option [value]="option.id">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+  </header>
+
+  @if (groups.error(); as error) {
+    <app-load-error [error]="error" (retry)="groups.reload()" />
+  } @else if (groups.isLoading()) {
+    <ng-container [ngTemplateOutlet]="skeleton" />
+  } @else if (!group()) {
+    <app-empty-state
+      heading="Aún no tienes grupos"
+      i18n-heading="@@history.empty.groups.heading"
+      text="Cuando tengas un grupo con ejercicios, aquí verás cómo evoluciona."
+      i18n-text="@@history.empty.groups.text"
+    />
+  } @else if (history.error(); as error) {
+    <app-load-error [error]="error" (retry)="history.reload()" />
+  } @else if (history.isLoading()) {
+    <ng-container [ngTemplateOutlet]="skeleton" />
+  } @else {
+    @if (selected(); as selected) {
+      <section aria-labelledby="history-chart-heading" class="flex flex-col gap-2">
+        <h2 id="history-chart-heading" class="text-title-large" i18n="@@history.evolution.heading">
+          Evolución del grupo
+        </h2>
+        <div class="flex flex-col gap-3 rounded-2xl bg-panel p-4">
+          @if (started().length > 1) {
+            @if (trend(); as trend) {
+              <p class="text-body-large">{{ trend }}</p>
+            }
+            <app-hint-chart
+              [blocks]="started()"
+              [students]="students()"
+              [selectedId]="selected.block.id"
+            />
+            <p class="text-body-small text-on-surface-variant" i18n="@@history.chart.help">
+              La media de pistas que pide un alumno en un ejercicio. Cuenta el primer intento
+              entregado de cada uno; las prácticas no.
+            </p>
+          } @else {
+            <p class="text-body-large" i18n="@@history.evolution.single">
+              Aún no hay evolución que comparar: el grupo solo ha trabajado un bloque.
+            </p>
+          }
+        </div>
+      </section>
+
+      <app-block-detail
+        [stats]="selected"
+        [deadlines]="selectedDeadlines()"
+        [students]="students()"
+      />
+    } @else {
+      <app-empty-state
+        heading="Este grupo aún no tiene actividad"
+        i18n-heading="@@history.empty.activity.heading"
+        text="Cuando tus alumnos empiecen los ejercicios de un bloque, aquí verás cuántas pistas piden, cuánto tardan y qué les queda por superar."
+        i18n-text="@@history.empty.activity.text"
+      />
+    }
+  }
+</div>
+
+<ng-template #skeleton>
+  <app-loading-skeleton label="Cargando el histórico…" i18n-label="@@history.loading">
+    <div class="flex flex-col gap-6">
+      <app-skeleton class="h-80 w-full rounded-2xl" />
+      <app-skeleton class="h-96 w-full rounded-2xl" />
+    </div>
+  </app-loading-skeleton>
+</ng-template>

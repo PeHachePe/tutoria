@@ -8,6 +8,7 @@ import { CodeRunnerService } from '../code-runner-service';
 import { EventService } from '../event-service';
 import { ExerciseService } from '../exercise-service';
 import { LiveService } from '../live-service';
+import { StatsService } from '../stats-service';
 import { TutorService } from '../tutor-service';
 import type { Database } from './database.types';
 import { keepaliveFetch } from './keepalive-fetch';
@@ -19,6 +20,7 @@ import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
 import { SupabaseLiveService } from './supabase-live-service';
+import { SupabaseStatsService } from './supabase-stats-service';
 import { SupabaseTutorService } from './supabase-tutor-service';
 
 /**
@@ -42,5 +44,6 @@ export function provideSupabaseData(config: SupabaseConfig): EnvironmentProvider
     { provide: TutorService, useClass: SupabaseTutorService },
     { provide: LiveService, useClass: SupabaseLiveService },
     { provide: BlockService, useClass: SupabaseBlockService },
+    { provide: StatsService, useClass: SupabaseStatsService },
   ]);
 }

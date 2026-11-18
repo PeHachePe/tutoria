@@ -7,6 +7,7 @@ import { CodeRunnerService } from '../code-runner-service';
 import { EventService } from '../event-service';
 import { ExerciseService } from '../exercise-service';
 import { LiveService } from '../live-service';
+import { StatsService } from '../stats-service';
 import { TutorService } from '../tutor-service';
 import { MockAttemptService } from './mock-attempt-service';
 import { MockAuthService } from './mock-auth-service';
@@ -15,6 +16,7 @@ import { MockCodeRunnerService } from './mock-code-runner-service';
 import { MockEventService } from './mock-event-service';
 import { MockExerciseService } from './mock-exercise-service';
 import { MockLiveService } from './mock-live-service';
+import { MockStatsService } from './mock-stats-service';
 import { MockTutorService } from './mock-tutor-service';
 
 /**
@@ -31,5 +33,6 @@ export function provideMockData(): EnvironmentProviders {
     { provide: TutorService, useClass: MockTutorService },
     { provide: LiveService, useClass: MockLiveService },
     { provide: BlockService, useClass: MockBlockService },
+    { provide: StatsService, useClass: MockStatsService },
   ]);
 }

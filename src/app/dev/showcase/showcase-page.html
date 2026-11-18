@@ -463,6 +463,21 @@
     </div>
   </section>
 
+  <section aria-labelledby="history-sample-title" class="flex flex-col gap-3">
+    <h2 id="history-sample-title" class="text-title-large">Histórico</h2>
+    <p class="text-body-medium text-on-surface-variant">
+      La gráfica de pistas por ejercicio con su leyenda (cada barra es un enlace que elige su
+      bloque; en gris, los que ha trabajado menos de media clase) y la entrega de un bloque con
+      todas sus líneas y quién falta a la vista.
+    </p>
+    <div class="flex flex-col gap-3 rounded-2xl bg-panel p-4">
+      <app-hint-chart [blocks]="historyBlocks" [students]="historyStudents" selectedId="t4" />
+    </div>
+    <div class="rounded-2xl bg-panel px-4">
+      <app-block-deadlines [deadlines]="deadlineSample" [students]="historyStudents" />
+    </div>
+  </section>
+
   <section aria-labelledby="detail-sample-title" class="flex flex-col gap-3">
     <h2 id="detail-sample-title" class="text-title-large">Detalle del intento</h2>
     <p class="text-body-medium text-on-surface-variant">

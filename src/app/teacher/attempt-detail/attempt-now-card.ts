@@ -8,7 +8,7 @@ import { activityAge } from '../live/activity-age';
 import { type AttemptNow, NOW_TESTS_SHOWN } from './attempt-now';
 import type { TestCount } from '../../shared/status-chip/status-chip';
 import type { AttemptSummary } from './attempt-summary';
-import { formatDuration } from './format-duration';
+import { formatDuration } from '../../shared/format-duration';
 
 const MINUTE_MS = 60_000;
 

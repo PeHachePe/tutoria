@@ -1,7 +1,14 @@
 import type { Attempt, StoredAttemptStatus } from '../data/attempt';
 import type { StuckThresholds } from '../data/exercise';
 import type { ProcessEvent } from '../data/process-event';
-import { failingStreaks, failureStreak, isStuck, lastActivityAt, stuckReason } from './is-stuck';
+import {
+  failingStreaks,
+  failureStreak,
+  isStuck,
+  lastActivityAt,
+  longestFailureStreak,
+  stuckReason,
+} from './is-stuck';
 
 const NOW = Date.parse('2026-11-07T10:00:00.000Z');
 const MINUTE = 60_000;
@@ -212,5 +219,46 @@ describe('failingStreaks', () => {
         ['t3', 1],
       ]),
     );
+  });
+});
+
+describe('longestFailureStreak', () => {
+  it('is 0 without runs', () => {
+    expect(longestFailureStreak([event('hint_requested', 1)])).toBe(0);
+  });
+
+  it('is 0 when every run passes', () => {
+    expect(longestFailureStreak([run(2, []), run(1, [])])).toBe(0);
+  });
+
+  it('finds a streak in the middle that is passed later', () => {
+    const events = [
+      run(6, []),
+      run(5, ['t1']),
+      run(4, ['t1']),
+      run(3, ['t1']),
+      run(2, []),
+      run(1, []),
+    ];
+
+    expect(longestFailureStreak(events)).toBe(3);
+  });
+
+  it('keeps the longest streak of each test apart', () => {
+    const events = [
+      run(5, ['t1']),
+      run(4, ['t1', 't2']),
+      run(3, ['t2']),
+      run(2, ['t2']),
+      run(1, ['t1']),
+    ];
+
+    expect(longestFailureStreak(events)).toBe(3);
+  });
+
+  it('sorts the runs by time before counting', () => {
+    const events = [run(1, ['t1']), run(3, ['t1']), run(2, [])];
+
+    expect(longestFailureStreak(events)).toBe(1);
   });
 });

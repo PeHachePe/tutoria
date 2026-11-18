@@ -64,12 +64,33 @@ export function failureStreak(events: readonly ProcessEvent[]): number {
  * failed. Empty before any run or with every test passed.
  */
 export function failingStreaks(events: readonly ProcessEvent[]): ReadonlyMap<string, number> {
-  const runs = events
+  const runs = failedTestsByRun(events);
+  const failingNow = runs.at(-1) ?? [];
+  return new Map(failingNow.map((testId) => [testId, trailingFailures(runs, testId)]));
+}
+
+/**
+ * Longest run of consecutive runs in which one same test failed, at any point of the attempt and not
+ * only at its end (the history, 4.4): a student who got stuck and then passed was stuck. 0 without
+ * runs.
+ */
+export function longestFailureStreak(events: readonly ProcessEvent[]): number {
+  /** Each test failing in the previous run, with the runs in a row it has failed up to it. */
+  let streaks = new Map<string, number>();
+  let longest = 0;
+  for (const failed of failedTestsByRun(events)) {
+    streaks = new Map(failed.map((testId) => [testId, (streaks.get(testId) ?? 0) + 1]));
+    longest = Math.max(longest, ...streaks.values());
+  }
+  return longest;
+}
+
+/** The tests that failed in each run, in the order of the runs. */
+function failedTestsByRun(events: readonly ProcessEvent[]): (readonly string[])[] {
+  return events
     .flatMap((event) => (event.type === 'run' ? [event] : []))
     .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
     .map((run) => run.detail.failedTestIds);
-  const failingNow = runs.at(-1) ?? [];
-  return new Map(failingNow.map((testId) => [testId, trailingFailures(runs, testId)]));
 }
 
 /** Runs in a row, counting back from the latest, in which `testId` failed. */
