@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { toUserEntry } from '../admin/user-entry';
 import { SupabaseAdminService } from './supabase-admin-service';
 import { toAppUser } from './supabase-rows';
 import { appUserRow, FakeSupabaseServer, provideFakeSupabase } from './supabase-testing';
@@ -20,12 +21,24 @@ describe('SupabaseAdminService', () => {
   });
 
   describe('listUsers', () => {
-    it('reads every account of app_user, by name', async () => {
+    it('reads every account of app_user, by name, with the groups it teaches and its enrollments', async () => {
       const marta = appUserRow({ id: 'marta', name: 'Marta Ibáñez', role: 'teacher' });
       const alvaro = appUserRow({ id: 'alvaro', name: 'Álvaro Ruiz' });
-      server.on('GET', USERS, { body: [marta, alvaro] });
+      server.on('GET', USERS, {
+        body: [
+          { ...marta, taught: [{ name: '1.º DAW A' }, { name: '1.º DAW A' }], enrollment: [] },
+          { ...alvaro, taught: [], enrollment: [{ class_group: { name: '1.º DAW A' } }] },
+        ],
+      });
 
-      await expect(service.listUsers()).resolves.toEqual([toAppUser(alvaro), toAppUser(marta)]);
+      await expect(service.listUsers()).resolves.toEqual([
+        toUserEntry(toAppUser(alvaro), [], ['1.º DAW A']),
+        toUserEntry(toAppUser(marta), ['1.º DAW A', '1.º DAW A'], []),
+      ]);
+      // The groups taught by their own key: through enrollment, app_user reaches class_group too
+      expect(server.sentTo('GET', USERS)[0].params.get('select')).toBe(
+        '*,taught:class_group!class_group_teacher_id_fkey(name),enrollment(class_group(name))',
+      );
     });
 
     it('turns a failure into a data error', async () => {

@@ -28,6 +28,13 @@
     }
   </mat-form-field>
 
+  <!-- The password of the accounts (5.1b): generate, show and copy -->
+  <app-password-field
+    class="sm:col-span-2"
+    [field]="exerciseForm.password"
+    label="Contraseña de la cuenta de prueba"
+  />
+
   <div class="flex flex-col items-start gap-2 pb-4">
     <mat-checkbox [formField]="exerciseForm.onlySignals">Solo con señales</mat-checkbox>
     <mat-slide-toggle [formField]="exerciseForm.animations">Animaciones</mat-slide-toggle>

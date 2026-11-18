@@ -91,3 +91,15 @@ export const TEACHER_PARAMS = {
   /** The filter of the students of the live panel (4.1e): `ayuda`, `parados`… */
   filter: 'filtro',
 } as const;
+
+/** Query parameters of the users of the administration (5.1b), part of the URL like the others. */
+export const ADMIN_PARAMS = {
+  /** The text searched for in the names and emails. */
+  search: 'buscar',
+  /** One role: `student`, `teacher` or `admin`. */
+  role: 'rol',
+  /** The accounts by status: `desactivadas` or `todas`; without it, the active ones. */
+  status: 'estado',
+  /** The page of the list, from 1. */
+  page: 'pagina',
+} as const;

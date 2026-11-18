@@ -8,6 +8,8 @@ import { MatOption, MatSelect } from '@angular/material/select';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
+import { PasswordField } from '../../admin/users/password-field';
+
 /** Signal Forms with Material fields: validation, errors under each field and submission. */
 @Component({
   selector: 'app-showcase-form',
@@ -24,6 +26,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatCheckbox,
     MatSlideToggle,
     MatButton,
+    PasswordField,
   ],
   templateUrl: './showcase-form.html',
 })
@@ -42,6 +45,7 @@ export class ShowcaseForm {
     difficulty: '',
     onlySignals: false,
     animations: true,
+    password: '',
   });
 
   protected readonly exerciseForm = form(

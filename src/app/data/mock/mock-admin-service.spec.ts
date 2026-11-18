@@ -54,9 +54,28 @@ describe('MockAdminService', () => {
       const users = await service.listUsers();
 
       expect(users).toHaveLength(db.tables().users.length);
-      const names = users.map((user) => user.name);
+      const names = users.map(({ user }) => user.name);
       expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'es')));
       expect(names.slice(0, 2)).toEqual(['Administración TutorIA', 'Adrián López Vidal']);
+    });
+
+    it('tells the groups of each account and what ties it to them', async () => {
+      const users = await service.listUsers();
+      const entry = (id: string) => users.find(({ user }) => user.id === id);
+
+      // Two groups with the same name, in two subjects: the name once
+      expect(entry(TEACHER_ID)).toMatchObject({
+        groupNames: ['1.º DAW A'],
+        links: { groups: 2, enrollments: 0 },
+      });
+      expect(entry(DAW_STUDENT_IDS[0])).toMatchObject({
+        groupNames: ['1.º DAW A'],
+        links: { groups: 0, enrollments: 2 },
+      });
+      expect(entry(ADMIN_ID)).toMatchObject({
+        groupNames: [],
+        links: { groups: 0, enrollments: 0 },
+      });
     });
   });
 

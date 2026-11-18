@@ -69,4 +69,13 @@ describe('ShowcaseForm', () => {
     const snackBar = await overlays.getHarness(MatSnackBarHarness);
     expect(await snackBar.getMessage()).toBe('Ejercicio guardado');
   });
+
+  it('shows the password field of the accounts, which generates one', async () => {
+    await (await loader.getHarness(MatButtonHarness.with({ text: /Generar/ }))).click();
+
+    const password = await (
+      await field('Contraseña de la cuenta de prueba')
+    ).getControl(MatInputHarness);
+    expect(await password?.getValue()).toHaveLength(12);
+  });
 });

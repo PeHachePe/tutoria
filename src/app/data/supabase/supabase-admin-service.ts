@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 
-import { AdminService, type NewUser, type UserChanges } from '../admin-service';
+import { toUserEntry } from '../admin/user-entry';
+import { AdminService, type NewUser, type UserChanges, type UserEntry } from '../admin-service';
 import type { AiProviderSetting } from '../ai-provider-setting';
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
@@ -23,9 +24,27 @@ export const ADMIN_USERS_FUNCTION = 'admin-users';
 export class SupabaseAdminService extends AdminService {
   private readonly supabase = inject(SUPABASE_CLIENT);
 
-  async listUsers(): Promise<AppUser[]> {
-    const rows = unwrap(await this.supabase.from('app_user').select());
-    return rows.map(toAppUser).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  /**
+   * One query, with the groups embedded. Those taught go by their own key: through `enrollment`,
+   * `app_user` also reaches `class_group`, and PostgREST would not know which way to go.
+   */
+  async listUsers(): Promise<UserEntry[]> {
+    const rows = unwrap(
+      await this.supabase
+        .from('app_user')
+        .select(
+          '*, taught:class_group!class_group_teacher_id_fkey(name), enrollment(class_group(name))',
+        ),
+    );
+    return rows
+      .map(({ taught, enrollment, ...user }) =>
+        toUserEntry(
+          toAppUser(user),
+          taught.map((group) => group.name),
+          enrollment.map((row) => row.class_group.name),
+        ),
+      )
+      .sort((a, b) => a.user.name.localeCompare(b.user.name, 'es'));
   }
 
   createUser(user: NewUser): Promise<AppUser> {

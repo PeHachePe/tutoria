@@ -8,7 +8,8 @@ import {
   normalizeEmail,
   userChangeProblem,
 } from '../admin/user-rules';
-import { AdminService, type NewUser, type UserChanges } from '../admin-service';
+import { toUserEntry } from '../admin/user-entry';
+import { AdminService, type NewUser, type UserChanges, type UserEntry } from '../admin-service';
 import type { AiProviderSetting } from '../ai-provider-setting';
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
@@ -27,10 +28,26 @@ export class MockAdminService extends AdminService {
   private readonly db = inject(MockDb);
   private readonly network = inject(MockNetwork);
 
-  listUsers(): Promise<AppUser[]> {
+  listUsers(): Promise<UserEntry[]> {
     return this.network.request(() => {
       this.db.requireUser('admin');
-      return [...this.db.tables().users].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      const { users, groups, enrollments } = this.db.tables();
+      const namesOf = (keep: (group: ClassGroup) => boolean) =>
+        groups.filter(keep).map((group) => group.name);
+      return [...users]
+        .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+        .map((user) => {
+          const enrolled = new Set(
+            enrollments
+              .filter((enrollment) => enrollment.userId === user.id)
+              .map((enrollment) => enrollment.groupId),
+          );
+          return toUserEntry(
+            user,
+            namesOf((group) => group.teacherId === user.id),
+            namesOf((group) => enrolled.has(group.id)),
+          );
+        });
     });
   }
 

@@ -1,0 +1,243 @@
+<div class="flex flex-col gap-6" [attr.aria-busy]="users.isLoading()">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-headline-medium" i18n="@@users.heading">Usuarios</h1>
+      <p class="text-body-large text-on-surface-variant" i18n="@@users.subheading">
+        Las cuentas del centro: altas, roles y contraseñas.
+      </p>
+    </div>
+    <button matButton="filled" type="button" [disabled]="!users.hasValue()" (click)="create()">
+      <mat-icon aria-hidden="true">person_add</mat-icon>
+      <span i18n="@@users.new">Nuevo usuario</span>
+    </button>
+  </header>
+
+  @if (users.error(); as error) {
+    <app-load-error [error]="error" (retry)="users.reload()" />
+  } @else if (firstLoad()) {
+    <app-loading-skeleton label="Cargando los usuarios…" i18n-label="@@users.loading">
+      <div class="flex flex-col gap-3">
+        <app-skeleton class="h-14 w-full max-w-3xl rounded-xl" />
+        <div class="flex flex-col gap-px overflow-hidden rounded-2xl">
+          @for (row of skeletonRows; track row) {
+            <app-skeleton class="h-16 w-full rounded-none" />
+          }
+        </div>
+      </div>
+    </app-loading-skeleton>
+  } @else {
+    <!-- One row from sm; on a phone the search on its own and the two selects side by side -->
+    <search class="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
+      <mat-form-field subscriptSizing="dynamic" class="col-span-2 sm:w-72">
+        <mat-label i18n="@@users.search">Buscar por nombre o correo</mat-label>
+        <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        <input matInput type="search" [value]="filters().search" (input)="onSearch($event)" />
+      </mat-form-field>
+      <mat-form-field subscriptSizing="dynamic" class="min-w-0 sm:w-48">
+        <mat-label i18n="@@users.role">Rol</mat-label>
+        <mat-select [value]="roleValue()" (selectionChange)="selectRole($event.value)">
+          <mat-option [value]="allRoles" i18n="@@users.role.all">Todos los roles</mat-option>
+          @for (role of roles; track role) {
+            <mat-option [value]="role">{{ roleLabels[role] }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field subscriptSizing="dynamic" class="min-w-0 sm:w-40">
+        <mat-label i18n="@@users.status">Estado</mat-label>
+        <mat-select [value]="statusValue()" (selectionChange)="selectStatus($event.value)">
+          @for (option of statusOptions; track option.status) {
+            <mat-option [value]="option.status">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </search>
+
+    <!-- A reload after a failure: a thin bar over what is shown, never a jump (4.8) -->
+    <div class="-mt-3 h-1">
+      @if (users.isLoading()) {
+        <app-loading-skeleton label="Cargando los usuarios…" i18n-label="@@users.loading">
+          <mat-progress-bar mode="indeterminate" class="rounded-full" />
+        </app-loading-skeleton>
+      }
+    </div>
+
+    <p class="-mt-3 text-body-medium text-on-surface-variant" aria-live="polite">
+      @if (hasFilters()) {
+        <span i18n="@@users.count.filtered">{matching().length, plural,
+          =0 {Ninguna cuenta de {{ total() }}}
+          =1 {1 cuenta de {{ total() }}}
+          other {{{ matching().length }} cuentas de {{ total() }}}
+        }</span>
+      } @else {
+        <span i18n="@@users.count">{total(), plural,
+          =1 {1 cuenta}
+          other {{{ total() }} cuentas}
+        }</span>
+      }
+    </p>
+
+    @if (matching().length === 0) {
+      <app-empty-state
+        heading="Ningún usuario coincide"
+        i18n-heading="@@users.empty"
+        text="Prueba con otras palabras, otro rol u otro estado."
+        i18n-text="@@users.empty.text"
+      >
+        <div class="mt-2 flex justify-center" emptyStateAction>
+          <button matButton="tonal" type="button" (click)="clearFilters()" i18n="@@users.clear">
+            Quitar los filtros
+          </button>
+        </div>
+      </app-empty-state>
+    } @else {
+      <div class="flex flex-col overflow-hidden rounded-2xl bg-panel">
+        <!-- The table scrolls in its own zone, under its header, and never stretches the page (5.4).
+             Focusable, so changing the page takes the focus back to its top -->
+        <div
+          #tableZone
+          tabindex="-1"
+          class="max-h-[max(16rem,calc(100dvh-24rem))] overflow-y-auto scroll-shadows outline-offset-[-2px] focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          <table
+            mat-table
+            matSort
+            matSortDisableClear
+            class="w-full"
+            [dataSource]="rows()"
+            [trackBy]="trackRow"
+            [matSortActive]="sort().active"
+            [matSortDirection]="sort().direction"
+            (matSortChange)="sortBy($event)"
+          >
+            <caption class="sr-only" i18n="@@users.caption">
+              Cuentas del centro
+            </caption>
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@users.column.name">
+                Nombre
+              </th>
+              <td mat-cell *matCellDef="let row" class="py-2">
+                <div class="flex min-w-0 flex-col">
+                  <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span class="text-body-large">{{ row.entry.user.name }}</span>
+                    @if (row.mine) {
+                      <span
+                        class="rounded-full bg-primary-container px-2 text-label-medium text-on-primary-container"
+                        i18n="@@users.you"
+                        >Tú</span
+                      >
+                    }
+                    @if (row.disabled) {
+                      <span
+                        class="flex items-center gap-1 rounded-full bg-surface-container-highest px-2 text-label-medium text-on-surface-variant"
+                      >
+                        <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">block</mat-icon>
+                        <span i18n="@@users.status.disabled">Desactivada</span>
+                      </span>
+                    }
+                  </span>
+                  <!-- On a phone it breaks before the at sign, and anywhere only if it must -->
+                  <span class="text-body-small wrap-anywhere text-on-surface-variant"
+                    >{{ row.emailUser }}<wbr />{{ row.emailDomain }}</span
+                  >
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="role">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@users.column.role">
+                Rol
+              </th>
+              <td mat-cell *matCellDef="let row" class="whitespace-nowrap">
+                {{ row.role }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="groups">
+              <th
+                mat-header-cell
+                *matHeaderCellDef
+                mat-sort-header
+                class="hidden md:table-cell"
+                i18n="@@users.column.groups"
+              >
+                Grupos
+              </th>
+              <td mat-cell *matCellDef="let row" class="hidden md:table-cell">
+                @if (row.groups) {
+                  {{ row.groups }}
+                } @else {
+                  <span class="text-on-surface-variant" aria-hidden="true">—</span>
+                  <span class="sr-only" i18n="@@users.noGroups">Sin grupos</span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="w-14">
+                <span class="sr-only" i18n="@@users.column.actions">Acciones</span>
+              </th>
+              <td mat-cell *matCellDef="let row" class="w-14">
+                <button
+                  matIconButton
+                  type="button"
+                  [matMenuTriggerFor]="actions"
+                  [attr.aria-label]="row.actionsLabel"
+                >
+                  <mat-icon aria-hidden="true">more_vert</mat-icon>
+                </button>
+                <mat-menu #actions="matMenu" xPosition="before">
+                  <button mat-menu-item type="button" (click)="edit(row.entry)">
+                    <mat-icon aria-hidden="true">edit</mat-icon>
+                    <span i18n="@@users.edit">Editar</span>
+                  </button>
+                  <button mat-menu-item type="button" (click)="resetPassword(row.entry)">
+                    <mat-icon aria-hidden="true">key</mat-icon>
+                    <span i18n="@@users.resetPassword">Restablecer la contraseña</span>
+                  </button>
+                  @if (row.disabled) {
+                    <button mat-menu-item type="button" (click)="setStatus(row.entry, 'active')">
+                      <mat-icon aria-hidden="true">check_circle</mat-icon>
+                      <span i18n="@@users.enable">Activar</span>
+                    </button>
+                  } @else if (row.mine) {
+                    <!-- The own account cannot be disabled (CU-06 3b): it says why, at sight, and
+                         keeps the focus, without an action that a click would still fire -->
+                    <button mat-menu-item type="button" disabled disabledInteractive>
+                      <mat-icon aria-hidden="true">block</mat-icon>
+                      <span class="flex flex-col py-2">
+                        <span i18n="@@users.disable">Desactivar</span>
+                        <span class="text-body-small" i18n="@@users.disable.own"
+                          >No puedes desactivar tu propia cuenta</span
+                        >
+                      </span>
+                    </button>
+                  } @else {
+                    <button mat-menu-item type="button" (click)="setStatus(row.entry, 'disabled')">
+                      <mat-icon aria-hidden="true">block</mat-icon>
+                      <span i18n="@@users.disable">Desactivar</span>
+                    </button>
+                  }
+                </mat-menu>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          </table>
+        </div>
+        @if (matching().length > pageSize) {
+          <mat-paginator
+            [length]="matching().length"
+            [pageSize]="pageSize"
+            [pageIndex]="page().pageIndex"
+            [hidePageSize]="true"
+            [showFirstLastButtons]="true"
+            (page)="goToPage($event, tableZone)"
+          />
+        }
+      </div>
+    }
+  }
+</div>

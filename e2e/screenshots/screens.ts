@@ -50,4 +50,6 @@ export const SCREENS: readonly Screen[] = [
     path: '/docente/historico?grupo=20000000-0000-4000-8000-000000000001',
     user: 'teacher',
   },
+  // The accounts of the seed, by name: the administration first, with «Tú» (5.1b)
+  { code: '10-usuarios', path: '/admin/usuarios', user: 'admin' },
 ];

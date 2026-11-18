@@ -1,3 +1,4 @@
+import type { UserLinks } from './admin/user-rules';
 import type { AiProviderSetting } from './ai-provider-setting';
 import type { Subject } from './subject';
 import type { AppUser, ClassGroup, Enrollment, Role, UserStatus } from './user';
@@ -18,6 +19,15 @@ export interface UserChanges {
   readonly password?: string;
 }
 
+/** An account as the administration lists it (5.1b): with what ties it to the classes. */
+export interface UserEntry {
+  readonly user: AppUser;
+  /** The groups they teach or are enrolled in, by name and without repeating one. */
+  readonly groupNames: readonly string[];
+  /** While there are any, the role does not change (D-072). */
+  readonly links: UserLinks;
+}
+
 /** A new group has no id yet; an existing one keeps it. */
 export type GroupDraft = Omit<ClassGroup, 'id'> & { readonly id?: string };
 
@@ -29,8 +39,8 @@ export type SubjectDraft = Omit<Subject, 'id'> & { readonly id?: string };
  * it is the injection token (4.2, D-005). Refined in phase 5.
  */
 export abstract class AdminService {
-  /** Every account, by name. */
-  abstract listUsers(): Promise<AppUser[]>;
+  /** Every account, by name, with its groups. */
+  abstract listUsers(): Promise<UserEntry[]>;
 
   /**
    * Creates the account: public sign-up is disabled (2.3). Throws `invalid` with an email that

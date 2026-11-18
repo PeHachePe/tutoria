@@ -1,4 +1,4 @@
-import { APP_PATHS, STUDENT_PARAMS } from './app-paths';
+import { ADMIN_PARAMS, APP_PATHS, STUDENT_PARAMS } from './app-paths';
 
 /** The URLs are part of the product (2.2): bookmarks and shared links depend on them. */
 describe('APP_PATHS', () => {
@@ -22,5 +22,14 @@ describe('APP_PATHS', () => {
 
   it('keeps the query parameters of the student screens', () => {
     expect(STUDENT_PARAMS).toEqual({ group: 'grupo', attempt: 'intento' });
+  });
+
+  it('keeps the query parameters of the users of the administration', () => {
+    expect(ADMIN_PARAMS).toEqual({
+      search: 'buscar',
+      role: 'rol',
+      status: 'estado',
+      page: 'pagina',
+    });
   });
 });
