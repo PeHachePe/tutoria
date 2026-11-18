@@ -35,14 +35,15 @@ test.describe('idioma', () => {
     await page.getByRole('button', { name: 'Cambiar el idioma' }).click();
     await page.getByRole('menuitemradio', { name: 'Català' }).click();
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Sessió en directe' })).toBeVisible();
+    // The heading and the title name the group and its block: the side menu says the screen
+    await expect(page.getByRole('link', { name: 'En directe' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'ca');
     await expect(page.getByRole('link', { name: 'Exercicis' })).toBeVisible();
 
     await page.getByRole('button', { name: "Canvia l'idioma" }).click();
     await page.getByRole('menuitemradio', { name: 'Español' }).click();
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Sesión en vivo' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'En vivo' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   });
 

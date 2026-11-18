@@ -12,6 +12,9 @@ import { formatDuration } from '../../shared/format-duration';
 
 const MINUTE_MS = 60_000;
 
+/** Each card labels its region with its own heading, also when a page shows more than one. */
+let nextId = 0;
+
 /** Material Symbols of each kind of help, so none says it only with its words. */
 const HELP_ICONS = { hint: 'lightbulb', question: 'chat', proactive: 'campaign' } as const;
 
@@ -43,7 +46,7 @@ export class AttemptNowCard {
   /** The entry or event of the timeline to go to: the latest help, or the run with every failing test. */
   readonly chosen = output<string>();
 
-  protected readonly headingId = 'detail-now-title';
+  protected readonly headingId = `app-attempt-now-card-title-${nextId++}`;
   protected readonly helpIcons = HELP_ICONS;
 
   /** The tests the card lists; the rest, the timeline tells them. */
