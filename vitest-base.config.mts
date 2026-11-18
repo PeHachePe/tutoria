@@ -49,8 +49,16 @@ function isAsyncClassMetadata(node: Node): boolean {
  */
 const TEST_TIMEOUT_MS = 15_000;
 
+/**
+ * The time zone of the school, for every unit test whatever the clock of the machine (D-074). The
+ * screens show the dates in local time, so a test that reads «23:59» would see «22:59» on a machine
+ * in UTC (Windows set so, a cloud session). The same zone as the e2e (`playwright.config.ts`).
+ */
+const TEST_TIME_ZONE = 'Europe/Madrid';
+
 export default defineConfig({
   test: {
+    env: { TZ: TEST_TIME_ZONE },
     testTimeout: TEST_TIMEOUT_MS,
     coverage: {
       ignoreNode: (node) =>

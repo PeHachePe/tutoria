@@ -2148,3 +2148,15 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Aprobación:** el boceto y la pantalla final, aprobados por el autor.
 
 **Hecho así en el 4.5** (18/11/2026): `group_work_stats` y `group_deadline_stats`, las dos `security definer`, comprueban al entrar que quien llama es la administración o el docente del grupo (si no, `P0002`, que el cliente lee como `not_found`). Agregar bajo la RLS llamaría a `can_read_attempt()` por cada evento del grupo, y solo devuelven cuentas y los nombres del alumnado, que su docente ya lee. `group_work_stats` da con `grouping sets` una fila por bloque y una por asignación, para que las reglas de cuenta estén escritas una sola vez. Quien tiene algo pendiente viaja en tres vectores paralelos de la fila de su plazo, lejos del tope de 1000 filas de PostgREST.
+
+## D-074 · Los tests, siempre en la hora de Madrid (19/11/2026)
+
+**Contexto:** las pantallas muestran las fechas en la hora local del navegador, y algunos tests leen la hora que sale («Entrega: vie 6 nov, 23:59»). En un equipo con otra zona horaria (un Windows en UTC, una sesión en la nube) salía «22:59» y el test fallaba sin que nada estuviera mal. Ya había pasado en el 4.3d, y se arregló test a test.
+
+**Decisión:** los tests unitarios y los e2e corren en la zona horaria del centro, `Europe/Madrid`, sea cual sea el reloj del equipo. La fija la constante `TEST_TIME_ZONE` de `vitest-base.config.mts` (con `test.env.TZ`) y la de `playwright.config.ts` (con `timezoneId`). Así cada test lee la hora como la vería el docente, sin tener que construir las fechas de una forma especial.
+
+**Alternativas:** construir cada fecha de los tests en hora local, como en el 4.3d: hay que acordarse en cada test nuevo, y el fallo solo aparece en otro equipo. Escribir las fechas en UTC en los tests: el centro no las ve así.
+
+**Consecuencias:** un test nuevo con horas no necesita nada especial, y el apaño del 4.3d (la apertura del examen reescrita en hora local en el test de Bloques) se quita: el test usa la del seed. Comprobado con `TZ=UTC npm run check`, en verde, y los dos tests con horas también en Nueva York y en Tokio, donde el de las entregas fallaba desde el 4.3d.
+
+**Aprobación:** pedida por el autor («que sirva para el futuro y no pase más»).
