@@ -463,6 +463,24 @@
     </div>
   </section>
 
+  <section aria-labelledby="detail-sample-title" class="flex flex-col gap-3">
+    <h2 id="detail-sample-title" class="text-title-large">Detalle del intento</h2>
+    <p class="text-body-medium text-on-surface-variant">
+      «Ahora» de un alumno que trabaja, «Cómo lo resolvió» de un intento entregado y la evolución.
+      «Añadir una ejecución» hace crecer una columna nueva al final.
+    </p>
+    <app-attempt-now-card [now]="sampleNow" [summary]="sampleNowSummary" [clock]="sampleClock" />
+    <app-attempt-now-card
+      [now]="sampleSolved"
+      [summary]="sampleSolvedSummary"
+      [clock]="sampleClock"
+    />
+    <button matButton="outlined" class="self-start" type="button" (click)="addRun()">
+      Añadir una ejecución
+    </button>
+    <app-attempt-evolution [runs]="evolution()" [liveSince]="evolutionSince" />
+  </section>
+
   <section aria-labelledby="states-title" class="flex flex-col gap-3">
     <h2 id="states-title" class="text-title-large">Carga, vacío y error</h2>
     <p class="text-body-medium text-on-surface-variant">

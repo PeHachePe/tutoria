@@ -113,7 +113,7 @@ export class SupabaseLiveService extends LiveService {
       await this.supabase
         .from('attempt')
         .select(
-          '*, app_user(id, name), process_event(*), tutor_interaction(*), exercise_assignment(id, group_id, block_id, exercise(*, test(*)))',
+          '*, app_user(id, name), process_event(*), tutor_interaction(*), exercise_assignment(id, group_id, block_id, exercise(*, test(*)), attempt(id, number, user_id))',
         )
         .eq('id', attemptId)
         .maybeSingle(),
@@ -136,6 +136,11 @@ export class SupabaseLiveService extends LiveService {
       },
       // toAttempt() reads the columns of the attempt and leaves what is embedded aside
       attempt: toAttempt(row),
+      // The embedded attempts are those of the assignment the RLS lets the teacher see
+      siblings: assignment.attempt
+        .filter((other) => other.user_id === row.user_id)
+        .sort((a, b) => a.number - b.number)
+        .map((other) => ({ id: other.id, number: other.number })),
       events: row.process_event
         .map(toProcessEvent)
         .sort((a, b) => a.timestamp.localeCompare(b.timestamp)),

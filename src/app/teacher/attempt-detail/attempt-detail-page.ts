@@ -7,7 +7,7 @@ import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
 import { AppTitleStrategy } from '../../core/app-title-strategy';
 import { LanguageService } from '../../core/i18n/language-service';
 import { DataError } from '../../data/data-error';
-import { type LiveAttemptDetail, LiveService } from '../../data/live-service';
+import { type AttemptRef, type LiveAttemptDetail, LiveService } from '../../data/live-service';
 import { exerciseText } from '../../data/localized-text';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
@@ -92,9 +92,17 @@ export class AttemptDetailPage {
         loaded.interactions,
         activity?.interactions.filter((i) => i.attemptId === id) ?? [],
       ),
-      attempts: (activity?.attempts ?? [attempt])
-        .filter((candidate) => candidate.assignmentId === attempt.assignmentId)
-        .sort((a, b) => a.number - b.number),
+      // The ones loaded and those the panel hears, whatever block it follows
+      attempts: mergeById<AttemptRef>(
+        loaded.siblings,
+        (activity?.attempts ?? [])
+          .filter(
+            (candidate) =>
+              candidate.assignmentId === attempt.assignmentId &&
+              candidate.userId === attempt.userId,
+          )
+          .map(({ id, number }) => ({ id, number })),
+      ).sort((a, b) => a.number - b.number),
     };
   });
 

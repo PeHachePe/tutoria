@@ -70,6 +70,10 @@ describe('ShowcasePage', () => {
       'Resultados de las pruebas',
       'Panel en vivo',
       'Dónde está la clase',
+      'Detalle del intento',
+      'Ahora',
+      'Cómo lo resolvió',
+      'Evolución',
       'Carga, vacío y error',
     ]);
   });
@@ -233,6 +237,26 @@ describe('ShowcasePage', () => {
     ).toHaveLength(4);
     expect(section.textContent).toContain('Para explicar a todos');
     expect(section.querySelectorAll('app-live-chip')).toHaveLength(5);
+  });
+
+  it('shows the pieces of the attempt detail, and grows the evolution with a run more', async () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const section = element.querySelector('[aria-labelledby="detail-sample-title"]') as HTMLElement;
+    const columns = () => section.querySelectorAll('[data-testid="run-bar"]');
+
+    expect(section.querySelectorAll('app-attempt-now-card')).toHaveLength(2);
+    expect(columns()).toHaveLength(4);
+
+    await (
+      await loader.getHarness(MatButtonHarness.with({ text: 'Añadir una ejecución' }))
+    ).click();
+    await (
+      await loader.getHarness(MatButtonHarness.with({ text: 'Añadir una ejecución' }))
+    ).click();
+
+    expect(columns()).toHaveLength(6);
+    expect(columns()[4].getAttribute('style')).toContain('height: 0%');
+    expect(columns()[5].classList).toContain('animate-column-in');
   });
 
   it('shows a snack bar notice', async () => {

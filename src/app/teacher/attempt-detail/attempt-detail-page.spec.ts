@@ -55,6 +55,8 @@ describe('AttemptDetailPage', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
     vi.setSystemTime(NOW);
+    // jsdom lays nothing out, so it cannot scroll an entry into view
+    Element.prototype.scrollIntoView = vi.fn();
     service = new FakeLiveService();
     service.details = () =>
       Promise.resolve(testDetail({ attempt: ATTEMPT, events: EVENTS, interactions: [ANSWER] }));
@@ -62,7 +64,10 @@ describe('AttemptDetailPage', () => {
       Promise.resolve(testSnapshot({ attempts: [ATTEMPT], events: EVENTS }));
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
+  });
 
   async function renderPage(url = '/', attemptId = 'a1', settle = true) {
     const reload = vi.fn();
@@ -89,27 +94,30 @@ describe('AttemptDetailPage', () => {
 
   const user = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
-  it('shows whose attempt it is, its figures and its timeline', async () => {
+  it('shows whose attempt it is, where it stands, its evolution and its timeline', async () => {
     await renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Ana' })).toBeTruthy();
     expect(screen.getByText(/ejercicio 1/)).toBeTruthy();
     expect(screen.getByText('En directo')).toBeTruthy();
-    const figures = screen.getByRole('region', { name: 'Cifras del intento' });
-    expect(text(figures)).toMatch(/Tiempo ?30 min/);
-    expect(text(figures)).toContain('Pistas 1 · nivel 2');
-    expect(text(figures)).toContain('Pegados 1 · 80 caracteres');
-    expect(text(figures)).toContain('Fuera de la ventana 1 · 2 min');
+    const now = screen.getByRole('region', { name: 'Ahora' });
+    expect(text(now)).toContain('4 de 5 superadas en la última ejecución');
+    expect(text(now)).toContain('Pista de nivel 2');
+    expect(text(now)).toContain('30 min de trabajo · 1 ejecución · 1 pista (nivel 2)');
+    expect(text(now)).toContain('Pegó 80 caracteres');
+    expect(text(now)).toContain('2 min fuera de la ventana');
+    const evolution = screen.getByRole('region', { name: 'Evolución' });
+    expect(within(evolution).getAllByRole('button')).toHaveLength(3);
     const timeline = screen.getByRole('list', { name: 'Línea temporal del intento' });
     const entries = within(timeline)
       .getAllByRole('listitem')
       .filter((item) => item.parentElement === timeline);
     expect(entries.map((entry) => text(entry).replace(/^\S+ \d\d:\d\d |^\d\d:\d\d /, ''))).toEqual([
-      expect.stringContaining('Abrió el ejercicio'),
-      expect.stringContaining('Ejecutó las pruebas: 4 de 5 superadas'),
-      expect.stringContaining('Pidió una pista · nivel 2'),
-      expect.stringContaining('Pegó 80 caracteres'),
       expect.stringContaining('Salió de la ventana · 2 min'),
+      expect.stringContaining('Pegó 80 caracteres'),
+      expect.stringContaining('Pidió una pista · nivel 2'),
+      expect.stringContaining('Ejecutó las pruebas: 4 de 5 superadas'),
+      expect.stringContaining('Abrió el ejercicio'),
     ]);
     expect(text(timeline)).toContain('Mira el caso de la lista vacía.');
     expect(TestBed.inject(Title).getTitle()).toBe(
@@ -227,9 +235,57 @@ describe('AttemptDetailPage', () => {
     expect(text(timeline)).not.toContain('Ejecutó');
     expect(screen.queryByText(/sin actividad/)).toBeNull();
 
-    await user().click(screen.getByRole('radio', { name: 'Pegados y salidas 0' }));
+    expect(screen.queryByRole('radio', { name: /Pegados y salidas/ })).toBeNull();
+  });
+
+  it('has no filters when there is nothing to filter', async () => {
+    service.details = () =>
+      Promise.resolve(testDetail({ attempt: ATTEMPT, events: [], interactions: [] }));
+    service.snapshots = () => Promise.resolve(testSnapshot({ attempts: [ATTEMPT] }));
+    await renderPage();
+
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Evolución' })).toBeNull();
+    expect(screen.getByText('Todavía no ha ejecutado las pruebas')).toBeTruthy();
+  });
+
+  it('goes to the entry of a column, back to «Todo» if the filter hides it', async () => {
+    const { fixture } = await renderPage();
+    await user().click(screen.getByRole('radio', { name: 'Tutor 1' }));
     await fixture.whenStable();
-    expect(screen.getByText('Nada de esto en este intento.')).toBeTruthy();
+
+    const evolution = screen.getByRole('region', { name: 'Evolución' });
+    await user().click(within(evolution).getAllByRole('button')[0]);
+    await fixture.whenStable();
+
+    expect(screen.getByRole('radio', { name: /^Todo/ }).getAttribute('aria-checked')).toBe('true');
+    expect(text(document.activeElement)).toContain('Ejecutó las pruebas: 4 de 5 superadas');
+  });
+
+  it('goes to the whole answer of the latest help, keeping the filter that shows it', async () => {
+    const { fixture } = await renderPage();
+    await user().click(screen.getByRole('radio', { name: 'Tutor 1' }));
+    await fixture.whenStable();
+
+    await user().click(screen.getByRole('button', { name: 'Ver entera' }));
+    await fixture.whenStable();
+
+    expect(screen.getByRole('radio', { name: 'Tutor 1' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    expect(text(document.activeElement)).toContain('Mira el caso de la lista vacía.');
+  });
+
+  it('goes nowhere with an event the timeline does not tell', async () => {
+    const { fixture } = await renderPage();
+    const view = fixture.debugElement.query((element) => element.name === 'app-attempt-detail-view')
+      .componentInstance as { goToEntry(id: string): void };
+    const focused = document.activeElement;
+
+    view.goToEntry('unknown');
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(focused);
   });
 
   it('says why the student waits and takes them out of the queue when attended', async () => {
@@ -260,6 +316,27 @@ describe('AttemptDetailPage', () => {
     const [first, second] = within(attempts).getAllByRole('link');
     expect(first.getAttribute('href')).toBe('/docente/en-vivo/a1?grupo=g1&bloque=b1');
     expect(second.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('links the attempts loaded with the detail, though the panel follows another block', async () => {
+    const practice = testAttempt('a2', 'ana', { number: 2 });
+    service.details = () =>
+      Promise.resolve(
+        testDetail({
+          attempt: practice,
+          siblings: [
+            { id: 'a1', number: 1 },
+            { id: 'a2', number: 2 },
+          ],
+        }),
+      );
+    service.snapshots = () => Promise.resolve(testSnapshot({ attempts: [] }));
+    await renderPage('/?grupo=g1&bloque=b2', 'a2');
+
+    const attempts = screen.getByRole('navigation', {
+      name: 'Intentos del alumno en este ejercicio',
+    });
+    expect(within(attempts).getAllByRole('link').map(text)).toEqual(['1', '2']);
   });
 
   it('shows the code read only and offers the latest when the student changes it', async () => {

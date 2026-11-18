@@ -58,6 +58,12 @@ export type LiveUpdate =
   /** What the student asked the tutor and its answer, for the detail of the attempt (4.2). */
   | { readonly type: 'interaction'; readonly interaction: TutorInteraction };
 
+/** Another attempt of the same student at the same assignment: what its link needs. */
+export interface AttemptRef {
+  readonly id: string;
+  readonly number: number;
+}
+
 /**
  * An attempt with all the teacher needs to read how it went (RF-12): whose it is, the exercise
  * with its tests, where it was assigned, and its events and tutor interactions in order.
@@ -67,6 +73,8 @@ export interface LiveAttemptDetail extends AttemptHistory {
   readonly blockId: string;
   readonly student: LiveStudent;
   readonly exercise: LiveExercise;
+  /** Every attempt of the student at this assignment, this one included, by number. */
+  readonly siblings: readonly AttemptRef[];
 }
 
 /**

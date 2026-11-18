@@ -244,6 +244,11 @@ describe('SupabaseLiveService', () => {
           ...exerciseRow(),
           test: [testRow({ id: 't2', position: 2 }), testRow({ id: 't1', position: 1 })],
         },
+        attempt: [
+          { id: 'attempt-2', number: 2, user_id: 'user-1' },
+          { id: 'other', number: 1, user_id: 'user-2' },
+          { id: 'attempt-1', number: 1, user_id: 'user-1' },
+        ],
       },
       ...overrides,
     });
@@ -263,6 +268,10 @@ describe('SupabaseLiveService', () => {
       expect(detail.exercise.tests.map((test) => test.id)).toEqual(['t1', 't2']);
       expect(detail.events.map((event) => event.id)).toEqual(['e1', 'e2']);
       expect(detail.interactions.map((interaction) => interaction.id)).toEqual(['i1', 'i2']);
+      expect(detail.siblings).toEqual([
+        { id: 'attempt-1', number: 1 },
+        { id: 'attempt-2', number: 2 },
+      ]);
       expect(server.sentTo('GET', '/rest/v1/attempt')[0].params.get('id')).toBe('eq.attempt-1');
     });
 

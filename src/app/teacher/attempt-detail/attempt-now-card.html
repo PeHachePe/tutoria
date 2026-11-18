@@ -1,0 +1,247 @@
+@let state = now();
+<h2 [id]="headingId" class="text-title-medium">
+  @switch (state.mode) {
+    @case ('now') {
+      <ng-container i18n="@@detail.now.heading">Ahora</ng-container>
+    }
+    @case ('left') {
+      <ng-container i18n="@@detail.left.heading">Dónde lo dejó</ng-container>
+    }
+    @default {
+      <ng-container i18n="@@detail.solved.heading">Cómo lo resolvió</ng-container>
+    }
+  }
+</h2>
+
+<div class="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
+  <div class="flex min-w-0 flex-col gap-2">
+    <h3 class="text-label-large text-on-surface-variant" i18n="@@detail.now.tests">Pruebas</h3>
+    @if (state.lastRun; as run) {
+      <p class="text-body-large">
+        @if (!allPassed()) {
+          <ng-container i18n="@@detail.now.passed"
+            >{{ run.passed }} de {{ run.total }} superadas en la última ejecución</ng-container
+          >
+        } @else if (state.mode === 'solved') {
+          <ng-container i18n="@@detail.solved.allPassed"
+            >Superó las {{ run.total }} pruebas</ng-container
+          >
+        } @else {
+          <ng-container i18n="@@detail.now.allPassed">Supera todas las pruebas</ng-container>
+        }
+      </p>
+      <span
+        class="flex h-1.5 overflow-hidden rounded-full bg-surface-container-high"
+        aria-hidden="true"
+      >
+        <span class="h-full rounded-full bg-success" [style.width.%]="percent(run)"></span>
+      </span>
+    } @else {
+      <p class="text-body-large text-on-surface-variant">
+        @if (state.mode === 'now') {
+          <ng-container i18n="@@detail.now.noRuns"
+            >Todavía no ha ejecutado las pruebas</ng-container
+          >
+        } @else {
+          <ng-container i18n="@@detail.left.noRuns">No llegó a ejecutar las pruebas</ng-container>
+        }
+      </p>
+    }
+    @if (state.tests.length > 0) {
+      @if (state.mode === 'solved') {
+        <p
+          id="detail-now-failed"
+          class="text-body-medium text-on-surface-variant"
+          i18n="@@detail.solved.failedBefore"
+        >
+          Fallaron antes de superarlas:
+        </p>
+      }
+      <ul
+        class="flex flex-col gap-2"
+        [attr.aria-labelledby]="state.mode === 'solved' ? 'detail-now-failed' : null"
+      >
+        @for (test of shownTests(); track test.id) {
+          <li class="flex min-w-0 flex-col items-start gap-0.5">
+            <code
+              class="max-w-full rounded-md px-2 py-0.5 font-mono text-body-small break-all"
+              [class]="
+                state.mode === 'solved'
+                  ? 'bg-surface-container-high'
+                  : 'bg-error-container text-on-error-container'
+              "
+              >{{ test.call }}</code
+            >
+            <!-- One line that wraps only when it does not fit: a long value (a text of several
+                 lines) then takes its own line, cut, whole on hover and for the screen reader -->
+            <span
+              class="flex w-full flex-wrap items-baseline gap-x-1 text-body-medium text-on-surface-variant"
+            >
+              <span class="flex max-w-full min-w-0 items-baseline gap-x-1">
+                <span class="shrink-0" i18n="@@detail.now.expects">espera</span>
+                <code
+                  class="min-w-0 truncate font-mono text-on-surface"
+                  [matTooltip]="test.expected"
+                  >{{ test.expected }}</code
+                >
+              </span>
+              @if (test.hidden) {
+                <span i18n="@@detail.hiddenTest">(prueba oculta)</span>
+              }
+              <span aria-hidden="true">·</span>
+              @if (state.mode === 'solved') {
+                <ng-container i18n="@@detail.solved.failedRuns">{test.runs, plural,
+                  =1 {falló en 1 ejecución}
+                  other {falló en {{ test.runs }} ejecuciones}
+                }</ng-container>
+              } @else {
+                <ng-container i18n="@@detail.now.failingSince">{test.runs, plural,
+                  =1 {falla desde la última ejecución}
+                  other {falla desde hace {{ test.runs }} ejecuciones}
+                }</ng-container>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+      @if (hiddenTests() > 0 && state.failingRunId; as runId) {
+        <button
+          matButton
+          class="-ms-3 self-start"
+          type="button"
+          (click)="chosen.emit(runId)"
+          i18n="@@detail.now.more"
+        >
+          y {{ hiddenTests() }} más en la línea temporal
+        </button>
+      }
+    }
+  </div>
+
+  <div class="flex min-w-0 flex-col gap-2">
+    <h3 class="text-label-large text-on-surface-variant" i18n="@@detail.help.heading">
+      La última ayuda del tutor
+    </h3>
+    @if (state.help; as help) {
+      <p class="flex flex-wrap items-center gap-x-2 text-body-large">
+        <mat-icon class="text-tertiary" aria-hidden="true">{{ helpIcons[help.trigger] }}</mat-icon>
+        @switch (help.trigger) {
+          @case ('hint') {
+            <span i18n="@@detail.help.hint">Pista de nivel {{ help.level }}</span>
+          }
+          @case ('question') {
+            <span i18n="@@detail.help.question">Respuesta a una pregunta</span>
+          }
+          @default {
+            <span i18n="@@detail.help.proactive">Intervino por su cuenta</span>
+          }
+        }
+        <span class="text-on-surface-variant" aria-hidden="true">·</span>
+        @let age = helpAge();
+        <span class="text-body-medium text-on-surface-variant">
+          @switch (age?.kind) {
+            @case ('now') {
+              <span i18n="@@live.age.now">Ahora mismo</span>
+            }
+            @case ('minutes') {
+              <span i18n="@@live.age.minutes"
+                >Hace {{ age?.kind === 'minutes' ? age.minutes : 0 }} min</span
+              >
+            }
+            @default {
+              <span>{{ help.at | date: 'd MMM, HH:mm' }}</span>
+            }
+          }
+        </span>
+      </p>
+      @if (help.question) {
+        <p class="truncate text-body-medium text-on-surface-variant">
+          <span i18n="@@detail.help.asked">Preguntó:</span> {{ help.question }}
+        </p>
+      }
+      @if (help.text) {
+        <p class="line-clamp-2 text-body-medium">{{ help.text }}</p>
+        <button
+          matButton
+          class="-ms-3 self-start"
+          type="button"
+          (click)="chosen.emit(help.entryId)"
+          i18n="@@detail.help.more"
+        >
+          Ver entera
+        </button>
+      } @else {
+        <p class="text-body-medium text-on-surface-variant" i18n="@@detail.help.unrecorded">
+          No se guardó la respuesta.
+        </p>
+      }
+    } @else {
+      <p class="text-body-large text-on-surface-variant">
+        @if (state.mode === 'now') {
+          <ng-container i18n="@@detail.help.none">No ha pedido ayuda al tutor</ng-container>
+        } @else {
+          <ng-container i18n="@@detail.help.nonePast">No pidió ayuda al tutor</ng-container>
+        }
+      </p>
+    }
+  </div>
+</div>
+
+@let stats = summary();
+@if (parts().length > 0) {
+  <p class="text-body-large">
+    @for (part of parts(); track part; let first = $first) {
+      @if (!first) {
+        <span aria-hidden="true"> · </span>
+      }
+      @switch (part) {
+        @case ('work') {
+          <span i18n="@@detail.summary.work">{{ duration(stats.workMs) }} de trabajo</span>
+        }
+        @case ('runs') {
+          <span i18n="@@detail.summary.runs">{stats.runs, plural,
+            =1 {1 ejecución}
+            other {{{ stats.runs }} ejecuciones}
+          }</span>
+        }
+        @default {
+          <span i18n="@@detail.summary.hints">{stats.hints, plural,
+            =1 {1 pista (nivel {{ stats.hintLevel }})}
+            other {{{ stats.hints }} pistas (nivel {{ stats.hintLevel }})}
+          }</span>
+        }
+      }
+    }
+  </p>
+}
+@if (chips().length > 0) {
+  <ul class="flex flex-wrap gap-2">
+    @for (chip of chips(); track chip) {
+      <li
+        class="inline-flex items-center gap-1 rounded-full bg-surface-container-high px-2.5 py-0.5 text-label-medium text-on-surface-variant"
+      >
+        @switch (chip) {
+          @case ('questions') {
+            <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">chat</mat-icon>
+            <ng-container i18n="@@detail.chip.questions">{stats.questions, plural,
+              =1 {1 pregunta al tutor}
+              other {{{ stats.questions }} preguntas al tutor}
+            }</ng-container>
+          }
+          @case ('pasted') {
+            <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">content_paste</mat-icon>
+            <ng-container i18n="@@detail.chip.pasted"
+              >Pegó {{ stats.pastedChars }} caracteres</ng-container
+            >
+          }
+          @default {
+            <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">visibility_off</mat-icon>
+            <ng-container i18n="@@detail.chip.away"
+              >{{ duration(stats.awayMs) }} fuera de la ventana</ng-container
+            >
+          }
+        }
+      </li>
+    }
+  </ul>
+}

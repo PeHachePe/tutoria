@@ -135,6 +135,7 @@ export function testDetail(overrides: Partial<LiveAttemptDetail> = {}): LiveAtte
     student: STUDENTS[0],
     exercise: BLOCK_EXERCISES[0],
     attempt: testAttempt('a1', 'ana'),
+    siblings: [{ id: 'a1', number: 1 }],
     events: [],
     interactions: [],
     ...overrides,

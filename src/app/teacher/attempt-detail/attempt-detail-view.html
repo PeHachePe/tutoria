@@ -1,11 +1,8 @@
 <header class="flex flex-col gap-2">
   <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
     <h1 class="text-headline-medium">{{ view().student.name }}</h1>
-    <app-status-chip
-      [status]="view().attempt.status"
-      [testCount]="figures().lastRun ?? undefined"
-    />
-    @if (figures().live) {
+    <app-status-chip [status]="view().attempt.status" [testCount]="now().lastRun ?? undefined" />
+    @if (isLive()) {
       <span class="flex items-center gap-1.5 text-label-large text-on-surface-variant">
         <span class="relative flex size-2.5" aria-hidden="true">
           <span
@@ -83,79 +80,27 @@
   </div>
 }
 
-@let stats = figures();
-<section aria-labelledby="detail-figures-title">
-  <h2 id="detail-figures-title" class="sr-only" i18n="@@detail.figures">Cifras del intento</h2>
-  <dl class="grid grid-cols-2 gap-3 @xl:grid-cols-3 @5xl:grid-cols-6">
-    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
-      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.time">Tiempo</dt>
-      <dd class="text-title-large" i18n="@@detail.figures.minutes">{{ stats.minutes }} min</dd>
-    </div>
-    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
-      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.runs">
-        Ejecuciones
-      </dt>
-      <dd class="text-title-large">
-        {{ stats.runs }}
-        @if (stats.lastRun; as run) {
-          <span class="text-body-medium text-on-surface-variant" i18n="@@detail.figures.lastRun"
-            >· {{ run.passed }}/{{ run.total }} en la última</span
-          >
-        }
-      </dd>
-    </div>
-    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
-      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.hints">Pistas</dt>
-      <dd class="text-title-large">
-        {{ stats.hints }}
-        @if (stats.hintLevel) {
-          <span class="text-body-medium text-on-surface-variant" i18n="@@detail.figures.level"
-            >· nivel {{ stats.hintLevel }}</span
-          >
-        }
-      </dd>
-    </div>
-    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
-      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.questions">
-        Preguntas al tutor
-      </dt>
-      <dd class="text-title-large">{{ stats.questions }}</dd>
-    </div>
-    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
-      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.pastes">
-        Pegados
-      </dt>
-      <dd class="text-title-large">
-        {{ stats.pastes }}
-        @if (stats.pastes > 0) {
-          <span class="text-body-medium text-on-surface-variant" i18n="@@detail.figures.chars"
-            >· {{ stats.pastedChars }} caracteres</span
-          >
-        }
-      </dd>
-    </div>
-    <div class="flex flex-col rounded-xl bg-panel px-3 py-2 sm:px-4 sm:py-3">
-      <dt class="text-label-large text-on-surface-variant" i18n="@@detail.figures.away">
-        Fuera de la ventana
-      </dt>
-      <dd class="text-title-large">
-        {{ stats.focusLosses }}
-        @if (stats.awayMs > 0) {
-          <span class="text-body-medium text-on-surface-variant"
-            >· {{ duration(stats.awayMs) }}</span
-          >
-        }
-      </dd>
-    </div>
-  </dl>
-</section>
+<app-attempt-now-card
+  [now]="now()"
+  [summary]="summary()"
+  [clock]="clock()"
+  (chosen)="goToEntry($event)"
+/>
 
-<div
-  class="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-rows-[minmax(0,1fr)]"
->
+@if (runs().items.length > 0) {
+  <app-attempt-evolution
+    [runs]="runs()"
+    [liveSince]="view().loadedAt"
+    (chosen)="goToEntry($event)"
+  />
+}
+
+<!-- The timeline comes before the code in the DOM: the editor keeps Tab (Esc and Tab leave it).
+     In one column the code goes up, as ficha 07 asks -->
+<div class="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
   <section
     aria-labelledby="detail-timeline-title"
-    class="flex max-h-[36rem] min-h-0 flex-col overflow-hidden rounded-2xl bg-panel xl:max-h-none"
+    class="flex max-h-144 min-h-0 flex-col overflow-hidden rounded-2xl bg-panel @4xl:h-144"
   >
     <div
       class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-4 py-3"
@@ -163,26 +108,28 @@
       <h2 id="detail-timeline-title" class="text-title-medium" i18n="@@detail.timeline.heading">
         Línea temporal
       </h2>
-      <!-- On a phone the filters do not fit: they scroll sideways in their own zone -->
-      <div class="max-w-full overflow-x-auto">
-        <mat-button-toggle-group
-          aria-label="Filtrar la línea temporal"
-          i18n-aria-label="@@detail.filter.label"
-          hideSingleSelectionIndicator
-          [value]="filter()"
-          (change)="selectFilter($event.value)"
-        >
-          @for (option of FILTERS; track option.value) {
-            <mat-button-toggle [value]="option.value"
-              >{{ option.label }}
-              <span
-                class="ms-1 inline-flex min-w-5 items-center justify-center rounded-full bg-surface-container-high px-1.5 align-middle text-label-small text-on-surface-variant tabular-nums"
-                >{{ filterCounts()[option.value] }}</span
-              >
-            </mat-button-toggle>
-          }
-        </mat-button-toggle-group>
-      </div>
+      @if (showFilters()) {
+        <!-- On a phone the filters do not fit: they scroll sideways in their own zone -->
+        <div class="max-w-full overflow-x-auto">
+          <mat-button-toggle-group
+            aria-label="Filtrar la línea temporal"
+            i18n-aria-label="@@detail.filter.label"
+            hideSingleSelectionIndicator
+            [value]="filter()"
+            (change)="selectFilter($event.value)"
+          >
+            @for (option of filters(); track option.value) {
+              <mat-button-toggle [value]="option.value"
+                >{{ option.label }}
+                <span
+                  class="ms-1 inline-flex min-w-5 items-center justify-center rounded-full bg-surface-container-high px-1.5 align-middle text-label-small text-on-surface-variant tabular-nums"
+                  >{{ option.count }}</span
+                >
+              </mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+        </div>
+      }
     </div>
     <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1) -->
     <div
@@ -191,27 +138,18 @@
       aria-labelledby="detail-timeline-title"
       class="min-h-0 flex-1 overflow-y-auto scroll-shadows px-4 py-2 outline-offset-[-2px] focus-visible:outline-2 focus-visible:outline-primary"
     >
-      @if (shownEntries().length > 0) {
-        <app-attempt-timeline-list
-          [entries]="shownEntries()"
-          [label]="timelineLabel"
-          [showGaps]="filter() === 'all'"
-          [liveSince]="view().loadedAt"
-        />
-      } @else {
-        <p
-          class="py-6 text-center text-body-large text-on-surface-variant"
-          i18n="@@detail.filter.empty"
-        >
-          Nada de esto en este intento.
-        </p>
-      }
+      <app-attempt-timeline-list
+        [entries]="shownEntries()"
+        [label]="timelineLabel"
+        [showGaps]="filter() === 'all'"
+        [liveSince]="view().loadedAt"
+      />
     </div>
   </section>
 
   <section
     aria-labelledby="detail-code-title"
-    class="flex min-h-80 flex-col gap-3 rounded-2xl bg-panel p-4 xl:min-h-0"
+    class="order-first flex min-h-80 flex-col gap-3 rounded-2xl bg-panel p-4 @4xl:order-none @4xl:h-144"
   >
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 id="detail-code-title" class="text-title-medium">

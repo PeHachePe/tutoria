@@ -101,6 +101,12 @@ export class MockLiveService extends LiveService {
         student: { id, name },
         exercise: liveExercise(tables, assignment),
         attempt,
+        siblings: tables.attempts
+          .filter(
+            (other) => other.userId === attempt.userId && other.assignmentId === assignment.id,
+          )
+          .sort((a, b) => a.number - b.number)
+          .map((other) => ({ id: other.id, number: other.number })),
         events: tables.events
           .filter((event) => event.attemptId === attemptId)
           .sort((a, b) => a.timestamp.localeCompare(b.timestamp)),

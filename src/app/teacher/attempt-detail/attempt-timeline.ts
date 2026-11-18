@@ -1,14 +1,16 @@
 import type { Attempt } from '../../data/attempt';
-import { LIVE_WINDOW_MINUTES, type LiveExercise } from '../../data/live-service';
+import type { LiveExercise } from '../../data/live-service';
 import type { ProcessEvent } from '../../data/process-event';
-import { type HintLevel, type TutorInteraction } from '../../data/tutor';
+import type { HintLevel, TutorInteraction } from '../../data/tutor';
 import { formatCall } from '../../shared/format-value';
-import type { TestCount } from '../../shared/status-chip/status-chip';
 
 const MINUTE_MS = 60_000;
 
 /** Minutes without anything happening that the timeline marks between two entries. */
 export const TIMELINE_GAP_MINUTES = 5;
+
+/** Runs in a row with the same result that the timeline tells as one entry. */
+export const RUN_GROUP_MIN = 2;
 
 /**
  * Longest time between a hint or an intervention and the answer the tutor recorded with it. The
@@ -25,10 +27,12 @@ export interface FailingTest {
 
 interface EntryBase {
   readonly id: string;
-  /** Milliseconds. */
+  /** Milliseconds; of a group of runs, the latest. */
   readonly at: number;
-  /** Minutes since the previous entry, when there was a long silence; null otherwise. */
+  /** Minutes of silence before it, when it was long; null otherwise. */
   readonly gapMinutes: number | null;
+  /** The process events it tells: every run of a group, or the hint or intervention of an answer. */
+  readonly eventIds: readonly string[];
 }
 
 /** Something that happened in an attempt, as the timeline of the detail tells it (RF-12). */
@@ -40,6 +44,10 @@ export type TimelineEntry = EntryBase &
         readonly passed: number;
         readonly total: number;
         readonly failing: readonly FailingTest[];
+        /** Runs in a row with this same result; 1 for a single one. */
+        readonly count: number;
+        /** When the first of them ran: `at` for a single one. */
+        readonly from: number;
       }
     | { readonly kind: 'tutor'; readonly interaction: TutorInteraction }
     /** A hint whose answer was not recorded. */
@@ -77,8 +85,9 @@ type Draft = TimelineEntry extends infer Entry
   : never;
 
 /**
- * The attempt from its opening, in order: each tutor answer once (with the hint or intervention it
- * recorded), a time away joined with its return, and the long silences marked.
+ * The attempt from its opening, the latest first: each tutor answer once (with the hint or
+ * intervention it recorded), a time away joined with its return, runs in a row with the same
+ * result as one entry and the long silences marked.
  */
 export function attemptTimeline(
   attempt: Attempt,
@@ -88,14 +97,10 @@ export function attemptTimeline(
 ): TimelineEntry[] {
   const sorted = [...events].sort((a, b) => time(a) - time(b));
   const unpaired = new Set(interactions);
+  /** The hint or intervention event each answer recorded, by the id of the interaction. */
+  const pairedEvent = new Map<string, string>();
   const drafts: Draft[] = [
-    { id: 'start', kind: 'start', at: Date.parse(attempt.startedAt) },
-    ...interactions.map((interaction): Draft => ({
-      id: interaction.id,
-      kind: 'tutor',
-      at: Date.parse(interaction.createdAt),
-      interaction,
-    })),
+    { id: 'start', kind: 'start', at: Date.parse(attempt.startedAt), eventIds: [] },
   ];
   let away: Extract<ProcessEvent, { type: 'focus_lost' }> | null = null;
 
@@ -108,6 +113,7 @@ export function attemptTimeline(
           id: event.id,
           kind: 'run',
           at,
+          eventIds: [event.id],
           passed: event.detail.passed,
           total: event.detail.passed + event.detail.failed,
           failing: tests
@@ -117,48 +123,146 @@ export function attemptTimeline(
               call: formatCall(exercise.functionName, test.input),
               hidden: test.isHidden,
             })),
+          count: 1,
+          from: at,
         });
         break;
       }
-      case 'hint_requested':
-        if (!takeAnswer(unpaired, 'hint', at)) {
-          drafts.push({ id: event.id, kind: 'hint', at, level: event.detail.level });
+      case 'hint_requested': {
+        const answer = takeAnswer(unpaired, 'hint', at);
+        if (answer) {
+          pairedEvent.set(answer.id, event.id);
+        } else {
+          drafts.push({
+            id: event.id,
+            kind: 'hint',
+            at,
+            eventIds: [event.id],
+            level: event.detail.level,
+          });
         }
         break;
-      case 'proactive_intervention':
-        if (event.detail.silent || !takeAnswer(unpaired, 'proactive', at)) {
-          drafts.push({ id: event.id, kind: 'proactive', at, silent: event.detail.silent });
+      }
+      case 'proactive_intervention': {
+        const answer = event.detail.silent ? null : takeAnswer(unpaired, 'proactive', at);
+        if (answer) {
+          pairedEvent.set(answer.id, event.id);
+        } else {
+          drafts.push({
+            id: event.id,
+            kind: 'proactive',
+            at,
+            eventIds: [event.id],
+            silent: event.detail.silent,
+          });
         }
         break;
+      }
       case 'paste':
-        drafts.push({ id: event.id, kind: 'paste', at, length: event.detail.length });
+        drafts.push({
+          id: event.id,
+          kind: 'paste',
+          at,
+          eventIds: [event.id],
+          length: event.detail.length,
+        });
         break;
       case 'focus_lost':
-        if (away) drafts.push({ id: away.id, kind: 'away', at: time(away), ms: null });
+        if (away) drafts.push(unreturned(away));
         away = event;
         break;
       case 'focus_gained':
         drafts.push(
           away
-            ? { id: away.id, kind: 'away', at: time(away), ms: event.detail.awayMs }
-            : { id: event.id, kind: 'away', at: at - event.detail.awayMs, ms: event.detail.awayMs },
+            ? {
+                id: away.id,
+                kind: 'away',
+                at: time(away),
+                eventIds: [away.id, event.id],
+                ms: event.detail.awayMs,
+              }
+            : {
+                id: event.id,
+                kind: 'away',
+                at: at - event.detail.awayMs,
+                eventIds: [event.id],
+                ms: event.detail.awayMs,
+              },
         );
         away = null;
         break;
       case 'submit':
-        drafts.push({ id: event.id, kind: 'submit', at });
+        drafts.push({ id: event.id, kind: 'submit', at, eventIds: [event.id] });
         break;
     }
   }
-  if (away) drafts.push({ id: away.id, kind: 'away', at: time(away), ms: null });
+  if (away) drafts.push(unreturned(away));
+  // After the opening and before the events, so what happens at the same time keeps that order
+  drafts.splice(
+    1,
+    0,
+    ...interactions.map((interaction): Draft => {
+      const eventId = pairedEvent.get(interaction.id);
+      return {
+        id: interaction.id,
+        kind: 'tutor',
+        at: Date.parse(interaction.createdAt),
+        eventIds: eventId ? [eventId] : [],
+        interaction,
+      };
+    }),
+  );
 
   // Stable: what happened at the same time keeps the order above
-  return drafts
+  const entries = drafts
     .sort((a, b) => a.at - b.at)
-    .map((draft, index, all) => {
+    .map((draft, index, all): TimelineEntry => {
       const minutes = index === 0 ? 0 : Math.floor((draft.at - all[index - 1].at) / MINUTE_MS);
       return { ...draft, gapMinutes: minutes >= TIMELINE_GAP_MINUTES ? minutes : null };
     });
+  return groupRuns(entries).reverse();
+}
+
+/**
+ * Each run joins the entry before it when that one is a run failing the same tests and no long
+ * silence separates them: anything in between (a hint, a paste) splits the group.
+ */
+function groupRuns(entries: readonly TimelineEntry[]): TimelineEntry[] {
+  const grouped: TimelineEntry[] = [];
+  for (const entry of entries) {
+    const previous = grouped.at(-1);
+    if (
+      entry.kind === 'run' &&
+      previous?.kind === 'run' &&
+      entry.gapMinutes === null &&
+      sameTests(previous.failing, entry.failing)
+    ) {
+      grouped[grouped.length - 1] = {
+        ...previous,
+        at: entry.at,
+        passed: entry.passed,
+        total: entry.total,
+        count: previous.count + 1,
+        eventIds: [...previous.eventIds, ...entry.eventIds],
+      };
+    } else {
+      grouped.push(entry);
+    }
+  }
+  return grouped;
+}
+
+function sameTests(a: readonly FailingTest[], b: readonly FailingTest[]): boolean {
+  return a.length === b.length && a.every((test, index) => test.id === b[index].id);
+}
+
+function unreturned(lost: Extract<ProcessEvent, { type: 'focus_lost' }>): Draft {
+  return { id: lost.id, kind: 'away', at: time(lost), eventIds: [lost.id], ms: null };
+}
+
+/** The id of the entry that tells an event or an interaction, or null. */
+export function entryIdOf(timeline: readonly TimelineEntry[], id: string): string | null {
+  return timeline.find((entry) => entry.id === id || entry.eventIds.includes(id))?.id ?? null;
 }
 
 /** Takes out of `unpaired` the answer recorded with a hint or intervention at `at`, if there is one. */
@@ -166,69 +270,14 @@ function takeAnswer(
   unpaired: Set<TutorInteraction>,
   trigger: TutorInteraction['trigger'],
   at: number,
-): boolean {
+): TutorInteraction | null {
   const answer = [...unpaired].find(
     (interaction) =>
       interaction.trigger === trigger &&
       Math.abs(Date.parse(interaction.createdAt) - at) <= ANSWER_PAIRING_MS,
   );
   if (answer) unpaired.delete(answer);
-  return answer !== undefined;
-}
-
-/** The figures of an attempt, above its timeline. */
-export interface AttemptFigures {
-  /** Until the submission, until now while the student works, or until their last activity. */
-  readonly minutes: number;
-  readonly runs: number;
-  readonly lastRun: TestCount | null;
-  readonly hints: number;
-  readonly hintLevel: HintLevel | null;
-  readonly questions: number;
-  readonly pastes: number;
-  readonly pastedChars: number;
-  readonly focusLosses: number;
-  readonly awayMs: number;
-  readonly lastActivity: number;
-  /** The student is on it now: open and with activity in the session window (D-054). */
-  readonly live: boolean;
-}
-
-export function attemptFigures(
-  attempt: Attempt,
-  events: readonly ProcessEvent[],
-  interactions: readonly TutorInteraction[],
-  now: number,
-): AttemptFigures {
-  const of = <Type extends ProcessEvent['type']>(type: Type) =>
-    events.filter((event): event is Extract<ProcessEvent, { type: Type }> => event.type === type);
-  const runs = of('run').sort((a, b) => time(a) - time(b));
-  const lastRun = runs.at(-1);
-  const levels = of('hint_requested').map((event) => event.detail.level);
-  const lastActivity = Math.max(
-    Date.parse(attempt.updatedAt),
-    ...events.map(time),
-    ...interactions.map((interaction) => Date.parse(interaction.createdAt)),
-  );
-  const live =
-    attempt.status !== 'submitted' && now - lastActivity < LIVE_WINDOW_MINUTES * MINUTE_MS;
-  const end = attempt.finishedAt ? Date.parse(attempt.finishedAt) : live ? now : lastActivity;
-  return {
-    minutes: Math.max(0, Math.floor((end - Date.parse(attempt.startedAt)) / MINUTE_MS)),
-    runs: runs.length,
-    lastRun: lastRun
-      ? { passed: lastRun.detail.passed, total: lastRun.detail.passed + lastRun.detail.failed }
-      : null,
-    hints: levels.length,
-    hintLevel: levels.length > 0 ? (Math.max(...levels) as HintLevel) : null,
-    questions: interactions.filter((interaction) => interaction.trigger === 'question').length,
-    pastes: of('paste').length,
-    pastedChars: of('paste').reduce((sum, event) => sum + event.detail.length, 0),
-    focusLosses: of('focus_lost').length,
-    awayMs: of('focus_gained').reduce((sum, event) => sum + event.detail.awayMs, 0),
-    lastActivity,
-    live,
-  };
+  return answer ?? null;
 }
 
 /** Every row once, by id: what was loaded, then what arrived live. */

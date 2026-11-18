@@ -52,10 +52,22 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { SettingsStore } from '../../student/settings/settings-store';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
+import { AttemptEvolution } from '../../teacher/attempt-detail/attempt-evolution';
+import { AttemptNowCard } from '../../teacher/attempt-detail/attempt-now-card';
 import { CommonFailure } from '../../teacher/live/common-failure';
 import { type BarSegment, LiveBar } from '../../teacher/live/live-bar';
 import { LiveChip, type LiveReason } from '../../teacher/live/live-reason';
 import { LiveClass } from '../../teacher/live/live-class';
+import {
+  nextRun,
+  sampleRuns,
+  SAMPLE_CLOCK,
+  SAMPLE_EVOLUTION,
+  SAMPLE_NOW,
+  SAMPLE_NOW_SUMMARY,
+  SAMPLE_SOLVED,
+  SAMPLE_SOLVED_SUMMARY,
+} from './attempt-detail-sample';
 import { SAMPLE_OVERVIEW, SAMPLE_STRIP } from './live-class-sample';
 import { ShowcaseDialog } from './showcase-dialog';
 import { ShowcaseForm } from './showcase-form';
@@ -110,6 +122,8 @@ import { ShowcaseTable } from './showcase-table';
     CommonFailure,
     LiveChip,
     LiveClass,
+    AttemptEvolution,
+    AttemptNowCard,
   ],
   templateUrl: './showcase-page.html',
 })
@@ -134,6 +148,15 @@ export class ShowcasePage {
     { kind: 'paste_submit', chars: 400, runs: 0 },
     { kind: 'breakthrough', failures: 5 },
   ];
+  protected readonly sampleNow = SAMPLE_NOW;
+  protected readonly sampleNowSummary = SAMPLE_NOW_SUMMARY;
+  protected readonly sampleSolved = SAMPLE_SOLVED;
+  protected readonly sampleSolvedSummary = SAMPLE_SOLVED_SUMMARY;
+  protected readonly sampleClock = SAMPLE_CLOCK;
+  /** What arrives after this grows: the runs added with «Añadir una ejecución». */
+  protected readonly evolutionSince = SAMPLE_EVOLUTION[SAMPLE_EVOLUTION.length - 1].at;
+  private readonly evolutionItems = signal(SAMPLE_EVOLUTION);
+  protected readonly evolution = computed(() => sampleRuns(this.evolutionItems()));
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   protected readonly settings = inject(SettingsStore);
@@ -353,6 +376,10 @@ export class ShowcasePage {
   protected readonly loadingKey = signal(0);
   protected readonly sampleError = new DataError('network');
   protected readonly retries = signal(0);
+
+  protected addRun(): void {
+    this.evolutionItems.update((items) => [...items, nextRun(items)]);
+  }
 
   protected replayLoading(): void {
     this.loadingKey.update((key) => key + 1);

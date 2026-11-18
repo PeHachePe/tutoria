@@ -18,6 +18,9 @@
   --animate-live-in: live-in 260ms ease-out both;
   --animate-live-out: live-out 200ms ease-in both;
 
+  /* Attempt detail (step 4.2b): a run that arrives grows from the axis of the evolution. */
+  --animate-column-in: column-in 400ms ease-out both;
+
   @keyframes page-in {
     from {
       opacity: 0;
@@ -55,6 +58,15 @@
     to {
       opacity: 0;
       translate: 0.5rem 0;
+    }
+  }
+
+  @keyframes column-in {
+    from {
+      scale: 1 0;
+    }
+    to {
+      scale: 1 1;
     }
   }
 

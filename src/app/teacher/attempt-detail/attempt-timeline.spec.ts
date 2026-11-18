@@ -1,15 +1,8 @@
 import { testEvents as e } from '../../data/process-event-testing';
+import { ago, BLOCK_EXERCISES, MINUTE, testAttempt, testInteraction } from '../live/live-testing';
 import {
-  ago,
-  BLOCK_EXERCISES,
-  MINUTE,
-  NOW,
-  testAttempt,
-  testInteraction,
-} from '../live/live-testing';
-import {
-  attemptFigures,
   attemptTimeline,
+  entryIdOf,
   latestAttempt,
   mergeById,
   timelineCategory,
@@ -20,24 +13,31 @@ const exercise = BLOCK_EXERCISES[0];
 const attempt = testAttempt('a1', 'ana', { startedAt: ago(30), updatedAt: ago(30) });
 
 const kinds = (entries: readonly TimelineEntry[]) => entries.map((entry) => entry.kind);
+/** The entries in the order they happened, without the opening. */
+const inOrder = (entries: readonly TimelineEntry[]) => entries.slice(0, -1).reverse();
 
 describe('attemptTimeline', () => {
   it('starts when the attempt was opened', () => {
     const entries = attemptTimeline(attempt, [], [], exercise);
 
-    expect(entries).toEqual([{ id: 'start', kind: 'start', at: ago(30), gapMinutes: null }]);
+    expect(entries).toEqual([
+      { id: 'start', kind: 'start', at: ago(30), gapMinutes: null, eventIds: [] },
+    ]);
   });
 
   it('describes each run with the tests that fail, visible or hidden, in the order of the exercise', () => {
     const run = e.run('a1', ago(20), ['e1-t5', 'e1-t1', 'gone'], 5);
 
-    const [, entry] = attemptTimeline(attempt, [run], [], exercise);
+    const [entry] = attemptTimeline(attempt, [run], [], exercise);
 
     expect(entry).toMatchObject({
       id: run.id,
       kind: 'run',
       passed: 2,
       total: 5,
+      count: 1,
+      from: ago(20),
+      eventIds: [run.id],
       failing: [
         { id: 'e1-t1', call: `${exercise.exercise.functionName}([])`, hidden: false },
         { id: 'e1-t5', call: `${exercise.exercise.functionName}([4])`, hidden: true },
@@ -59,10 +59,14 @@ describe('attemptTimeline', () => {
       exercise,
     );
 
-    expect(entries.slice(1)).toEqual([
-      expect.objectContaining({ kind: 'tutor', interaction: answer }),
-      expect.objectContaining({ kind: 'tutor', interaction: question }),
-      expect.objectContaining({ kind: 'tutor', interaction: intervention }),
+    expect(inOrder(entries)).toEqual([
+      expect.objectContaining({ kind: 'tutor', interaction: answer, eventIds: [hint.id] }),
+      expect.objectContaining({ kind: 'tutor', interaction: question, eventIds: [] }),
+      expect.objectContaining({
+        kind: 'tutor',
+        interaction: intervention,
+        eventIds: [proactive.id],
+      }),
     ]);
   });
 
@@ -79,8 +83,8 @@ describe('attemptTimeline', () => {
       exercise,
     );
 
-    expect(entries.slice(1)).toEqual([
-      expect.objectContaining({ kind: 'hint', level: 3 }),
+    expect(inOrder(entries)).toEqual([
+      expect.objectContaining({ kind: 'hint', level: 3, eventIds: [lonelyHint.id] }),
       expect.objectContaining({ kind: 'proactive', silent: true }),
       expect.objectContaining({ kind: 'proactive', silent: false }),
       expect.objectContaining({ kind: 'tutor', interaction: farAnswer }),
@@ -101,8 +105,14 @@ describe('attemptTimeline', () => {
       exercise,
     );
 
-    expect(entries.slice(1)).toEqual([
-      expect.objectContaining({ id: lost.id, kind: 'away', at: ago(20), ms: 2 * MINUTE }),
+    expect(inOrder(entries)).toEqual([
+      expect.objectContaining({
+        id: lost.id,
+        kind: 'away',
+        at: ago(20),
+        ms: 2 * MINUTE,
+        eventIds: [lost.id, gained.id],
+      }),
       expect.objectContaining({ id: lonelyReturn.id, kind: 'away', at: ago(11), ms: MINUTE }),
       expect.objectContaining({ id: unreturned.id, kind: 'away', at: ago(7), ms: null }),
       expect.objectContaining({ id: stillAway.id, kind: 'away', at: ago(5), ms: null }),
@@ -117,7 +127,7 @@ describe('attemptTimeline', () => {
       exercise,
     );
 
-    expect(entries.slice(1)).toEqual([
+    expect(inOrder(entries)).toEqual([
       expect.objectContaining({ kind: 'paste', length: 120 }),
       expect.objectContaining({ kind: 'submit', at: ago(10) }),
     ]);
@@ -126,15 +136,15 @@ describe('attemptTimeline', () => {
   it('marks the long silences between two entries', () => {
     const entries = attemptTimeline(
       attempt,
-      [e.run('a1', ago(28)), e.run('a1', ago(16)), e.run('a1', ago(12))],
+      [e.run('a1', ago(28)), e.run('a1', ago(16), ['e1-t1']), e.run('a1', ago(12))],
       [],
       exercise,
     );
 
-    expect(entries.map((entry) => entry.gapMinutes)).toEqual([null, null, 12, null]);
+    expect(entries.map((entry) => entry.gapMinutes)).toEqual([null, 12, null, null]);
   });
 
-  it('orders everything by time', () => {
+  it('puts the latest first and the opening last', () => {
     const entries = attemptTimeline(
       attempt,
       [e.submit('a1', ago(5)), e.run('a1', ago(25))],
@@ -142,7 +152,111 @@ describe('attemptTimeline', () => {
       exercise,
     );
 
-    expect(kinds(entries)).toEqual(['start', 'run', 'tutor', 'submit']);
+    expect(kinds(entries)).toEqual(['submit', 'tutor', 'run', 'start']);
+  });
+
+  describe('runs in a row with the same result', () => {
+    it.each([2, 3, 4])('tells %i of them as one entry', (count) => {
+      const runs = Array.from({ length: count }, (_, index) =>
+        e.run('a1', ago(20 - index), ['e1-t1', 'e1-t2']),
+      );
+
+      const [group, start] = attemptTimeline(attempt, runs, [], exercise);
+
+      expect(group).toMatchObject({
+        id: runs[0].id,
+        kind: 'run',
+        passed: 3,
+        count,
+        from: ago(20),
+        at: ago(20 - count + 1),
+        eventIds: runs.map((run) => run.id),
+      });
+      expect(start.kind).toBe('start');
+    });
+
+    it('groups the runs that pass everything too', () => {
+      const entries = attemptTimeline(
+        attempt,
+        [e.run('a1', ago(20)), e.run('a1', ago(19))],
+        [],
+        exercise,
+      );
+
+      expect(entries[0]).toMatchObject({ kind: 'run', failing: [], count: 2 });
+    });
+
+    it('does not group runs that fail different tests', () => {
+      const entries = attemptTimeline(
+        attempt,
+        [e.run('a1', ago(20), ['e1-t1']), e.run('a1', ago(19), ['e1-t2'])],
+        [],
+        exercise,
+      );
+
+      expect(kinds(entries)).toEqual(['run', 'run', 'start']);
+    });
+
+    it.each([
+      ['a hint', () => [e.hint('a1', ago(19.5), 1)], []],
+      ['a paste', () => [e.paste('a1', ago(19.5))], []],
+      ['a question', () => [], [testInteraction('a1', ago(19.5), { trigger: 'question' })]],
+    ])('does not group runs with %s between them', (_, extra, interactions) => {
+      const entries = attemptTimeline(
+        attempt,
+        [e.run('a1', ago(20), ['e1-t1']), ...extra(), e.run('a1', ago(19), ['e1-t1'])],
+        interactions,
+        exercise,
+      );
+
+      expect(entries.filter((entry) => entry.kind === 'run')).toHaveLength(2);
+    });
+
+    it('does not group runs a long silence separates, and keeps marking it', () => {
+      const entries = attemptTimeline(
+        attempt,
+        [e.run('a1', ago(20), ['e1-t1']), e.run('a1', ago(15), ['e1-t1'])],
+        [],
+        exercise,
+      );
+
+      expect(entries.map((entry) => [entry.kind, entry.gapMinutes])).toEqual([
+        ['run', 5],
+        ['run', 10],
+        ['start', null],
+      ]);
+    });
+
+    it('keeps the silence before the first run of a group', () => {
+      const entries = attemptTimeline(
+        attempt,
+        [e.run('a1', ago(20), ['e1-t1']), e.run('a1', ago(19), ['e1-t1'])],
+        [],
+        exercise,
+      );
+
+      expect(entries[0]).toMatchObject({ count: 2, gapMinutes: 10 });
+    });
+  });
+});
+
+describe('entryIdOf', () => {
+  const runs = [e.run('a1', ago(20), ['e1-t1']), e.run('a1', ago(19), ['e1-t1'])];
+  const hint = e.hint('a1', ago(10), 2);
+  const answer = testInteraction('a1', ago(10), { hintLevel: 2 });
+  const timeline = attemptTimeline(attempt, [...runs, hint], [answer], exercise);
+
+  it('finds the entry of a run inside a group', () => {
+    expect(entryIdOf(timeline, runs[1].id)).toBe(runs[0].id);
+  });
+
+  it('finds the answer of a hint, by the hint or by the interaction', () => {
+    expect(entryIdOf(timeline, hint.id)).toBe(answer.id);
+    expect(entryIdOf(timeline, answer.id)).toBe(answer.id);
+  });
+
+  it('gives null for an unknown id', () => {
+    expect(entryIdOf(timeline, 'unknown')).toBeNull();
   });
 });
 
@@ -158,58 +272,6 @@ describe('timelineCategory', () => {
     ['away', 'browser'],
   ])('puts %s in %s', (kind, category) => {
     expect(timelineCategory({ kind } as TimelineEntry)).toBe(category);
-  });
-});
-
-describe('attemptFigures', () => {
-  it('counts what the student did', () => {
-    const events = [
-      e.run('a1', ago(25), ['e1-t1']),
-      e.hint('a1', ago(22), 1),
-      e.hint('a1', ago(20), 2),
-      e.paste('a1', ago(18), 30),
-      e.paste('a1', ago(17), 90),
-      e.focusLost('a1', ago(16)),
-      e.focusGained('a1', ago(14), 2 * MINUTE),
-      e.run('a1', ago(10), [], 5),
-    ];
-    const interactions = [
-      testInteraction('a1', ago(12), { trigger: 'question' }),
-      testInteraction('a1', ago(11), { trigger: 'question' }),
-    ];
-
-    expect(attemptFigures(attempt, events, interactions, NOW)).toEqual({
-      minutes: 30,
-      runs: 2,
-      lastRun: { passed: 5, total: 5 },
-      hints: 2,
-      hintLevel: 2,
-      questions: 2,
-      pastes: 2,
-      pastedChars: 120,
-      focusLosses: 1,
-      awayMs: 2 * MINUTE,
-      lastActivity: ago(10),
-      live: true,
-    });
-  });
-
-  it('counts the time until the submission, or until the last activity once the student left', () => {
-    const submitted = {
-      ...attempt,
-      status: 'submitted' as const,
-      finishedAt: new Date(ago(10)).toISOString(),
-    };
-    expect(attemptFigures(submitted, [], [], NOW)).toMatchObject({ minutes: 20, live: false });
-
-    const old = testAttempt('a1', 'ana', { startedAt: ago(300), updatedAt: ago(200) });
-    expect(attemptFigures(old, [], [], NOW)).toMatchObject({
-      minutes: 100,
-      live: false,
-      runs: 0,
-      lastRun: null,
-      hintLevel: null,
-    });
   });
 });
 

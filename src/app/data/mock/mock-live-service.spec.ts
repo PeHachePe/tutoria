@@ -204,6 +204,24 @@ describe('MockLiveService', () => {
       expect(detail.interactions.length).toBeGreaterThan(0);
       const created = detail.interactions.map((interaction) => interaction.createdAt);
       expect(created).toEqual([...created].sort());
+      expect(detail.siblings).toContainEqual({ id: attempt.id, number: attempt.number });
+    });
+
+    it('gives every attempt of the student at the assignment, by number', async () => {
+      db.setSession(TEACHER_ID);
+      const attempt = talkative();
+      const practice = { ...attempt, id: 'practice', number: 99 };
+      const ofAnother = { ...attempt, id: 'of-another', userId: 'someone-else' };
+      db.update('attempts', (rows) => [practice, ofAnother, ...rows]);
+
+      const { siblings } = await service.attemptDetail(attempt.id);
+
+      const ids = siblings.map((sibling) => sibling.id);
+      expect(ids).toContain(attempt.id);
+      expect(ids.at(-1)).toBe('practice');
+      expect(ids).not.toContain('of-another');
+      const numbers = siblings.map((sibling) => sibling.number);
+      expect(numbers).toEqual([...numbers].sort((a, b) => a - b));
     });
 
     it('is open to an administrator', async () => {

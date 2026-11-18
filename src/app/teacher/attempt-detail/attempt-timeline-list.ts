@@ -1,10 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, ElementRef, inject, input, viewChildren } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 
 import type { ToolRequest } from '../../data/tutor';
+import { prefersReducedMotion } from '../../shared/reduced-motion';
 import { TutorMessage } from '../../shared/tutor-message/tutor-message';
-import type { TimelineEntry } from './attempt-timeline';
+import { FLASH_MS } from '../live/flash-on-change';
+import { RUN_GROUP_MIN, type TimelineEntry } from './attempt-timeline';
 import { formatDuration } from './format-duration';
 
 /** What the tutor did with each of its tools, as the teacher reads it (2.5e, 2.5f). */
@@ -61,25 +63,25 @@ function toolsText(actions: readonly ToolRequest[]): string {
 }
 
 /**
- * The timeline of an attempt (RF-12), oldest first: each entry with its time (and its day when it
- * changes), what happened and, before it, the long silence that preceded it.
+ * The timeline of an attempt (RF-12), the latest first: each entry with its time (and its day when
+ * it changes), what happened and, under it, the long silence that preceded it. `reveal()` takes an
+ * entry into view, with the focus, and highlights it for a moment.
  */
 @Component({
   selector: 'app-attempt-timeline-list',
   imports: [DatePipe, MatIcon, TutorMessage],
   template: `
-    <ol class="flex flex-col" [attr.aria-label]="label()">
+    <ol class="flex flex-col" reversed [attr.aria-label]="label()">
       @for (item of items(); track item.entry.id) {
         @let entry = item.entry;
-        <li class="flex flex-col">
-          @if (item.gap !== null) {
-            <p
-              class="my-1 ms-12 flex items-center gap-2 text-label-medium text-on-surface-variant"
-              i18n="@@detail.gap"
-            >
-              {{ duration(item.gap) }} sin actividad
-            </p>
-          }
+        <!-- It takes the focus from a column of the evolution or «Ver entera»: the outline shows
+             after a click too, so focus: and not focus-visible: -->
+        <li
+          #row
+          class="flex flex-col rounded-lg focus:outline-2 focus:-outline-offset-2 focus:outline-primary"
+          tabindex="-1"
+          [attr.data-entry]="entry.id"
+        >
           <div
             class="flex gap-3 py-2"
             [class]="item.arrived ? 'animate-live-in motion-reduce:animate-none' : ''"
@@ -97,19 +99,39 @@ function toolsText(actions: readonly ToolRequest[]): string {
                   [attr.datetime]="item.iso"
                 >
                   @if (item.newDay) {
-                    {{ entry.at | date: 'd MMM' }},
+                    {{ (entry.kind === 'run' ? entry.from : entry.at) | date: 'd MMM' }},
                   }
-                  {{ entry.at | date: 'HH:mm' }}</time
+                  {{ (entry.kind === 'run' ? entry.from : entry.at) | date: 'HH:mm' }}</time
                 >
+                @if (item.until; as until) {
+                  <span class="text-label-large text-on-surface-variant" aria-hidden="true">–</span>
+                  <time
+                    class="-ms-1 text-label-large text-on-surface-variant tabular-nums"
+                    [attr.datetime]="until.iso"
+                    >{{ until.at | date: 'HH:mm' }}</time
+                  >
+                }
                 <span class="text-body-large">
                   @switch (entry.kind) {
                     @case ('start') {
                       <ng-container i18n="@@detail.entry.start">Abrió el ejercicio</ng-container>
                     }
                     @case ('run') {
-                      @if (entry.passed === entry.total) {
+                      @if (entry.count >= RUN_GROUP_MIN) {
+                        @if (entry.passed === entry.total) {
+                          <ng-container i18n="@@detail.entry.runsPassed"
+                            >Ejecutó {{ entry.count }} veces · superó las
+                            {{ entry.total }}</ng-container
+                          >
+                        } @else {
+                          <ng-container i18n="@@detail.entry.runs"
+                            >Ejecutó {{ entry.count }} veces · {{ entry.passed }} de
+                            {{ entry.total }}, fallan las mismas</ng-container
+                          >
+                        }
+                      } @else if (entry.passed === entry.total) {
                         <ng-container i18n="@@detail.entry.runPassed"
-                          >Ejecutó las pruebas: superó las {{ entry.total }}</ng-container
+                          >Superó todas las pruebas</ng-container
                         >
                       } @else {
                         <ng-container i18n="@@detail.entry.run"
@@ -236,12 +258,26 @@ function toolsText(actions: readonly ToolRequest[]): string {
               }
             </div>
           </div>
+          @if (item.gap !== null) {
+            <p
+              class="my-1 ms-12 flex items-center gap-2 text-label-medium text-on-surface-variant"
+              i18n="@@detail.gap"
+            >
+              {{ duration(item.gap) }} sin actividad
+            </p>
+          }
         </li>
       }
     </ol>
   `,
 })
 export class AttemptTimelineList {
+  private readonly window = inject(ElementRef).nativeElement.ownerDocument
+    .defaultView as Window | null;
+  private readonly rows = viewChildren<ElementRef<HTMLElement>>('row');
+
+  protected readonly RUN_GROUP_MIN = RUN_GROUP_MIN;
+
   readonly entries = input.required<readonly TimelineEntry[]>();
   /** The accessible name of the list. */
   readonly label = input.required<string>();
@@ -252,19 +288,42 @@ export class AttemptTimelineList {
 
   protected readonly items = computed(() =>
     this.entries().map((entry, index, all) => {
-      const previous = all[index - 1];
+      // The latest first: what happened before it is the entry under it
+      const before = all[index + 1];
+      const at = entry.kind === 'run' ? entry.from : entry.at;
       return {
         entry,
         icon: iconOf(entry),
-        iso: new Date(entry.at).toISOString(),
-        newDay:
-          !previous || new Date(previous.at).toDateString() !== new Date(entry.at).toDateString(),
+        iso: new Date(at).toISOString(),
+        /** Of a group of runs, when the latest ran; none if it was in the same minute as the first. */
+        until:
+          entry.kind === 'run' &&
+          entry.count >= RUN_GROUP_MIN &&
+          Math.floor(entry.at / MINUTE_MS) !== Math.floor(at / MINUTE_MS)
+            ? { at: entry.at, iso: new Date(entry.at).toISOString() }
+            : null,
+        newDay: !before || new Date(before.at).toDateString() !== new Date(at).toDateString(),
         /** The silence before it, in milliseconds, or null to show none. */
         gap: this.showGaps() && entry.gapMinutes !== null ? entry.gapMinutes * MINUTE_MS : null,
         arrived: entry.at > this.liveSince(),
       };
     }),
   );
+
+  /** Takes an entry into view with the focus and highlights it, as `FlashOnChange` a row. */
+  reveal(entryId: string): void {
+    const row = this.rows()
+      .map((ref) => ref.nativeElement)
+      .find((element) => element.dataset['entry'] === entryId);
+    if (!row) return;
+    row.scrollIntoView({ block: 'nearest' });
+    row.focus({ preventScroll: true });
+    if (prefersReducedMotion(this.window) || !row.animate) return;
+    row.animate(
+      [{ backgroundColor: 'var(--mat-sys-primary-container)' }, { backgroundColor: 'transparent' }],
+      { duration: FLASH_MS, easing: 'ease-out' },
+    );
+  }
 
   protected duration(ms: number): string {
     return formatDuration(ms);
