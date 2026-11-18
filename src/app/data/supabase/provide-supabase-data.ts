@@ -1,6 +1,7 @@
 import { DOCUMENT, EnvironmentProviders, inject, makeEnvironmentProviders } from '@angular/core';
 import { createClient } from '@supabase/supabase-js';
 
+import { AdminService } from '../admin-service';
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
 import { BlockService } from '../block-service';
@@ -13,6 +14,7 @@ import { TutorService } from '../tutor-service';
 import type { Database } from './database.types';
 import { keepaliveFetch } from './keepalive-fetch';
 import { SUPABASE_CLIENT, type SupabaseConfig } from './supabase-client';
+import { SupabaseAdminService } from './supabase-admin-service';
 import { SupabaseAttemptService } from './supabase-attempt-service';
 import { SupabaseAuthService } from './supabase-auth-service';
 import { SupabaseBlockService } from './supabase-block-service';
@@ -45,5 +47,6 @@ export function provideSupabaseData(config: SupabaseConfig): EnvironmentProvider
     { provide: LiveService, useClass: SupabaseLiveService },
     { provide: BlockService, useClass: SupabaseBlockService },
     { provide: StatsService, useClass: SupabaseStatsService },
+    { provide: AdminService, useClass: SupabaseAdminService },
   ]);
 }

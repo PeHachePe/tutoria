@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { AdminService } from '../admin-service';
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
 import { BlockService } from '../block-service';
@@ -9,6 +10,7 @@ import { EventService } from '../event-service';
 import { ExerciseService } from '../exercise-service';
 import { LiveService } from '../live-service';
 import { TutorService } from '../tutor-service';
+import { MockAdminService } from './mock-admin-service';
 import { MockAttemptService } from './mock-attempt-service';
 import { MockAuthService } from './mock-auth-service';
 import { MockCodeRunnerService } from './mock-code-runner-service';
@@ -33,5 +35,6 @@ describe('provideMockData', () => {
     expect(TestBed.inject(LiveService)).toBeInstanceOf(MockLiveService);
     expect(TestBed.inject(BlockService)).toBeInstanceOf(MockBlockService);
     expect(TestBed.inject(StatsService)).toBeInstanceOf(MockStatsService);
+    expect(TestBed.inject(AdminService)).toBeInstanceOf(MockAdminService);
   });
 });

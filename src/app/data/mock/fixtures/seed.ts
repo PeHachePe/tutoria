@@ -8,7 +8,7 @@ import { ENROLLMENTS, GROUPS, USERS } from './users';
  * Change it whenever the fixtures change: the mock data saved in a browser with another version is
  * discarded and replaced with the new seed.
  */
-export const SEED_VERSION = 11;
+export const SEED_VERSION = 12;
 
 /** The data both worlds share: the mock data starts from it and `npm run seed` turns it into SQL. */
 export const SEED: MockTables = {
@@ -24,6 +24,7 @@ export const SEED: MockTables = {
   attempts: ATTEMPTS,
   interactions: INTERACTIONS,
   events: EVENTS,
+  passwords: {},
   // Free plans only (D-053): when Flash-Lite is saturated (503 or no answer), the Gemma models of
   // the same API and key, each with its own quota; slower, so they get more time
   aiProvider: {

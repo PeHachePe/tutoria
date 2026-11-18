@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
-import { DAW_STUDENT_IDS, DISABLED_STUDENT_ID, MOCK_PASSWORD } from './fixtures/users';
+import { ADMIN_ID, DAW_STUDENT_IDS, DISABLED_STUDENT_ID, MOCK_PASSWORD } from './fixtures/users';
+import { MockAdminService } from './mock-admin-service';
 import { MockAuthService } from './mock-auth-service';
 import { MOCK_DB_STORAGE_KEY, MOCK_SESSION_STORAGE_KEY, MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -11,7 +12,7 @@ describe('MockAuthService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [MockAuthService] });
+    TestBed.configureTestingModule({ providers: [MockAuthService, MockAdminService] });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     db = TestBed.inject(MockDb);
     service = TestBed.inject(MockAuthService);
@@ -49,6 +50,49 @@ describe('MockAuthService', () => {
       expect(db.sessionUserId()).toBeNull();
     },
   );
+
+  describe('with the accounts of the administration', () => {
+    const CLARA = { email: 'clara.fuentes@tutoria.test', password: 'contraseña de Clara' };
+
+    beforeEach(async () => {
+      db.setSession(ADMIN_ID);
+      await TestBed.inject(MockAdminService).createUser({
+        name: 'Clara Fuentes',
+        role: 'student',
+        ...CLARA,
+      });
+      db.setSession(null);
+    });
+
+    it('signs in a new account with its own password and not the shared one', async () => {
+      await expect(service.signIn({ ...CLARA, password: MOCK_PASSWORD })).rejects.toMatchObject({
+        kind: 'unauthorized',
+      });
+
+      await expect(service.signIn(CLARA)).resolves.toMatchObject({ email: CLARA.email });
+    });
+
+    it('takes only the new password after a reset', async () => {
+      const id = db.tables().users.find(({ email }) => email === CLARA.email)?.id ?? '';
+      db.setSession(ADMIN_ID);
+      await TestBed.inject(MockAdminService).updateUser(id, { password: 'la nueva de Clara' });
+      db.setSession(null);
+
+      await expect(service.signIn(CLARA)).rejects.toMatchObject({ kind: 'unauthorized' });
+      await expect(
+        service.signIn({ ...CLARA, password: 'la nueva de Clara' }),
+      ).resolves.toMatchObject({ id });
+    });
+
+    it('keeps out an account once it is disabled', async () => {
+      const id = db.tables().users.find(({ email }) => email === CLARA.email)?.id ?? '';
+      db.setSession(ADMIN_ID);
+      await TestBed.inject(MockAdminService).updateUser(id, { status: 'disabled' });
+      db.setSession(null);
+
+      await expect(service.signIn(CLARA)).rejects.toMatchObject({ kind: 'forbidden' });
+    });
+  });
 
   it('signs out', async () => {
     db.setSession(DAW_STUDENT_IDS[0]);

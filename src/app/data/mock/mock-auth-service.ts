@@ -1,5 +1,6 @@
 import { inject, Service } from '@angular/core';
 
+import { normalizeEmail } from '../admin/user-rules';
 import { AuthService, Credentials } from '../auth-service';
 import { DataError } from '../data-error';
 import type { AppUser } from '../user';
@@ -8,7 +9,10 @@ import { findRow, now } from './mock-access';
 import { MOCK_SESSION_STORAGE_KEY, MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 
-/** Sign-in against the seed users, all with the same test password. The dev toolbar switches user. */
+/**
+ * Sign-in against the mock users: those of the seed, with the same test password, and those the
+ * administration created or reset, with theirs. The dev toolbar switches user.
+ */
 @Service({ autoProvided: false })
 export class MockAuthService extends AuthService {
   private readonly db = inject(MockDb);
@@ -16,11 +20,14 @@ export class MockAuthService extends AuthService {
 
   signIn({ email, password }: Credentials): Promise<AppUser> {
     return this.network.request(() => {
-      const normalized = email.trim().toLowerCase();
-      const user = this.db.tables().users.find((candidate) => candidate.email === normalized);
+      const tables = this.db.tables();
+      const normalized = normalizeEmail(email);
+      const user = tables.users.find((candidate) => candidate.email === normalized);
       // As Supabase Auth: a disabled account is told before checking the password
       if (user?.status === 'disabled') throw new DataError('forbidden');
-      if (!user || password !== MOCK_PASSWORD) throw new DataError('unauthorized');
+      if (!user || password !== (tables.passwords[user.id] ?? MOCK_PASSWORD)) {
+        throw new DataError('unauthorized');
+      }
       this.db.setSession(user.id);
       return user;
     });

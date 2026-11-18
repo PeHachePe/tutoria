@@ -20,6 +20,11 @@ export interface MockTables {
   readonly attempts: readonly Attempt[];
   readonly interactions: readonly TutorInteraction[];
   readonly events: readonly ProcessEvent[];
+  /**
+   * The passwords of the accounts created or reset in the demo, by user id, as Supabase Auth keeps
+   * them; the seed users have `MOCK_PASSWORD`.
+   */
+  readonly passwords: Readonly<Record<string, string>>;
   /** Row `ai_provider` of table `app_setting`. */
   readonly aiProvider: AiProviderSetting;
 }

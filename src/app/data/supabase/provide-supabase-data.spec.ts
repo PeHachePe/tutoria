@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+import { AdminService } from '../admin-service';
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
 import { BlockService } from '../block-service';
@@ -12,6 +13,7 @@ import { LiveService } from '../live-service';
 import { TutorService } from '../tutor-service';
 import { provideSupabaseData } from './provide-supabase-data';
 import { SUPABASE_CLIENT } from './supabase-client';
+import { SupabaseAdminService } from './supabase-admin-service';
 import { SupabaseAttemptService } from './supabase-attempt-service';
 import { SupabaseAuthService } from './supabase-auth-service';
 import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
@@ -49,6 +51,7 @@ describe('provideSupabaseData', () => {
     expect(TestBed.inject(LiveService)).toBeInstanceOf(SupabaseLiveService);
     expect(TestBed.inject(BlockService)).toBeInstanceOf(SupabaseBlockService);
     expect(TestBed.inject(StatsService)).toBeInstanceOf(SupabaseStatsService);
+    expect(TestBed.inject(AdminService)).toBeInstanceOf(SupabaseAdminService);
   });
 
   it('creates one client for the project, with the publishable key', async () => {

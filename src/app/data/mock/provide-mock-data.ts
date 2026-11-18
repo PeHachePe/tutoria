@@ -1,5 +1,6 @@
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 
+import { AdminService } from '../admin-service';
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
 import { BlockService } from '../block-service';
@@ -9,6 +10,7 @@ import { ExerciseService } from '../exercise-service';
 import { LiveService } from '../live-service';
 import { StatsService } from '../stats-service';
 import { TutorService } from '../tutor-service';
+import { MockAdminService } from './mock-admin-service';
 import { MockAttemptService } from './mock-attempt-service';
 import { MockAuthService } from './mock-auth-service';
 import { MockBlockService } from './mock-block-service';
@@ -34,5 +36,6 @@ export function provideMockData(): EnvironmentProviders {
     { provide: LiveService, useClass: MockLiveService },
     { provide: BlockService, useClass: MockBlockService },
     { provide: StatsService, useClass: MockStatsService },
+    { provide: AdminService, useClass: MockAdminService },
   ]);
 }
