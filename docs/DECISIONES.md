@@ -2085,3 +2085,38 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - El plan del 4.2b daba por hechos algunos ID de la cola que ya no existen: corregido en su punto «Del 4.1e».
 
 **Aprobación:** la revisión del plan, aprobada por el autor («Sí, adelante»); la pantalla final, construida con él iteración a iteración y aprobada al cerrar («Sí, ciérralo»).
+
+## D-073 · El histórico: lo que ya pasó, bloque a bloque, para dos decisiones fuera de clase (18/11/2026)
+
+**Contexto:** el paso 4.4 construye el histórico del grupo (`/docente/historico`, ficha 09, figuras 10 y 19 de la memoria). La especificación pedía una gráfica de la media de pistas por bloque y tres KPI (tiempo medio, porcentaje de superados y alumnos con señales), contando solo el intento que cuenta de cada asignación (D-046), y, por D-054, el ritmo de entrega respecto a la fecha. Con la regla del panel en vivo (D-068), cada dato tiene que responder a una decisión del docente. La primera versión, que seguía el plan al pie de la letra, el autor la rechazó al probarla: mezclaba la tendencia del grupo, un bloque y las fechas de todo el grupo sin decirlo; la gráfica no explicaba sus colores; con un solo bloque era una barra suelta; las entregas dejaban huecos y escondían los nombres tras «Ver quiénes». Se rehízo a partir de un boceto aprobado por el autor.
+
+**Decisión:**
+
+- **La pantalla es solo historia,** en dos tarjetas a todo el ancho: la evolución del grupo y el bloque elegido. Responde a si el grupo gana autonomía y a qué repasar. Las entregas que vienen de todo el grupo, que son un recordatorio y no historia, se dejan para Bloques, donde se ponen las fechas (`PENDIENTES.md`).
+- **Pistas por alumno y ejercicio,** no por alumno y bloque: las pistas pedidas en los intentos que cuentan, entre esos intentos. Por bloque, uno con tres ejercicios saldría más alto que uno con uno aunque el grupo pida menos ayuda.
+- **El tiempo es la mediana** entre abrir un ejercicio y entregarlo («Tiempo por ejercicio»): un ejercicio abierto el lunes y entregado el jueves no puede contar tres días.
+- **«Se atascaron en alguna prueba»** son los alumnos que, en algún momento del intento que cuenta, fallaron la misma prueba tantas veces seguidas como el umbral del ejercicio (`longestFailureStreak()`). La inactividad no cuenta: en datos pasados todo intento tiene parones (D-068). Se da el número, sin nombres.
+- **La gráfica se explica sola:** una leyenda dice qué es el verde, el gris y la columna resaltada del bloque elegido, y una línea dice que cada barra elige su bloque. La frase de la tendencia solo lee los bloques que ha trabajado al menos media clase (`REPRESENTATIVE_SHARE`): una recuperación con un alumno daría la vuelta a la lectura, así que va en gris con «1 alumno». Compara el primero con el último, con una tolerancia de 0,1 pistas. Con un solo bloque empezado no hay gráfica, sino una frase.
+- **El bloque elegido** (`?bloque=`; por defecto, el último trabajado por media clase) trae sus tres cifras, su entrega y una fila por ejercicio: lo que se repasa es un ejercicio, no la media de un bloque. Una media de todo el curso no responde a ninguna decisión, y la mediana y los alumnos distintos no se suman bloque a bloque.
+- **La entrega del bloque,** una fila por fecha: a tiempo, en las **últimas 24 horas** (`DEADLINE_LAST_HOURS`, parte del contrato), después del plazo y quién falta, por nombre y siempre a la vista. Solo quien entregó una parte dice cuánto le queda; si nadie ha entregado, una línea lo dice en lugar de nombrar a la clase entera. Quien entrega en el último momento no se nombra: es un dato del plazo, no de la persona. Una fecha que aún no ha llegado dice «entregadas», porque todavía nadie llega tarde.
+- **`StatsService.groupHistory()` da cuentas en bruto,** del bloque y de cada ejercicio, y la pantalla calcula medias y porcentajes; la versión de Supabase responde `unavailable` hasta el 4.5.
+- **La gráfica es HTML con Tailwind:** cada barra es un enlace de verdad, con su foco y su nombre. El título va primero en el DOM aunque se dibuje debajo, y «1 alumno» queda fuera del enlace, para que lo visible esté seguido dentro del nombre (WCAG 2.5.3, `label-content-name-mismatch` de axe).
+
+**Alternativas:**
+
+- **Las tres cifras del grupo entero,** como el prototipo: no responden a ninguna decisión y la mediana no se puede agregar.
+- **Una sección «Entregas» de todo el grupo en el histórico,** con tarjetas o con filas: mezcla un recordatorio con el análisis, que es lo que el autor rechazó.
+- **Cambiar el nombre a «Progreso»** para que cupieran las dos cosas: tapaba la mezcla en lugar de quitarla.
+- **Contar la inactividad como señal:** en el histórico, todo el mundo la tendría.
+- **Nombrar a quien entrega en las últimas horas o tarde:** etiqueta a personas, contra D-054.
+- **Un SVG o una librería de gráficas:** había que rehacer el foco, los nombres y el tamaño de las dianas.
+
+**Consecuencias:**
+
+- El 4.5 implementa las RPC `group_block_stats` (del bloque y de cada ejercicio) y `group_deadline_stats` con estas mismas reglas, y sus tests de pgTAP usan las cifras del seed que comprueba `group-history.spec.ts`.
+- `formatDuration()` pasa a `shared/` y `is-stuck.ts` gana `longestFailureStreak()`.
+- Con el seed no hay entregas en las últimas horas ni fuera de plazo: los tests las cubren, y `PENDIENTES.md` propone añadirlas para las capturas de la memoria.
+- El modelo de datos asigna cada bloque a todo el grupo: una recuperación cuenta como pendientes a quienes no la necesitan. Lo recoge `PENDIENTES.md`.
+- La lección de proceso: una pantalla nueva se boceta con los datos del seed y se valida antes de construirla, aunque el plan la deje atada.
+
+**Aprobación:** el boceto, aprobado por el autor; la pantalla, pendiente de su revisión.
