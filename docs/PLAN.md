@@ -3208,6 +3208,20 @@ Commit: `feat(admin): users service and the admin-users function (step 5.1a)`.
 
 Commit: `feat(admin): users screen (step 5.1b)`.
 
+**Hecho así** (19/11/2026), sobre el plan de arriba, con lo que se cambió al bocetarla y al verla con el seed:
+
+- **La lista trae los grupos de cada cuenta** (`UserEntry`: la cuenta, los nombres de sus grupos sin repetir y sus `UserLinks`). En el seed todos los docentes y alumnos tienen grupos o matrículas: sin esto, el rol solo se rechazaría al guardar. Ahora el diálogo lo deshabilita antes, con el motivo y los grupos («Tiene matrícula en 1.º DAW A: dale de baja de sus grupos antes de cambiarle el rol»), y la tabla tiene una columna «Grupos» (desde `md`). En Supabase es una consulta con `class_group!class_group_teacher_id_fkey` y `enrollment(class_group)` incrustados: por `enrollment`, `app_user` también llega a `class_group`, y sin la clave PostgREST no sabría por dónde ir. `toUserEntry()` (en `data/admin/`) arma la entrada igual en las dos versiones.
+- **Roles neutros:** «Alumnado», «Profesorado» y «Administración» (`role-labels.ts`), en lugar de «Alumno» y «Docente».
+- **Nombre y correo en la misma celda;** el estado, como etiqueta «Desactivada» (icono y texto) junto al nombre, no como columna. El correo corta antes de la «@» en el móvil.
+- **Filtro «Estado»** (Activas, Desactivadas, Todas; `?estado=desactivadas` o `todas`), a propuesta del autor, en lugar del interruptor «Ver las desactivadas» (`ADMIN_PARAMS.status` en lugar de `disabled`).
+- **Ordenar por las cabeceras** (nombre, rol y grupos; `user-sort.ts`), a propuesta del autor: dentro del mismo rol o grupo, por nombre de la A a la Z. El orden no va en la URL: no hay pantallas a las que ir y volver.
+- **«Nuevo usuario» en la cabecera,** no flotante: la lista está paginada.
+- **La tabla se desplaza dentro de su zona,** con la cabecera fija, y no alarga la página a 768×1024 ni a 1280×720 (5.4).
+- **Contraseña:** «Copiar» junto a «Mostrar» y «Generar» (`PasswordField`, que comparten los dos diálogos y el muestrario), y la pista dice «entre 8 y 64 caracteres» (el límite del 5.1a, no 72).
+- **«Desactivar» en la cuenta propia** está deshabilitado, sigue siendo enfocable y dice el motivo debajo; no lleva acción, porque un `disabledInteractive` sigue emitiendo el clic.
+- **Los avisos, solo con `MatSnackBar`,** que ya los anuncia en su región `aria-live`; el `LiveAnnouncer` se usa para «Contraseña copiada». Un fallo dentro de un diálogo se muestra en él (`role="alert"`) y recarga la lista; uno de activar o desactivar, en el aviso.
+- **El correo se valida recortado:** pegado con espacios sigue siendo un correo (los quita al guardar).
+
 **5.2a · Grupos y matrícula: permisos y servicio (≈1,5 h, sin pantalla)**
 
 - El docente crea sus grupos, cada uno de una asignatura (2.5c), y matricula en ellos a los alumnos que quiera (RF-16); el administrador gestiona todos y cambia el docente de un grupo. Las operaciones de grupos y matrícula pasan de `AdminService` a `GroupService`, porque ya no son solo del administrador.

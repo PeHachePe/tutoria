@@ -2160,3 +2160,15 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Consecuencias:** un test nuevo con horas no necesita nada especial, y el apaño del 4.3d (la apertura del examen reescrita en hora local en el test de Bloques) se quita: el test usa la del seed. Comprobado con `TZ=UTC npm run check`, en verde, y los dos tests con horas también en Nueva York y en Tokio, donde el de las entregas fallaba desde el 4.3d.
 
 **Aprobación:** pedida por el autor («que sirva para el futuro y no pase más»).
+
+## D-075 · La pantalla de usuarios: los grupos de cada cuenta en la lista (19/11/2026)
+
+**Contexto:** el rol solo cambia a quien no tiene grupos ni matrículas (D-072). Con `listUsers()` devolviendo solo las cuentas, la pantalla no lo sabía hasta que el servidor lo rechazaba, y en el seed todos los docentes y alumnos tienen grupos: cambiar el rol daría siempre un error después de guardar.
+
+**Decisión:** `listUsers()` devuelve `UserEntry`: la cuenta, los nombres de los grupos que imparte o en los que está matriculada (sin repetir) y sus `UserLinks`. En Supabase es una sola consulta, con `class_group` (por su clave `class_group_teacher_id_fkey`) y `enrollment(class_group)` incrustados; los dos servicios la arman con `toUserEntry()`. El diálogo deshabilita el rol con el motivo y los grupos, y la tabla tiene una columna «Grupos». El servidor sigue aplicando la regla. Además: los roles se nombran en colectivo y sin género («Alumnado», «Profesorado», «Administración»), el estado se filtra con un desplegable (Activas, Desactivadas, Todas) y la tabla se ordena por sus cabeceras.
+
+**Alternativas:** pedir los vínculos al abrir el diálogo de cada cuenta: una petición más por edición y un diálogo que cambia mientras carga. Dejar que el servidor lo rechace y explicar el error: el administrador lo descubre después de intentarlo, que es lo que CU-06 evita con el rol propio.
+
+**Consecuencias:** la lista pesa algo más (los nombres de los grupos), dentro del tope de 1000 filas ya apuntado. El 5.2a, que pasa los grupos a `GroupService`, no toca esta consulta: la administración sigue leyendo `class_group` y `enrollment` por su RLS.
+
+**Aprobación:** el autor aprobó el ajuste con el boceto («Sí, adelante») y pidió el orden por columnas y el filtro de estado.
