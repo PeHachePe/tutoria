@@ -13,7 +13,7 @@ Que el docente, fuera de clase, vea lo que ya pasó en un grupo bloque a bloque 
 - Cuenta solo el intento que cuenta de cada alumno y asignación (`countedAttempt()`, D-046): la práctica no. Las asignaciones que cuentan son las que el alumnado ve o en las que alguien trabajó.
 - Sin store: dos `resource()` en la página. No escribe nada.
 - Funciones puras: `groupHistoryOf()` (simulados), `longestFailureStreak()` y `formatDuration()` (en `shared/`), `averageHints()`, `solvedPercent()`, `isStarted()`, `isRepresentative()`, `formatAverage()`, `formatPercent()`, `pickBlock()` y `hintTrend()`.
-- En el 4.4, la versión de Supabase responde `unavailable` (estado de error con reintento); el 4.5 la completa con las RPC `group_block_stats` y `group_deadline_stats`.
+- En el 4.4, la versión de Supabase responde `unavailable` (estado de error con reintento); el 4.5 la completa con las RPC `group_work_stats` y `group_deadline_stats`.
 
 ## Contenido y disposición
 

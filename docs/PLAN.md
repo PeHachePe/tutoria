@@ -639,7 +639,7 @@ Son clases abstractas con los métodos de acceso a datos. Las pantallas y los st
 | `TutorService`      | preguntar y devolver un `AsyncIterable<TutorEvent>`; lo mismo en vista previa para el docente, sin guardar nada (`tryOut`, 4.3e)                      | Respuestas guionizadas por nivel                              | Edge Function `tutor`                                                                          |
 | `EventService`      | enviar un lote de eventos                                                                                                                             | MockDb                                                        | Inserción en `process_event`                                                                   |
 | `LiveService`       | observar un grupo con un callback y devolver la función para dejar de observar                                                                        | Simulador de alumnos                                          | Supabase Realtime                                                                              |
-| `StatsService`      | histórico del grupo: `groupHistory()`, cuentas por bloque, por ejercicio y por fecha de entrega (D-073)                                               | `groupHistoryOf()` sobre MockDb                               | RPC `group_block_stats` y `group_deadline_stats` (4.5)                                         |
+| `StatsService`      | histórico del grupo: `groupHistory()`, cuentas por bloque, por ejercicio y por fecha de entrega (D-073)                                               | `groupHistoryOf()` sobre MockDb                               | RPC `group_work_stats` y `group_deadline_stats` (4.5)                                          |
 | `AdminService`      | usuarios, grupos, matrículas y ajustes del sistema                                                                                                    | MockDb                                                        | Edge Function `admin-users` y tablas                                                           |
 
 Resultado de una ejecución:
@@ -2824,7 +2824,7 @@ Tests, en este orden:
 
 **4.5 · Histórico con datos reales (≈2 h)**
 
-- RPC `group_block_stats` y `group_deadline_stats`, con test en pgTAP: el intento que cuenta de cada asignación, sin las prácticas (D-046).
+- RPC `group_work_stats` (cada bloque y cada uno de sus ejercicios) y `group_deadline_stats`, con test en pgTAP: el intento que cuenta de cada asignación, sin las prácticas (D-046).
 - `SupabaseStatsService` completo.
 
 ✅ Con dos navegadores: el alumno trabaja y el docente lo ve en vivo; al entregar, el histórico lo cuenta.
@@ -3036,6 +3036,14 @@ Tests, en este orden:
 2. `supabase-stats-service.spec.ts`, con `FakeSupabaseServer`: las tres peticiones y sus parámetros; los bloques en orden con sus cifras; la mediana 0 como `null`; un bloque sin fila de estadísticas no rompe (todo a cero); los plazos con sus nombres en orden; un grupo sin bloques (`students` 0); `P0002` como `not_found` y sin red, `network`.
 
 ✅ `npm run check` y `npm run db:test`. En local (`npm run db:start` y `npm run start:local`), con dos navegadores: como Marta, el histórico de 1.º DAW A enseña las mismas cifras que con los datos simulados (la comprobación del 4.4); como Lucía, se resuelve y se entrega un ejercicio del tema 5 pidiendo una pista; Marta lo ve moverse en la sesión en vivo y, al recargar el histórico, el tema 5 aparece en la gráfica con un alumno y su plazo tiene una entrega a tiempo. Sin capturas nuevas: la pantalla es la del 4.4.
+
+**Hecho así** (18/11/2026), sobre el plan de arriba, que era anterior al 4.4 rehecho y no daba las cifras de cada ejercicio:
+
+- **`group_work_stats` en lugar de `group_block_stats`:** una sola función con `grouping sets` da una fila por bloque y una por cada asignación que cuenta, detrás de su bloque y en su orden, con las mismas cuentas escritas una vez. `id` es el bloque o la asignación e `is_block` dice cuál, porque los tipos generados no admiten una columna nula (un `assignment_id` vacío en las filas de bloque). Lo demás, como en el plan: el intento que cuenta, las islas de fallos, la mediana inexistente como 0 y `security definer` con `P0002`.
+- **Una asignación oculta cuenta si tiene un intento que cuenta** (de alguien matriculado ahora), no uno cualquiera: lo mismo que `groupHistoryOf()`.
+- **`SupabaseStatsService`:** `class_block` con `exercise_assignment(id, exercise(*))`, en orden de bloque y de asignación, para el texto de cada ejercicio; los ejercicios de un bloque son las asignaciones con fila en `group_work_stats`.
+- **pgTAP** con 21 comprobaciones: las del plan y las cifras de los ejercicios del tema 4 (21, 19 y 19 intentos; 14, 13 y 14 superados). Antes de escribir el test, la función dio con el seed las mismas cifras que el simulado, bloque a bloque y ejercicio a ejercicio.
+- **Comprobado con dos sesiones a la vez** en el navegador integrado: Marta en `localhost:4210` y Lucía en `tutoria.localhost:4210`, otro origen con su propia sesión. `DESPLIEGUE.md` no cambia: `db push --remote` aplica todas las migraciones nuevas.
 
 #### Fase 5 · Administración (≈10 h, en cinco subpasos)
 

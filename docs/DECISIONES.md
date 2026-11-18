@@ -2113,10 +2113,12 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 **Consecuencias:**
 
-- El 4.5 implementa las RPC `group_block_stats` (del bloque y de cada ejercicio) y `group_deadline_stats` con estas mismas reglas, y sus tests de pgTAP usan las cifras del seed que comprueba `group-history.spec.ts`.
+- El 4.5 implementa las RPC `group_work_stats` (del bloque y de cada ejercicio) y `group_deadline_stats` con estas mismas reglas, y sus tests de pgTAP usan las cifras del seed que comprueba `group-history.spec.ts`.
 - `formatDuration()` pasa a `shared/` y `is-stuck.ts` gana `longestFailureStreak()`.
 - Con el seed no hay entregas en las últimas horas ni fuera de plazo: los tests las cubren, y `PENDIENTES.md` propone añadirlas para las capturas de la memoria.
 - El modelo de datos asigna cada bloque a todo el grupo: una recuperación cuenta como pendientes a quienes no la necesitan. Lo recoge `PENDIENTES.md`.
 - La lección de proceso: una pantalla nueva se boceta con los datos del seed y se valida antes de construirla, aunque el plan la deje atada.
 
 **Aprobación:** el boceto y la pantalla final, aprobados por el autor.
+
+**Hecho así en el 4.5** (18/11/2026): `group_work_stats` y `group_deadline_stats`, las dos `security definer`, comprueban al entrar que quien llama es la administración o el docente del grupo (si no, `P0002`, que el cliente lee como `not_found`). Agregar bajo la RLS llamaría a `can_read_attempt()` por cada evento del grupo, y solo devuelven cuentas y los nombres del alumnado, que su docente ya lee. `group_work_stats` da con `grouping sets` una fila por bloque y una por asignación, para que las reglas de cuenta estén escritas una sola vez. Quien tiene algo pendiente viaja en tres vectores paralelos de la fila de su plazo, lejos del tope de 1000 filas de PostgREST.
