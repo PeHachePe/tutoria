@@ -71,6 +71,8 @@ Lo que se espera y por qué:
 - **`rls_auto_enable()` ejecutable sin sesión:** la crea la opción «Enable automatic RLS». Solo la necesita su _event trigger_, así que la migración `cloud_rls_auto_enable` le quita el permiso; no hace nada en local, donde no existe. Si aparece, falta subir esa migración con otro `db push --remote`.
 - **Funciones `SECURITY DEFINER` ejecutables por `authenticated`** (`is_admin`, `teaches_group`, `open_attempt`, `submit_attempt`…): intencionado desde el paso 2.1. Son las ayudas de las RLS y las RPC de los intentos, y solo responden sobre el propio usuario.
 - **Varias políticas permisivas en una tabla:** aviso de rendimiento, sin efecto con los datos de un aula (en pendientes, para el pulido).
+- **Pocas opciones de MFA** (`auth_insufficient_mfa_options`): el MFA está desactivado a propósito porque la app no lo usa (paso 4, más abajo).
+- **Sin protección contra contraseñas filtradas** (`auth_leaked_password_protection`): la comprobación contra HaveIBeenPwned solo se puede activar en los planes de pago. Las contraseñas las pone la administración y se entregan en persona (fase 5).
 
 ## 4 · Autenticación · tú o Claude, con tu OK
 
