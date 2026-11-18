@@ -2086,6 +2086,32 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 **Aprobación:** la revisión del plan, aprobada por el autor («Sí, adelante»); la pantalla final, construida con él iteración a iteración y aprobada al cerrar («Sí, ciérralo»).
 
+## D-072 · Las cuentas: baja con bloqueo, rol sin vínculos y contraseña entregada en persona (18/11/2026)
+
+**Contexto:** la fase 5 da a la administración la gestión de usuarios, grupos y sistema (CU-06, CU-07, RF-16, RF-18 y RF-19). El 5.1a hace la parte de las cuentas: `AdminService` en sus dos versiones y la Edge Function `admin-users`, la única con la API de administración de Supabase Auth (`service_role`). El registro público está cerrado (2.3) y la aplicación no envía correos. Quedaba abierto desde el 2.2 cómo se da de baja una cuenta, sabiendo que Auth dice «User is banned» con cualquier contraseña (D-041).
+
+**Decisión:**
+
+- **La baja es el bloqueo en Auth más `status = disabled`,** como ya hace el seed. Desactivar escribe primero `status` (la RLS se cierra al instante, porque `current_app_role()` y `claim_*_request` lo miran) y después bloquea en Auth con `ban_duration` de cien años (`876000h`); activar va al revés. Así la cuenta nunca está abierta en Auth mientras los datos dicen que está de baja. Se acepta la fuga de «User is banned»: solo dice que ese correo tuvo una cuenta que ya no entra, la frena el límite de intentos de Auth y, a cambio, quien fue dado de baja lee un mensaje claro y no cree que ha olvidado la contraseña. La alternativa (no bloquear y poner una contraseña aleatoria) esconde el dato, pero deja vivas sesiones que se renuevan y da un mensaje engañoso.
+- **El rol solo cambia a quien no tiene grupos a su cargo ni matrículas.** Un docente degradado dejaría grupos que nadie gestiona (`teaches_group()` exige el rol) y un alumno ascendido seguiría matriculado. La administración no puede quitarse su propio rol ni desactivarse (CU-06, 3b). Dar de baja a un docente con grupos sí se puede: se va, y sus grupos se reasignan en Grupos (5.2b).
+- **Las reglas se escriben una vez,** en `src/app/data/admin/user-rules.ts`, sin importaciones, que usan la función y el servicio simulado, como `tutor-contract.ts`: `userChangeProblem()` (`own_role`, `own_status`, `has_groups`, `has_enrollments`, en ese orden), `normalizeEmail()` y los límites.
+- **El correo no se cambia** (es la identidad en Auth) y un correo repetido se rechaza (CU-06, 3a). **La contraseña la pone la administración y se entrega en persona;** también la restablece. Nunca se escribe en un log ni vuelve en la respuesta. El alta crea la cuenta con el correo ya confirmado; el disparador `create_app_user` hace la fila como alumno y la función le pone el rol pedido; si eso falla, borra la cuenta y no queda nada a medias.
+- **La contraseña, de 8 a 64 caracteres,** contados como cualquier web: 64 es lo que el NIST pide aceptar como mínimo. bcrypt solo lee 72 bytes, y Auth rechaza una más larga («Password cannot be longer than 72 characters»): eso solo pasa con 64 caracteres llenos de tildes o emojis, y la función lo devuelve como 400 (`invalid`), no como un fallo del servidor. La contraseña se cambia antes que lo demás, así que un rechazo no deja cambios a medias. `minimum_password_length` sube a 8 en `config.toml` para que Auth diga lo mismo.
+- **Sin límite por minuto:** la función no llama a ningún modelo y solo la usa la administración. Responde 401 sin sesión, 403 si quien llama no es un administrador activo, 400 con un cuerpo que no encaja o una contraseña rechazada, 404 sin el usuario y 409 con un correo repetido o un cambio prohibido (el mensaje lo nombra).
+
+**Alternativas:**
+
+- Contar el límite de la contraseña en bytes (72): exacto, pero nadie lo entiende y la regla dependería de las tildes. El autor lo descartó.
+- Comprobar el administrador con la RLS desde el cliente y escribir `app_user` directamente: no sirve, porque crear cuentas, bloquearlas y cambiar contraseñas exige la API de administración de Auth, que solo puede ir en el servidor.
+
+**Consecuencias:**
+
+- El 5.1b solo tiene que pintar la pantalla y traducir `invalid` según el caso; el formulario usa los mismos límites de `user-rules.ts`.
+- Restablecer una contraseña no cierra las sesiones abiertas de esa cuenta (la API de administración no cierra las sesiones de otro usuario por su id): a `PENDIENTES.md`. Para echar a alguien al momento está la baja.
+- En la nube, la longitud mínima de la contraseña se cambia en el panel (`DESPLIEGUE.md`).
+
+**Aprobación:** el plan y el límite de 8 a 64 caracteres, aprobados por el autor.
+
 ## D-073 · El histórico: lo que ya pasó, bloque a bloque, para dos decisiones fuera de clase (18/11/2026)
 
 **Contexto:** el paso 4.4 construye el histórico del grupo (`/docente/historico`, ficha 09, figuras 10 y 19 de la memoria). La especificación pedía una gráfica de la media de pistas por bloque y tres KPI (tiempo medio, porcentaje de superados y alumnos con señales), contando solo el intento que cuenta de cada asignación (D-046), y, por D-054, el ritmo de entrega respecto a la fecha. Con la regla del panel en vivo (D-068), cada dato tiene que responder a una decisión del docente. La primera versión, que seguía el plan al pie de la letra, el autor la rechazó al probarla: mezclaba la tendencia del grupo, un bloque y las fechas de todo el grupo sin decirlo; la gráfica no explicaba sus colores; con un solo bloque era una barra suelta; las entregas dejaban huecos y escondían los nombres tras «Ver quiénes». Se rehízo a partir de un boceto aprobado por el autor.

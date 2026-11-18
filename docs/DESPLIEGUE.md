@@ -95,6 +95,8 @@ Lo que en local es cómodo para desarrollar se queda en la nube con los valores 
 
 ✅ `npx supabase config diff` ya no muestra diferencias (salvo `storage.vector`). En el panel, Authentication → Sign In / Providers: _Allow new users to sign up_ desactivado; en URL Configuration, la URL de Vercel.
 
+Desde el 5.1a, `minimum_password_length` es 8 en `config.toml` (D-072): `npx supabase config push` lo sube (tras revisar el `config diff`); si no, en el panel, Authentication → Sign In / Providers → Email, _Minimum password length_ a 8.
+
 ## 5 · Secretos de las Edge Functions · tú
 
 ```bash
@@ -113,7 +115,7 @@ Lo lanza el autor: lee `supabase/functions/.env`, que el agente no toca.
 npx supabase functions deploy --remote
 ```
 
-Despliega `execute` y `tutor`. Las dos importan ficheros de `src/app/data/` (los contratos compartidos con la app); si la CLI no los empaqueta, el despliegue falla con un error de módulo no encontrado: pásaselo a Claude.
+Despliega `execute`, `tutor`, `translate` (4.3c) y `admin-users` (5.1a). Todas importan ficheros de `src/app/data/` (los contratos compartidos con la app); si la CLI no los empaqueta, el despliegue falla con un error de módulo no encontrado: pásaselo a Claude.
 
 La CLI las empaqueta bien (1,2 MB `execute` y 1,9 MB `tutor`, con QuickJS). Avisa de que `import_map` en `config.toml` ya no se admite como opción; no afecta, porque Deno encuentra solo el `deno.json` de `supabase/functions/`.
 

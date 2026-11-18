@@ -3141,6 +3141,12 @@ export interface AdminUsersStore {
 ✅ `npm run check`. En local, con `npm run db:start`: con la sesión de la administración, la función crea un alumno que entra con su contraseña; desactivado, deja de entrar. Sin capturas.
 Commit: `feat(admin): users service and the admin-users function (step 5.1a)`.
 
+**Hecho así** (18/11/2026), sobre el plan de arriba:
+
+- **La contraseña, de 8 a 64 caracteres** (`MAX_PASSWORD_LENGTH = 64`, no 72): bcrypt lee 72 bytes, no caracteres, y contar bytes no lo entiende nadie. En local, Auth rechaza 64 caracteres con 40 «ñ» (104 bytes) con `validation_failed`, y una corta con `weak_password`: la función los convierte en `PasswordRejectedError` y responde 400, y cambia la contraseña antes que lo demás para no dejar nada a medias. `minimum_password_length` sube a 8 en `config.toml`.
+- **`MAX_EMAIL_LENGTH = 254`** en `user-rules.ts`, y el servicio simulado comprueba los mismos límites que la función (nombre, correo y contraseña dan `invalid`).
+- **Comprobado en local** con la función servida: el docente recibe 403; el alta entra con su contraseña; correo repetido, rol propio y docente con grupos, 409; tras restablecerla, solo vale la nueva; desactivada, Auth dice `user_banned`, y al activarla vuelve a entrar. Las cuentas de prueba se borraron después.
+
 **5.1b · Usuarios: la pantalla (≈2 h)** · ficha `10-usuarios` · Figura 13 del TFM
 
 - Lista, alta (nombre, correo, rol y contraseña), cambio de rol, restablecer la contraseña y activar o desactivar (RF-18, CU-06).
