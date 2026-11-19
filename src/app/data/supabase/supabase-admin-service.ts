@@ -1,24 +1,38 @@
 import { inject, Service } from '@angular/core';
 
 import { toUserEntry } from '../admin/user-entry';
-import { AdminService, type NewUser, type UserChanges, type UserEntry } from '../admin-service';
-import type { AiProviderSetting } from '../ai-provider-setting';
+import {
+  AdminService,
+  type NewUser,
+  type SubjectDraft,
+  type UserChanges,
+  type UserEntry,
+} from '../admin-service';
+import type { AiModelCheck, AiProviderSetting } from '../ai-provider-setting';
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
 import type { AppUser } from '../user';
 import { SUPABASE_CLIENT } from './supabase-client';
-import { toFunctionDataError, unwrap } from './supabase-error';
-import { type Row, toAppUser } from './supabase-rows';
+import { check, toFunctionDataError, unwrap } from './supabase-error';
+import type { Json } from './database.types';
+import { type Row, toAppUser, toSubject } from './supabase-rows';
 
 /** The Edge Function of the accounts (`supabase/functions/admin-users`). */
 export const ADMIN_USERS_FUNCTION = 'admin-users';
+
+/** The Edge Function that checks a setting of the AI provider (`supabase/functions/ai-check`). */
+export const AI_CHECK_FUNCTION = 'ai-check';
+
+/** The row of `app_setting` with the active provider (2.3). */
+export const AI_PROVIDER_KEY = 'ai_provider';
 
 /**
  * The administration in Supabase (5.1a, D-072). The list of accounts is read from `app_user`, which
  * the RLS gives whole to the administration; the accounts are created and changed by the Edge
  * Function `admin-users`, the only one with the API of administration of Auth. Its 409 (an email
- * with an account, a change the rules forbid) arrives as `invalid`. The subjects and the provider
- * arrive in 5.3; the groups are in `SupabaseGroupService` (5.2a).
+ * with an account, a change the rules forbid) arrives as `invalid`. The subjects and the setting of
+ * the provider are tables the RLS opens to the administration, whose checks give `invalid` (23514);
+ * the Edge Function `ai-check` tries a setting (5.3a). The groups are in `SupabaseGroupService`.
  */
 @Service({ autoProvided: false })
 export class SupabaseAdminService extends AdminService {
@@ -55,20 +69,50 @@ export class SupabaseAdminService extends AdminService {
     return this.callFunction({ action: 'update', userId, changes });
   }
 
-  listSubjects(): Promise<Subject[]> {
-    return unavailable();
+  /** Sorted here as the mock data does: the collation of the database may not be Spanish. */
+  async listSubjects(): Promise<Subject[]> {
+    return unwrap(await this.supabase.from('subject').select())
+      .map(toSubject)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }
 
-  saveSubject(): Promise<Subject> {
-    return unavailable();
+  async saveSubject({ id, name, sourceLocale, translations }: SubjectDraft): Promise<Subject> {
+    const row = {
+      name: name.trim(),
+      source_locale: sourceLocale,
+      translations: translations as Record<string, Json>,
+    };
+    const query =
+      id === undefined
+        ? this.supabase.from('subject').insert(row)
+        : this.supabase.from('subject').update(row).eq('id', id);
+    return toSubject(unwrap(await query.select().single()));
   }
 
-  getAiProvider(): Promise<AiProviderSetting> {
-    return unavailable();
+  async getAiProvider(): Promise<AiProviderSetting> {
+    const row = unwrap(
+      await this.supabase.from('app_setting').select('value').eq('key', AI_PROVIDER_KEY).single(),
+    );
+    // The check of the table gives it this shape (is_valid_ai_provider)
+    return row.value as unknown as AiProviderSetting;
   }
 
-  setAiProvider(): Promise<void> {
-    return unavailable();
+  async setAiProvider(setting: AiProviderSetting): Promise<void> {
+    check(
+      await this.supabase
+        .from('app_setting')
+        .upsert({ key: AI_PROVIDER_KEY, value: setting as unknown as NonNullable<Json> }),
+    );
+  }
+
+  async checkAiProvider(setting: AiProviderSetting): Promise<AiModelCheck[]> {
+    const { data, error } = await this.supabase.functions.invoke<AiModelCheck[]>(
+      AI_CHECK_FUNCTION,
+      { body: setting },
+    );
+    if (error) throw toFunctionDataError(error);
+    if (!data) throw new DataError('unknown', 'The check came back empty');
+    return data;
   }
 
   private async callFunction(body: object): Promise<AppUser> {
@@ -80,9 +124,4 @@ export class SupabaseAdminService extends AdminService {
     if (!data) throw new DataError('unknown', 'The user came back empty');
     return toAppUser(data);
   }
-}
-
-/** What arrives in 5.3. */
-function unavailable(): Promise<never> {
-  return Promise.reject(new DataError('unavailable'));
 }

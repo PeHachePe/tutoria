@@ -1,5 +1,5 @@
 import type { UserLinks } from './admin/user-rules';
-import type { AiProviderSetting } from './ai-provider-setting';
+import type { AiModelCheck, AiProviderSetting } from './ai-provider-setting';
 import type { Subject } from './subject';
 import type { AppUser, Role, UserStatus } from './user';
 
@@ -32,8 +32,8 @@ export interface UserEntry {
 export type SubjectDraft = Omit<Subject, 'id'> & { readonly id?: string };
 
 /**
- * Users, subjects and system settings: administrators only; the groups are in `GroupService` (5.2a). Abstract class without a decorator:
- * it is the injection token (4.2, D-005). Refined in phase 5.
+ * Users, subjects and system settings: administrators only; the groups are in `GroupService`
+ * (5.2a). Abstract class without a decorator: it is the injection token (4.2, D-005).
  */
 export abstract class AdminService {
   /** Every account, by name, with its groups. */
@@ -51,12 +51,24 @@ export abstract class AdminService {
    */
   abstract updateUser(userId: string, changes: UserChanges): Promise<AppUser>;
 
-  /** The subjects of the groups (2.5c), in their source language and translated. */
+  /** The subjects of the groups (2.5c), by name, in their source language and translated. */
   abstract listSubjects(): Promise<Subject[]>;
 
+  /**
+   * Creates the subject, or edits the one of its id (`not_found` without it). Throws `invalid` with
+   * a blank name or translation, or a translation to its own language.
+   */
   abstract saveSubject(subject: SubjectDraft): Promise<Subject>;
 
+  /** Row `ai_provider` of `app_setting`. */
   abstract getAiProvider(): Promise<AiProviderSetting>;
 
+  /** Throws `invalid` without the shape of a provider (`isValidAiProvider`). */
   abstract setAiProvider(setting: AiProviderSetting): Promise<void>;
+
+  /**
+   * Asks each model of the setting, saved or not, for a minimal answer, in order (5.3): one result per
+   * model, or a single one with `invalid` or `host_not_allowed` for the main one. Saves nothing.
+   */
+  abstract checkAiProvider(setting: AiProviderSetting): Promise<AiModelCheck[]>;
 }

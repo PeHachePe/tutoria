@@ -367,6 +367,13 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/deno.json"
 
+# Step 5.3a · «Probar la conexión» (RF-19, CU-07): the administration asks each model of a setting
+# of the AI provider for a minimal answer before saving it.
+[functions.ai-check]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deno.json"
+
 [analytics]
 enabled = true
 port = 55327

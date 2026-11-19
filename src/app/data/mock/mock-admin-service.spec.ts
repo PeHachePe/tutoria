@@ -177,16 +177,103 @@ describe('MockAdminService', () => {
     });
   });
 
-  it('leaves the subjects and the provider for 5.3', async () => {
-    const pending = [
-      service.listSubjects(),
-      service.saveSubject(),
-      service.getAiProvider(),
-      service.setAiProvider(),
-    ];
+  describe('subjects', () => {
+    const DRAFT = {
+      name: '  Bases de datos ',
+      sourceLocale: 'es',
+      translations: { en: { name: 'Databases' } },
+    } as const;
 
-    for (const call of pending) {
-      await expect(call).rejects.toMatchObject({ kind: 'unavailable' });
-    }
+    it('lists them by name', async () => {
+      const names = (await service.listSubjects()).map((subject) => subject.name);
+
+      expect(names).toEqual([
+        'Desarrollo web en entorno cliente',
+        'Programación avanzada',
+        'Programación básica',
+      ]);
+    });
+
+    it('creates one, trimmed, and edits it', async () => {
+      const created = await service.saveSubject(DRAFT);
+      expect(created).toMatchObject({ name: 'Bases de datos', translations: DRAFT.translations });
+      expect(created.id).toEqual(expect.any(String));
+
+      const edited = await service.saveSubject({ ...created, translations: {} });
+      expect(edited).toEqual({ ...created, translations: {} });
+      expect(await service.listSubjects()).toContainEqual(edited);
+    });
+
+    it('turns down a blank name, a blank translation and one in the source language', async () => {
+      const drafts = [
+        { ...DRAFT, name: ' ' },
+        { ...DRAFT, translations: { en: { name: ' ' } } },
+        { ...DRAFT, translations: { es: { name: 'Otra' } } },
+      ];
+      for (const draft of drafts) {
+        await expect(service.saveSubject(draft)).rejects.toMatchObject({ kind: 'invalid' });
+      }
+    });
+
+    it('does not edit a subject that does not exist', async () => {
+      await expect(service.saveSubject({ ...DRAFT, id: 'nada' })).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+    });
+  });
+
+  describe('AI provider', () => {
+    const GROQ = {
+      baseUrl: 'https://api.groq.com/openai/v1',
+      model: 'llama-4',
+      keySecret: 'AI_GROQ_API_KEY',
+      fallbacks: ['llama-fail', { baseUrl: 'https://openrouter.ai/api/v1', model: 'qwen' }],
+    };
+
+    it('reads and saves the setting', async () => {
+      await expect(service.getAiProvider()).resolves.toEqual(db.tables().aiProvider);
+
+      await service.setAiProvider(GROQ);
+
+      await expect(service.getAiProvider()).resolves.toEqual(GROQ);
+    });
+
+    it('does not save a setting without the shape of a provider', async () => {
+      await expect(service.setAiProvider({ ...GROQ, baseUrl: 'file:///' })).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+    });
+
+    it('checks every model in order: one whose name has «fail» is not found', async () => {
+      await expect(service.checkAiProvider(GROQ)).resolves.toEqual([
+        { model: 'llama-4', ms: expect.any(Number) },
+        { model: 'llama-fail', problem: 'not_found' },
+        { model: 'qwen', ms: expect.any(Number) },
+      ]);
+      await expect(service.checkAiProvider({ ...GROQ, fallbacks: undefined })).resolves.toEqual([
+        { model: 'llama-4', ms: expect.any(Number) },
+      ]);
+    });
+
+    it('checks a setting without its shape as one invalid result, and saves nothing', async () => {
+      const before = db.tables();
+
+      await expect(service.checkAiProvider({ ...GROQ, model: '' })).resolves.toEqual([
+        { model: '', problem: 'invalid' },
+      ]);
+      expect(db.tables()).toBe(before);
+    });
+
+    it('is only for the administration', async () => {
+      db.setSession(TEACHER_ID);
+      const calls = [
+        service.listSubjects(),
+        service.saveSubject({ name: 'X', sourceLocale: 'es', translations: {} }),
+        service.getAiProvider(),
+        service.setAiProvider(GROQ),
+        service.checkAiProvider(GROQ),
+      ];
+      for (const call of calls) await expect(call).rejects.toMatchObject({ kind: 'forbidden' });
+    });
   });
 });

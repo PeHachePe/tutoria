@@ -1,8 +1,8 @@
 /**
  * What a teacher asks of the Edge Functions that is not a student's (4.3c, D-059): checking a solution,
- * translating, and the tutor in preview mode (4.3e, D-061).
+ * translating, the tutor in preview mode (4.3e, D-061) and the check of the AI provider (5.3a).
  */
-export type StaffRequestKind = 'check' | 'translate' | 'tutor';
+export type StaffRequestKind = 'check' | 'translate' | 'tutor' | 'ai_check';
 
 /** The limits of the requests of the staff, with `claim_staff_request`. */
 export interface StaffRequests {

@@ -9,8 +9,18 @@ import {
   userChangeProblem,
 } from '../admin/user-rules';
 import { toUserEntry } from '../admin/user-entry';
-import { AdminService, type NewUser, type UserChanges, type UserEntry } from '../admin-service';
-import type { AiProviderSetting } from '../ai-provider-setting';
+import {
+  AdminService,
+  type NewUser,
+  type SubjectDraft,
+  type UserChanges,
+  type UserEntry,
+} from '../admin-service';
+import {
+  type AiModelCheck,
+  type AiProviderSetting,
+  isValidAiProvider,
+} from '../ai-provider-setting';
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
 import type { AppUser, ClassGroup } from '../user';
@@ -21,7 +31,8 @@ import { MockNetwork } from './mock-network';
 /**
  * The accounts in MockDb, with the rules of the Edge Function `admin-users` (5.1a, D-072): only the
  * administration, an email has one account, and the same limits and changes as the function. The
- * subjects and the provider arrive in 5.3; the groups are in `MockGroupService` (5.2a).
+ * subjects and the provider with the checks of their tables, and a check of the provider where any
+ * model with `fail` in its name is not found (5.3). The groups are in `MockGroupService` (5.2a).
  */
 @Service({ autoProvided: false })
 export class MockAdminService extends AdminService {
@@ -108,25 +119,74 @@ export class MockAdminService extends AdminService {
   }
 
   listSubjects(): Promise<Subject[]> {
-    return unavailable();
+    return this.network.request(() => {
+      this.db.requireUser('admin');
+      return [...this.db.tables().subjects].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    });
   }
 
-  saveSubject(): Promise<Subject> {
-    return unavailable();
+  saveSubject({ id, ...draft }: SubjectDraft): Promise<Subject> {
+    return this.network.request(() => {
+      this.db.requireUser('admin');
+      const subject: Subject = { ...validSubject(draft), id: id ?? crypto.randomUUID() };
+      if (id === undefined) {
+        this.db.update('subjects', (rows) => [...rows, subject]);
+      } else {
+        findRow(this.db.tables().subjects, id);
+        this.db.update('subjects', (rows) => rows.map((row) => (row.id === id ? subject : row)));
+      }
+      return subject;
+    });
   }
 
   getAiProvider(): Promise<AiProviderSetting> {
-    return unavailable();
+    return this.network.request(() => {
+      this.db.requireUser('admin');
+      return this.db.tables().aiProvider;
+    });
   }
 
-  setAiProvider(): Promise<void> {
-    return unavailable();
+  setAiProvider(setting: AiProviderSetting): Promise<void> {
+    return this.network.request(() => {
+      this.db.requireUser('admin');
+      if (!isValidAiProvider(setting)) throw new DataError('invalid');
+      this.db.update('aiProvider', () => setting);
+    });
+  }
+
+  checkAiProvider(setting: AiProviderSetting): Promise<AiModelCheck[]> {
+    return this.network.request(() => {
+      this.db.requireUser('admin');
+      if (!isValidAiProvider(setting)) return [{ model: setting.model, problem: 'invalid' }];
+      const models = [setting.model, ...(setting.fallbacks ?? [])].map((entry) =>
+        typeof entry === 'string' ? entry : entry.model,
+      );
+      return models.map((model) =>
+        model.includes(FAILING_MODEL)
+          ? { model, problem: 'not_found' }
+          : { model, ms: MOCK_CHECK_MS },
+      );
+    });
   }
 }
 
-/** What arrives in 5.3. */
-function unavailable(): Promise<never> {
-  return Promise.reject(new DataError('unavailable'));
+/** A model whose name has it is not found by the check of the provider, to see and test the failure. */
+const FAILING_MODEL = 'fail';
+
+/** What a model of the demo takes to answer the check. */
+const MOCK_CHECK_MS = 420;
+
+/** The subject trimmed, with the check of its table (`is_valid_text_translations`), or `invalid`. */
+function validSubject(draft: Omit<Subject, 'id'>): Omit<Subject, 'id'> {
+  const name = draft.name.trim();
+  const translations = Object.entries(draft.translations);
+  if (
+    !name ||
+    translations.some(([locale, text]) => locale === draft.sourceLocale || !text.name.trim())
+  ) {
+    throw new DataError('invalid', 'A subject needs a name in every language it has');
+  }
+  return { ...draft, name };
 }
 
 function isValidPassword(password: string): boolean {

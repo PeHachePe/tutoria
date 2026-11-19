@@ -2,11 +2,20 @@ import { TestBed } from '@angular/core/testing';
 
 import { toUserEntry } from '../admin/user-entry';
 import { SupabaseAdminService } from './supabase-admin-service';
-import { toAppUser } from './supabase-rows';
-import { appUserRow, FakeSupabaseServer, provideFakeSupabase } from './supabase-testing';
+import { toAppUser, toSubject } from './supabase-rows';
+import {
+  appUserRow,
+  FakeSupabaseServer,
+  provideFakeSupabase,
+  subjectRow,
+} from './supabase-testing';
 
 const USERS = '/rest/v1/app_user';
 const ADMIN_USERS = '/functions/v1/admin-users';
+const SUBJECTS = '/rest/v1/subject';
+const SETTINGS = '/rest/v1/app_setting';
+const AI_CHECK = '/functions/v1/ai-check';
+const SETTING = { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-4', fallbacks: ['x'] };
 
 describe('SupabaseAdminService', () => {
   let server: FakeSupabaseServer;
@@ -108,16 +117,91 @@ describe('SupabaseAdminService', () => {
     });
   });
 
-  it('leaves the subjects and the provider for 5.3', async () => {
-    const pending = [
-      service.listSubjects(),
-      service.saveSubject(),
-      service.getAiProvider(),
-      service.setAiProvider(),
-    ];
+  describe('subjects', () => {
+    it('reads them by name, in Spanish', async () => {
+      const web = subjectRow({ id: 'web', name: 'Desarrollo web' });
+      const basic = subjectRow({ id: 'basic', name: 'Programación básica' });
+      const advanced = subjectRow({ id: 'adv', name: 'Álgebra' });
+      server.on('GET', SUBJECTS, { body: [basic, web, advanced] });
 
-    for (const call of pending) {
-      await expect(call).rejects.toMatchObject({ kind: 'unavailable' });
-    }
+      await expect(service.listSubjects()).resolves.toEqual([advanced, web, basic].map(toSubject));
+    });
+
+    it('creates a new one, trimmed', async () => {
+      const row = subjectRow({ id: 'db', name: 'Bases de datos' });
+      server.on('POST', SUBJECTS, { body: row });
+
+      const saved = await service.saveSubject({
+        name: ' Bases de datos ',
+        sourceLocale: 'es',
+        translations: { en: { name: 'Databases' } },
+      });
+
+      expect(saved).toEqual(toSubject(row));
+      expect(server.sentTo('POST', SUBJECTS)[0].body).toEqual({
+        name: 'Bases de datos',
+        source_locale: 'es',
+        translations: { en: { name: 'Databases' } },
+      });
+    });
+
+    it('edits the one of its id', async () => {
+      const row = subjectRow({ id: 'db', name: 'Bases' });
+      server.on('PATCH', SUBJECTS, { body: row });
+
+      await service.saveSubject({ ...toSubject(row) });
+
+      expect(server.sentTo('PATCH', SUBJECTS)[0].params.get('id')).toBe('eq.db');
+    });
+
+    it('takes a check of the table as invalid', async () => {
+      server.on('POST', SUBJECTS, { status: 400, body: { message: 'No', code: '23514' } });
+
+      await expect(
+        service.saveSubject({ name: 'X', sourceLocale: 'es', translations: {} }),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+    });
+  });
+
+  describe('AI provider', () => {
+    it('reads the row ai_provider of app_setting', async () => {
+      server.on('GET', SETTINGS, { body: { value: SETTING } });
+
+      await expect(service.getAiProvider()).resolves.toEqual(SETTING);
+      expect(server.sentTo('GET', SETTINGS)[0].params.get('key')).toBe('eq.ai_provider');
+    });
+
+    it('writes it, and takes its check as invalid', async () => {
+      server.on('POST', SETTINGS, { status: 201, body: null });
+      await service.setAiProvider(SETTING);
+      expect(server.sentTo('POST', SETTINGS)[0].body).toEqual({
+        key: 'ai_provider',
+        value: SETTING,
+      });
+
+      server.on('POST', SETTINGS, { status: 400, body: { message: 'No', code: '23514' } });
+      await expect(service.setAiProvider(SETTING)).rejects.toMatchObject({ kind: 'invalid' });
+    });
+
+    it('asks the Edge Function ai-check for the check of a setting', async () => {
+      const checks = [
+        { model: 'llama-4', ms: 300 },
+        { model: 'x', problem: 'not_found' },
+      ];
+      server.on('POST', AI_CHECK, { body: checks });
+
+      await expect(service.checkAiProvider(SETTING)).resolves.toEqual(checks);
+      expect(server.sentTo('POST', AI_CHECK)[0].body).toEqual(SETTING);
+    });
+
+    it('turns a failure of the check into a data error, and an empty answer too', async () => {
+      server.on('POST', AI_CHECK, { status: 429, body: { message: 'Wait' } });
+      await expect(service.checkAiProvider(SETTING)).rejects.toMatchObject({
+        kind: 'rate_limited',
+      });
+
+      server.on('POST', AI_CHECK, { body: null });
+      await expect(service.checkAiProvider(SETTING)).rejects.toMatchObject({ kind: 'unknown' });
+    });
   });
 });
