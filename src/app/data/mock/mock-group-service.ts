@@ -181,10 +181,8 @@ export class MockGroupService extends GroupService {
   }
 
   private toEnrolled(enrollment: Enrollment): EnrolledStudent {
-    return {
-      enrollmentId: enrollment.id,
-      student: toRef(findRow(this.db.tables().users, enrollment.userId)),
-    };
+    const user = findRow(this.db.tables().users, enrollment.userId);
+    return { enrollmentId: enrollment.id, student: toRef(user), active: user.status === 'active' };
   }
 
   private enrolledIn(groupId: string): ReadonlySet<string> {

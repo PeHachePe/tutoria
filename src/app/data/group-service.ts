@@ -24,6 +24,8 @@ export interface UserRef {
 export interface EnrolledStudent {
   readonly enrollmentId: string;
   readonly student: UserRef;
+  /** A disabled account stays enrolled, but cannot be enrolled in another group. */
+  readonly active: boolean;
 }
 
 export const MIN_STUDENT_SEARCH_LENGTH = 2;

@@ -19,6 +19,7 @@ import { MatInput } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 
+import { LanguageService } from '../../core/i18n/language-service';
 import { type EnrolledStudent, GroupService, type UserRef } from '../../data/group-service';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { LoadError } from '../../shared/load-error/load-error';
@@ -29,10 +30,6 @@ import { groupActionMessage } from './group-action-message';
 import { filterStudents, STUDENT_FILTER_THRESHOLD } from './student-filter';
 
 const SKELETON_ROWS = [1, 2, 3, 4];
-
-function byStudentName(a: EnrolledStudent, b: EnrolledStudent): number {
-  return a.student.name.localeCompare(b.student.name, 'es');
-}
 
 /**
  * The enrollment of the group chosen (ficha 11): loads and fails on its own, enrolls (also the
@@ -111,8 +108,9 @@ function byStudentName(a: EnrolledStudent, b: EnrolledStudent): number {
           i18n-aria-label="@@groups.students.list"
         >
           @for (row of shown(); track row.enrollmentId) {
+            <!-- pr-1: the touch target of the button is 4px wider than it, and would scroll sideways -->
             <li
-              class="flex items-center justify-between gap-2 border-b border-outline-variant py-1 last:border-b-0"
+              class="flex items-center justify-between gap-2 border-b border-outline-variant py-1 pr-1 last:border-b-0"
             >
               <span class="flex min-w-0 flex-col">
                 <span class="truncate text-body-large">{{ row.student.name }}</span>
@@ -148,6 +146,7 @@ export class GroupStudents {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly injector = inject(Injector);
+  private readonly locale = inject(LanguageService).locale;
 
   readonly groupId = input.required<string>();
   /** «Name · subject»: what tells this group apart in the dialogs. */
@@ -161,10 +160,11 @@ export class GroupStudents {
 
   protected readonly students = resource({
     params: () => this.groupId(),
-    // Each load says the count too: after a reload it may have changed in another session
-    loader: async ({ params }) => {
-      const students = await this.service.listStudents(params);
-      this.countChange.emit(students.length);
+    // Each load says the count too: after a reload it may have changed in another session. Not
+    // that of a group left while it loaded: the page would give it to the one shown
+    loader: async ({ params, abortSignal }) => {
+      const students = this.sorted(await this.service.listStudents(params));
+      if (!abortSignal.aborted) this.countChange.emit(students.length);
       return students;
     },
   });
@@ -204,8 +204,11 @@ export class GroupStudents {
         groupName: this.groupName(),
         enrolledIds: new Set(this.entries().map(({ student }) => student.id)),
         sources: this.groups().filter(({ id }) => id !== groupId),
+        // A disabled account stays in its group, but the server would turn the whole batch down
         studentsOf: async (sourceId) =>
-          (await this.service.listStudents(sourceId)).map(({ student }) => student),
+          (await this.service.listStudents(sourceId))
+            .filter(({ active }) => active)
+            .map(({ student }) => student),
         search: (text) => this.service.searchStudents(groupId, text),
         enroll: async (chosen) => {
           try {
@@ -213,7 +216,7 @@ export class GroupStudents {
               groupId,
               chosen.map(({ id }) => id),
             );
-            this.change((entries) => [...entries, ...enrolled].sort(byStudentName));
+            this.change((entries) => this.sorted([...entries, ...enrolled]));
           } catch (error) {
             this.students.reload();
             throw error;
@@ -249,6 +252,11 @@ export class GroupStudents {
     // Its button, which had the focus, is gone: the focus stays in the group, not on the body
     afterNextRender(() => this.zone().nativeElement.focus(), { injector: this.injector });
     this.snackBar.open($localize`:@@groups.unenrolled:${name}:name: ya no está en el grupo`);
+  }
+
+  /** By name, as the language of the interface orders them. */
+  private sorted(students: readonly EnrolledStudent[]): EnrolledStudent[] {
+    return [...students].sort((a, b) => a.student.name.localeCompare(b.student.name, this.locale));
   }
 
   private change(

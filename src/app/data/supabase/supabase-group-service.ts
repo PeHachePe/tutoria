@@ -104,7 +104,7 @@ export class SupabaseGroupService extends GroupService {
     const group = unwrap(
       await this.supabase
         .from('class_group')
-        .select('id, enrollment(id, app_user(id, name, email))')
+        .select('id, enrollment(id, app_user(id, name, email, status))')
         .eq('id', groupId)
         .single(),
     );
@@ -140,7 +140,12 @@ export class SupabaseGroupService extends GroupService {
         student_ids: [...userIds],
       }),
     );
-    return rows.map(({ enrollment_id, ...student }) => ({ enrollmentId: enrollment_id, student }));
+    // Only an active student can be enrolled
+    return rows.map(({ enrollment_id, ...student }) => ({
+      enrollmentId: enrollment_id,
+      student,
+      active: true,
+    }));
   }
 
   async unenroll(enrollmentId: string): Promise<void> {
@@ -181,6 +186,10 @@ function toManaged({ subject, teacher, ...group }: ManagedRow, summary: Summary)
   };
 }
 
-function toEnrolled(row: { readonly id: string; readonly app_user: UserRef }): EnrolledStudent {
-  return { enrollmentId: row.id, student: row.app_user };
+function toEnrolled(row: {
+  readonly id: string;
+  readonly app_user: UserRef & { readonly status: string };
+}): EnrolledStudent {
+  const { status, ...student } = row.app_user;
+  return { enrollmentId: row.id, student, active: status === 'active' };
 }

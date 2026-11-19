@@ -154,15 +154,15 @@ describe('SupabaseGroupService', () => {
       body: {
         id: 'daw',
         enrollment: [
-          { id: 'e-1', app_user: LUCIA },
-          { id: 'e-2', app_user: HUGO },
+          { id: 'e-1', app_user: { ...LUCIA, status: 'active' } },
+          { id: 'e-2', app_user: { ...HUGO, status: 'disabled' } },
         ],
       },
     });
 
     await expect(service.listStudents('daw')).resolves.toEqual([
-      { enrollmentId: 'e-2', student: HUGO },
-      { enrollmentId: 'e-1', student: LUCIA },
+      { enrollmentId: 'e-2', student: HUGO, active: false },
+      { enrollmentId: 'e-1', student: LUCIA, active: true },
     ]);
     const [request] = server.sentTo('GET', '/rest/v1/class_group');
     expect(request.params.get('id')).toBe('eq.daw');
@@ -217,8 +217,8 @@ describe('SupabaseGroupService', () => {
     });
 
     await expect(service.enroll('daw', ['lucia', 'hugo'])).resolves.toEqual([
-      { enrollmentId: 'e-1', student: LUCIA },
-      { enrollmentId: 'e-2', student: HUGO },
+      { enrollmentId: 'e-1', student: LUCIA, active: true },
+      { enrollmentId: 'e-2', student: HUGO, active: true },
     ]);
     const [request] = server.sentTo('POST', '/rest/v1/rpc/enroll_students');
     expect(request.body).toEqual({ target_group_id: 'daw', student_ids: ['lucia', 'hugo'] });

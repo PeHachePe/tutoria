@@ -145,6 +145,30 @@ describe('GroupsPage', () => {
     expect(await screen.findAllByRole('option')).toHaveLength(4);
   });
 
+  it('lets an administrator choose the teacher of a new group and change it', async () => {
+    await render(URL, { role: 'admin' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo grupo' }));
+    let dialog = await openedDialog();
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), 'Prueba');
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignatura' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Programación avanzada' }));
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Docente' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Marta Ibáñez Soler' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
+    await closed();
+    const label = 'Prueba · Programación avanzada';
+    expect(text(shown(label))).toContain('Docente: Marta Ibáñez Soler');
+
+    await userEvent.click(await action(label, 'Editar'));
+    dialog = await openedDialog();
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Docente' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Javier Ortega Ruiz' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+    await closed();
+    expect(text(shown(label))).toContain('Docente: Javier Ortega Ruiz');
+  });
+
   it('chooses the group in the URL, and filters its students', async () => {
     await render(DAW_URL);
 
@@ -237,8 +261,16 @@ describe('GroupsPage', () => {
     expect(screen.getByText('Matrícula guardada')).toBeTruthy();
   });
 
-  it('enrolls the students of another group at once', async () => {
-    await render(DAW_URL);
+  it('enrolls the active students of another group at once', async () => {
+    // A disabled account stays in its group, but cannot be enrolled in another one
+    await render(DAW_URL, {
+      prepare: () =>
+        TestBed.inject(MockDb).update('users', (users) =>
+          users.map((user) =>
+            user.id === DAW_STUDENT_IDS[0] ? { ...user, status: 'disabled' } : user,
+          ),
+        ),
+    });
     await createGroup('Prueba');
 
     await userEvent.click(screen.getByRole('button', { name: 'Matricular alumnos' }));
@@ -247,12 +279,15 @@ describe('GroupsPage', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: BASIC }));
     await userEvent.click(
       await within(dialog).findByRole('button', {
-        name: `Matricular (${DAW_STUDENT_IDS.length})`,
+        name: `Matricular (${DAW_STUDENT_IDS.length - 1})`,
       }),
     );
     await closed();
 
-    expect(students()).toHaveLength(DAW_STUDENT_IDS.length);
+    expect(students()).toHaveLength(DAW_STUDENT_IDS.length - 1);
+    expect(text(shown('Prueba · Programación avanzada'))).toContain(
+      `${DAW_STUDENT_IDS.length - 1} alumnos`,
+    );
   });
 
   it('keeps the enroll dialog open when enrolling fails', async () => {
@@ -295,11 +330,13 @@ describe('GroupsPage', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Dar de baja a Lucía Martín Gómez del grupo' }),
     );
+    const listStudents = vi.spyOn(TestBed.inject(GroupService), 'listStudents');
     TestBed.inject(MockNetwork).failNextRequest('network');
     await confirm('Dar de baja del grupo');
 
     expect(screen.getByText(/Sin conexión/)).toBeTruthy();
     expect(screen.getByText('Lucía Martín Gómez')).toBeTruthy();
+    expect(listStudents).toHaveBeenCalledWith(DAW_GROUP_ID);
   });
 
   it('keeps the group dialog open when saving fails, and warns of a failed removal', async () => {
