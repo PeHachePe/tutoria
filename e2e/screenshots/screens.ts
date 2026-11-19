@@ -58,4 +58,6 @@ export const SCREENS: readonly Screen[] = [
     path: '/docente/grupos?grupo=20000000-0000-4000-8000-000000000001',
     user: 'teacher',
   },
+  // The AI provider of the seed, Gemini with two fallbacks, and the three subjects (5.3b)
+  { code: '12-sistema', path: '/admin/sistema', user: 'admin' },
 ];

@@ -1,0 +1,372 @@
+<div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-headline-medium" i18n="@@system.heading">Ajustes del sistema</h1>
+    <p class="text-body-large text-on-surface-variant" i18n="@@system.subheading">
+      El proveedor de IA y las asignaturas de los grupos.
+    </p>
+  </header>
+
+  <section
+    class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+    aria-labelledby="provider-heading"
+    [attr.aria-busy]="provider.isLoading()"
+  >
+    <div class="flex flex-col gap-1">
+      <h2 id="provider-heading" class="text-title-large" i18n="@@system.provider">
+        Proveedor de IA
+      </h2>
+      <p class="text-body-medium text-on-surface-variant" i18n="@@system.provider.intro">
+        El modelo que responde como tutor y traduce los ejercicios. El cambio se aplica a la
+        siguiente petición.
+      </p>
+    </div>
+
+    @if (provider.error(); as error) {
+      <app-load-error [error]="error" (retry)="provider.reload()" />
+    } @else if (!provider.hasValue()) {
+      <app-loading-skeleton label="Cargando el proveedor…" i18n-label="@@system.provider.loading">
+        <div class="flex flex-col gap-3">
+          <app-skeleton class="h-14 w-full rounded-xl" />
+          <app-skeleton class="h-14 w-full rounded-xl" />
+          <app-skeleton class="h-14 w-full rounded-xl" />
+          <app-skeleton class="h-10 w-64 rounded-full" />
+        </div>
+      </app-loading-skeleton>
+    } @else {
+      <form class="flex flex-col gap-2" (submit)="$event.preventDefault(); save()">
+        <mat-form-field>
+          <mat-label i18n="@@system.preset">Proveedor</mat-label>
+          <mat-select
+            [value]="providerForm.presetId().value()"
+            (selectionChange)="selectPreset($event.value)"
+          >
+            @for (option of presetOptions; track option.id) {
+              <mat-option [value]="option.id">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field class="mb-4" subscriptSizing="dynamic">
+          <mat-label i18n="@@system.baseUrl">URL base</mat-label>
+          <input matInput type="url" [formField]="providerForm.baseUrl" />
+          @if (providerForm.presetId().value() !== other) {
+            <mat-hint i18n="@@system.baseUrl.hint"
+              >La del proveedor: elige «Otro» para cambiarla</mat-hint
+            >
+          }
+          @if (providerForm.baseUrl().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+        <div class="flex flex-col gap-x-4 sm:flex-row">
+          <mat-form-field class="sm:flex-1">
+            <mat-label i18n="@@system.model.main">Modelo principal</mat-label>
+            <input matInput [formField]="providerForm.model" />
+            @if (providerForm.model().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field class="sm:w-56">
+            <mat-label i18n="@@system.timeout">Tiempo máximo (segundos)</mat-label>
+            <input matInput type="number" [formField]="providerForm.timeoutSeconds" />
+            @if (providerForm.timeoutSeconds().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+        <div class="flex flex-col gap-x-4 sm:flex-row">
+          <mat-form-field class="mb-4 sm:flex-1" subscriptSizing="dynamic">
+            <mat-label i18n="@@system.keySecret">Nombre del secreto con la clave</mat-label>
+            <input matInput [formField]="providerForm.keySecret" />
+            <mat-hint i18n="@@system.keySecret.hint"
+              >La clave nunca se escribe aquí: vive en los secretos del servidor.</mat-hint
+            >
+            @if (providerForm.keySecret().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field class="sm:w-56">
+            <mat-label i18n="@@system.format">Formato de la respuesta</mat-label>
+            <mat-select [formField]="providerForm.responseFormat">
+              @for (option of formatOptions; track option.format) {
+                <mat-option [value]="option.format">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <fieldset class="mt-2 flex flex-col gap-3">
+          <legend class="mb-1 text-title-medium" i18n="@@system.fallbacks">
+            Modelos de respaldo, en orden
+          </legend>
+          <p class="text-body-medium text-on-surface-variant" i18n="@@system.fallbacks.intro">
+            Si el principal no responde, se prueban uno tras otro. Uno de otro proveedor protege
+            también de una caída o de la cuota agotada del principal.
+          </p>
+          @for (
+            fallback of providerForm.fallbacks;
+            track $index;
+            let index = $index, last = $last
+          ) {
+            @let position = index + 1;
+            <div
+              class="flex flex-col gap-x-3 rounded-xl border border-outline-variant p-3 pb-0"
+              role="group"
+              [attr.aria-label]="fallbackLabel(position)"
+            >
+              <div class="grid grid-cols-[1fr_5.5rem] gap-x-3 md:flex md:items-start">
+                <mat-form-field class="col-span-2 md:w-52">
+                  <mat-label i18n="@@system.fallback.preset">Proveedor</mat-label>
+                  <mat-select
+                    [value]="fallback.presetId().value()"
+                    (selectionChange)="selectFallbackPreset(index, $event.value)"
+                  >
+                    @for (option of fallbackPresetOptions; track option.id) {
+                      <mat-option [value]="option.id">{{ option.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field class="md:flex-1">
+                  <mat-label i18n="@@system.model">Modelo</mat-label>
+                  <input matInput [id]="'fallback-model-' + index" [formField]="fallback.model" />
+                  @if (fallback.model().errors()[0]; as error) {
+                    <mat-error>{{ error.message }}</mat-error>
+                  }
+                </mat-form-field>
+                <mat-form-field class="md:w-24">
+                  <mat-label i18n="@@system.fallback.timeout">Segundos</mat-label>
+                  <input matInput type="number" [formField]="fallback.timeoutSeconds" />
+                  @if (fallback.timeoutSeconds().errors()[0]; as error) {
+                    <mat-error>{{ error.message }}</mat-error>
+                  }
+                </mat-form-field>
+                <div class="col-span-2 -mt-3 mb-2 flex shrink-0 justify-end md:mt-2 md:mb-0">
+                  <button
+                    matIconButton
+                    type="button"
+                    [id]="'fallback-up-' + index"
+                    [disabled]="index === 0"
+                    disabledInteractive
+                    [attr.aria-label]="moveUpLabel(position)"
+                    [matTooltip]="moveUpLabel(position)"
+                    (click)="index > 0 && moveFallback(index, -1)"
+                  >
+                    <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+                  </button>
+                  <button
+                    matIconButton
+                    type="button"
+                    [id]="'fallback-down-' + index"
+                    [disabled]="last"
+                    disabledInteractive
+                    [attr.aria-label]="moveDownLabel(position)"
+                    [matTooltip]="moveDownLabel(position)"
+                    (click)="!last && moveFallback(index, 1)"
+                  >
+                    <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                  </button>
+                  <button
+                    matIconButton
+                    type="button"
+                    [attr.aria-label]="removeLabel(position)"
+                    [matTooltip]="removeLabel(position)"
+                    (click)="removeFallback(index)"
+                  >
+                    <mat-icon aria-hidden="true">delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+              @if (fallback.presetId().value() === other) {
+                <mat-form-field>
+                  <mat-label i18n="@@system.baseUrl">URL base</mat-label>
+                  <input matInput type="url" [formField]="fallback.baseUrl" />
+                  @if (fallback.baseUrl().errors()[0]; as error) {
+                    <mat-error>{{ error.message }}</mat-error>
+                  }
+                </mat-form-field>
+                <div class="flex flex-col gap-x-3 sm:flex-row">
+                  <mat-form-field class="sm:flex-1">
+                    <mat-label i18n="@@system.keySecret">Nombre del secreto con la clave</mat-label>
+                    <input matInput [formField]="fallback.keySecret" />
+                    @if (fallback.keySecret().errors()[0]; as error) {
+                      <mat-error>{{ error.message }}</mat-error>
+                    }
+                  </mat-form-field>
+                  <mat-form-field class="sm:w-56">
+                    <mat-label i18n="@@system.format">Formato de la respuesta</mat-label>
+                    <mat-select [formField]="fallback.responseFormat">
+                      @for (option of formatOptions; track option.format) {
+                        <mat-option [value]="option.format">{{ option.label }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              } @else if (fallback.presetId().value() !== same) {
+                <p class="-mt-2 mb-3 text-body-small text-on-surface-variant">
+                  {{ fallback.baseUrl().value() }} · {{ fallback.keySecret().value() || '—' }}
+                </p>
+              }
+            </div>
+          }
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              matButton="outlined"
+              type="button"
+              id="add-fallback"
+              [disabled]="!canAddFallback()"
+              disabledInteractive
+              aria-describedby="fallbacks-limit"
+              (click)="canAddFallback() && addFallback()"
+            >
+              <mat-icon aria-hidden="true">add</mat-icon>
+              <span i18n="@@system.fallbacks.add">Añadir un respaldo</span>
+            </button>
+            <span
+              id="fallbacks-limit"
+              class="text-body-small text-on-surface-variant"
+              i18n="@@system.fallbacks.limit"
+              >Hasta {{ maxFallbacks }}</span
+            >
+          </div>
+        </fieldset>
+
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="checking() || providerForm().invalid()"
+            (click)="check()"
+          >
+            @if (checking()) {
+              <span i18n="@@system.checking">Probando…</span>
+            } @else {
+              <span i18n="@@system.check">Probar la conexión</span>
+            }
+          </button>
+          <button
+            matButton="filled"
+            type="submit"
+            [disabled]="!canSave()"
+            disabledInteractive
+            aria-describedby="save-reason"
+          >
+            @if (saving()) {
+              <span i18n="@@system.saving">Guardando…</span>
+            } @else {
+              <span i18n="@@system.save">Guardar</span>
+            }
+          </button>
+          <button matButton type="button" [disabled]="!changed()" (click)="discard()">
+            <span i18n="@@system.discard">Descartar los cambios</span>
+          </button>
+        </div>
+        <p id="save-reason" class="text-body-medium text-on-surface-variant">
+          @if (results() && !mainAnswered()) {
+            <span class="text-error" i18n="@@system.check.failed"
+              >El modelo principal no responde: se mantiene el proveedor anterior.</span
+            >
+          } @else if (!results()) {
+            <span i18n="@@system.check.first">Prueba la conexión antes de guardar</span>
+          }
+        </p>
+        @if (actionFailed(); as failed) {
+          <p class="text-body-medium text-error" role="alert">
+            @if (failed === 'check') {
+              <span i18n="@@system.check.error">No se ha podido probar. Inténtalo de nuevo.</span>
+            } @else {
+              <span i18n="@@system.save.error">No se ha podido guardar. Inténtalo de nuevo.</span>
+            }
+          </p>
+        }
+        <div role="status">
+          @if (results(); as checks) {
+            <ul
+              class="flex flex-col gap-2"
+              aria-label="Resultado de la prueba"
+              i18n-aria-label="@@system.check.results"
+            >
+              @for (result of checks; track $index) {
+                <li class="flex items-start gap-2 text-body-medium">
+                  @if (result.problem) {
+                    <mat-icon class="shrink-0 text-error" aria-hidden="true">error</mat-icon>
+                  } @else {
+                    <mat-icon class="shrink-0 text-success" aria-hidden="true"
+                      >check_circle</mat-icon
+                    >
+                  }
+                  <span class="min-w-0 break-words"
+                    ><span class="font-medium">{{ result.model }}</span
+                    >: {{ checkMessage(result) }}</span
+                  >
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </form>
+    }
+  </section>
+
+  <section
+    class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+    aria-labelledby="subjects-heading"
+    [attr.aria-busy]="subjects.isLoading()"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="subjects-heading" class="text-title-large" i18n="@@system.subjects">Asignaturas</h2>
+      <button
+        matButton="filled"
+        type="button"
+        [disabled]="!subjects.hasValue()"
+        (click)="createSubject()"
+      >
+        <mat-icon aria-hidden="true">add</mat-icon>
+        <span i18n="@@system.subjects.new">Nueva asignatura</span>
+      </button>
+    </div>
+    @if (subjects.error(); as error) {
+      <app-load-error [error]="error" (retry)="subjects.reload()" />
+    } @else if (subjectsFirstLoad()) {
+      <app-loading-skeleton
+        label="Cargando las asignaturas…"
+        i18n-label="@@system.subjects.loading"
+      >
+        <div class="flex flex-col gap-2">
+          <app-skeleton class="h-12 w-full rounded-xl" />
+          <app-skeleton class="h-12 w-full rounded-xl" />
+          <app-skeleton class="h-12 w-full rounded-xl" />
+        </div>
+      </app-loading-skeleton>
+    } @else if (subjectRows().length === 0) {
+      <app-empty-state
+        heading="Aún no hay asignaturas"
+        i18n-heading="@@system.subjects.empty"
+        text="Cada grupo es de una asignatura: crea la primera."
+        i18n-text="@@system.subjects.empty.text"
+      />
+    } @else {
+      <ul class="flex max-h-96 flex-col divide-y divide-outline-variant overflow-y-auto">
+        @for (row of subjectRows(); track row.subject.id) {
+          <li class="flex items-center gap-3 py-2">
+            <div class="flex min-w-0 flex-1 flex-col">
+              <span class="text-body-large" [attr.lang]="row.lang">{{ row.name }}</span>
+              <span class="text-body-small text-on-surface-variant"
+                ><span aria-hidden="true">{{ row.locales }}</span
+                ><span class="sr-only" i18n="@@system.subjects.locales"
+                  >En {{ row.localeNames }}</span
+                ></span
+              >
+            </div>
+            <button
+              matButton
+              type="button"
+              [attr.aria-label]="editLabel(row.name)"
+              (click)="editSubject(row.subject)"
+            >
+              <span i18n="@@system.subjects.edit">Editar</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

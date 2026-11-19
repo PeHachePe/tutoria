@@ -39,14 +39,20 @@ describe('appConfig', () => {
     expect(TestBed.inject(AuthStore).userId()).toBe(DAW_STUDENT_IDS[0]);
   });
 
-  it('passes the route data to the screens as inputs', async () => {
-    // The administrator this time, at the system settings, still a placeholder
+  it('passes the query parameters to the screens as inputs', async () => {
+    // The administrator this time, searching the accounts
     localStorage.setItem(MOCK_SESSION_STORAGE_KEY, ADMIN_ID);
     await TestBed.inject(ApplicationInitStatus).donePromise;
 
-    await RouterTestingHarness.create('/admin/sistema');
+    await RouterTestingHarness.create('/admin/usuarios?buscar=lucia');
 
-    expect(screen.getByText('Esta pantalla se construye en el paso 5.3.')).toBeTruthy();
+    expect(
+      (
+        await screen.findByRole<HTMLInputElement>('searchbox', {
+          name: 'Buscar por nombre o correo',
+        })
+      ).value,
+    ).toBe('lucia');
   });
 
   it('applies the colour mode on start-up', async () => {

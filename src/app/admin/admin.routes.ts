@@ -4,8 +4,8 @@ import { SEGMENTS } from '../core/app-paths';
 import { provideFormFieldDefaults } from '../core/form-field-defaults';
 import { provideLocalizedPaginator } from '../core/i18n/localized-paginator-intl';
 import { provideSnackBarDefaults } from '../core/snack-bar-defaults';
-import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
+import { SystemPage } from './system/system-page';
 import { UsersPage } from './users/users-page';
 
 /** Admin area (2.2), loaded lazily by app.routes.ts. */
@@ -25,8 +25,7 @@ export const adminRoutes: Routes = [
       {
         path: SEGMENTS.admin.system,
         title: $localize`:@@route.system.title:Sistema`,
-        component: PlaceholderPage,
-        data: { heading: $localize`:@@route.system.heading:Ajustes del sistema`, step: '5.3' },
+        component: SystemPage,
       },
     ],
   },

@@ -110,12 +110,6 @@ describe('app routes', () => {
     expect(document.title).toBe(title);
   });
 
-  it('tells which step builds each placeholder screen', async () => {
-    await visit('admin', '/admin/sistema');
-
-    expect(screen.getByText('Esta pantalla se construye en el paso 5.3.')).toBeTruthy();
-  });
-
   it.each<[Role, string]>([
     ['student', '/docente/en-vivo'],
     ['teacher', '/admin/usuarios'],
