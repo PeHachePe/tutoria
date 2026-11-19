@@ -221,7 +221,22 @@ describe('SupabaseGroupService', () => {
       { enrollmentId: 'e-2', student: HUGO, active: true },
     ]);
     const [request] = server.sentTo('POST', '/rest/v1/rpc/enroll_students');
-    expect(request.body).toEqual({ target_group_id: 'daw', student_ids: ['lucia', 'hugo'] });
+    expect(request.body).toEqual({
+      target_group_id: 'daw',
+      student_ids: ['lucia', 'hugo'],
+      also_group_ids: [],
+    });
+  });
+
+  it('enrolls in the other groups of the class too', async () => {
+    server.on('POST', '/rest/v1/rpc/enroll_students', {
+      body: [{ enrollment_id: 'e-1', ...LUCIA }],
+    });
+
+    await service.enroll('daw', ['lucia'], ['daw-web']);
+
+    const [request] = server.sentTo('POST', '/rest/v1/rpc/enroll_students');
+    expect(request.body).toMatchObject({ also_group_ids: ['daw-web'] });
   });
 
   it.each([
@@ -247,6 +262,84 @@ describe('SupabaseGroupService', () => {
   ])('does not send an enrollment of %s', async (_, userIds) => {
     await expect(service.enroll('daw', userIds)).rejects.toMatchObject({ kind: 'invalid' });
     expect(server.requests).toHaveLength(0);
+  });
+
+  it('creates the class in several subjects in one insert, in their order', async () => {
+    server.on('POST', '/rest/v1/class_group', {
+      status: 201,
+      body: [
+        managedRow({ id: 'web', name: 'Taller', subject_id: 'subject-2' }),
+        managedRow({ id: 'basic', name: 'Taller', subject_id: 'subject-1' }),
+      ],
+    });
+
+    const created = await service.createGroups(
+      { name: ' Taller ', schoolYear: '2026/27', teacherId: 'teacher-1' },
+      ['subject-1', 'subject-2'],
+    );
+
+    expect(created.map((row) => [row.group.id, row.studentCount, row.started])).toEqual([
+      ['basic', 0, false],
+      ['web', 0, false],
+    ]);
+    const [request] = server.sentTo('POST', '/rest/v1/class_group');
+    expect(request.body).toEqual([
+      { name: 'Taller', school_year: '2026/27', teacher_id: 'teacher-1', subject_id: 'subject-1' },
+      { name: 'Taller', school_year: '2026/27', teacher_id: 'teacher-1', subject_id: 'subject-2' },
+    ]);
+  });
+
+  it('duplicates groups with the RPC, and reads them as the list shows them', async () => {
+    server
+      .on('POST', '/rest/v1/rpc/duplicate_groups', {
+        body: [groupRow({ id: 'copy-1' }), groupRow({ id: 'copy-2' })],
+      })
+      .on('GET', '/rest/v1/class_group', {
+        body: [managedRow({ id: 'copy-2' }), managedRow({ id: 'copy-1' })],
+      })
+      .on('POST', '/rest/v1/rpc/group_summaries', {
+        body: [{ group_id: 'copy-1', student_count: 24, is_started: false }],
+      });
+
+    const created = await service.duplicateGroups(
+      ['daw', 'daw-web'],
+      { name: ' 1.º DAW A ', schoolYear: '2027/28', teacherId: 'teacher-1' },
+      { blocks: true, dates: false, students: true },
+    );
+
+    expect(created.map((row) => [row.group.id, row.studentCount])).toEqual([
+      ['copy-1', 24],
+      ['copy-2', 0],
+    ]);
+    const [request] = server.sentTo('POST', '/rest/v1/rpc/duplicate_groups');
+    expect(request.body).toEqual({
+      source_group_ids: ['daw', 'daw-web'],
+      group_name: '1.º DAW A',
+      group_school_year: '2027/28',
+      group_teacher_id: 'teacher-1',
+      with_blocks: true,
+      with_dates: false,
+      with_students: true,
+      time_zone: 'Europe/Madrid',
+    });
+    expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('id')).toBe(
+      'in.(copy-1,copy-2)',
+    );
+  });
+
+  it('translates a group of others on duplicating into not found', async () => {
+    server.on('POST', '/rest/v1/rpc/duplicate_groups', {
+      status: 400,
+      body: { message: 'No such group', code: 'P0002' },
+    });
+
+    await expect(
+      service.duplicateGroups(
+        ['dam'],
+        { name: 'Copia', schoolYear: '2027/28', teacherId: 'teacher-1' },
+        { blocks: false, dates: false, students: false },
+      ),
+    ).rejects.toMatchObject({ kind: 'not_found' });
   });
 
   it('unenrolls, and an enrollment the RLS hides is not found', async () => {

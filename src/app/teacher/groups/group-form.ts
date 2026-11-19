@@ -7,7 +7,7 @@ import {
 } from '@angular/forms/signals';
 
 import {
-  type GroupDraft,
+  type ClassDraft,
   type ManagedGroup,
   SCHOOL_YEAR_PATTERN,
   type UserRef,
@@ -17,19 +17,20 @@ import { isSchoolYear } from './school-year';
 /** Enough for «2.º DAW A · Mañanas»: the name goes in the header of its panel. */
 export const MAX_GROUP_NAME_LENGTH = 60;
 
-/** A group as its dialog edits it (5.2b). */
+/** A group as its dialog edits it (5.2b), or a class as it is created in several subjects (5.2c). */
 export interface GroupFormModel {
   readonly name: string;
   readonly schoolYear: string;
-  readonly subjectId: string;
+  /** A group of each, when it is created; that of the group, which never changes, when edited. */
+  readonly subjectIds: readonly string[];
   readonly teacherId: string;
 }
 
 export interface GroupFormDefaults {
   /** The current one, from `schoolYearOf()`. */
   readonly schoolYear: string;
-  /** The only subject there is, or empty to choose one. */
-  readonly subjectId: string;
+  /** The only subject there is, or none to choose them. */
+  readonly subjectIds: readonly string[];
   /** A teacher's groups are their own; an administrator chooses one (none, undefined). */
   readonly teacherId: string | undefined;
 }
@@ -41,11 +42,30 @@ export function toGroupFormModel(
 ): GroupFormModel {
   if (!managed) return { name: '', ...defaults, teacherId: defaults.teacherId ?? '' };
   const { name, schoolYear, subjectId, teacherId } = managed.group;
-  return { name, schoolYear, subjectId, teacherId };
+  return { name, schoolYear, subjectIds: [subjectId], teacherId };
 }
 
 /** Everything is required, and the year is like `2026/27`, as the database checks it. */
 export function groupSchema(path: SchemaPathTree<GroupFormModel>): void {
+  classSchema(path);
+  // `required` takes an empty list as a value
+  validate(path.subjectIds, ({ value }) =>
+    value().length === 0
+      ? {
+          kind: 'required',
+          message: $localize`:@@groupForm.error.subject:Elige la asignatura`,
+        }
+      : null,
+  );
+}
+
+/**
+ * What every group of a class shares: the name, the year and the teacher (5.2c). Also the schema of
+ * duplicating a class.
+ */
+export function classSchema(
+  path: SchemaPathTree<Pick<GroupFormModel, 'name' | 'schoolYear' | 'teacherId'>>,
+): void {
   required(path.name, { message: $localize`:@@groupForm.error.name:Escribe el nombre del grupo` });
   maxLength(path.name, MAX_GROUP_NAME_LENGTH, {
     message: $localize`:@@groupForm.error.nameLength:Como mucho ${MAX_GROUP_NAME_LENGTH}:max: caracteres`,
@@ -68,19 +88,16 @@ export function groupSchema(path: SchemaPathTree<GroupFormModel>): void {
         }
       : null,
   );
-  required(path.subjectId, {
-    message: $localize`:@@groupForm.error.subject:Elige la asignatura`,
-  });
   required(path.teacherId, { message: $localize`:@@groupForm.error.teacher:Elige el docente` });
 }
 
-/** What is saved: the texts without surrounding spaces, and the id of an existing group. */
-export function toGroupDraft(model: GroupFormModel, groupId?: string): GroupDraft {
+/** What the groups of the class share, with the texts without surrounding spaces. */
+export function toClassDraft(
+  model: Pick<GroupFormModel, 'name' | 'schoolYear' | 'teacherId'>,
+): ClassDraft {
   return {
-    ...(groupId === undefined ? {} : { id: groupId }),
     name: model.name.trim(),
     schoolYear: model.schoolYear.trim(),
-    subjectId: model.subjectId,
     teacherId: model.teacherId,
   };
 }

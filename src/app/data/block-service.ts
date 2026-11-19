@@ -11,6 +11,11 @@ export interface BlockDraft {
   readonly opensAt: string | null;
 }
 
+/** A group whose blocks the teacher plans, with its year: the same class of two years apart. */
+export interface PlannedGroup extends AssignedGroup {
+  readonly schoolYear: string;
+}
+
 /** What the teacher changes of an assignment besides its order. */
 export interface AssignmentChanges {
   readonly isHidden?: boolean;
@@ -39,7 +44,7 @@ export interface PlannedBlock {
  */
 export abstract class BlockService {
   /** The groups the user teaches, or every group for an administrator, by name and subject. */
-  abstract listGroups(): Promise<AssignedGroup[]>;
+  abstract listGroups(): Promise<PlannedGroup[]>;
 
   /** Every block of the group, hidden ones included, with its exercises. `not_found` for others. */
   abstract listBlocks(groupId: string): Promise<PlannedBlock[]>;
@@ -74,6 +79,18 @@ export abstract class BlockService {
    * group (4.3d), started or not: the attempts keep pointing to it. `invalid` if the exercise is
    * already in that block.
    */
+  /**
+   * The blocks of another group after those of this one (5.2c, D-079), in their order, with their
+   * exercises, order, visibility and translations; with their dates moved to the year of this group
+   * in whole weeks, or without them. How many blocks were copied. `not_found` for a group of others
+   * and `invalid` for the same group.
+   */
+  abstract copyBlocks(
+    sourceGroupId: string,
+    targetGroupId: string,
+    withDates: boolean,
+  ): Promise<number>;
+
   abstract moveAssignment(
     assignmentId: string,
     blockId: string,

@@ -41,12 +41,17 @@ export interface EnrollDialogData {
   readonly enrolledIds: ReadonlySet<string>;
   /** The other groups of the user, such as the same class in another subject. */
   readonly sources: readonly EnrollSource[];
+  /**
+   * The other groups of the class (5.2c): the same name and year, in another subject. Those chosen
+   * are enrolled in them too, all checked at first.
+   */
+  readonly classmates: readonly EnrollSource[];
   /** The students of one of them. */
   readonly studentsOf: (groupId: string) => Promise<UserRef[]>;
   /** Active students who are not in the group yet. */
   readonly search: (text: string) => Promise<UserRef[]>;
-  /** Enrolls them; the dialog stays open, with the error, if it fails. */
-  readonly enroll: (students: readonly UserRef[]) => Promise<void>;
+  /** Enrolls them, also in those groups; the dialog stays open, with the error, if it fails. */
+  readonly enroll: (students: readonly UserRef[], alsoGroupIds: readonly string[]) => Promise<void>;
 }
 
 /**
@@ -182,6 +187,21 @@ export interface EnrollDialogData {
             </ul>
           }
         </div>
+        @if (data.classmates.length > 0) {
+          <fieldset class="flex flex-col">
+            <legend class="text-title-small" i18n="@@enrollDialog.also">
+              Matricular también en
+            </legend>
+            @for (group of data.classmates; track group.id) {
+              <mat-checkbox [checked]="also().has(group.id)" (change)="toggleAlso(group)">
+                {{ group.label }}
+              </mat-checkbox>
+            }
+            <p class="text-body-small text-on-surface-variant" i18n="@@enrollDialog.also.hint">
+              Los que ya estén en alguno se quedan como están.
+            </p>
+          </fieldset>
+        }
         @if (failure(); as message) {
           <p class="text-body-medium text-error" role="alert">{{ message }}</p>
         }
@@ -234,6 +254,11 @@ export class EnrollDialog {
   private readonly announcer = inject(LiveAnnouncer);
   protected readonly failure = signal<string | null>(null);
 
+  /** The other groups of the class where they are enrolled too: all of them at first. */
+  protected readonly also = signal<ReadonlySet<string>>(
+    new Set(this.data.classmates.map(({ id }) => id)),
+  );
+
   constructor() {
     inject(DestroyRef).onDestroy(() => this.debouncer.cancel());
   }
@@ -279,6 +304,14 @@ export class EnrollDialog {
     }
   }
 
+  protected toggleAlso(group: EnrollSource): void {
+    this.also.update((also) => {
+      const next = new Set(also);
+      if (!next.delete(group.id)) next.add(group.id);
+      return next;
+    });
+  }
+
   protected removeLabel(student: UserRef): string {
     return $localize`:@@enrollDialog.remove:Quitar a ${student.name}:name:`;
   }
@@ -287,7 +320,9 @@ export class EnrollDialog {
     this.saving.set(true);
     this.failure.set(null);
     try {
-      await this.data.enroll(this.chosen());
+      // In the order of the class, whatever the order of the clicks
+      const also = this.data.classmates.map(({ id }) => id).filter((id) => this.also().has(id));
+      await this.data.enroll(this.chosen(), also);
       this.ref.close(true);
     } catch (error) {
       this.failure.set(groupActionMessage('enroll', error));

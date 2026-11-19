@@ -47,13 +47,31 @@
           text="Crea el primero, como «Tema 1: Bucles», y añádele ejercicios del banco."
           i18n-text="@@blocks.empty.text"
         >
-          <div class="mt-2 flex justify-center" emptyStateAction>
+          <div class="mt-2 flex flex-wrap justify-center gap-2" emptyStateAction>
             <button matButton="filled" type="button" (click)="newBlock(group)" i18n="@@blocks.new">
               Nuevo bloque
             </button>
+            @if (groupOptions().length > 1) {
+              <button
+                matButton="tonal"
+                type="button"
+                (click)="copyBlocks(group)"
+                i18n="@@blocks.copy"
+              >
+                Copiar de otro grupo
+              </button>
+            }
           </div>
         </app-empty-state>
       } @else {
+        @if (groupOptions().length > 1) {
+          <div class="-mt-3 flex justify-end">
+            <button matButton type="button" (click)="copyBlocks(group)">
+              <mat-icon aria-hidden="true">content_copy</mat-icon>
+              <span i18n="@@blocks.copy">Copiar de otro grupo</span>
+            </button>
+          </div>
+        }
         <ol
           class="flex flex-col gap-4"
           cdkDropList

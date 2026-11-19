@@ -2,17 +2,22 @@ import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
 import {
+  type ClassDraft,
+  type DuplicateOptions,
   type EnrolledStudent,
   type GroupDraft,
   GroupService,
   type ManagedGroup,
   MAX_ENROLLMENT_BATCH,
+  MAX_GROUP_BATCH,
   MAX_STUDENT_SEARCH_RESULTS,
   MIN_STUDENT_SEARCH_LENGTH,
   SCHOOL_YEAR_PATTERN,
   type UserRef,
 } from '../group-service';
+import { schoolYearShiftDays } from '../school-year-shift';
 import type { AppUser, ClassGroup, Enrollment } from '../user';
+import { copyGroupBlocks } from './copy-group-blocks';
 import { canManageGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -43,25 +48,10 @@ export class MockGroupService extends GroupService {
 
   saveGroup({ id, ...draft }: GroupDraft): Promise<ManagedGroup> {
     return this.network.request(() => {
-      const user = this.db.requireUser('teacher', 'admin');
       const previous = id === undefined ? undefined : this.findGroup(id);
-      const tables = this.db.tables();
-      // In the order of Postgres: `check_group_teacher`, the RLS, the checks and the foreign key.
-      // The teacher is checked when chosen, so a group of a disabled teacher stays editable.
-      const teacher = tables.users.find((candidate) => candidate.id === draft.teacherId);
-      const chosen = previous?.teacherId !== draft.teacherId;
-      if (chosen && (!teacher || !isActive(teacher, 'teacher'))) {
-        throw new DataError('invalid', 'The teacher of a group is an active teacher');
-      }
-      if (user.role !== 'admin' && draft.teacherId !== user.id) {
-        throw new DataError('forbidden', 'A teacher saves only groups of their own');
-      }
-      const name = draft.name.trim();
-      if (!name || !SCHOOL_YEAR_PATTERN.test(draft.schoolYear)) throw new DataError('invalid');
+      const name = this.checkClass(draft, previous?.teacherId !== draft.teacherId);
       // A change keeps the subject: only a new group needs one that exists
-      if (!previous && !tables.subjects.some((subject) => subject.id === draft.subjectId)) {
-        throw new DataError('invalid');
-      }
+      if (!previous) this.checkSubjects([draft.subjectId]);
       const group: ClassGroup = previous
         ? { ...previous, name, schoolYear: draft.schoolYear, teacherId: draft.teacherId }
         : { ...draft, id: crypto.randomUUID(), name };
@@ -69,6 +59,51 @@ export class MockGroupService extends GroupService {
         previous ? rows.map((row) => (row.id === group.id ? group : row)) : [...rows, group],
       );
       return this.toManaged(group);
+    });
+  }
+
+  createGroups(draft: ClassDraft, subjectIds: readonly string[]): Promise<ManagedGroup[]> {
+    return this.network.request(() => {
+      const name = this.checkClass(draft, true);
+      this.checkSubjects(subjectIds);
+      const groups = subjectIds.map((subjectId): ClassGroup => ({
+        ...draft,
+        id: crypto.randomUUID(),
+        name,
+        subjectId,
+      }));
+      this.db.update('groups', (rows) => [...rows, ...groups]);
+      return groups.map((group) => this.toManaged(group));
+    });
+  }
+
+  duplicateGroups(
+    sourceGroupIds: readonly string[],
+    draft: ClassDraft,
+    options: DuplicateOptions,
+  ): Promise<ManagedGroup[]> {
+    return this.network.request(() => {
+      checkBatch(sourceGroupIds);
+      const name = this.checkClass(draft, true);
+      const sources = sourceGroupIds.map((groupId) => this.findGroup(groupId));
+      const groups = sources.map((source): ClassGroup => {
+        const group: ClassGroup = {
+          ...draft,
+          id: crypto.randomUUID(),
+          name,
+          subjectId: source.subjectId,
+        };
+        this.db.update('groups', (rows) => [...rows, group]);
+        if (options.blocks) {
+          const shift = options.dates
+            ? schoolYearShiftDays(source.schoolYear, draft.schoolYear)
+            : null;
+          copyGroupBlocks(this.db, source.id, group.id, shift);
+        }
+        if (options.students) this.copyStudents(source.id, group.id);
+        return group;
+      });
+      return groups.map((group) => this.toManaged(group));
     });
   }
 
@@ -116,14 +151,20 @@ export class MockGroupService extends GroupService {
     });
   }
 
-  enroll(groupId: string, userIds: readonly string[]): Promise<EnrolledStudent[]> {
+  enroll(
+    groupId: string,
+    userIds: readonly string[],
+    alsoGroupIds: readonly string[] = [],
+  ): Promise<EnrolledStudent[]> {
     return this.network.request(() => {
       this.findGroup(groupId);
+      alsoGroupIds.forEach((id) => this.findGroup(id));
       const enrolled = this.enrolledIn(groupId);
       const users = this.db.tables().users;
       const valid =
         userIds.length > 0 &&
         userIds.length <= MAX_ENROLLMENT_BATCH &&
+        alsoGroupIds.length <= MAX_GROUP_BATCH &&
         new Set(userIds).size === userIds.length &&
         userIds.every((userId) => {
           const user = users.find((candidate) => candidate.id === userId);
@@ -135,7 +176,16 @@ export class MockGroupService extends GroupService {
         groupId,
         userId,
       }));
-      this.db.update('enrollments', (current) => [...current, ...rows]);
+      // In the other groups of the class, those already there are skipped
+      const others = alsoGroupIds
+        .filter((id) => id !== groupId)
+        .flatMap((otherId) => {
+          const there = this.enrolledIn(otherId);
+          return userIds
+            .filter((userId) => !there.has(userId))
+            .map((userId) => ({ id: crypto.randomUUID(), groupId: otherId, userId }));
+        });
+      this.db.update('enrollments', (current) => [...current, ...rows, ...others]);
       return rows.map((row) => this.toEnrolled(row));
     });
   }
@@ -159,6 +209,48 @@ export class MockGroupService extends GroupService {
         .sort((a, b) => a.name.localeCompare(b.name, 'es'))
         .map(toRef);
     });
+  }
+
+  /**
+   * The checks of a group, in the order of Postgres: `check_group_teacher` (only when the teacher
+   * is chosen, so a group of a disabled teacher stays editable), the RLS and the checks of the
+   * table. The name without surrounding spaces.
+   */
+  private checkClass(draft: ClassDraft, teacherChosen: boolean): string {
+    const user = this.db.requireUser('teacher', 'admin');
+    const teacher = this.db.tables().users.find((candidate) => candidate.id === draft.teacherId);
+    if (teacherChosen && (!teacher || !isActive(teacher, 'teacher'))) {
+      throw new DataError('invalid', 'The teacher of a group is an active teacher');
+    }
+    if (user.role !== 'admin' && draft.teacherId !== user.id) {
+      throw new DataError('forbidden', 'A teacher saves only groups of their own');
+    }
+    const name = draft.name.trim();
+    if (!name || !SCHOOL_YEAR_PATTERN.test(draft.schoolYear)) throw new DataError('invalid');
+    return name;
+  }
+
+  /** Subjects that exist, each once and not too many: the foreign key and the batch. */
+  private checkSubjects(subjectIds: readonly string[]): void {
+    checkBatch(subjectIds);
+    const subjects = this.db.tables().subjects;
+    if (!subjectIds.every((id) => subjects.some((subject) => subject.id === id))) {
+      throw new DataError('invalid');
+    }
+  }
+
+  /** The active students of a group into another, as `duplicate_groups`. */
+  private copyStudents(sourceGroupId: string, targetGroupId: string): void {
+    const { users, enrollments } = this.db.tables();
+    const rows = enrollments
+      .filter((row) => row.groupId === sourceGroupId)
+      .filter((row) => isActive(findRow(users, row.userId), 'student'))
+      .map((row): Enrollment => ({
+        id: crypto.randomUUID(),
+        groupId: targetGroupId,
+        userId: row.userId,
+      }));
+    this.db.update('enrollments', (current) => [...current, ...rows]);
   }
 
   /** A group the user manages; any other is `not_found`, as row level security hides it. */
@@ -206,6 +298,13 @@ export class MockGroupService extends GroupService {
 
 function isActive(user: AppUser, role: AppUser['role']): boolean {
   return user.role === role && user.status === 'active';
+}
+
+/** Between one and `MAX_GROUP_BATCH`, each once. */
+function checkBatch(ids: readonly string[]): void {
+  if (ids.length === 0 || ids.length > MAX_GROUP_BATCH || new Set(ids).size !== ids.length) {
+    throw new DataError('invalid', 'Between one and the maximum, each once');
+  }
 }
 
 function toRef({ id, name, email }: AppUser): UserRef {

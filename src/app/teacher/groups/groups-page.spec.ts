@@ -20,6 +20,7 @@ import { MockExerciseService } from '../../data/mock/mock-exercise-service';
 import { MockGroupService } from '../../data/mock/mock-group-service';
 import { MockNetwork } from '../../data/mock/mock-network';
 import { GroupsPage } from './groups-page';
+import { nextSchoolYear } from './school-year';
 
 const URL = '/docente/grupos';
 const BASIC = '1.º DAW A · Programación básica';
@@ -107,13 +108,19 @@ describe('GroupsPage', () => {
     await closed();
   }
 
+  /** Chooses subjects in the list of a new group, which stays open until Escape. */
+  async function pickSubjects(dialog: HTMLElement, ...names: string[]): Promise<void> {
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignaturas' }));
+    for (const name of names) await userEvent.click(await screen.findByRole('option', { name }));
+    await userEvent.keyboard('{Escape}');
+  }
+
   /** A new group of advanced programming, which nobody started: it can be removed. */
   async function createGroup(name: string): Promise<void> {
     await userEvent.click(screen.getAllByRole('button', { name: 'Nuevo grupo' })[0]);
     const dialog = await openedDialog();
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), name);
-    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignatura' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'Programación avanzada' }));
+    await pickSubjects(dialog, 'Programación avanzada');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
     await closed();
   }
@@ -151,8 +158,7 @@ describe('GroupsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Nuevo grupo' }));
     let dialog = await openedDialog();
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), 'Prueba');
-    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignatura' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'Programación avanzada' }));
+    await pickSubjects(dialog, 'Programación avanzada');
     await userEvent.click(within(dialog).getByRole('combobox', { name: 'Docente' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Marta Ibáñez Soler' }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
@@ -200,6 +206,130 @@ describe('GroupsPage', () => {
     expect(TestBed.inject(Router).url).toBe(URL);
     expect(screen.getByText(`Grupo ${label} eliminado`)).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1 }));
+  });
+
+  it('creates the same class in several subjects at once, and chooses the first', async () => {
+    await render();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo grupo' }));
+    const dialog = await openedDialog();
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), '2.º DAW B');
+    await pickSubjects(dialog, 'Programación avanzada', 'Programación básica');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear 2 grupos' }));
+    await closed();
+
+    // In the order of the list of subjects, whatever the order of the clicks
+    expect(shown('2.º DAW B · Programación básica')).toBeTruthy();
+    expect(screen.getByText('2 grupos creados')).toBeTruthy();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Grupo' }));
+    expect(
+      await screen.findByRole('option', { name: '2.º DAW B · Programación avanzada' }),
+    ).toBeTruthy();
+  });
+
+  it('duplicates a class for the next year, with its blocks and its students', async () => {
+    await render(DAW_URL);
+
+    await userEvent.click(await action(BASIC, 'Duplicar…'));
+    const dialog = await openedDialog();
+    expect(within(dialog).getByRole('heading').textContent).toContain(
+      'Duplicar 1.º DAW A · 2026/27',
+    );
+    const year = nextSchoolYear('2026/27', new Date());
+    expect(within(dialog).getByRole('textbox', { name: 'Curso' })).toHaveProperty('value', year);
+    const subjects = within(dialog).getByRole('group', { name: 'Asignaturas' });
+    expect(
+      within(subjects)
+        .getAllByRole('checkbox')
+        .map((box) => [text(box.closest('mat-checkbox')), (box as HTMLInputElement).checked]),
+    ).toEqual([
+      [`Programación básica (${DAW_STUDENT_IDS.length} alumnos)`, true],
+      [expect.stringContaining('Desarrollo web en entorno cliente'), true],
+    ]);
+    expect(within(dialog).getByText(/pasan a .*, el mismo día de la semana/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /Su alumnado/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear 2 grupos' }));
+    await closed();
+
+    const label = `${BASIC} · ${year}`;
+    expect(text(shown(label))).toContain(`${DAW_STUDENT_IDS.length} alumnos`);
+    expect(screen.getByText('2 grupos creados')).toBeTruthy();
+  });
+
+  it('lets an administrator duplicate a group for the teacher of the source', async () => {
+    await render(DAW_URL, { role: 'admin' });
+
+    await userEvent.click(await action(BASIC, 'Duplicar…'));
+    const dialog = await openedDialog();
+    expect(text(within(dialog).getByRole('combobox', { name: 'Docente' }))).toContain(
+      'Marta Ibáñez Soler',
+    );
+    const subjects = within(dialog).getByRole('group', { name: 'Asignaturas' });
+    await userEvent.click(within(subjects).getAllByRole('checkbox')[1]);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
+    await closed();
+
+    const year = nextSchoolYear('2026/27', new Date());
+    expect(text(shown(`${BASIC} · ${year}`))).toContain('Docente: Marta Ibáñez Soler');
+  });
+
+  it('duplicates one group without blocks, and says what is missing', async () => {
+    await render(DAW_URL);
+
+    await userEvent.click(await action(BASIC, 'Duplicar…'));
+    const dialog = await openedDialog();
+    const subjects = within(dialog).getByRole('group', { name: 'Asignaturas' });
+    for (const box of within(subjects).getAllByRole('checkbox')) await userEvent.click(box);
+    expect(within(dialog).getByText('Elige al menos una asignatura')).toBeTruthy();
+    const dates = within(dialog).getByRole('checkbox', { name: 'Con sus fechas' });
+    await userEvent.click(dates);
+    expect(within(dialog).getByText(/sin fechas de apertura ni de entrega/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /Sus bloques/ }));
+    expect(within(dialog).getByRole('checkbox', { name: 'Con sus fechas' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(within(dialog).getByText('Solo con los bloques.')).toBeTruthy();
+    const year = within(dialog).getByRole('textbox', { name: 'Curso' });
+    await userEvent.clear(year);
+    await userEvent.type(year, '2026/27');
+    await userEvent.click(within(subjects).getAllByRole('checkbox')[0]);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
+    await closed();
+
+    expect(text(shown(`${BASIC} · 2026/27`))).toContain('Sin alumnos');
+    expect(screen.getByText('Grupo creado')).toBeTruthy();
+  });
+
+  it('keeps the duplicate dialog open when it fails, and does nothing when cancelled', async () => {
+    await render(DAW_URL);
+
+    await userEvent.click(await action(BASIC, 'Duplicar…'));
+    const dialog = await openedDialog();
+    TestBed.inject(MockNetwork).failNextRequest('network');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear 2 grupos' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('Sin conexión');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await closed();
+    expect(screen.queryByText(/grupos creados/)).toBeNull();
+  });
+
+  it('enrolls in the other groups of the class too', async () => {
+    await render(DAW_URL);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Matricular alumnos' }));
+    const dialog = await openedDialog();
+    const also = within(dialog).getByRole('group', { name: 'Matricular también en' });
+    expect(within(also).getByRole('checkbox', { name: WEB })).toHaveProperty('checked', true);
+    await userEvent.type(within(dialog).getByRole('searchbox'), 'elena');
+    await userEvent.click(
+      await within(dialog).findByRole('checkbox', { name: /Elena Vázquez Lorenzo/ }),
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (1)' }));
+    await closed();
+
+    await choose(WEB);
+    expect(students().some((item) => text(item).includes('Elena Vázquez Lorenzo'))).toBe(true);
   });
 
   it('edits a group in place', async () => {
@@ -344,8 +474,7 @@ describe('GroupsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Nuevo grupo' }));
     const dialog = await openedDialog();
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), 'Prueba');
-    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignatura' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'Programación avanzada' }));
+    await pickSubjects(dialog, 'Programación avanzada');
     TestBed.inject(MockNetwork).failNextRequest('network');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
     expect((await within(dialog).findByRole('alert')).textContent).toContain('Sin conexión');

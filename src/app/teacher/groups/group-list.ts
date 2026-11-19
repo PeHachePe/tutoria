@@ -40,3 +40,22 @@ export function labelGroups(groups: readonly ManagedGroup[], locale: AppLocale):
         : labels[index],
   }));
 }
+
+/**
+ * The groups of the class of `group`: the same name and year, one per subject (5.2c, D-079), with
+ * `group` first and the rest in their order. None without a group.
+ */
+export function classOf<T extends { readonly managed: ManagedGroup }>(
+  options: readonly T[],
+  group: { readonly managed: ManagedGroup } | null,
+): T[] {
+  if (!group) return [];
+  const { id, name, schoolYear } = group.managed.group;
+  const same = options.filter(
+    ({ managed }) => managed.group.name === name && managed.group.schoolYear === schoolYear,
+  );
+  return [
+    ...same.filter(({ managed }) => managed.group.id === id),
+    ...same.filter(({ managed }) => managed.group.id !== id),
+  ];
+}

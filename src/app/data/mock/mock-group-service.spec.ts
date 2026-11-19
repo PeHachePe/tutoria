@@ -1,17 +1,22 @@
 import { TestBed } from '@angular/core/testing';
 
 import {
+  type ClassDraft,
+  type DuplicateOptions,
   type GroupDraft,
   MAX_ENROLLMENT_BATCH,
+  MAX_GROUP_BATCH,
   MAX_STUDENT_SEARCH_RESULTS,
 } from '../group-service';
 import { SEED } from './fixtures/seed';
+import { WEB_CLIENT_ID } from './fixtures/subjects';
 import {
   ADMIN_ID,
   DAM_GROUP_ID,
   DAM_STUDENT_IDS,
   DAW_GROUP_ID,
   DAW_STUDENT_IDS,
+  DAW_WEB_GROUP_ID,
   DISABLED_STUDENT_ID,
   OTHER_TEACHER_ID,
   TEACHER_ID,
@@ -28,6 +33,10 @@ const DRAFT: GroupDraft = {
   teacherId: TEACHER_ID,
   subjectId: SUBJECT_ID,
 };
+
+const NEXT_YEAR: ClassDraft = { name: ' 1.º DAW A ', schoolYear: '2027/28', teacherId: TEACHER_ID };
+
+const EVERYTHING: DuplicateOptions = { blocks: true, dates: true, students: true };
 
 /** Elena, a student of 1.º DAM B who is not in 1.º DAW A. */
 const ELENA_ID = DAM_STUDENT_IDS[0];
@@ -182,6 +191,129 @@ describe('MockGroupService', () => {
     });
   });
 
+  describe('createGroups', () => {
+    it('creates the same class in several subjects, in their order and empty', async () => {
+      const created = await service.createGroups(NEXT_YEAR, [WEB_CLIENT_ID, SUBJECT_ID]);
+
+      expect(created.map((row) => [row.group.name, row.group.subjectId, row.studentCount])).toEqual(
+        [
+          ['1.º DAW A', WEB_CLIENT_ID, 0],
+          ['1.º DAW A', SUBJECT_ID, 0],
+        ],
+      );
+      expect(db.tables().groups).toHaveLength(SEED.groups.length + 2);
+    });
+
+    it.each([
+      ['no subject', []],
+      ['a subject twice', [SUBJECT_ID, SUBJECT_ID]],
+      ['a subject that does not exist', [SUBJECT_ID, 'nope']],
+      ['too many subjects', Array.from({ length: MAX_GROUP_BATCH + 1 }, (_, i) => `s-${i}`)],
+    ])('creates none with %s', async (_, subjectIds) => {
+      await expect(service.createGroups(NEXT_YEAR, subjectIds)).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      expect(db.tables().groups).toEqual(SEED.groups);
+    });
+
+    it('does not create groups of another teacher', async () => {
+      await expect(
+        service.createGroups({ ...NEXT_YEAR, teacherId: OTHER_TEACHER_ID }, [SUBJECT_ID]),
+      ).rejects.toMatchObject({ kind: 'forbidden' });
+    });
+  });
+
+  describe('duplicateGroups', () => {
+    it('duplicates a class with its blocks, dates a year later and active students', async () => {
+      const created = await service.duplicateGroups(
+        [DAW_GROUP_ID, DAW_WEB_GROUP_ID],
+        NEXT_YEAR,
+        EVERYTHING,
+      );
+
+      expect(created.map((row) => [row.group.name, row.group.schoolYear, row.subject.id])).toEqual([
+        ['1.º DAW A', '2027/28', SUBJECT_ID],
+        ['1.º DAW A', '2027/28', WEB_CLIENT_ID],
+      ]);
+      const tables = db.tables();
+      const [copy] = created;
+      const titles = (groupId: string) =>
+        tables.classBlocks
+          .filter((block) => block.groupId === groupId)
+          .sort((a, b) => a.position - b.position)
+          .map((block) => block.title);
+      expect(titles(copy.group.id)).toEqual(titles(DAW_GROUP_ID));
+      expect(tables.assignments.filter((row) => row.groupId === copy.group.id)).toHaveLength(
+        tables.assignments.filter((row) => row.groupId === DAW_GROUP_ID).length,
+      );
+      const due = tables.assignments
+        .filter((row) => row.groupId === copy.group.id && row.dueAt !== null)
+        .map((row) => new Date(row.dueAt!).getDay());
+      const sourceDue = tables.assignments
+        .filter((row) => row.groupId === DAW_GROUP_ID && row.dueAt !== null)
+        .map((row) => new Date(row.dueAt!).getDay());
+      expect(due).toEqual(sourceDue);
+      expect(copy.studentCount).toBe(
+        SEED.enrollments.filter((row) => row.groupId === DAW_GROUP_ID).length,
+      );
+      expect(copy.started).toBe(false);
+    });
+
+    it('leaves out the disabled students', async () => {
+      db.update('enrollments', (rows) => [
+        ...rows,
+        { id: 'raul', groupId: DAW_GROUP_ID, userId: DISABLED_STUDENT_ID },
+      ]);
+
+      const [copy] = await service.duplicateGroups([DAW_GROUP_ID], NEXT_YEAR, EVERYTHING);
+
+      await expect(service.listStudents(copy.group.id)).resolves.not.toContainEqual(
+        expect.objectContaining({ student: expect.objectContaining({ id: DISABLED_STUDENT_ID }) }),
+      );
+    });
+
+    it('brings blocks without dates, or nothing', async () => {
+      const [withoutDates] = await service.duplicateGroups([DAW_GROUP_ID], NEXT_YEAR, {
+        blocks: true,
+        dates: false,
+        students: false,
+      });
+      const [empty] = await service.duplicateGroups([DAW_GROUP_ID], NEXT_YEAR, {
+        blocks: false,
+        dates: true,
+        students: false,
+      });
+
+      const { classBlocks, assignments } = db.tables();
+      const copied = assignments.filter((row) => row.groupId === withoutDates.group.id);
+      expect(copied.length).toBeGreaterThan(0);
+      expect(copied.every((row) => row.dueAt === null)).toBe(true);
+      expect(
+        classBlocks
+          .filter((row) => row.groupId === withoutDates.group.id)
+          .every((row) => row.opensAt === null),
+      ).toBe(true);
+      expect(withoutDates.studentCount).toBe(0);
+      expect(classBlocks.some((row) => row.groupId === empty.group.id)).toBe(false);
+    });
+
+    it('does not duplicate a group of another teacher, and creates nothing', async () => {
+      await expect(
+        service.duplicateGroups([DAW_GROUP_ID, DAM_GROUP_ID], NEXT_YEAR, EVERYTHING),
+      ).rejects.toMatchObject({ kind: 'not_found' });
+      expect(db.tables().groups).toEqual(SEED.groups);
+    });
+
+    it.each([
+      ['no group', []],
+      ['a group twice', [DAW_GROUP_ID, DAW_GROUP_ID]],
+    ])('duplicates none with %s', async (_, groupIds) => {
+      await expect(service.duplicateGroups(groupIds, NEXT_YEAR, EVERYTHING)).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+    });
+  });
+
   describe('removeGroup', () => {
     it('removes a group nobody started, with its enrollments, blocks and assignments', async () => {
       const { group } = await service.saveGroup(DRAFT);
@@ -275,6 +407,34 @@ describe('MockGroupService', () => {
         kind: 'invalid',
       });
       expect(db.tables().enrollments).toEqual(SEED.enrollments);
+    });
+
+    it('enrolls in the other groups of the class too, skipping who is already there', async () => {
+      const [first, second] = await service.createGroups(NEXT_YEAR, [SUBJECT_ID, WEB_CLIENT_ID]);
+      await service.enroll(second.group.id, [ELENA_ID]);
+
+      const enrolled = await service.enroll(
+        first.group.id,
+        [ELENA_ID, DAW_STUDENT_IDS[0]],
+        [first.group.id, second.group.id],
+      );
+
+      expect(enrolled.map((row) => row.student.id)).toEqual([ELENA_ID, DAW_STUDENT_IDS[0]]);
+      const inSecond = await service.listStudents(second.group.id);
+      expect(inSecond.map((row) => row.student.id).sort()).toEqual(
+        [ELENA_ID, DAW_STUDENT_IDS[0]].sort(),
+      );
+    });
+
+    it('does not enroll in another group of another teacher, nor in too many', async () => {
+      const { group } = await service.saveGroup(DRAFT);
+      await expect(service.enroll(group.id, [ELENA_ID], [DAM_GROUP_ID])).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+      const many = Array.from({ length: MAX_GROUP_BATCH + 1 }, () => DAW_GROUP_ID);
+      await expect(service.enroll(group.id, [ELENA_ID], many)).rejects.toMatchObject({
+        kind: 'invalid',
+      });
     });
 
     it('does not enroll in a group of another teacher', async () => {

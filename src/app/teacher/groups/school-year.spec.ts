@@ -1,5 +1,5 @@
 import { SCHOOL_YEAR_PATTERN } from '../../data/group-service';
-import { isSchoolYear, schoolYearOf } from './school-year';
+import { isSchoolYear, nextSchoolYear, schoolYearOf } from './school-year';
 
 describe('schoolYearOf', () => {
   it('is still the previous year on 31 August', () => {
@@ -29,5 +29,16 @@ describe('isSchoolYear', () => {
   it('refuses another shape or years apart', () => {
     expect(isSchoolYear('2026-27')).toBe(false);
     expect(isSchoolYear('2026/99')).toBe(false);
+  });
+});
+
+describe('nextSchoolYear', () => {
+  it('is the year after that of the group', () => {
+    expect(nextSchoolYear('2026/27', new Date(2026, 10, 19))).toBe('2027/28');
+    expect(nextSchoolYear('2099/00', new Date(2099, 10, 19))).toBe('2100/01');
+  });
+
+  it('or the current one, if the group is older', () => {
+    expect(nextSchoolYear('2024/25', new Date(2026, 10, 19))).toBe('2026/27');
   });
 });

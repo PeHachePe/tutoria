@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
 
 import { BASIC_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
-import { DAW_GROUP_ID, GROUPS, TEACHER_ID } from '../../data/mock/fixtures/users';
+import { GROUPS, TEACHER_ID } from '../../data/mock/fixtures/users';
 import type { ManagedGroup } from '../../data/group-service';
 import { SUBJECTS } from '../../data/mock/fixtures/subjects';
 import {
@@ -11,16 +11,16 @@ import {
   groupSchema,
   MAX_GROUP_NAME_LENGTH,
   teacherChoices,
-  toGroupDraft,
+  toClassDraft,
   toGroupFormModel,
 } from './group-form';
 
-const DEFAULTS = { schoolYear: '2026/27', subjectId: '', teacherId: TEACHER_ID };
+const DEFAULTS = { schoolYear: '2026/27', subjectIds: [], teacherId: TEACHER_ID };
 
 const VALID: GroupFormModel = {
   name: '2.º DAW A',
   schoolYear: '2026/27',
-  subjectId: BASIC_PROGRAMMING_ID,
+  subjectIds: [BASIC_PROGRAMMING_ID],
   teacherId: TEACHER_ID,
 };
 
@@ -34,7 +34,7 @@ const DAW: ManagedGroup = {
 
 function errorsOf(model: GroupFormModel): Record<string, string[]> {
   const groupForm = form(signal(model), groupSchema, { injector: TestBed.inject(Injector) });
-  const keys = ['name', 'schoolYear', 'subjectId', 'teacherId'] as const;
+  const keys = ['name', 'schoolYear', 'subjectIds', 'teacherId'] as const;
   return Object.fromEntries(
     keys.map((key) => [
       key,
@@ -58,7 +58,7 @@ describe('toGroupFormModel', () => {
     expect(toGroupFormModel(DAW, DEFAULTS)).toEqual({
       name: '1.º DAW A',
       schoolYear: '2026/27',
-      subjectId: BASIC_PROGRAMMING_ID,
+      subjectIds: [BASIC_PROGRAMMING_ID],
       teacherId: TEACHER_ID,
     });
   });
@@ -70,10 +70,10 @@ describe('groupSchema', () => {
   });
 
   it('requires every field', () => {
-    expect(errorsOf({ name: '', schoolYear: '', subjectId: '', teacherId: '' })).toEqual({
+    expect(errorsOf({ name: '', schoolYear: '', subjectIds: [], teacherId: '' })).toEqual({
       name: ['Escribe el nombre del grupo'],
       schoolYear: ['Escribe el curso'],
-      subjectId: ['Elige la asignatura'],
+      subjectIds: ['Elige la asignatura'],
       teacherId: ['Elige el docente'],
     });
   });
@@ -112,12 +112,12 @@ describe('teacherChoices', () => {
   });
 });
 
-describe('toGroupDraft', () => {
-  it('trims the texts of a new group, without an id', () => {
-    expect(toGroupDraft({ ...VALID, name: ' 2.º DAW A ', schoolYear: '2026/27 ' })).toEqual(VALID);
-  });
-
-  it('keeps the id of an existing group', () => {
-    expect(toGroupDraft(VALID, DAW_GROUP_ID)).toEqual({ id: DAW_GROUP_ID, ...VALID });
+describe('toClassDraft', () => {
+  it('trims the texts and leaves the subjects out', () => {
+    expect(toClassDraft({ ...VALID, name: ' 2.º DAW A ', schoolYear: '2026/27 ' })).toEqual({
+      name: '2.º DAW A',
+      schoolYear: '2026/27',
+      teacherId: TEACHER_ID,
+    });
   });
 });

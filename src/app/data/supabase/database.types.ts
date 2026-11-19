@@ -710,6 +710,24 @@ export type Database = {
         };
         Returns: number;
       };
+      copy_blocks: {
+        Args: {
+          source_group_id: string;
+          target_group_id: string;
+          time_zone?: string;
+          with_dates: boolean;
+        };
+        Returns: number;
+      };
+      copy_group_blocks: {
+        Args: {
+          shift_days: number;
+          source_group_id: string;
+          target_group_id: string;
+          time_zone: string;
+        };
+        Returns: number;
+      };
       create_block: {
         Args: {
           block_is_hidden: boolean;
@@ -740,8 +758,33 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Database['public']['Enums']['user_role'];
       };
+      duplicate_groups: {
+        Args: {
+          group_name: string;
+          group_school_year: string;
+          group_teacher_id: string;
+          source_group_ids: string[];
+          time_zone?: string;
+          with_blocks: boolean;
+          with_dates: boolean;
+          with_students: boolean;
+        };
+        Returns: {
+          id: string;
+          name: string;
+          school_year: string;
+          subject_id: string;
+          teacher_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'class_group';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       enroll_students: {
-        Args: { student_ids: string[]; target_group_id: string };
+        Args: { also_group_ids?: string[]; student_ids: string[]; target_group_id: string };
         Returns: {
           email: string;
           enrollment_id: string;
@@ -953,6 +996,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      school_year_shift_days: {
+        Args: { source_year: string; target_year: string };
+        Returns: number;
       };
       search_students: {
         Args: { search: string; target_group_id: string };

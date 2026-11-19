@@ -14,6 +14,7 @@ import {
   DAM_GROUP_ID,
   DAW_GROUP_ID,
   DAW_STUDENT_IDS,
+  DAW_WEB_GROUP_ID,
   OTHER_TEACHER_ID,
   TEACHER_ID,
 } from './fixtures/users';
@@ -60,9 +61,9 @@ describe('MockBlockService', () => {
     it('lists the groups of the teacher with their subject, by name and subject', async () => {
       const groups = await service.listGroups();
 
-      expect(groups.map((group) => [group.name, group.subject.name])).toEqual([
-        ['1.º DAW A', 'Desarrollo web en entorno cliente'],
-        ['1.º DAW A', 'Programación básica'],
+      expect(groups.map((group) => [group.name, group.schoolYear, group.subject.name])).toEqual([
+        ['1.º DAW A', '2026/27', 'Desarrollo web en entorno cliente'],
+        ['1.º DAW A', '2026/27', 'Programación básica'],
       ]);
     });
 
@@ -323,6 +324,58 @@ describe('MockBlockService', () => {
       await expect(service.moveAssignment(id, STARTED_BLOCK, 1)).rejects.toMatchObject({
         kind: 'not_found',
       });
+    });
+  });
+
+  describe('copyBlocks', () => {
+    it('copies the blocks of a group after those of another, with their exercises and dates', async () => {
+      const before = blockIdsOf(DAW_WEB_GROUP_ID);
+      const sources = blockIdsOf(DAW_GROUP_ID);
+
+      await expect(service.copyBlocks(DAW_GROUP_ID, DAW_WEB_GROUP_ID, true)).resolves.toBe(
+        sources.length,
+      );
+
+      const blocks = await service.listBlocks(DAW_WEB_GROUP_ID);
+      const source = await service.listBlocks(DAW_GROUP_ID);
+      expect(blocks.slice(0, before.length).map((row) => row.block.id)).toEqual(before);
+      const copies = blocks.slice(before.length);
+      const shape = (rows: typeof blocks) =>
+        rows.map(({ block, assignments }) => [
+          block.title,
+          block.isHidden,
+          block.opensAt,
+          assignments.map(({ assignment }) => [
+            assignment.exerciseId,
+            assignment.isHidden,
+            assignment.dueAt,
+          ]),
+        ]);
+      // The same year: the same dates
+      expect(shape(copies)).toEqual(shape(source));
+      expect(copies.every((row) => row.assignments.every((a) => a.studentCount === 0))).toBe(true);
+    });
+
+    it('copies without dates', async () => {
+      await service.copyBlocks(DAW_GROUP_ID, DAW_WEB_GROUP_ID, false);
+
+      const copied = db
+        .tables()
+        .assignments.filter(
+          (row) => row.groupId === DAW_WEB_GROUP_ID && !SEED.assignments.includes(row),
+        );
+      expect(copied.length).toBeGreaterThan(0);
+      expect(copied.every((row) => row.dueAt === null)).toBe(true);
+    });
+
+    it('does not copy from or into a group of another teacher, nor into the same', async () => {
+      await expect(service.copyBlocks(DAM_GROUP_ID, DAW_GROUP_ID, true)).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+      await expect(service.copyBlocks(DAW_GROUP_ID, DAW_GROUP_ID, true)).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      expect(db.tables().classBlocks).toEqual(SEED.classBlocks);
     });
   });
 });

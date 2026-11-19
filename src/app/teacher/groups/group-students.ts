@@ -153,8 +153,12 @@ export class GroupStudents {
   readonly groupName = input.required<string>();
   /** Every group of the user: the others can lend their students. */
   readonly groups = input.required<readonly EnrollSource[]>();
+  /** The other groups of its class (5.2c): those enrolled can go into them too. */
+  readonly classmates = input<readonly EnrollSource[]>([]);
   /** How many are enrolled, after each load or change. */
   readonly countChange = output<number>();
+  /** Students were enrolled in other groups of the class too: their counts changed. */
+  readonly classChange = output();
 
   protected readonly skeletonRows = SKELETON_ROWS;
 
@@ -204,19 +208,22 @@ export class GroupStudents {
         groupName: this.groupName(),
         enrolledIds: new Set(this.entries().map(({ student }) => student.id)),
         sources: this.groups().filter(({ id }) => id !== groupId),
+        classmates: this.classmates(),
         // A disabled account stays in its group, but the server would turn the whole batch down
         studentsOf: async (sourceId) =>
           (await this.service.listStudents(sourceId))
             .filter(({ active }) => active)
             .map(({ student }) => student),
         search: (text) => this.service.searchStudents(groupId, text),
-        enroll: async (chosen) => {
+        enroll: async (chosen, alsoGroupIds) => {
           try {
             const enrolled = await this.service.enroll(
               groupId,
               chosen.map(({ id }) => id),
+              alsoGroupIds,
             );
             this.change((entries) => this.sorted([...entries, ...enrolled]));
+            if (alsoGroupIds.length > 0) this.classChange.emit();
           } catch (error) {
             this.students.reload();
             throw error;

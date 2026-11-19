@@ -2,6 +2,8 @@ import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
 import {
+  type ClassDraft,
+  type DuplicateOptions,
   type EnrolledStudent,
   type GroupDraft,
   GroupService,
@@ -13,6 +15,7 @@ import {
 import { SUPABASE_CLIENT } from './supabase-client';
 import { unwrap } from './supabase-error';
 import { type Row, toClassGroup, toSubject } from './supabase-rows';
+import { localTimeZone } from './time-zone';
 
 /**
  * The group with its subject and the name of its teacher, by its own key: through `enrollment`,
@@ -84,6 +87,55 @@ export class SupabaseGroupService extends GroupService {
     return toManaged(row, summaries.get(id) ?? EMPTY);
   }
 
+  /** In one insert, so all or none. */
+  async createGroups(draft: ClassDraft, subjectIds: readonly string[]): Promise<ManagedGroup[]> {
+    const rows = unwrap(
+      await this.supabase
+        .from('class_group')
+        .insert(
+          subjectIds.map((subjectId) => ({
+            name: draft.name.trim(),
+            school_year: draft.schoolYear,
+            teacher_id: draft.teacherId,
+            subject_id: subjectId,
+          })),
+        )
+        .select(MANAGED_GROUP),
+    );
+    return inOrder(rows, subjectIds, (row) => row.subject_id).map((row) => toManaged(row, EMPTY));
+  }
+
+  /**
+   * With the RPC `duplicate_groups`, in one transaction (the dates move in the zone of the
+   * browser), and then the new groups as the list shows them.
+   */
+  async duplicateGroups(
+    sourceGroupIds: readonly string[],
+    draft: ClassDraft,
+    options: DuplicateOptions,
+  ): Promise<ManagedGroup[]> {
+    const created = unwrap(
+      await this.supabase.rpc('duplicate_groups', {
+        source_group_ids: [...sourceGroupIds],
+        group_name: draft.name.trim(),
+        group_school_year: draft.schoolYear,
+        group_teacher_id: draft.teacherId,
+        with_blocks: options.blocks,
+        with_dates: options.dates,
+        with_students: options.students,
+        time_zone: localTimeZone(),
+      }),
+    );
+    const ids = created.map((row) => row.id);
+    const [groups, summaries] = await Promise.all([
+      this.supabase.from('class_group').select(MANAGED_GROUP).in('id', ids),
+      this.summaries(),
+    ]);
+    return inOrder(unwrap(groups), ids, (row) => row.id).map((row) =>
+      toManaged(row, summaries.get(row.id) ?? EMPTY),
+    );
+  }
+
   /**
    * The RLS deletes no row, without an error, of a group somebody started or of one the user does
    * not manage: only then a second request tells them apart, as the mock service does.
@@ -126,7 +178,11 @@ export class SupabaseGroupService extends GroupService {
    * students, as their new enrollments are what lets the teacher read them. The limits are checked
    * here too, so a batch the server would reject is not sent.
    */
-  async enroll(groupId: string, userIds: readonly string[]): Promise<EnrolledStudent[]> {
+  async enroll(
+    groupId: string,
+    userIds: readonly string[],
+    alsoGroupIds: readonly string[] = [],
+  ): Promise<EnrolledStudent[]> {
     if (
       userIds.length === 0 ||
       userIds.length > MAX_ENROLLMENT_BATCH ||
@@ -138,6 +194,7 @@ export class SupabaseGroupService extends GroupService {
       await this.supabase.rpc('enroll_students', {
         target_group_id: groupId,
         student_ids: [...userIds],
+        also_group_ids: [...alsoGroupIds],
       }),
     );
     // Only an active student can be enrolled
@@ -184,6 +241,11 @@ function toManaged({ subject, teacher, ...group }: ManagedRow, summary: Summary)
     teacherName: teacher.name,
     ...summary,
   };
+}
+
+/** The rows in the order of `keys`: a response does not promise one. */
+function inOrder<T>(rows: readonly T[], keys: readonly string[], keyOf: (row: T) => string): T[] {
+  return [...rows].sort((a, b) => keys.indexOf(keyOf(a)) - keys.indexOf(keyOf(b)));
 }
 
 function toEnrolled(row: {

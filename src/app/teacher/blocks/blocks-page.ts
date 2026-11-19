@@ -49,6 +49,7 @@ import {
   type AddExercisesResult,
 } from './add-exercises-dialog';
 import { BlockDialog, type BlockDialogData } from './block-dialog';
+import { CopyBlocksDialog, type CopyBlocksDialogData } from './copy-blocks-dialog';
 import { moveItem } from './block-order';
 import { DueDateDialog, type DueDateDialogData, type DueDateDialogResult } from './due-date-dialog';
 
@@ -125,12 +126,21 @@ export class BlocksPage {
     return groups.find((group) => group.id === this.grupo()) ?? groups.at(0) ?? null;
   });
 
-  protected readonly groupOptions = computed(() =>
-    this.groupList().map((group) => ({
+  /** «Name · subject», with the year when that is not enough: the same class of another year. */
+  protected readonly groupOptions = computed(() => {
+    const groups = this.groupList();
+    const labels = groups.map(
+      (group) => `${group.name} · ${subjectName(group.subject, this.locale).name}`,
+    );
+    return groups.map((group, index) => ({
+      group,
       id: group.id,
-      label: `${group.name} · ${subjectName(group.subject, this.locale).name}`,
-    })),
-  );
+      label:
+        labels.filter((label) => label === labels[index]).length > 1
+          ? `${labels[index]} · ${group.schoolYear}`
+          : labels[index],
+    }));
+  });
 
   /** Changed in place by every action, so the page answers at once; reloaded only after a failure. */
   protected readonly blocks = resource({
@@ -210,6 +220,46 @@ export class BlocksPage {
     afterNextRender(() => this.document.getElementById(`block-${createdId}`)?.focus(), {
       injector: this.injector,
     });
+  }
+
+  /**
+   * The blocks of another group after those of this one (5.2c, D-079): the same class of last year
+   * or a parallel group. The server gives them their ids, so they are reloaded.
+   */
+  protected async copyBlocks(group: AssignedGroup): Promise<void> {
+    const options = this.groupOptions();
+    // The page offers it only for the group it shows, which is one of the list
+    const [target] = options.filter((option) => option.id === group.id);
+    let copied = 0;
+    const ref = this.dialog.open<CopyBlocksDialog, CopyBlocksDialogData, boolean>(
+      CopyBlocksDialog,
+      {
+        data: {
+          target,
+          blockCount: this.blocks.value().length,
+          // Those of the same subject first, the most recent year first
+          sources: options
+            .filter((option) => option.id !== group.id)
+            .sort(
+              (a, b) =>
+                Number(b.group.subject.id === group.subject.id) -
+                  Number(a.group.subject.id === group.subject.id) ||
+                b.group.schoolYear.localeCompare(a.group.schoolYear),
+            ),
+          copy: async (sourceGroupId, withDates) => {
+            copied = await this.service.copyBlocks(sourceGroupId, group.id, withDates);
+          },
+        },
+        injector: this.injector,
+      },
+    );
+    if ((await firstValueFrom(ref.afterClosed())) !== true) return;
+    this.blocks.reload();
+    this.snackBar.open(
+      copied === 0
+        ? $localize`:@@blocks.copied.none:Ese grupo no tiene bloques: no se ha copiado nada`
+        : $localize`:@@blocks.copied:Bloques copiados: ${copied}:count:`,
+    );
   }
 
   protected async editBlock(planned: PlannedBlock): Promise<void> {

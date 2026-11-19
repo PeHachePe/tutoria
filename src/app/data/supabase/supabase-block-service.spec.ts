@@ -35,16 +35,19 @@ describe('SupabaseBlockService', () => {
     const web = subjectRow({ id: 'web', name: 'Desarrollo web' });
     server.on('GET', '/rest/v1/class_group', {
       body: [
-        { id: 'daw', name: '1.º DAW A', subject: subjectRow() },
-        { id: 'dam', name: '1.º DAM B', subject: subjectRow() },
-        { id: 'daw-web', name: '1.º DAW A', subject: web },
+        { id: 'daw', name: '1.º DAW A', school_year: '2026/27', subject: subjectRow() },
+        { id: 'dam', name: '1.º DAM B', school_year: '2026/27', subject: subjectRow() },
+        { id: 'daw-web', name: '1.º DAW A', school_year: '2026/27', subject: web },
       ],
     });
 
     const groups = await service.listGroups();
 
     expect(groups.map((group) => group.id)).toEqual(['dam', 'daw-web', 'daw']);
-    expect(groups[1].subject).toMatchObject({ id: 'web', name: 'Desarrollo web' });
+    expect(groups[1]).toMatchObject({
+      schoolYear: '2026/27',
+      subject: { id: 'web', name: 'Desarrollo web' },
+    });
   });
 
   it('lists the blocks of a group in order, with their exercises and who started them', async () => {
@@ -254,6 +257,18 @@ describe('SupabaseBlockService', () => {
 
     await expect(service.moveAssignment('a-1', 'block-2', 1)).rejects.toMatchObject({
       kind: 'invalid',
+    });
+  });
+
+  it('copies the blocks of another group with the RPC, in the zone of the browser', async () => {
+    server.on('POST', '/rest/v1/rpc/copy_blocks', { body: 6 });
+
+    await expect(service.copyBlocks('daw', 'daw-2027', true)).resolves.toBe(6);
+    expect(server.sentTo('POST', '/rest/v1/rpc/copy_blocks')[0].body).toEqual({
+      source_group_id: 'daw',
+      target_group_id: 'daw-2027',
+      with_dates: true,
+      time_zone: 'Europe/Madrid',
     });
   });
 });

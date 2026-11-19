@@ -5,10 +5,13 @@ import {
   type BlockDraft,
   BlockService,
   type PlannedBlock,
+  type PlannedGroup,
 } from '../block-service';
 import { DataError } from '../data-error';
-import type { AssignedGroup, ClassBlock, ExerciseAssignment } from '../exercise';
+import type { ClassBlock, ExerciseAssignment } from '../exercise';
+import { schoolYearShiftDays } from '../school-year-shift';
 import type { ClassGroup } from '../user';
+import { copyGroupBlocks } from './copy-group-blocks';
 import { canManageGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -22,7 +25,7 @@ export class MockBlockService extends BlockService {
   private readonly db = inject(MockDb);
   private readonly network = inject(MockNetwork);
 
-  listGroups(): Promise<AssignedGroup[]> {
+  listGroups(): Promise<PlannedGroup[]> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
       const tables = this.db.tables();
@@ -31,6 +34,7 @@ export class MockBlockService extends BlockService {
         .map((group) => ({
           id: group.id,
           name: group.name,
+          schoolYear: group.schoolYear,
           subject: findRow(tables.subjects, group.subjectId),
         }))
         .sort(
@@ -167,6 +171,18 @@ export class MockBlockService extends BlockService {
       const assignments = this.db.tables().assignments.filter((row) => row.blockId === blockId);
       const positions = newPositions(assignments, assignmentIds);
       this.db.update('assignments', (rows) => rows.map((row) => withPosition(row, positions)));
+    });
+  }
+
+  copyBlocks(sourceGroupId: string, targetGroupId: string, withDates: boolean): Promise<number> {
+    return this.network.request(() => {
+      const source = this.findGroup(sourceGroupId);
+      const target = this.findGroup(targetGroupId);
+      if (source.id === target.id) {
+        throw new DataError('invalid', 'A group is copied into another');
+      }
+      const shift = withDates ? schoolYearShiftDays(source.schoolYear, target.schoolYear) : null;
+      return copyGroupBlocks(this.db, source.id, target.id, shift);
     });
   }
 

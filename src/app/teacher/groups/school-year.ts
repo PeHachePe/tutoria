@@ -19,3 +19,14 @@ export function isSchoolYear(text: string): boolean {
   const [start, end] = text.split('/').map(Number);
   return (start + 1) % 100 === end;
 }
+
+/**
+ * The school year a group is duplicated for (5.2c): the one after its own, or the current one if
+ * that is later, as for a group of two years ago.
+ */
+export function nextSchoolYear(schoolYear: string, today: Date): string {
+  const start = Number(schoolYear.slice(0, 4)) + 1;
+  const next = `${start}/${String((start + 1) % 100).padStart(2, '0')}`;
+  const current = schoolYearOf(today);
+  return current > next ? current : next;
+}

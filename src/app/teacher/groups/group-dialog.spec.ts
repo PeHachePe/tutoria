@@ -28,7 +28,7 @@ function open(data: Partial<GroupDialogData>, save = vi.fn<GroupDialogData['save
       managed: null,
       subjects: SUBJECTS,
       teachers: null,
-      defaults: { schoolYear: '2026/27', subjectId: '', teacherId: TEACHER_ID },
+      defaults: { schoolYear: '2026/27', subjectIds: [], teacherId: TEACHER_ID },
       save,
       ...data,
     },
@@ -63,22 +63,41 @@ describe('GroupDialog', () => {
     expect(within(dialog).queryByRole('combobox', { name: 'Docente' })).toBeNull();
 
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), '2.º DAW A');
-    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignatura' }));
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignaturas' }));
     await userEvent.click(await screen.findByRole('option', { name: SUBJECTS[2].name }));
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
 
     expect(save).toHaveBeenCalledWith({
       name: '2.º DAW A',
       schoolYear: '2026/27',
-      subjectId: WEB_CLIENT_ID,
+      subjectIds: [WEB_CLIENT_ID],
       teacherId: TEACHER_ID,
     });
+  });
+
+  it('creates the same class in several subjects at once', async () => {
+    const save = open({});
+    const dialog = await screen.findByRole('dialog', { name: 'Nuevo grupo' });
+    await focused(dialog);
+    expect(within(dialog).getByText('Se crea un grupo en cada una.')).toBeTruthy();
+
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), '1.º DAW A');
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Asignaturas' }));
+    await userEvent.click(await screen.findByRole('option', { name: SUBJECTS[0].name }));
+    await userEvent.click(await screen.findByRole('option', { name: SUBJECTS[2].name }));
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear 2 grupos' }));
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ subjectIds: [SUBJECTS[0].id, WEB_CLIENT_ID] }),
+    );
   });
 
   it('says what is missing, the teacher too for an administrator', async () => {
     const save = open({
       teachers: TEACHERS,
-      defaults: { schoolYear: '', subjectId: '', teacherId: '' },
+      defaults: { schoolYear: '', subjectIds: [], teacherId: '' },
     });
     const dialog = await screen.findByRole('dialog', { name: 'Nuevo grupo' });
     await focused(dialog);
@@ -86,6 +105,7 @@ describe('GroupDialog', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Crear el grupo' }));
 
     expect(within(dialog).getByText('Escribe el curso')).toBeTruthy();
+    expect(within(dialog).getByText('Elige la asignatura')).toBeTruthy();
     expect(within(dialog).getByText('Elige el docente')).toBeTruthy();
     expect(save).not.toHaveBeenCalled();
   });

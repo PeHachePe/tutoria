@@ -16,6 +16,8 @@ import {
   exerciseId,
 } from '../../data/mock/fixtures/exercises';
 import { fixtureId } from '../../data/mock/fixtures/fixture-id';
+import { SEED } from '../../data/mock/fixtures/seed';
+import { BASIC_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
 import { DAW_GROUP_ID, DAW_WEB_GROUP_ID, TEACHER_ID } from '../../data/mock/fixtures/users';
 import { MockBlockService } from '../../data/mock/mock-block-service';
 import { MockDb } from '../../data/mock/mock-db';
@@ -1045,6 +1047,121 @@ describe('BlocksPage', () => {
 
       expect(text(dialog)).toContain('Elige el día');
       expect(screen.getByRole('dialog')).toBeTruthy();
+    });
+  });
+
+  describe('copying blocks (5.2c)', () => {
+    const NEXT = 'next-year';
+    const EMPTY = 'empty-group';
+
+    /** The same class next year, without blocks, and a group of the same subject without any. */
+    function newGroups(db: MockDb): void {
+      db.update('groups', (groups) => [
+        ...groups,
+        {
+          id: NEXT,
+          name: '1.º DAW A',
+          schoolYear: '2027/28',
+          teacherId: TEACHER_ID,
+          subjectId: BASIC_PROGRAMMING_ID,
+        },
+        {
+          id: EMPTY,
+          name: 'Taller',
+          schoolYear: '2026/27',
+          teacherId: TEACHER_ID,
+          subjectId: BASIC_PROGRAMMING_ID,
+        },
+      ]);
+    }
+
+    it('copies the blocks of last year into an empty group, with their dates moved', async () => {
+      const harness = await renderBlocks(`/docente/bloques?grupo=${NEXT}`, newGroups);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      const dialog = await openDialog();
+      expect(text(within(dialog).getByRole('heading'))).toBe(
+        'Copiar bloques en 1.º DAW A · Programación básica · 2027/28',
+      );
+      expect(text(dialog)).toContain('como los primeros de este grupo');
+      expect(text(dialog)).toContain('Elige el grupo para ver dónde caen.');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      expect(text(dialog)).toContain('Elige el grupo');
+
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      const options = await screen.findAllByRole('option');
+      // Those of the same subject first
+      expect(options.map((option) => text(option))).toEqual([
+        '1.º DAW A · Programación básica · 2026/27',
+        'Taller · Programación básica',
+        '1.º DAW A · Desarrollo web en entorno cliente',
+      ]);
+      await userEvent.click(options[0]);
+      expect(text(dialog)).toContain('pasan a 2027/28, el mismo día de la semana');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+
+      const sources = SEED.classBlocks.filter((row) => row.groupId === DAW_GROUP_ID);
+      expect(blockHeadings()).toHaveLength(sources.length);
+      expect(snack).toHaveBeenCalledWith(`Bloques copiados: ${sources.length}`);
+      const copiedDates = db
+        .tables()
+        .assignments.filter((row) => row.groupId === NEXT && row.dueAt !== null);
+      expect(copiedDates.length).toBeGreaterThan(0);
+      expect(copiedDates.every((row) => row.dueAt!.startsWith('2027-'))).toBe(true);
+    });
+
+    it('copies after the blocks a group has, without dates, and says when there was nothing', async () => {
+      const harness = await renderBlocks(DAW, newGroups);
+      const before = blockHeadings().length;
+
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      let dialog = await openDialog();
+      expect(text(dialog)).toContain(`después de los ${before} bloques que ya tiene`);
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      await userEvent.click(
+        await screen.findByRole('option', { name: 'Taller · Programación básica' }),
+      );
+      expect(text(dialog)).toContain('Las mismas fechas de apertura y entrega.');
+      await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Con sus fechas' }));
+      expect(text(dialog)).toContain('sin fechas de apertura ni de entrega');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+      expect(snack).toHaveBeenCalledWith('Ese grupo no tiene bloques: no se ha copiado nada');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      await userEvent.click(
+        await screen.findByRole('option', {
+          name: '1.º DAW A · Desarrollo web en entorno cliente',
+        }),
+      );
+      TestBed.inject(MockNetwork).failNextRequest('network');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      expect((await within(dialog).findByRole('alert')).textContent).toContain(
+        'No se han podido copiar los bloques',
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+
+      const web = SEED.classBlocks.filter((row) => row.groupId === DAW_WEB_GROUP_ID);
+      expect(blockHeadings()).toHaveLength(before + web.length);
+    });
+
+    it('is not offered with a single group, and a cancelled copy changes nothing', async () => {
+      const harness = await renderBlocks(DAW, newGroups);
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      const dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+      await closed(harness);
+      expect(snack).not.toHaveBeenCalled();
+
+      TestBed.resetTestingModule();
+      await renderBlocks(DAW, (db) =>
+        db.update('groups', (groups) => groups.filter((group) => group.id === DAW_GROUP_ID)),
+      );
+      expect(screen.queryByRole('button', { name: 'Copiar de otro grupo' })).toBeNull();
     });
   });
 });

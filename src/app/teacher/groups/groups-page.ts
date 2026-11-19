@@ -31,10 +31,12 @@ import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
+import { DuplicateDialog, type DuplicateDialogData } from './duplicate-dialog';
+import { toDuplicateOptions } from './duplicate-form';
 import { groupActionMessage } from './group-action-message';
 import { GroupDialog, type GroupDialogData } from './group-dialog';
-import { type GroupFormModel, toGroupDraft } from './group-form';
-import { type GroupOption, labelGroups, sortGroups } from './group-list';
+import { type GroupFormModel, toClassDraft } from './group-form';
+import { classOf, type GroupOption, labelGroups, sortGroups } from './group-list';
 import { GroupStudents } from './group-students';
 import { schoolYearOf } from './school-year';
 
@@ -129,6 +131,9 @@ export class GroupsPage {
     return options.find(({ id }) => id === this.grupo()) ?? options.at(0) ?? null;
   });
 
+  /** The other groups of the class of the one chosen: its students can be enrolled in them too. */
+  protected readonly classmates = computed(() => classOf(this.options(), this.current()).slice(1));
+
   protected readonly emptyHeading = computed(() =>
     this.isAdmin()
       ? $localize`:@@groups.empty.admin:Aún no hay grupos`
@@ -157,7 +162,7 @@ export class GroupsPage {
 
   protected async create(): Promise<void> {
     const subjects = this.subjects.value();
-    let created: ManagedGroup | undefined;
+    let created: readonly ManagedGroup[] = [];
     const saved = await this.openGroupDialog({
       managed: null,
       subjects,
@@ -165,20 +170,16 @@ export class GroupsPage {
       defaults: {
         // The year of a new group is the current one: it can be changed
         schoolYear: schoolYearOf(new Date()),
-        subjectId: subjects.length === 1 ? subjects[0].id : '',
+        subjectIds: subjects.length === 1 ? [subjects[0].id] : [],
         teacherId: this.isAdmin() ? undefined : this.auth.userId(),
       },
       save: (model) =>
         this.saving(async () => {
-          created = await this.service.saveGroup(toGroupDraft(model));
-          const group = created;
-          this.entries.update((entries) => sortGroups([...entries, group], this.locale));
+          created = await this.service.createGroups(toClassDraft(model), model.subjectIds);
+          this.add(created);
         }),
     });
-    if (saved && created) {
-      this.select(created.group.id);
-      this.snackBar.open($localize`:@@groups.created:Grupo creado`);
-    }
+    if (saved) this.announceCreated(created);
   }
 
   protected async edit(option: GroupOption): Promise<void> {
@@ -186,10 +187,14 @@ export class GroupsPage {
       managed: option.managed,
       subjects: this.subjects.value(),
       teachers: this.teacherOptions(),
-      defaults: option.managed.group,
+      defaults: { ...option.managed.group, subjectIds: [option.managed.group.subjectId] },
       save: (model: GroupFormModel) =>
         this.saving(async () => {
-          const changed = await this.service.saveGroup(toGroupDraft(model, option.id));
+          const changed = await this.service.saveGroup({
+            ...toClassDraft(model),
+            id: option.id,
+            subjectId: option.managed.group.subjectId,
+          });
           this.entries.update((entries) =>
             sortGroups(
               entries.map((entry) => (entry.group.id === changed.group.id ? changed : entry)),
@@ -199,6 +204,31 @@ export class GroupsPage {
         }),
     });
     if (saved) this.snackBar.open($localize`:@@groups.saved:Cambios guardados`);
+  }
+
+  /** For the next year or a parallel group, with what the user chooses to bring (5.2c). */
+  protected async duplicate(option: GroupOption): Promise<void> {
+    let created: readonly ManagedGroup[] = [];
+    const ref = this.dialog.open<DuplicateDialog, DuplicateDialogData, boolean>(DuplicateDialog, {
+      data: {
+        source: option.managed,
+        classGroups: classOf(this.options(), option).map(({ managed }) => managed),
+        teachers: this.teacherOptions(),
+        teacherId: this.isAdmin() ? undefined : this.auth.userId(),
+        today: new Date(),
+        save: (model) =>
+          this.saving(async () => {
+            created = await this.service.duplicateGroups(
+              model.groupIds,
+              toClassDraft(model),
+              toDuplicateOptions(model),
+            );
+            this.add(created);
+          }),
+      },
+      injector: this.injector,
+    });
+    if ((await firstValueFrom(ref.afterClosed())) === true) this.announceCreated(created);
   }
 
   protected async remove(option: GroupOption): Promise<void> {
@@ -224,6 +254,27 @@ export class GroupsPage {
     // Its menu, which had the focus, is gone: back to the top of the page, not to the body
     afterNextRender(() => this.heading().nativeElement.focus(), { injector: this.injector });
     this.snackBar.open($localize`:@@groups.removed:Grupo ${name}:name: eliminado`);
+  }
+
+  private add(created: readonly ManagedGroup[]): void {
+    this.entries.update((entries) => sortGroups([...entries, ...created], this.locale));
+  }
+
+  /** The first new group is chosen, and the notice says how many there are. */
+  private announceCreated(created: readonly ManagedGroup[]): void {
+    // Only after saving, which created one at least
+    const [first] = created;
+    this.select(first.group.id);
+    this.snackBar.open(
+      created.length === 1
+        ? $localize`:@@groups.created:Grupo creado`
+        : $localize`:@@groups.createdMany:${created.length}:count: grupos creados`,
+    );
+  }
+
+  /** After the students of the class changed in other groups too, their counts are reloaded. */
+  protected classChanged(): void {
+    this.groups.reload();
   }
 
   private teacherOptions() {

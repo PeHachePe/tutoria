@@ -1,7 +1,7 @@
 import type { ManagedGroup } from '../../data/group-service';
 import { SUBJECTS } from '../../data/mock/fixtures/subjects';
 import { GROUPS } from '../../data/mock/fixtures/users';
-import { labelGroups, sortGroups } from './group-list';
+import { classOf, labelGroups, sortGroups } from './group-list';
 
 const [basic, , web] = SUBJECTS;
 
@@ -43,5 +43,13 @@ describe('labelGroups', () => {
       '1.º DAW A · Programación básica · 2026/27',
       '1.º DAW A · Programación básica · 2025/26',
     ]);
+  });
+});
+
+describe('classOf', () => {
+  it('gives the groups of the same name and year, the one asked first', () => {
+    const options = labelGroups([DAM, WEB, BASIC, OLD], 'es');
+    expect(classOf(options, { managed: BASIC }).map(({ id }) => id)).toEqual(['basic', 'web']);
+    expect(classOf(options, null)).toEqual([]);
   });
 });

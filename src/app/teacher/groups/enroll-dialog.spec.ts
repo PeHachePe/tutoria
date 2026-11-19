@@ -17,6 +17,7 @@ function open(overrides: Partial<EnrollDialogData> = {}) {
     groupName: '1.º DAW A',
     enrolledIds: new Set(),
     sources: [],
+    classmates: [],
     studentsOf: () => Promise.resolve([]),
     search: vi.fn(() => Promise.resolve(STUDENTS)),
     enroll: vi.fn(() => Promise.resolve()),
@@ -64,7 +65,8 @@ describe('EnrollDialog', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (2)' }));
 
     expect(data.search).toHaveBeenCalledWith('an');
-    expect(data.enroll).toHaveBeenCalledWith([STUDENTS[0], STUDENTS[1]]);
+    expect(data.enroll).toHaveBeenCalledWith([STUDENTS[0], STUDENTS[1]], []);
+    expect(within(dialog).queryByRole('group', { name: 'Matricular también en' })).toBeNull();
     expect(await within(dialog).findByText('Matriculando…')).toBeTruthy();
     fail(new DataError('invalid'));
     expect((await within(dialog).findByRole('alert')).textContent).toContain('vuelve a buscarlo');
@@ -124,5 +126,30 @@ describe('EnrollDialog', () => {
     expect((await within(dialog).findByRole('alert')).textContent).toContain(
       'No se ha podido leer ese grupo',
     );
+  });
+
+  it('enrolls in the other groups of the class too, those left checked in their order', async () => {
+    const data = open({
+      classmates: [
+        { id: 'web', label: '1.º DAW A · Web' },
+        { id: 'db', label: '1.º DAW A · Bases de datos' },
+      ],
+      // The first one fails, so the dialog stays open for the second
+      enroll: vi.fn<EnrollDialogData['enroll']>().mockRejectedValueOnce(new DataError('network')),
+    });
+    const dialog = await typeSearch('an');
+    const also = within(dialog).getByRole('group', { name: 'Matricular también en' });
+    const web = within(also).getByRole('checkbox', { name: '1.º DAW A · Web' });
+    expect(web).toHaveProperty('checked', true);
+
+    await userEvent.click(web);
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Ana Ruiz/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (1)' }));
+    expect(data.enroll).toHaveBeenLastCalledWith([STUDENTS[0]], ['db']);
+    expect(await within(dialog).findByRole('alert')).toBeTruthy();
+
+    await userEvent.click(web);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (1)' }));
+    expect(data.enroll).toHaveBeenLastCalledWith([STUDENTS[0]], ['web', 'db']);
   });
 });

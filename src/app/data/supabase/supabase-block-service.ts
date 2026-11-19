@@ -5,13 +5,15 @@ import {
   type BlockDraft,
   BlockService,
   type PlannedBlock,
+  type PlannedGroup,
 } from '../block-service';
 import { DataError } from '../data-error';
-import type { AssignedGroup, ClassBlock, ExerciseAssignment } from '../exercise';
+import type { ClassBlock, ExerciseAssignment } from '../exercise';
 import type { Json } from './database.types';
 import { SUPABASE_CLIENT } from './supabase-client';
 import { check, unwrap } from './supabase-error';
 import { toAssignment, toClassBlock, toExercise, toSubject } from './supabase-rows';
+import { localTimeZone } from './time-zone';
 
 /**
  * Blocks and assignments in Supabase (4.3b). The RLS decides who changes them; adding and
@@ -22,10 +24,17 @@ export class SupabaseBlockService extends BlockService {
   private readonly supabase = inject(SUPABASE_CLIENT);
 
   /** The RLS gives a teacher their groups and the administration every group. */
-  async listGroups(): Promise<AssignedGroup[]> {
-    const rows = unwrap(await this.supabase.from('class_group').select('id, name, subject(*)'));
+  async listGroups(): Promise<PlannedGroup[]> {
+    const rows = unwrap(
+      await this.supabase.from('class_group').select('id, name, school_year, subject(*)'),
+    );
     return rows
-      .map((row) => ({ id: row.id, name: row.name, subject: toSubject(row.subject) }))
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        schoolYear: row.school_year,
+        subject: toSubject(row.subject),
+      }))
       .sort(
         (a, b) =>
           a.name.localeCompare(b.name, 'es') || a.subject.name.localeCompare(b.subject.name, 'es'),
@@ -153,6 +162,22 @@ export class SupabaseBlockService extends BlockService {
   }
 
   /** On the server, which closes the gap and makes room in one transaction (`move_assignment`). */
+  /** With the RPC `copy_blocks`, in one transaction; the dates move in the zone of the browser. */
+  async copyBlocks(
+    sourceGroupId: string,
+    targetGroupId: string,
+    withDates: boolean,
+  ): Promise<number> {
+    return unwrap(
+      await this.supabase.rpc('copy_blocks', {
+        source_group_id: sourceGroupId,
+        target_group_id: targetGroupId,
+        with_dates: withDates,
+        time_zone: localTimeZone(),
+      }),
+    );
+  }
+
   async moveAssignment(
     assignmentId: string,
     blockId: string,

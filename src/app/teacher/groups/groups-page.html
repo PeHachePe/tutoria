@@ -63,6 +63,10 @@
           <mat-icon aria-hidden="true">edit</mat-icon>
           <span i18n="@@groups.edit">Editar</span>
         </button>
+        <button mat-menu-item type="button" (click)="duplicate(group)">
+          <mat-icon aria-hidden="true">content_copy</mat-icon>
+          <span i18n="@@groups.duplicate">Duplicar…</span>
+        </button>
         <a mat-menu-item [routerLink]="blocksPath" [queryParams]="group.blocksQuery">
           <mat-icon aria-hidden="true">view_list</mat-icon>
           <span i18n="@@groups.blocks">Ver sus bloques</span>
@@ -108,7 +112,9 @@
         [groupId]="group.id"
         [groupName]="group.label"
         [groups]="options()"
+        [classmates]="classmates()"
         (countChange)="countChanged(group.id, $event)"
+        (classChange)="classChanged()"
       />
     </section>
   } @else {
