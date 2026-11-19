@@ -141,7 +141,7 @@ Detalle por pantalla:
 
 En **negrita**, lo que cambia respecto al modelo de la memoria.
 
-- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), created_at, updated_at). El nombre evita la palabra reservada `user`.
+- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), **guide_state** (`jsonb`: cuándo vio la bienvenida y qué recorridos de primeros pasos terminó o cerró, 2.12, D-080), created_at, updated_at). El nombre evita la palabra reservada `user`.
 - **`subject`** (id, name, source_locale, translations `jsonb` con el nombre en los otros idiomas, D-046): la asignatura («Programación básica»), que gestiona el administrador. No supone programación: el editor y la corrección son del ejercicio según su `kind` (D-029).
 - `class_group` (id, name, school_year, teacher_id → app_user, **subject_id** → subject)
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
@@ -519,6 +519,18 @@ abstract class SpeechService {
 | Safari               | El dictado de Apple, por comprobar dónde transcribe                                                    | Voces del sistema. macOS: 2 voces en español, de calidad aceptable. Funciona (6.1a)                                                                                                                 |
 | Firefox              | No tiene                                                                                               | Voces del sistema. Windows 11, Firefox 138: 4 voces en español (Helena y Laura, cada una dos veces), ninguna en catalán y 5 en inglés; por defecto, Helena. Funciona (6.1a)                         |
 | Chrome en Android    | Servicio de Google; por comprobar si avisa con un sonido cada vez que abre el micrófono (modo llamada) | Motor de síntesis del sistema. Funciona (6.1a)                                                                                                                                                      |
+
+### 2.12 Ayuda guiada
+
+Cada perfil aprende a usar la aplicación sobre la propia aplicación, sin manual aparte (pasos 7.0a y 7.0b, D-080). Son tres capas, cada una útil sin las demás:
+
+- **Bienvenida:** la primera vez que un usuario entra en su área, un recorrido corto (cinco pasos como mucho) oscurece la pantalla salvo la pieza que explica y la presenta la mascota. Se puede saltar en cualquier momento y no vuelve a salir: se guarda en su perfil (`app_user.guide_state`), no en el navegador, para que no se repita en otro equipo. En el alumno, sale después del aviso de datos (2.2).
+- **Primeros pasos:** una lista con su progreso («2 de 4»), en un panel que se abre desde la barra superior. Cada tarea lanza un recorrido sobre la pantalla real que **espera a que el usuario haga la acción** (pulsar, escribir, guardar) antes de pasar al siguiente paso. Las tareas se dan por hechas por los datos cuando los hay (el docente ya tiene un bloque) y, si no, porque se completó su recorrido. Al terminarlas todas, el panel lo celebra y se puede cerrar para siempre.
+  - **Alumno:** abrir un ejercicio, ejecutar las pruebas, pedir una pista al tutor y entregar.
+  - **Docente:** crear un bloque, añadir un ejercicio, asignarlo a un grupo y abrir la sesión en vivo.
+- **Ayuda de cada pantalla:** un botón «?» en la barra muestra balizas animadas junto a las piezas de la pantalla; cada baliza, al pulsarla, explica la suya (la del editor, también su atajo para ejecutar, Ctrl+Enter o ⌘+Enter). También para la administración, que no tiene bienvenida ni primeros pasos.
+
+En el menú de usuario, «Ver la bienvenida» la repite. Todo funciona igual con teclado, lector de pantalla y en el móvil (en pantallas estrechas, los pasos cuya pieza no se ve se saltan), en los tres idiomas y sin animaciones si el usuario las ha reducido (ajustes o `prefers-reduced-motion`).
 
 ---
 
@@ -1118,7 +1130,7 @@ Cada paso indica una estimación orientativa de horas, lo que se hace, cuándo e
 
 ### Bloque A · Hasta la PEC3 (la aplicación completa)
 
-Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
+Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
 
 #### Fase 0 · Cimientos (≈12 h)
 
@@ -4312,7 +4324,31 @@ Tests, en este orden:
 🧪 `ChromeTutorService` con un `LanguageModel` falso.
 Commit: `feat: on-device tutor`.
 
-#### Fase 7 · Cierre (≈15 h)
+#### Fase 7 · Cierre (≈22,5 h)
+
+**7.0a · Ayuda guiada: la base y el alumno (≈4 h)** · §2.12 · D-080 · a petición del autor, antes del 7.1 para que sus e2e y axe ya la recorran
+
+- **Ficha `13-ayuda`** al empezar el paso: la bienvenida, el panel de primeros pasos y las balizas, con sus estados y textos en los tres idiomas.
+- **driver.js** (MIT, sin dependencias) para el recorrido y las balizas (`driver.js` y `driver.js/hints`), cargado aparte solo cuando hace falta. Su CSS, adaptado con los tokens del tema en un parcial de `src/styles/` (D-039), y el globo con la mascota que presenta cada paso. Sin animaciones si el usuario las ha reducido.
+- **`GuideService`** (`core/guide/`): la única pieza que toca driver.js; lanza un recorrido, lo cierra y avisa de cómo acabó. Los recorridos se describen como datos (pieza, título y texto traducibles, y la acción que se espera, `advanceOn`), y las piezas se marcan en las plantillas con un atributo propio, no con clases de estilo.
+- **`GuideStore`:** la bienvenida vista y los recorridos terminados o cerrados, de `app_user.guide_state`, en las dos versiones del servicio de datos; el progreso de cada tarea, de los datos cuando los hay.
+- **Migración:** la columna `guide_state`, que el usuario solo puede actualizar en su propia fila (privilegio por columna, como `current_code`). Tests de pgTAP.
+- **Panel de primeros pasos, propio con Material** (no el checklist de driver.js, cuyos textos para el lector de pantalla están fijos en inglés): botón en la barra con el progreso, lista de tareas con su estado, barra de progreso y cierre. Al muestrario `/dev/ui`, sin empezar, a medias y terminado.
+- **Alumno:** la bienvenida (después del aviso de datos), sus primeros pasos y las balizas de la pantalla de trabajo y del catálogo; «Ver la bienvenida» en el menú de usuario.
+
+✅ Un alumno nuevo ve la bienvenida una sola vez (también al entrar desde otro equipo), completa sus primeros pasos sobre la pantalla real y lo puede hacer todo con teclado y en el móvil; `npm run check` en verde.
+🧪 `GuideService` con un driver falso; `GuideStore` con TDD; el panel; las balizas; pgTAP de la columna.
+Commit: `feat(guide): guided help for students (step 7.0a)`.
+
+**7.0b · Ayuda guiada: docente y administración (≈3,5 h)** · §2.12 · D-080
+
+- **Docente:** la bienvenida y sus primeros pasos (crear un bloque, añadir un ejercicio, asignarlo a un grupo y abrir la sesión en vivo), con las tareas dadas por hechas por sus datos; y las balizas de en vivo, detalle del intento, ejercicios, histórico y grupos.
+- **Administración:** las balizas de usuarios y sistema; además, las del docente, porque entra en sus pantallas.
+- Pensado para las pantallas vacías: un docente sin grupos empieza por la tarea que crea el primero.
+
+✅ Un docente nuevo prepara su primera clase guiado de principio a fin; `npm run check` en verde.
+🧪 Los recorridos del docente (que cada pieza que nombran existe en su pantalla) y el progreso por sus datos.
+Commit: `feat(guide): guided help for teachers and admins (step 7.0b)`.
 
 **7.1 · Accesibilidad y responsive**
 
