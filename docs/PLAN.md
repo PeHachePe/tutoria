@@ -596,7 +596,7 @@ src/app/
     supabase/         # client, generated types, supabase-*-service.ts
   shared/             # used by more than one feature, one folder or file per concept
     status-chip/  difficulty-chip/  skeleton/  empty-state/  page-header/
-    staff-layout/  user-menu/  skip-link/  placeholder-page/   # shells shared by roles (D-019)
+    staff-layout/  user-menu/  skip-link/   # shells shared by roles (D-019); placeholder-page/ until 5.3b
     theme-menu/  language-menu/   # theme and language buttons of the bars: login and shells (1.1, 1.1c, 1.1d)
     brand/            # mascot and name of the bars, linking to the home of the role (1.1d)
     mascot/           # the TutorIA pug: inline SVG with its moods, accessories and animations (mascot.css) (1.1b)
@@ -3360,6 +3360,7 @@ Commit: `feat(groups): groups and enrollment screen (step 5.2b)`.
 **Plan de implementación del 5.3** (17/11/2026; necesita el 5.1a hecho)
 
 - **Partido en dos (19/11/2026, D-076):** el 5.3a trae los tipos, `AI_PROVIDER_PRESETS`, la migración (`20261119120000_ai_check.sql`, no la de abajo, cuyo número ya estaba usado), la función `ai-check` y los dos `AdminService` (los tests 3 a 5); el 5.3b, la pantalla (los tests 1, 2, 6 y 7), con su boceto y su ficha. Un respaldo de un host no permitido da su propio `host_not_allowed`, y la prueba tiene también un límite diario.
+- **Cambiado en el 5.3b (D-077):** los respaldos de otro proveedor no son de solo lectura: cada respaldo elige su proveedor («El del principal», uno predefinido u «Otro») y se puede subir y bajar, así que `toProviderSetting()` no recibe respaldos conservados y `system.fallbacks.kept` no existe. «Guardar» y «Probar la conexión» marcan lo que falta; la prueba cuenta mientras no cambie lo que se guarda (`settingKey()`), y sin el ajuste guardado `getAiProvider()` devuelve `null` y la pantalla abre Gemini sin modelo.
 
 - Dudas resueltas:
   - las «alternativas disponibles» de CU-07 son una lista fija de proveedores con la API de chat de OpenAI (`AI_PROVIDER_PRESETS`), que rellena la URL, el secreto y el formato; «Otro» deja escribirlos;

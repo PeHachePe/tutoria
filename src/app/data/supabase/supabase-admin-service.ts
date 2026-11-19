@@ -89,12 +89,16 @@ export class SupabaseAdminService extends AdminService {
     return toSubject(unwrap(await query.select().single()));
   }
 
-  async getAiProvider(): Promise<AiProviderSetting> {
+  async getAiProvider(): Promise<AiProviderSetting | null> {
     const row = unwrap(
-      await this.supabase.from('app_setting').select('value').eq('key', AI_PROVIDER_KEY).single(),
+      await this.supabase
+        .from('app_setting')
+        .select('value')
+        .eq('key', AI_PROVIDER_KEY)
+        .maybeSingle(),
     );
-    // The check of the table gives it this shape (is_valid_ai_provider)
-    return row.value as unknown as AiProviderSetting;
+    // The check of the table gives it this shape (is_valid_ai_provider); without the row, none yet
+    return row === null ? null : (row.value as unknown as AiProviderSetting);
   }
 
   async setAiProvider(setting: AiProviderSetting): Promise<void> {

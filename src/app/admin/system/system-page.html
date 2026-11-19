@@ -33,7 +33,7 @@
         </div>
       </app-loading-skeleton>
     } @else {
-      <form class="flex flex-col gap-2" (submit)="$event.preventDefault(); save()">
+      <form class="flex flex-col gap-2" [formRoot]="providerForm">
         <mat-form-field>
           <mat-label i18n="@@system.preset">Proveedor</mat-label>
           <mat-select
@@ -202,7 +202,12 @@
                 </div>
               } @else if (fallback.presetId().value() !== same) {
                 <p class="-mt-2 mb-3 text-body-small text-on-surface-variant">
-                  {{ fallback.baseUrl().value() }} · {{ fallback.keySecret().value() || '—' }}
+                  {{ fallback.baseUrl().value() }} ·
+                  @if (fallback.keySecret().value(); as secret) {
+                    {{ secret }}
+                  } @else {
+                    <span i18n="@@system.fallback.noKey">sin clave</span>
+                  }
                 </p>
               }
             </div>
@@ -230,12 +235,7 @@
         </fieldset>
 
         <div class="mt-4 flex flex-wrap items-center gap-3">
-          <button
-            matButton="outlined"
-            type="button"
-            [disabled]="checking() || providerForm().invalid()"
-            (click)="check()"
-          >
+          <button matButton="outlined" type="button" [disabled]="checking()" (click)="check()">
             @if (checking()) {
               <span i18n="@@system.checking">Probando…</span>
             } @else {
@@ -264,6 +264,8 @@
             <span class="text-error" i18n="@@system.check.failed"
               >El modelo principal no responde: se mantiene el proveedor anterior.</span
             >
+          } @else if (!changed()) {
+            <span i18n="@@system.save.unchanged">No hay cambios que guardar</span>
           } @else if (!results()) {
             <span i18n="@@system.check.first">Prueba la conexión antes de guardar</span>
           }
@@ -344,7 +346,10 @@
         i18n-text="@@system.subjects.empty.text"
       />
     } @else {
-      <ul class="flex max-h-96 flex-col divide-y divide-outline-variant overflow-y-auto">
+      <ul
+        class="flex max-h-96 flex-col divide-y divide-outline-variant overflow-y-auto"
+        aria-labelledby="subjects-heading"
+      >
         @for (row of subjectRows(); track row.subject.id) {
           <li class="flex items-center gap-3 py-2">
             <div class="flex min-w-0 flex-1 flex-col">

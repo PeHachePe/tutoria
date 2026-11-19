@@ -16,20 +16,20 @@ Que la administración elija el proveedor de IA que responde como tutor y traduc
 
 Una columna, con un ancho máximo de lectura, en los tres tamaños; las dos secciones, una tras otra, cada una en su tarjeta con su `h2`:
 
-- **Proveedor de IA:** su explicación; «Proveedor» (Gemini, Groq, OpenRouter, Ollama local u «Otro»), «URL base», «Modelo», «Nombre del secreto con la clave» (con su pista: la clave no se escribe aquí) y «Tiempo máximo de respuesta». En escritorio y tablet, modelo y tiempo en una fila; en móvil, uno bajo otro.
-  - **Respaldos, en orden (D-077):** una fila por respaldo con su proveedor («El del principal» por defecto, uno predefinido u «Otro»), su modelo, sus segundos, «Subir», «Bajar» y «Quitar». Con un predefinido, su URL y su secreto en una línea; con «Otro», sus campos. En el móvil, el modelo y los segundos en una fila. «Añadir un respaldo» se deshabilita con cinco.
-  - **Pie:** «Probar la conexión», «Guardar» (deshabilitado con «Prueba la conexión antes de guardar» mientras no haya una prueba superada del borrador) y «Descartar los cambios».
+- **Proveedor de IA:** su explicación; «Proveedor» (Gemini, Groq, OpenRouter, Ollama local u «Otro»), «URL base», «Modelo principal», «Tiempo máximo (segundos)», «Nombre del secreto con la clave» (con su pista: la clave no se escribe aquí) y «Formato de la respuesta». Con un proveedor predefinido, la URL, el secreto y el formato se ven bloqueados. En escritorio y tablet, modelo y tiempo en una fila, y secreto y formato en otra; en móvil, uno bajo otro.
+  - **Respaldos, en orden (D-077):** una fila por respaldo con su proveedor («El del principal» por defecto, uno predefinido u «Otro»), su modelo, sus segundos, «Subir», «Bajar» y «Quitar». Con un predefinido, su URL y su secreto (o «sin clave») en una línea; con «Otro», sus campos. En el móvil, el modelo y los segundos en una fila. «Añadir un respaldo» se deshabilita con cinco.
+  - **Pie:** «Probar la conexión», «Guardar» y «Descartar los cambios». «Guardar» está deshabilitado, con su motivo debajo, mientras no haya nada que guardar («No hay cambios que guardar»), falte la prueba de lo que se va a guardar («Prueba la conexión antes de guardar») o el principal no la supere.
   - **Resultado de la prueba:** una lista bajo el pie, una línea por modelo con su icono y «Responde en N ms» o su problema.
 - **Asignaturas:** la lista por nombre en el idioma de la interfaz, cada una con los idiomas en que está y «Editar»; «Nueva asignatura» en la cabecera. Con muchas, la lista se desplaza dentro de su zona.
 - Diálogo de la asignatura: idioma en que se escribe, nombre y traducciones opcionales, como el de los bloques.
 
 ## Interacciones
 
-- **Elegir un proveedor:** rellena la URL, el secreto y el formato; «Otro» deja escribirlos. Cambiar la URL a mano pasa a «Otro».
-- **Probar la conexión:** «Probando…» en el botón; el resultado aparece debajo. Si el principal responde, «Guardar» se habilita; si no, «El modelo principal no responde: se mantiene el proveedor anterior.». Un respaldo que falla avisa, pero deja guardar.
-- **Cualquier cambio** invalida la prueba: el resultado se borra y «Guardar» vuelve a deshabilitarse.
-- **Guardar:** aviso «Proveedor de IA guardado» (`MatSnackBar`); el borrador pasa a ser el guardado.
-- **Descartar los cambios:** vuelve al guardado y borra la prueba.
+- **Elegir un proveedor:** rellena la URL, el secreto y el formato; «Otro» deja escribirlos, partiendo de los que había.
+- **Probar la conexión:** con algo que falta o mal escrito, no prueba: marca los errores y lleva el foco al primer campo con uno (como «Guardar» o Intro en un campo). Si no, «Probando…» en el botón y el resultado debajo. También se puede probar lo guardado, sin cambios. Si el principal responde, «Guardar» se habilita; si no, «El modelo principal no responde: se mantiene el proveedor anterior.». Un respaldo que falla avisa, pero deja guardar.
+- **Cualquier cambio de lo que se guarda** invalida la prueba: el resultado se borra y «Guardar» vuelve a deshabilitarse. Lo que no cambia el ajuste (elegir otra vez el mismo proveedor, espacios alrededor del modelo, deshacer lo escrito) no la invalida.
+- **Guardar:** aviso «Proveedor de IA guardado» (`MatSnackBar`); el borrador pasa a ser el guardado y el resultado de su prueba sigue a la vista.
+- **Descartar los cambios:** vuelve al guardado; deshabilitado sin cambios.
 - **Nueva asignatura / Editar:** el diálogo; al guardar, la asignatura aparece o cambia en su orden. Un fallo se dice en el diálogo sin cerrarlo.
 
 ## Estados
@@ -43,7 +43,8 @@ Una columna, con un ancho máximo de lectura, en los tres tamaños; las dos secc
 
 - El resultado de la prueba, en una región `role="status"`; el icono de cada línea tiene su texto.
 - «Guardar» deshabilitado sigue enfocable (`disabledInteractive`) con su motivo enlazado.
-- «Quitar» de cada respaldo y «Editar» de cada asignatura llevan su nombre («Quitar gemma-4-31b-it», «Editar Programación básica»). Al añadir un respaldo, el foco va a su modelo; al quitarlo, al siguiente o a «Añadir un respaldo».
+- Cada respaldo es un grupo con nombre («Respaldo 2»); sus botones de icono «Subir», «Bajar» y «Quitar» dicen cuál («Quitar el respaldo 2»), también en su tooltip, y «Editar» de cada asignatura lleva su nombre («Editar Programación básica»). Al añadir un respaldo, el foco va a su modelo; al quitarlo, al siguiente o a «Añadir un respaldo»; al moverlo, se queda en el mismo botón, que sigue enfocable aunque se deshabilite en el extremo.
+- Con algo que falta, el foco va al primer campo con un error.
 - El nombre de una asignatura en otro idioma lleva su `lang`.
 
 ## Criterios de aceptación

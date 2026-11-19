@@ -9,7 +9,7 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import { form, FormField } from '@angular/forms/signals';
+import { form, FormField, FormRoot, submit } from '@angular/forms/signals';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
@@ -26,6 +26,7 @@ import { AdminService, type SubjectDraft } from '../../data/admin-service';
 import {
   AI_PROVIDER_PRESETS,
   type AiModelCheck,
+  type AiProviderSetting,
   type AiResponseFormat,
   MAX_AI_FALLBACKS,
 } from '../../data/ai-provider-setting';
@@ -39,11 +40,13 @@ import { CONTENT_LOCALES } from '../../teacher/exercises/exercise-form-model';
 import { checkMessage } from './check-message';
 import {
   applyPreset,
+  fieldToFocus,
   newFallback,
   OTHER_PROVIDER,
   type ProviderFormModel,
   providerSchema,
   SAME_PROVIDER,
+  settingKey,
   toProviderFormModel,
   toProviderSetting,
 } from './provider-form';
@@ -74,9 +77,12 @@ const FORMAT_OPTIONS: readonly { readonly format: AiResponseFormat; readonly lab
   { format: 'none', label: $localize`:@@system.format.none:Sin formato` },
 ];
 
-/** The check of a draft: it only counts while the draft is the same object (any change is a new one). */
-interface DraftCheck {
-  readonly draft: ProviderFormModel;
+/** The form before any setting is saved: Gemini, the provider of the project, without a model. */
+const UNSET_PROVIDER: AiProviderSetting = { baseUrl: AI_PROVIDER_PRESETS[0].baseUrl, model: '' };
+
+/** The check of a setting: it counts while the draft saves that same setting (`settingKey`). */
+interface SettingCheck {
+  readonly key: string;
   readonly results: readonly AiModelCheck[];
 }
 
@@ -98,6 +104,7 @@ interface SubjectRow {
 @Component({
   selector: 'app-system-page',
   imports: [
+    FormRoot,
     FormField,
     MatButton,
     MatIconButton,
@@ -135,28 +142,38 @@ export class SystemPage {
 
   protected readonly provider = resource({ loader: () => this.admin.getAiProvider() });
 
-  /** What is saved, as the form edits it. */
+  /**
+   * What is saved, as the form edits it. Without a setting yet (only the seed writes one), the
+   * provider of the project with no model: it has to be written, tested and saved.
+   */
   private readonly saved = computed(() =>
-    this.provider.hasValue() ? toProviderFormModel(this.provider.value()) : null,
+    // In an error state value() throws: the form is not shown then
+    toProviderFormModel((this.provider.hasValue() && this.provider.value()) || UNSET_PROVIDER),
   );
 
   /** The draft: back to what is saved whenever that changes. */
-  private readonly draft = linkedSignal<ProviderFormModel>(
-    () => this.saved() ?? toProviderFormModel({ baseUrl: '', model: '' }),
-  );
+  private readonly draft = linkedSignal(() => this.saved());
 
-  protected readonly providerForm = form(this.draft, providerSchema);
+  /** «Guardar» submits it; «Probar la conexión», too (`submit()`): both mark what is missing. */
+  protected readonly providerForm = form(this.draft, providerSchema, {
+    submission: {
+      action: () => this.save(),
+      onInvalid: (field) => this.focusLater(fieldToFocus(field)),
+    },
+  });
+
+  private readonly draftKey = computed(() => settingKey(this.draft()));
 
   protected readonly checking = signal(false);
   protected readonly saving = signal(false);
   /** The check or the save that failed, said beside the buttons. */
   protected readonly actionFailed = signal<'check' | 'save' | null>(null);
-  private readonly lastCheck = signal<DraftCheck | null>(null);
+  private readonly lastCheck = signal<SettingCheck | null>(null);
 
-  /** The results of the check of the current draft; none once anything changes. */
+  /** The results of the check of what the draft saves; none once that changes. */
   protected readonly results = computed(() => {
     const check = this.lastCheck();
-    return check?.draft === this.draft() ? check.results : null;
+    return check?.key === this.draftKey() ? check.results : null;
   });
 
   protected readonly mainAnswered = computed(() => {
@@ -164,11 +181,12 @@ export class SystemPage {
     return main !== undefined && main.problem === undefined;
   });
 
-  protected readonly canSave = computed(
-    () => this.mainAnswered() && this.providerForm().valid() && !this.saving(),
-  );
+  /** Whether the draft saves something else than what is saved: not just another object. */
+  protected readonly changed = computed(() => this.draftKey() !== settingKey(this.saved()));
 
-  protected readonly changed = computed(() => this.draft() !== this.saved());
+  protected readonly canSave = computed(
+    () => this.changed() && this.mainAnswered() && this.providerForm().valid() && !this.saving(),
+  );
 
   protected readonly canAddFallback = computed(
     () => this.draft().fallbacks.length < MAX_AI_FALLBACKS,
@@ -260,22 +278,30 @@ export class SystemPage {
     this.focusLater(`fallback-${step < 0 ? 'up' : 'down'}-${to}`);
   }
 
+  /** Checks what the draft saves; with something missing, says it instead (D-077). */
   protected async check(): Promise<void> {
-    const draft = this.draft();
-    this.checking.set(true);
-    this.actionFailed.set(null);
-    try {
-      const results = await this.admin.checkAiProvider(toProviderSetting(draft));
-      this.lastCheck.set({ draft, results });
-    } catch {
-      this.actionFailed.set('check');
-    } finally {
-      this.checking.set(false);
-    }
+    await submit(this.providerForm, {
+      action: async () => {
+        const key = this.draftKey();
+        this.checking.set(true);
+        this.actionFailed.set(null);
+        try {
+          const results = await this.admin.checkAiProvider(toProviderSetting(this.draft()));
+          this.lastCheck.set({ key, results });
+        } catch {
+          this.actionFailed.set('check');
+        } finally {
+          this.checking.set(false);
+        }
+        return undefined;
+      },
+      onInvalid: (field) => this.focusLater(fieldToFocus(field)),
+    });
   }
 
-  protected async save(): Promise<void> {
-    if (!this.canSave()) return;
+  /** The submission of the form, which Enter in a field also sends: only once it may be saved. */
+  private async save(): Promise<undefined> {
+    if (!this.canSave()) return undefined;
     const setting = toProviderSetting(this.draft());
     this.saving.set(true);
     this.actionFailed.set(null);
@@ -288,11 +314,11 @@ export class SystemPage {
     } finally {
       this.saving.set(false);
     }
+    return undefined;
   }
 
   protected discard(): void {
-    // The form, and this button, are only shown with the provider loaded
-    this.draft.set(this.saved() as ProviderFormModel);
+    this.draft.set(this.saved());
     this.actionFailed.set(null);
   }
 
@@ -327,7 +353,14 @@ export class SystemPage {
     this.draft.update((model) => ({ ...model, fallbacks: change(model.fallbacks) }));
   }
 
-  private focusLater(id: string): void {
-    afterNextRender(() => this.document.getElementById(id)?.focus(), { injector: this.injector });
+  /** Moves the focus once the change is drawn: to an element by its id, or to a field. */
+  private focusLater(target: string | ReturnType<typeof fieldToFocus>): void {
+    afterNextRender(
+      () =>
+        typeof target === 'string'
+          ? this.document.getElementById(target)?.focus()
+          : target().focusBoundControl(),
+      { injector: this.injector },
+    );
   }
 }

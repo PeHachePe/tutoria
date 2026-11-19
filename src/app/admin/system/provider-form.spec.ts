@@ -1,16 +1,18 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { form } from '@angular/forms/signals';
+import { form, validate } from '@angular/forms/signals';
 
 import { type AiProviderSetting, MAX_AI_FALLBACKS } from '../../data/ai-provider-setting';
 import {
   applyPreset,
+  fieldToFocus,
   type FallbackFormModel,
   newFallback,
   OTHER_PROVIDER,
   type ProviderFormModel,
   providerSchema,
   SAME_PROVIDER,
+  settingKey,
   toProviderFormModel,
   toProviderSetting,
 } from './provider-form';
@@ -152,6 +154,24 @@ describe('toProviderSetting', () => {
   });
 });
 
+describe('settingKey', () => {
+  it('is the same for two models that save the same setting', () => {
+    const model = toProviderFormModel(SEED);
+    const again = applyPreset(model, 'gemini');
+    expect(again).not.toBe(model);
+    expect(settingKey(again)).toBe(settingKey(model));
+    expect(settingKey({ ...model, model: ' gemini-3.5-flash-lite ' })).toBe(settingKey(model));
+  });
+
+  it('changes with anything that is saved', () => {
+    const model = toProviderFormModel(SEED);
+    expect(settingKey({ ...model, timeoutSeconds: 11 })).not.toBe(settingKey(model));
+    expect(settingKey({ ...model, fallbacks: model.fallbacks.slice(1) })).not.toBe(
+      settingKey(model),
+    );
+  });
+});
+
 describe('applyPreset', () => {
   it('fills in how to call a preset', () => {
     expect(applyPreset(toProviderFormModel(SEED), 'ollama')).toMatchObject({
@@ -198,6 +218,24 @@ describe('providerSchema', () => {
     });
     expect(kinds(tree.baseUrl)).toEqual(['pattern']);
     expect(kinds(tree.model)).toEqual(['required']);
+  });
+
+  it('asks besides for the shape the table checks (isValidAiProvider), as a safety net', () => {
+    const tree = formOf({ ...toProviderFormModel(SEED), model: '' });
+    expect(kinds(tree)).toEqual(['provider']);
+    expect(fieldToFocus(tree)).toBe(tree.model);
+    expect(kinds(formOf(toProviderFormModel(SEED)))).toEqual([]);
+  });
+
+  it('takes the whole form when no field has an error', () => {
+    const tree = TestBed.runInInjectionContext(() =>
+      form(signal({ name: 'x' }), (path) =>
+        validate(path, () => ({ kind: 'whole', message: 'Mal' })),
+      ),
+    );
+    expect(fieldToFocus(tree)).toBe(tree);
+    const valid = formOf(toProviderFormModel(SEED));
+    expect(fieldToFocus(valid)).toBe(valid);
   });
 
   it('asks for the name of a secret or none, written with «Other»', () => {

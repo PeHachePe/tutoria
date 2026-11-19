@@ -60,11 +60,11 @@ describe('SystemPage', () => {
     await settle();
   }
 
+  /** The names of the subjects, in their order, as their «Editar» buttons say them. */
   function subjectNames(): string[] {
-    const list = screen.getAllByRole('list').at(-1)!;
-    return within(list)
-      .getAllByRole('listitem')
-      .map((item) => text(item.querySelector('[class*="text-body-large"]')));
+    return within(screen.getByRole('list', { name: 'Asignaturas' }))
+      .getAllByRole('button', { name: /^Editar / })
+      .map((edit) => edit.getAttribute('aria-label')!.replace('Editar ', ''));
   }
 
   afterEach(() => localStorage.clear());
@@ -113,6 +113,26 @@ describe('SystemPage', () => {
     expect(screen.getByText('En inglés')).toBeTruthy();
   });
 
+  it('opens Gemini without a model while no provider is saved, to set the first one', async () => {
+    await renderSystem((admin) => vi.spyOn(admin, 'getAiProvider').mockResolvedValueOnce(null));
+
+    expect(text(screen.getAllByRole('combobox', { name: 'Proveedor' })[0])).toBe('Gemini');
+    const model = screen.getByRole<HTMLInputElement>('textbox', { name: 'Modelo principal' });
+    expect(model.value).toBe('');
+    expect(screen.queryByRole('group', { name: /^Respaldo/ })).toBeNull();
+
+    await userEvent.type(model, 'gemini-3.5-flash-lite');
+    await checkConnection();
+    const setProvider = vi.spyOn(service, 'setAiProvider');
+    await userEvent.click(button('Guardar'));
+    await settle();
+    expect(setProvider).toHaveBeenCalledWith({
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      model: 'gemini-3.5-flash-lite',
+      timeoutMs: 15000,
+    });
+  });
+
   it('fills in a preset, and lets its URL be written only with «Other»', async () => {
     await renderSystem();
     const url = screen.getByRole<HTMLInputElement>('textbox', { name: 'URL base' });
@@ -134,24 +154,32 @@ describe('SystemPage', () => {
   it('saves only after a check of the draft, and checks again after any change', async () => {
     await renderSystem();
     const save = button('Guardar');
+    const model = screen.getByRole('textbox', { name: 'Modelo principal' });
     expect(isDisabled(save)).toBe(true);
-    const unchecked = vi.spyOn(service, 'setAiProvider');
+    expect(screen.getByText('No hay cambios que guardar')).toBeTruthy();
+    const setProvider = vi.spyOn(service, 'setAiProvider');
     await userEvent.click(save);
-    expect(unchecked).not.toHaveBeenCalled();
-    expect(screen.getByText('Prueba la conexión antes de guardar')).toBeTruthy();
+    expect(setProvider).not.toHaveBeenCalled();
 
+    // What is saved can be tested too, though there is nothing to save
     await checkConnection();
     const status = screen.getByRole('status');
     expect(text(status)).toContain('gemini-3.5-flash-lite: Responde en');
     expect(within(status).getAllByRole('listitem')).toHaveLength(3);
+    expect(isDisabled(save)).toBe(true);
+
+    await userEvent.type(model, '-2');
+    expect(text(screen.getByRole('status'))).toBe('');
+    expect(screen.getByText('Prueba la conexión antes de guardar')).toBeTruthy();
+    expect(isDisabled(save)).toBe(true);
+    await checkConnection();
     expect(isDisabled(save)).toBe(false);
 
-    await userEvent.type(screen.getByRole('textbox', { name: 'Modelo principal' }), '-2');
-    expect(isDisabled(save)).toBe(true);
-    expect(text(screen.getByRole('status'))).toBe('');
+    // Picking the same provider again saves the same: the check still counts
+    await userEvent.click(screen.getAllByRole('combobox', { name: 'Proveedor' })[0]);
+    await userEvent.click(await screen.findByRole('option', { name: 'Gemini' }));
+    expect(isDisabled(save)).toBe(false);
 
-    await checkConnection();
-    const setProvider = vi.spyOn(service, 'setAiProvider');
     const snackBar = vi.spyOn(TestBed.inject(MatSnackBar), 'open');
     await userEvent.click(save);
     await settle();
@@ -159,7 +187,31 @@ describe('SystemPage', () => {
       expect.objectContaining({ model: 'gemini-3.5-flash-lite-2' }),
     );
     expect(snackBar).toHaveBeenCalledWith('Proveedor de IA guardado');
+    // Saved as tested: the results stay, and there is nothing else to save or discard
+    expect(text(screen.getByRole('status'))).toContain('gemini-3.5-flash-lite-2: Responde en');
+    expect(screen.getByText('No hay cambios que guardar')).toBeTruthy();
     expect(isDisabled(button('Descartar los cambios'))).toBe(true);
+  });
+
+  it('marks what is missing instead of testing or saving, and takes the focus there', async () => {
+    await renderSystem();
+    const checkProvider = vi.spyOn(service, 'checkAiProvider');
+    const model = screen.getByRole('textbox', { name: 'Modelo principal' });
+    await userEvent.clear(model);
+    await userEvent.click(button('Añadir un respaldo'));
+    await settle();
+
+    await userEvent.click(button('Probar la conexión'));
+    await settle();
+    expect(checkProvider).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(model);
+    expect(screen.getAllByText('Escribe el modelo')).toHaveLength(2);
+
+    // Enter in a field submits the form: with something missing, the same
+    await userEvent.type(screen.getByRole('textbox', { name: 'Modelo principal' }), 'x');
+    await userEvent.type(document.activeElement as HTMLElement, '{Enter}');
+    await settle();
+    expect(document.activeElement?.id).toBe('fallback-model-2');
   });
 
   it('does not save when the main model fails, and says why', async () => {
@@ -185,6 +237,7 @@ describe('SystemPage', () => {
     await checkConnection();
     expect(text(screen.getByRole('alert'))).toContain('No se ha podido probar');
 
+    await userEvent.type(screen.getByRole('textbox', { name: 'Modelo principal' }), '-2');
     await checkConnection();
     vi.spyOn(service, 'setAiProvider').mockRejectedValueOnce(new DataError('unavailable'));
     await userEvent.click(button('Guardar'));
@@ -234,7 +287,7 @@ describe('SystemPage', () => {
 
     await userEvent.click(within(fallback).getByRole('combobox', { name: 'Proveedor' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Ollama (en el servidor)' }));
-    expect(text(fallback)).toContain('host.docker.internal:11434/v1 · —');
+    expect(text(fallback)).toContain('host.docker.internal:11434/v1 · sin clave');
 
     await userEvent.click(within(fallback).getByRole('combobox', { name: 'Proveedor' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Otro' }));

@@ -60,8 +60,8 @@ export abstract class AdminService {
    */
   abstract saveSubject(subject: SubjectDraft): Promise<Subject>;
 
-  /** Row `ai_provider` of `app_setting`. */
-  abstract getAiProvider(): Promise<AiProviderSetting>;
+  /** Row `ai_provider` of `app_setting`, or null while none is saved (only the seed writes one). */
+  abstract getAiProvider(): Promise<AiProviderSetting | null>;
 
   /** Throws `invalid` without the shape of a provider (`isValidAiProvider`). */
   abstract setAiProvider(setting: AiProviderSetting): Promise<void>;

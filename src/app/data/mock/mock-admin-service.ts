@@ -139,7 +139,7 @@ export class MockAdminService extends AdminService {
     });
   }
 
-  getAiProvider(): Promise<AiProviderSetting> {
+  getAiProvider(): Promise<AiProviderSetting | null> {
     return this.network.request(() => {
       this.db.requireUser('admin');
       return this.db.tables().aiProvider;

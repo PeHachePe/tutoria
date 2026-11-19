@@ -7,8 +7,10 @@ import {
   pattern,
   required,
   type SchemaPath,
+  type FieldTree,
   type SchemaPathTree,
   validate,
+  type ValidationError,
 } from '@angular/forms/signals';
 
 import {
@@ -16,6 +18,7 @@ import {
   type AiModelSetting,
   type AiProviderSetting,
   type AiResponseFormat,
+  isValidAiProvider,
   MAX_AI_FALLBACKS,
 } from '../../data/ai-provider-setting';
 
@@ -157,6 +160,28 @@ export function toProviderSetting(model: ProviderFormModel): AiProviderSetting {
   };
 }
 
+/** A field of a form, as its errors name it. */
+type FocusableField = ValidationError.WithFieldTree['fieldTree'];
+
+/**
+ * The field to take the focus to: the first one with an error, which says what is missing there,
+ * before the error of the whole form (the shape of the table), which Signal Forms lists first; the
+ * form itself if no field has one.
+ */
+export function fieldToFocus<T>(tree: FieldTree<T>): FocusableField {
+  const errors = tree().errorSummary();
+  const error = errors.find((candidate) => candidate.fieldTree !== tree) ?? errors[0];
+  return error?.fieldTree ?? tree;
+}
+
+/**
+ * What a model saves, as text: two models that save the same setting have the same key, though they
+ * are different objects (picking the same preset again, spaces around the model).
+ */
+export function settingKey(model: ProviderFormModel): string {
+  return JSON.stringify(toProviderSetting(model));
+}
+
 /**
  * Picks a provider: a preset fills in how to call it; `OTHER_PROVIDER` keeps what there is, to
  * change it from there; `SAME_PROVIDER` (a fallback) clears it, as the main one decides it.
@@ -241,4 +266,14 @@ export function providerSchema(path: SchemaPathTree<ProviderFormModel>): void {
     modelRules(fallback);
     applyWhen(fallback, ({ value }) => value().presetId === OTHER_PROVIDER, callRules);
   });
+  // The rules above say what is wrong field by field; this one keeps the form from ever allowing
+  // what the check of the table (is_valid_ai_provider) would turn down
+  validate(path, ({ value }) =>
+    isValidAiProvider(toProviderSetting(value()))
+      ? null
+      : {
+          kind: 'provider',
+          message: $localize`:@@providerForm.error.provider:Falta algún dato del proveedor`,
+        },
+  );
 }

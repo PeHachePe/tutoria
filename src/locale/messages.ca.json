@@ -1192,6 +1192,9 @@
     "settings.voice.better": "Sonen robòtiques? Edge té veus naturals, i en un Mac pots descarregar veus millorades a Configuració del Sistema › Accessibilitat › Contingut parlat.",
     "tutor.voice.speaking": "Parlant",
     "tutor.voice.speakingLabel": "El tutor està parlant. Aturar",
-    "settings.voice.stopLabel": "Aturar la prova de la veu {$nombre}"
+    "settings.voice.stopLabel": "Aturar la prova de la veu {$nombre}",
+    "providerForm.error.provider": "Falta alguna dada del proveïdor",
+    "system.fallback.noKey": "sense clau",
+    "system.save.unchanged": "No hi ha canvis per desar"
   }
 }

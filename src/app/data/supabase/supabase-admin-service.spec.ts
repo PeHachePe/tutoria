@@ -171,6 +171,12 @@ describe('SupabaseAdminService', () => {
       expect(server.sentTo('GET', SETTINGS)[0].params.get('key')).toBe('eq.ai_provider');
     });
 
+    it('reads null while there is no row ai_provider', async () => {
+      server.on('GET', SETTINGS, { body: [] });
+
+      await expect(service.getAiProvider()).resolves.toBeNull();
+    });
+
     it('writes it, and takes its check as invalid', async () => {
       server.on('POST', SETTINGS, { status: 201, body: null });
       await service.setAiProvider(SETTING);
