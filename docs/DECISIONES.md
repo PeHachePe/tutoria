@@ -2193,3 +2193,15 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Consecuencias:** el resultado tiene siempre un elemento por modelo válido del ajuste, en su orden. Un respaldo que `providerSettingOf()` descarta por otra razón (un secreto con un nombre no permitido, un formato que no existe) sigue sin aparecer: el formulario del 5.3b no deja escribirlo.
 
 **Aprobación:** el autor aprobó partir el paso y las correcciones («Sí, empieza el 5.3a»).
+
+## D-077 · Los respaldos de otro proveedor se editan en el formulario del sistema (19/11/2026)
+
+**Contexto:** el plan del 5.3 dejaba el formulario del proveedor de IA para el modelo principal y los respaldos del mismo proveedor; uno de otro proveedor (con su `baseUrl`) solo se enseñaba en una línea de solo lectura y se conservaba al guardar. Pero el fallo más común del principal es de su proveedor (cuota agotada, caída, clave rechazada), y entonces un respaldo del mismo proveedor suele caer a la vez: el respaldo que de verdad protege al tutor es el de otro proveedor, que el back-end ya admite (D-044) y `ai-check` ya prueba (D-076).
+
+**Decisión:** cada respaldo lleva su propio desplegable de proveedor: «El del principal» (por defecto: solo modelo y tiempo, guardado como `{ model, timeoutMs }`), uno de `AI_PROVIDER_PRESETS` (rellena la URL, el secreto y el formato, que se enseñan en una línea) u «Otro» (los escribe). Se guardan con todos sus campos, porque un respaldo de otro proveedor nunca hereda la clave del principal. Los respaldos se pueden además subir y bajar, porque se prueban en su orden. El principal deja sus campos de proveedor deshabilitados salvo con «Otro», y la clave y el formato por defecto no se escriben, para que el ajuste del seed vuelva igual.
+
+**Alternativas:** la línea de solo lectura del plan (con «Quitar»): no deja crear el respaldo más útil sin tocar la base de datos. Un formulario aparte para cada respaldo: más pantallas para lo mismo.
+
+**Consecuencias:** `toProviderSetting()` ya no recibe los respaldos conservados; el formulario los edita todos. `system.fallbacks.kept` del plan no existe. La pantalla provisional (`PlaceholderPage`) deja de usarse con el 5.3b y se borra.
+
+**Aprobación:** el autor preguntó por qué no se podían editar y, tras la explicación, eligió «Sí, editables».
