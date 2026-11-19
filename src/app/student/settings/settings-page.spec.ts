@@ -192,6 +192,10 @@ describe('SettingsPage', () => {
         sentence: 'Hola, soy tu tutor. ¿Seguimos con el ejercicio?',
         options: { voiceId: 'jorge', rate: 'fast' },
       });
+      const stops = fake.stops;
+      await user.click(screen.getByRole('button', { name: 'Parar la prueba de la voz Jorge' }));
+      expect(fake.stops).toBe(stops + 1);
+      expect(screen.getByRole('button', { name: 'Probar la voz Jorge' })).toBeTruthy();
     });
 
     it('says when the browser has no voices of the language', async () => {

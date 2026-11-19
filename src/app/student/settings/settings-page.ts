@@ -149,6 +149,7 @@ export class SettingsPage {
       ...voice,
       region: voiceRegion(voice, this.locale),
       tryLabel: $localize`:@@settings.voice.tryLabel:Probar la voz ${voice.name}:nombre:`,
+      stopLabel: $localize`:@@settings.voice.stopLabel:Parar la prueba de la voz ${voice.name}:nombre:`,
     })),
   );
 
@@ -174,8 +175,10 @@ export class SettingsPage {
     void this.voice.sample(id);
   }
 
+  /** «Probar», or «Parar» while that voice sounds. */
   protected tryVoice(id: string): void {
-    void this.voice.sample(id);
+    if (this.voice.sampling() === id) this.voice.stop();
+    else void this.voice.sample(id);
   }
 
   protected trySample(): void {

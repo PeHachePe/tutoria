@@ -258,10 +258,14 @@
                     <button
                       matIconButton
                       type="button"
-                      [attr.aria-label]="option.tryLabel"
+                      [attr.aria-label]="
+                        voice.sampling() === option.id ? option.stopLabel : option.tryLabel
+                      "
                       (click)="tryVoice(option.id)"
                     >
-                      <mat-icon>play_arrow</mat-icon>
+                      <mat-icon>{{
+                        voice.sampling() === option.id ? 'stop' : 'play_arrow'
+                      }}</mat-icon>
                     </button>
                   </div>
                 }

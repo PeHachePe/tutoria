@@ -2226,6 +2226,8 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 **Alternativas:** mantener la voz sin elegir, como en D-066, con el coste de un paso más en cada idioma. Guardar una voz por idioma: sigue obligando a elegir la primera vez. Una síntesis de pago en el servidor: mejor sonido, pero con coste por respuesta y otro proveedor que recibe el texto (queda en `PENDIENTES.md`).
 
+**Las voces de broma** (que cantan o hacen ruidos) se reconocen por su nombre en inglés, español y catalán, porque macOS los traduce y su `voiceURI` es el mismo nombre traducido: la API no da un identificador fijo. Siguen ofreciéndose tras «Ver todas las voces», a petición del autor.
+
 **Consecuencias:** desaparece el enlace del chat a los ajustes («Elige una voz para el tutor en los ajustes»). Esta decisión se explica en la memoria junto a la perspectiva de género, que cambia de «no elegir» a «elegir por calidad y dejar cambiarla».
 
 **Aprobación:** el autor la pidió («pon las mejores voces primero sí y selecciona por defecto la mejor… que la puedan elegir»).

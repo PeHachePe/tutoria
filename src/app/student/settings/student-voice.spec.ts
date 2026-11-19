@@ -133,10 +133,24 @@ describe('StudentVoice', () => {
     const tried = voice.sample('paulina');
     expect(fake.stops).toBe(1);
     expect(fake.spoken[0].options).toEqual({ voiceId: 'paulina', rate: 'slow' });
+    expect(voice.sampling()).toBe('paulina');
     fake.fail();
     await expect(tried).resolves.toBeUndefined();
+    expect(voice.sampling()).toBeNull();
     voice.stop();
     expect(fake.stops).toBe(2);
+  });
+
+  it('knows which voice is being tried, until another one or stop', async () => {
+    setup();
+    await turnOn();
+    const first = voice.sample('paulina');
+    const second = voice.sample('jorge');
+    await first;
+    expect(voice.sampling()).toBe('jorge');
+    voice.stop();
+    await second;
+    expect(voice.sampling()).toBeNull();
   });
 
   it('unloads the speech when the voice is turned off', async () => {

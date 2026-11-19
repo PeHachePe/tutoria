@@ -1,4 +1,4 @@
-import { isNoveltyVoice, byQuality } from './voice-quality';
+import { byQuality, isNoveltyVoice } from './voice-quality';
 
 const voice = (name: string, local = true) => ({ id: name, name, lang: 'es-ES', local });
 
@@ -22,6 +22,25 @@ describe('voice quality', () => {
       'Eddy (español (España))',
       'Grandma (español (España))',
     ]);
+  });
+
+  it('tells the joke voices of macOS also with their names translated, as Chrome gives them', () => {
+    for (const name of [
+      'Campanas',
+      'Burbujas',
+      'Bufón',
+      'Buenas noticias',
+      'Órgano',
+      'Susurro',
+      'Violonchelos',
+      'Superestrella',
+      'Campanes',
+      'Bad News',
+    ]) {
+      expect(isNoveltyVoice(voice(name))).toBe(true);
+    }
+    expect(isNoveltyVoice(voice('Samantha'))).toBe(false);
+    expect(isNoveltyVoice(voice('Daniel'))).toBe(false);
   });
 
   it('tells the novelty voices of macOS', () => {

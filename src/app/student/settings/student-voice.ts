@@ -1,4 +1,4 @@
-import { computed, inject, resource, Service, type Signal } from '@angular/core';
+import { computed, inject, resource, Service, type Signal, signal } from '@angular/core';
 
 import { LanguageService } from '../../core/i18n/language-service';
 import { SpeechLoader } from '../../core/speech/speech-loader';
@@ -49,6 +49,10 @@ export class StudentVoice {
   /** The voice of the tutor: the chosen one, or the most natural of the language. */
   readonly tutorVoice = computed(() => this.chosenVoice() ?? this.voices()[0]);
 
+  private readonly samplingState = signal<string | null>(null);
+  /** The voice being tried with «Probar», to offer stopping it; null in silence. */
+  readonly sampling = this.samplingState.asReadonly();
+
   /** Says a sentence with the chosen voice and rate; `cancelled` without one. Rejects with a SpeechError. */
   async say(sentence: string): Promise<'ended' | 'cancelled'> {
     const speech = this.speech();
@@ -62,14 +66,18 @@ export class StudentVoice {
     const speech = this.speech();
     if (!speech) return;
     speech.stopSpeaking();
+    this.samplingState.set(voiceId);
     try {
       await speech.speak(SAMPLE, { voiceId, rate: this.settings.speechRate() });
     } catch {
       // A sample that fails is only silence: the list is still there to try another voice
     }
+    // Another sample may have started meanwhile: that one is still sounding
+    if (this.samplingState() === voiceId) this.samplingState.set(null);
   }
 
   stop(): void {
+    this.samplingState.set(null);
     this.speech()?.stopSpeaking();
   }
 }

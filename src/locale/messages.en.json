@@ -1191,6 +1191,7 @@
     "settings.voice.showAll": "See all the voices ({$INTERPOLATION} more)",
     "settings.voice.better": "Do they sound robotic? Edge has natural voices, and on a Mac you can download enhanced voices in System Settings › Accessibility › Spoken Content.",
     "tutor.voice.speaking": "Speaking",
-    "tutor.voice.speakingLabel": "The tutor is speaking. Stop"
+    "tutor.voice.speakingLabel": "The tutor is speaking. Stop",
+    "settings.voice.stopLabel": "Stop trying the voice {$nombre}"
   }
 }

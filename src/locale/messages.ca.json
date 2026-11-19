@@ -1191,6 +1191,7 @@
     "settings.voice.showAll": "Veure totes les veus ({$INTERPOLATION} més)",
     "settings.voice.better": "Sonen robòtiques? Edge té veus naturals, i en un Mac pots descarregar veus millorades a Configuració del Sistema › Accessibilitat › Contingut parlat.",
     "tutor.voice.speaking": "Parlant",
-    "tutor.voice.speakingLabel": "El tutor està parlant. Aturar"
+    "tutor.voice.speakingLabel": "El tutor està parlant. Aturar",
+    "settings.voice.stopLabel": "Aturar la prova de la veu {$nombre}"
   }
 }

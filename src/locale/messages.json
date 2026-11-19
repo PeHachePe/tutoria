@@ -379,6 +379,7 @@
     "settings.reactions.off": "Desactivadas",
     "settings.reactions.off.hint": "El tutor responde sin reacciones.",
     "settings.voice.tryLabel": "Probar la voz {$nombre}",
+    "settings.voice.stopLabel": "Parar la prueba de la voz {$nombre}",
     "settings.voice.sample": "Hola, soy tu tutor. ¿Seguimos con el ejercicio?",
     "nav.catalog": " Ejercicios ",
     "nav.settings": "Ajustes",

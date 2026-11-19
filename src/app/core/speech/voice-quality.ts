@@ -4,38 +4,60 @@ import type { SpeechVoice } from './speech-service';
 /** Words in the names of the voices that sound natural: neural, network or enhanced ones. */
 const NATURAL = /\b(natural|neural|online|premium|enhanced|mejorada|millorada|google)\b/i;
 
-/**
- * The voices of macOS that Chrome offers and that sound robotic or are a joke: the old Eloquence
- * voices and the novelty ones. They are only shown on demand.
- */
-const NOVELTY = new Set([
-  'albert',
-  'bad news',
-  'bahh',
-  'bells',
-  'boing',
-  'bubbles',
-  'cellos',
+/** The old Eloquence voices of macOS that Chrome offers: they speak, but sound robotic. */
+const ROBOTIC = new Set([
   'eddy',
   'flo',
-  'fred',
-  'good news',
   'grandma',
   'grandpa',
-  'jester',
-  'junior',
-  'kathy',
-  'organ',
-  'ralph',
   'reed',
   'rocko',
   'sandy',
   'shelley',
-  'superstar',
+  'albert',
+  'fred',
+  'junior',
+  'kathy',
+  'ralph',
+]);
+
+/**
+ * The joke voices of macOS, which sing or make noises: shown on demand, for fun. macOS translates
+ * their names into the language of the system (and so their `voiceURI`), so they are listed in
+ * English, Spanish and Catalan.
+ */
+const JOKES = new Set([
+  'bahh',
+  'boing',
   'trinoids',
-  'whisper',
   'wobble',
   'zarvox',
+  'bad news',
+  'bells',
+  'bubbles',
+  'cellos',
+  'good news',
+  'jester',
+  'organ',
+  'superstar',
+  'whisper',
+  'buenas noticias',
+  'bufón',
+  'burbujas',
+  'campanas',
+  'malas noticias',
+  'órgano',
+  'superestrella',
+  'susurro',
+  'violonchelos',
+  'bones notícies',
+  'bufó',
+  'bombolles',
+  'campanes',
+  'males notícies',
+  'orgue',
+  'xiuxiueig',
+  'violoncels',
 ]);
 
 /** Its first name, without the language that Chrome adds («Eddy (español (España))»). */
@@ -46,8 +68,10 @@ function baseName(voice: SpeechVoice): string {
     .toLowerCase();
 }
 
+/** A robotic voice, or a joke one that sings or makes noises: shown only on demand. */
 export function isNoveltyVoice(voice: SpeechVoice): boolean {
-  return NOVELTY.has(baseName(voice));
+  const name = baseName(voice);
+  return ROBOTIC.has(name) || JOKES.has(name);
 }
 
 /** 0 sounds natural, 1 is a voice of the system, 2 a novelty one. */
