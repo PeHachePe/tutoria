@@ -97,7 +97,7 @@ Reparto orientativo por semanas:
 | 5      | 30 nov–5 dic | Pasos 7.1–7.2 (accesibilidad, responsive y endurecimiento) y 3.2 (vídeo y memoria de la PEC3) |
 | 6–9    | 6 dic–5 ene  | Feedback de la PEC3, pasos 6.3 y 7.3 si hay tiempo, 7.4 (versión 1.0) y entrega final         |
 
-Quedan unas 90 h de pasos hasta la PEC3, unas 22 h por semana. El desarrollo debería acabar hacia el 2 de diciembre para dejar el 3.2 con margen. Si falta tiempo, se recorta en este orden: 6.3 y 7.3 (ya opcionales), 6.2 (capa 4), 6.1 (capa 3) y 5.3 (sistema), y lo que quede fuera se justifica en la memoria y en el checklist y pasa a la PEC4. El despliegue en la nube (3.1) se hace en cuanto el núcleo funciona con back-end real, como recomienda el aula, y cada fase posterior se despliega en ella. Hasta entonces todo se hace en local; el front con datos simulados puede publicarse antes (paso 1.10) sin coste y sin back-end.
+Quedan unas 90 h de pasos hasta la PEC3, unas 22 h por semana. El desarrollo debería acabar hacia el 2 de diciembre para dejar el 3.2 con margen. Si falta tiempo, se recorta en este orden: 6.3 y 7.3 (ya opcionales), las tareas guiadas que no son primeros pasos (7.0b, D-080), 6.2 (capa 4), 6.1 (capa 3) y 5.3 (sistema), y lo que quede fuera se justifica en la memoria y en el checklist y pasa a la PEC4. El despliegue en la nube (3.1) se hace en cuanto el núcleo funciona con back-end real, como recomienda el aula, y cada fase posterior se despliega en ella. Hasta entonces todo se hace en local; el front con datos simulados puede publicarse antes (paso 1.10) sin coste y sin back-end.
 
 ---
 
@@ -141,7 +141,7 @@ Detalle por pantalla:
 
 En **negrita**, lo que cambia respecto al modelo de la memoria.
 
-- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), **guide_state** (`jsonb`: cuándo vio la bienvenida y qué recorridos de primeros pasos terminó o cerró, 2.12, D-080), created_at, updated_at). El nombre evita la palabra reservada `user`.
+- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), **guide_state** (`jsonb`: la versión de la bienvenida que vio, las tareas guiadas hechas y si ocultó los primeros pasos; solo de cada usuario, 2.12, D-080), created_at, updated_at). El nombre evita la palabra reservada `user`.
 - **`subject`** (id, name, source_locale, translations `jsonb` con el nombre en los otros idiomas, D-046): la asignatura («Programación básica»), que gestiona el administrador. No supone programación: el editor y la corrección son del ejercicio según su `kind` (D-029).
 - `class_group` (id, name, school_year, teacher_id → app_user, **subject_id** → subject)
 - `enrollment` (id, group_id → class_group, user_id → app_user; única por pareja)
@@ -522,15 +522,50 @@ abstract class SpeechService {
 
 ### 2.12 Ayuda guiada
 
-Cada perfil aprende a usar la aplicación sobre la propia aplicación, sin manual aparte (pasos 7.0a y 7.0b, D-080). Son tres capas, cada una útil sin las demás:
+Cada perfil aprende a usar la aplicación sobre la propia aplicación: la ayuda señala cada pieza en la pantalla real y acompaña al usuario mientras hace las tareas, con sus propios datos (pasos 7.0a, 7.0b y 7.0c; D-080). Las mismas tareas generan el manual de usuario (7.0c), así que la ayuda y el manual no se separan nunca.
 
-- **Bienvenida:** la primera vez que un usuario entra en su área, un recorrido corto (cinco pasos como mucho) oscurece la pantalla salvo la pieza que explica y la presenta la mascota. Se puede saltar en cualquier momento y no vuelve a salir: se guarda en su perfil (`app_user.guide_state`), no en el navegador, para que no se repita en otro equipo. En el alumno, sale después del aviso de datos (2.2).
-- **Primeros pasos:** una lista con su progreso («2 de 4»), en un panel que se abre desde la barra superior. Cada tarea lanza un recorrido sobre la pantalla real que **espera a que el usuario haga la acción** (pulsar, escribir, guardar) antes de pasar al siguiente paso. Las tareas se dan por hechas por los datos cuando los hay (el docente ya tiene un bloque) y, si no, porque se completó su recorrido. Al terminarlas todas, el panel lo celebra y se puede cerrar para siempre.
-  - **Alumno:** abrir un ejercicio, ejecutar las pruebas, pedir una pista al tutor y entregar.
-  - **Docente:** crear un bloque, añadir un ejercicio, asignarlo a un grupo y abrir la sesión en vivo.
-- **Ayuda de cada pantalla:** un botón «?» en la barra muestra balizas animadas junto a las piezas de la pantalla; cada baliza, al pulsarla, explica la suya (la del editor, también su atajo para ejecutar, Ctrl+Enter o ⌘+Enter). También para la administración, que no tiene bienvenida ni primeros pasos.
+**Un único punto de entrada: el botón «Ayuda»** («?», solo icono, con su etiqueta y su _tooltip_) en la barra superior de los dos _layouts_, a la derecha, junto al menú del tema. Mientras quedan primeros pasos, lleva un punto de aviso, y su nombre accesible lo dice («Ayuda: 2 de 4 primeros pasos hechos»). No hay atajo de teclado global (D-080).
 
-En el menú de usuario, «Ver la bienvenida» la repite. Todo funciona igual con teclado, lector de pantalla y en el móvil (en pantallas estrechas, los pasos cuya pieza no se ve se saltan), en los tres idiomas y sin animaciones si el usuario las ha reducido (ajustes o `prefers-reduced-motion`).
+**Bienvenida.** La primera vez que un usuario entra en su área (el alumno, después del aviso de datos), un recorrido de cinco pasos como mucho, que presenta la mascota, enseña dónde está cada cosa y acaba señalando el botón «Ayuda»: «Aquí tienes la ayuda siempre que la necesites». Se puede saltar en cualquier paso, y saltarla cuenta como vista.
+
+- **Alumno:** el catálogo y sus pestañas, un ejercicio y su botón, los ajustes, «Ayuda».
+- **Docente:** el menú lateral, la sesión en vivo, los ejercicios, los grupos, «Ayuda».
+- **Administración** (también la cuenta del tribunal): usuarios, sistema, que entra además en todas las pantallas del docente, «Ayuda».
+
+**El panel de ayuda,** que abre el botón: un diálogo lateral (a pantalla completa en el móvil) que guarda el foco, se cierra con Esc y lo devuelve al botón. De arriba abajo:
+
+1. **Primeros pasos,** mientras no estén todos hechos: las tareas básicas del perfil con su estado y una barra de progreso («2 de 4»). Al terminarlas, la mascota lo celebra y la sección se recoge. También se puede ocultar con «Ya sé usarla».
+2. **¿Cómo se hace…?:** todas las tareas guiadas del perfil, primeros pasos incluidos, con un campo para filtrar (por título y palabras clave, sin distinguir acentos ni mayúsculas, en el idioma de la interfaz). Las de la pantalla abierta salen primero. Cada una lleva su título, una línea que dice qué consigue y una marca si ya se hizo; cualquiera se puede repetir.
+3. **Ayuda de esta pantalla:** enciende las balizas. Solo sale en las pantallas que las tienen.
+4. **Ver la bienvenida.**
+
+**Tareas guiadas.** Una tarea es una secuencia de pasos sobre las pantallas reales:
+
+- Si empieza en otra pantalla, navega a ella antes y espera a que la pieza aparezca.
+- Cada paso oscurece la pantalla salvo la pieza que explica, con un globo que lleva la mascota, un título, el texto, «Paso 2 de 5» y los botones Anterior, Siguiente y Cerrar.
+- **Los pasos de acción esperan a que el usuario la haga** (pulsar, escribir, elegir, guardar), lo dicen («Pulsa «Nuevo bloque»») y siguen solos. También dentro de los diálogos de Material que esa acción abre.
+- Las tareas trabajan con datos de verdad. Si una crea algo (un bloque, un usuario), el globo lo avisa antes y explica cómo deshacerlo.
+- Si el usuario cierra la tarea o se va a otra parte, la tarea acaba sin darse por hecha y vuelve a empezar desde el principio.
+- **Hecha:** por los datos cuando los hay (el docente ya tiene un bloque, el alumno ya ha entregado) y, si no, al terminar su recorrido.
+
+**Catálogo de tareas** (la lista definitiva y sus textos, en la ficha `13-ayuda`, contrastada con las pantallas):
+
+| Perfil         | Primeros pasos                                                                                                                             | Además, en «¿Cómo se hace…?»                                                                                                                                                                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Alumno         | Empezar un ejercicio · Ejecutar las pruebas · Pedir una pista al tutor · Entregar                                                          | Practicar de nuevo un ejercicio entregado · Volver a un intento anterior · Hablar con el tutor por voz (si el navegador puede, 2.11) · Cambiar el tema, el idioma o las reacciones · Ver qué datos se registran                                                                                      |
+| Docente        | Crear un grupo y matricular a su alumnado · Crear un bloque · Añadir un ejercicio al banco · Asignarlo al bloque · Seguir la clase en vivo | Preparar un curso nuevo (D-079) · Copiar los bloques de otro grupo · Poner una fecha de entrega · Ocultar un bloque o un ejercicio · Comprobar la solución de un ejercicio · Traducir un ejercicio · Probar un ejercicio como alumno · Ver el detalle de un intento · Leer el histórico de un bloque |
+| Administración | Dar de alta un usuario · Crear un grupo y matricular · Probar el proveedor de IA · Seguir la clase en vivo                                 | Cambiar el rol de una cuenta o desactivarla · Gestionar las asignaturas · Añadir un proveedor de respaldo · y todas las del docente                                                                                                                                                                  |
+
+**Balizas** («Ayuda de esta pantalla»): puntos animados junto a las piezas de la pantalla. Cada una es un botón («Ayuda: Ejecutar las pruebas») que abre la explicación de su pieza; la del editor explica también su atajo para ejecutar (Ctrl+Enter o ⌘+Enter). Se apagan con Esc, con «Ocultar la ayuda» o al cambiar de pantalla. Las llevan las pantallas con más piezas: catálogo, trabajo, en vivo, detalle del intento, ejercicios, grupos, histórico y sistema. Acceso, ajustes y datos registrados se explican solas.
+
+**Para todos:**
+
+- **Teclado y lector de pantalla:** el globo es un diálogo con título y se puede llegar con el tabulador a la pieza resaltada (driver.js 1.14 incluye la pieza en el ciclo del foco). Los pasos de acción anuncian qué hacer. Esc cierra la tarea y el foco vuelve a donde estaba.
+- **Móvil:** el globo se coloca donde cabe y la pieza se desplaza a la vista. Si una pieza está en el menú lateral plegado, la tarea lo abre antes. Los pasos y las balizas cuya pieza no se ve en ese ancho se saltan.
+- **Sin animaciones** si el usuario las ha reducido (ajustes o `prefers-reduced-motion`): sin transiciones entre pasos ni pulso en las balizas.
+- **Tres idiomas,** como el resto de la interfaz, y con los colores del tema en claro y oscuro.
+
+**Lo que se guarda,** en `app_user.guide_state` (`jsonb`, solo de cada usuario, que su docente no lee): la versión de la bienvenida que vio, las tareas hechas con su fecha, por un identificador estable, y si ocultó los primeros pasos. Sirve para no repetir la ayuda, también en otro equipo. Una tarea nueva o renombrada no necesita migración: los identificadores que no se conocen se ignoran, y una bienvenida rehecha sube su versión y vuelve a salir una vez. La pantalla de datos registrados lo cuenta en una línea: «Qué ayuda has visto, solo para no repetírtela. Tu docente no lo ve».
 
 ---
 
@@ -586,7 +621,8 @@ Es una aplicación Angular normal, con tres tipos de piezas:
 src/app/
   app.ts  app.html  app.config.ts  app.routes.ts   # generated by ng new; app.routes.ts lazy-loads each role
   auth/               # login-page/, auth-store.ts, role-guard.ts, guest-guard.ts, home-path.ts
-  student/            # student.routes.ts, student-layout/, catalog/, workspace/, settings/
+  student/            # student.routes.ts, student-layout/, catalog/, workspace/, settings/, student-guide.ts
+                      # (the guided tasks of each role live in their feature: teacher-guide.ts, admin-guide.ts)
                       # settings/: settings-store.ts, the student's settings (1.8 starts it with the reactions);
                       # student-voice.ts, the settings of the voice with what the browser can do (6.1a, D-071)
                       # workspace/: workspace.routes.ts (lazy, with its stores), the page and one folder
@@ -601,6 +637,9 @@ src/app/
     tools/            # app-tool.ts: the tools of the tutor and of WebMCP, their registry (2.5e, D-051)
     speech/           # speech-service.ts (abstract), web-speech-service.ts, loaded only with the voice on by
                       # speech-loader.ts; speakable-sentences.ts; speech-testing.ts (2.11, step 6.1)
+    guide/            # guided help (2.12, 7.0a): guide-task.ts (types), guide-anchor.ts (directive and anchor ids),
+                      # tour-runner.ts (the only file that imports driver.js, loaded on demand), guide-store.ts,
+                      # guide-progress.ts (pure functions), help-button/, help-panel/
   data/
     user.ts  exercise.ts  attempt.ts  process-event.ts  tutor.ts  ai-provider-setting.ts   # data types, one file per concept
     *-service.ts      # data services as abstract classes: exercise-service.ts, attempt-service.ts...
@@ -758,6 +797,7 @@ Si no, el componente guarda su estado en signals y lee con `resource()` directam
 | `SettingsStore` | Animaciones, proactividad y voz: los leen las reacciones, el tutor proactivo y el chat. El tema lo lleva `ThemeService`.                                                                    |
 | `AttemptStore`  | Intento en curso, compartido por el editor, los resultados, «Entregar» y el tutor.                                                                                                          |
 | `TutorStore`    | Conversación, compartida por el chat, las reacciones, la voz y el tutor proactivo; y lo que el tutor hace con sus herramientas (2.5e): sus acciones, las marcas del código y adónde señala. |
+| `GuideStore`    | Lo que el usuario ha visto y hecho de la ayuda guiada (2.12): lo leen el botón «Ayuda», su panel, la bienvenida y los recorridos, en todas las pantallas.                                   |
 | `LiveStore`     | Estado en vivo de cada alumno, que actualiza Realtime y usan la tabla y el detalle.                                                                                                         |
 
 El acceso, el catálogo, el histórico, la gestión de ejercicios y la administración no necesitan store.
@@ -1130,7 +1170,7 @@ Cada paso indica una estimación orientativa de horas, lo que se hace, cuándo e
 
 ### Bloque A · Hasta la PEC3 (la aplicación completa)
 
-Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
+Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b, 7.0c, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
 
 #### Fase 0 · Cimientos (≈12 h)
 
@@ -4324,35 +4364,53 @@ Tests, en este orden:
 🧪 `ChromeTutorService` con un `LanguageModel` falso.
 Commit: `feat: on-device tutor`.
 
-#### Fase 7 · Cierre (≈22,5 h)
+#### Fase 7 · Cierre (≈26 h)
 
-**7.0a · Ayuda guiada: la base y el alumno (≈4 h)** · §2.12 · D-080 · a petición del autor, antes del 7.1 para que sus e2e y axe ya la recorran
+La ayuda guiada (7.0a, 7.0b y 7.0c) va antes del 7.1, para que sus e2e y axe ya la recorran. Es una petición del autor, y su manual entra en la memoria.
 
-- **Ficha `13-ayuda`** al empezar el paso: la bienvenida, el panel de primeros pasos y las balizas, con sus estados y textos en los tres idiomas.
-- **driver.js** (MIT, sin dependencias) para el recorrido y las balizas (`driver.js` y `driver.js/hints`), cargado aparte solo cuando hace falta. Su CSS, adaptado con los tokens del tema en un parcial de `src/styles/` (D-039), y el globo con la mascota que presenta cada paso. Sin animaciones si el usuario las ha reducido.
-- **`GuideService`** (`core/guide/`): la única pieza que toca driver.js; lanza un recorrido, lo cierra y avisa de cómo acabó. Los recorridos se describen como datos (pieza, título y texto traducibles, y la acción que se espera, `advanceOn`), y las piezas se marcan en las plantillas con un atributo propio, no con clases de estilo.
-- **`GuideStore`:** la bienvenida vista y los recorridos terminados o cerrados, de `app_user.guide_state`, en las dos versiones del servicio de datos; el progreso de cada tarea, de los datos cuando los hay.
-- **Migración:** la columna `guide_state`, que el usuario solo puede actualizar en su propia fila (privilegio por columna, como `current_code`). Tests de pgTAP.
-- **Panel de primeros pasos, propio con Material** (no el checklist de driver.js, cuyos textos para el lector de pantalla están fijos en inglés): botón en la barra con el progreso, lista de tareas con su estado, barra de progreso y cierre. Al muestrario `/dev/ui`, sin empezar, a medias y terminado.
-- **Alumno:** la bienvenida (después del aviso de datos), sus primeros pasos y las balizas de la pantalla de trabajo y del catálogo; «Ver la bienvenida» en el menú de usuario.
+**7.0a · Ayuda guiada: la base, el panel y el alumno (≈5 h)** · ficha `13-ayuda` · §2.12 · D-080
 
-✅ Un alumno nuevo ve la bienvenida una sola vez (también al entrar desde otro equipo), completa sus primeros pasos sobre la pantalla real y lo puede hacer todo con teclado y en el móvil; `npm run check` en verde.
-🧪 `GuideService` con un driver falso; `GuideStore` con TDD; el panel; las balizas; pgTAP de la columna.
-Commit: `feat(guide): guided help for students (step 7.0a)`.
+- **Ficha `13-ayuda`, lo primero:** el botón, el panel, el globo y las balizas, con sus estados, y el catálogo de tareas de los tres perfiles con sus textos en español, contrastado con las pantallas reales.
+- **Prueba en el navegador antes de construir encima:** un recorrido de driver.js sobre una pantalla real, con un paso que abre un diálogo de Material. Comprobar el foco (el globo, la pieza resaltada y el diálogo, cada uno con su propia trampa de foco), Esc (que cierre el diálogo y no la tarea), el orden de capas con `.cdk-overlay-container` (`allowedElements`) y el lector de pantalla. Lo que salga, a la ficha y a D-080.
+- **driver.js 1.14** (`--save-exact`): `driver.js` para los recorridos y `driver.js/hints` para las balizas.
+  - **`TourRunner`** es lo único que lo importa, con un `import()` dinámico en su primer uso (como `SpeechLoader`, 6.1a). Traduce una `GuideTask` a pasos de driver.js: navegar si hace falta, esperar a la pieza, `advanceOn` en los pasos de acción, saltar las piezas que no se ven y desactivar las animaciones si están reducidas. Dice cómo acabó: hecha, cerrada o interrumpida.
+  - **El globo,** con `onPopoverRender`: la mascota (`createComponent` en el nodo del globo) y los textos de los botones en el idioma de la interfaz.
+  - **Su CSS,** con los tokens del tema, en `src/styles/guide.css` (D-039).
+- **Las tareas, como datos** (`GuideTask`: id estable, perfil, título, descripción y palabras clave con `$localize`, la pantalla donde empieza, los pasos y, si la hay, la condición de hecha por los datos). Las piezas se marcan con la directiva `GuideAnchor` (`[appGuideAnchor]="GUIDE_ANCHORS.newBlock"`), con los ids en una constante tipada, no con clases de estilo ni `data-testid`.
+- **`guide-progress.ts`,** funciones puras con TDD: el progreso de los primeros pasos, el orden del panel (las de la pantalla abierta primero), el filtro sin acentos y la mezcla de lo guardado con lo que dicen los datos.
+- **`GuideStore`** (en `core/guide/`, global): lee `guide_state` del usuario de `AuthStore` y lo escribe con `AuthService.saveGuideState()`, en las dos versiones, como el aviso de datos.
+- **Migración:** la columna `app_user.guide_state` (`jsonb`, por defecto `{}`, con una comprobación de forma y tamaño), que el usuario solo puede actualizar en su propia fila (privilegio por columna). Tests de pgTAP. Regenerar los tipos y la semilla.
+- **Botón «Ayuda» y panel** en los dos _layouts_, y la línea nueva en la pantalla de datos registrados. Al muestrario `/dev/ui`: el botón con y sin aviso, el panel sin empezar, a medias y terminado, un globo y una baliza abierta.
+- **Alumno:** la bienvenida (después del aviso de datos), sus primeros pasos, sus tareas de «¿Cómo se hace…?» y las balizas del catálogo y de la pantalla de trabajo.
+- **Textos** en los tres idiomas (`npm run i18n`).
 
-**7.0b · Ayuda guiada: docente y administración (≈3,5 h)** · §2.12 · D-080
+✅ Un alumno nuevo ve la bienvenida una sola vez (tampoco se repite en otro equipo), hace sus primeros pasos sobre la pantalla real y lo puede hacer todo con teclado, con lector de pantalla y en el móvil. `npm run check` en verde y definición de terminado (§5.4) del panel.
+🧪 `guide-progress.ts` (TDD); `GuideStore` (TDD); `TourRunner` con un driver falso; botón, panel y balizas; que cada pieza que nombra una tarea esté marcada en alguna plantilla (recorriendo los `.html`); pgTAP de la columna.
+Commit: `feat(guide): guided help and the student's tasks (step 7.0a)`.
 
-- **Docente:** la bienvenida y sus primeros pasos (crear un bloque, añadir un ejercicio, asignarlo a un grupo y abrir la sesión en vivo), con las tareas dadas por hechas por sus datos; y las balizas de en vivo, detalle del intento, ejercicios, histórico y grupos.
-- **Administración:** las balizas de usuarios y sistema; además, las del docente, porque entra en sus pantallas.
-- Pensado para las pantallas vacías: un docente sin grupos empieza por la tarea que crea el primero.
+**7.0b · Ayuda guiada: docente y administración (≈4 h)** · ficha `13-ayuda` · §2.12 · D-080
 
-✅ Un docente nuevo prepara su primera clase guiado de principio a fin; `npm run check` en verde.
-🧪 Los recorridos del docente (que cada pieza que nombran existe en su pantalla) y el progreso por sus datos.
-Commit: `feat(guide): guided help for teachers and admins (step 7.0b)`.
+- **Docente:** la bienvenida, sus primeros pasos y sus tareas de «¿Cómo se hace…?», con las condiciones de hecha por sus datos (tiene un grupo con alumnado, un bloque, un ejercicio propio en el banco, una asignación). Las balizas de en vivo, detalle del intento, ejercicios, grupos e histórico.
+- **Administración:** la bienvenida y sus primeros pasos, que son los de la cuenta del tribunal; sus tareas, y las del docente; las balizas de sistema.
+- **Pantallas vacías:** un docente sin grupos empieza por la tarea que crea el primero, y ninguna tarea da por hecho que hay datos.
+- **Menú lateral:** en el móvil y en modo raíl, las tareas lo abren antes de señalar una entrada suya.
+
+✅ Un docente nuevo prepara su primera clase guiado de principio a fin, y la cuenta de administración enseña al tribunal la aplicación en sus primeros pasos. `npm run check` en verde.
+🧪 Las condiciones de hecha por los datos (TDD); las tareas del docente y de la administración, como en el 7.0a.
+Commit: `feat(guide): the teacher's and the admin's guided tasks (step 7.0b)`.
+
+**7.0c · Manual de usuario generado desde la ayuda (≈2 h)** · §2.12 · D-080
+
+- **`npm run manual`:** un proyecto de Playwright (`manual`, como el de `screenshots`) que, con los datos simulados y en español, hace cada tarea guiada de cada perfil de principio a fin. Guarda una captura de cada paso, con la pieza resaltada y su globo, y escribe `docs/manual/alumno.md`, `docente.md` y `administracion.md`: un índice y, por tarea, sus pasos con el texto del globo (leído de la página) y su captura.
+- Se rehace cada vez que cambian las tareas o las pantallas. Si una pieza ya no existe, falla, y así sirve también de prueba de que todas las tareas siguen funcionando.
+- Enlazado desde el README y como anexo de la memoria (manual de usuario).
+
+✅ `npm run manual` genera los tres manuales sin errores, y cada tarea guiada se completa sola en el navegador.
+Commit: `docs(guide): user manual generated from the guided tasks (step 7.0c)`.
 
 **7.1 · Accesibilidad y responsive**
 
-- e2e de todas las pantallas (D-026): los de comportamiento y un test de accesibilidad por pantalla con `@axe-core/playwright` que recorre sus estados (diálogos abiertos, errores, vacío), completo en claro y solo contraste en oscuro (D-025), sin ninguna infracción.
+- e2e de todas las pantallas (D-026): los de comportamiento y un test de accesibilidad por pantalla con `@axe-core/playwright` que recorre sus estados (diálogos abiertos, errores, vacío, y la ayuda: panel, globo y balizas), completo en claro y solo contraste en oscuro (D-025), sin ninguna infracción.
 - Recorrido completo con teclado y con un lector de pantalla (NVDA en Windows), que encuentra lo que axe no puede comprobar solo.
 - `npm run screenshots -- pec4` como evidencia para la memoria.
 
@@ -4381,13 +4439,13 @@ Commit: `release: v1.0`.
 
 ## 7. Riesgos y plan de contingencia
 
-| Riesgo                                                 | Impacto | Medida                                                                                                                                                                                                                                                                   |
-| ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| No llegar a la aplicación completa el 5/12             | Alto    | Orden de recorte fijado (6.3, 7.3, 6.2, 6.1 y 5.3), lo recortado se justifica en la memoria y en el checklist y pasa a la PEC4. Despliegue en la nube desde el 3.1, para ver los problemas de despliegue pronto. El front simulado se puede publicar desde el paso 1.10. |
-| Límite de CPU de las Edge Functions (2 s por petición) | Medio   | QuickJS corta cada prueba a los 250 ms y la ejecución al segundo (D-042); límite de 10 ejecuciones por minuto y usuario. Si en el proyecto en la nube no basta, se bajan los límites o se pasa a Judge0 con otra clase de `CodeSandbox`.                                 |
-| Proyecto gratuito de Supabase pausado por inactividad  | Medio   | Entrar al panel antes de cada fecha de evaluación y mantener actividad semanal.                                                                                                                                                                                          |
-| Calidad, límites o condiciones del proveedor de IA     | Medio   | Adaptador compatible con la API de OpenAI: se cambia de proveedor desde la configuración (Gemini gratis, Ollama u otro), y para la demo se puede usar un modelo de pago por unos pocos euros. El plan gratuito de Gemini, solo con datos de prueba.                      |
-| Aspecto genérico de Material                           | Bajo    | Tema propio en `src/theme.scss`: paleta a partir del verde, formas, tipografía y densidad.                                                                                                                                                                               |
-| Docker da problemas con Supabase local                 | Bajo    | Proyecto de desarrollo en la nube.                                                                                                                                                                                                                                       |
-| Pulir pantallas sin fin                                | Medio   | Tiempo máximo por pantalla y lista de pulido pendiente en su ficha.                                                                                                                                                                                                      |
-| Código generado con IA sin revisar                     | Medio   | Un paso cada vez, tests, revisión humana antes de cada commit y registro en `REGISTRO.md`.                                                                                                                                                                               |
+| Riesgo                                                 | Impacto | Medida                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No llegar a la aplicación completa el 5/12             | Alto    | Orden de recorte fijado (6.3, 7.3, las tareas guiadas que no son primeros pasos, 6.2, 6.1 y 5.3), lo recortado se justifica en la memoria y en el checklist y pasa a la PEC4. Despliegue en la nube desde el 3.1, para ver los problemas de despliegue pronto. El front simulado se puede publicar desde el paso 1.10. |
+| Límite de CPU de las Edge Functions (2 s por petición) | Medio   | QuickJS corta cada prueba a los 250 ms y la ejecución al segundo (D-042); límite de 10 ejecuciones por minuto y usuario. Si en el proyecto en la nube no basta, se bajan los límites o se pasa a Judge0 con otra clase de `CodeSandbox`.                                                                               |
+| Proyecto gratuito de Supabase pausado por inactividad  | Medio   | Entrar al panel antes de cada fecha de evaluación y mantener actividad semanal.                                                                                                                                                                                                                                        |
+| Calidad, límites o condiciones del proveedor de IA     | Medio   | Adaptador compatible con la API de OpenAI: se cambia de proveedor desde la configuración (Gemini gratis, Ollama u otro), y para la demo se puede usar un modelo de pago por unos pocos euros. El plan gratuito de Gemini, solo con datos de prueba.                                                                    |
+| Aspecto genérico de Material                           | Bajo    | Tema propio en `src/theme.scss`: paleta a partir del verde, formas, tipografía y densidad.                                                                                                                                                                                                                             |
+| Docker da problemas con Supabase local                 | Bajo    | Proyecto de desarrollo en la nube.                                                                                                                                                                                                                                                                                     |
+| Pulir pantallas sin fin                                | Medio   | Tiempo máximo por pantalla y lista de pulido pendiente en su ficha.                                                                                                                                                                                                                                                    |
+| Código generado con IA sin revisar                     | Medio   | Un paso cada vez, tests, revisión humana antes de cada commit y registro en `REGISTRO.md`.                                                                                                                                                                                                                             |

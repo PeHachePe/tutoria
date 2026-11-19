@@ -2272,26 +2272,59 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 **Aprobación:** el diseño, por el autor («Sí, las cuatro»); el detalle técnico (semanas enteras, zona horaria del navegador, alumnado sin marcar), por delegación del autor.
 
-## D-080 · Ayuda guiada: driver.js para los recorridos y las balizas, y un panel de primeros pasos propio (19/11/2026, propuesta)
+## D-080 · Ayuda guiada: un único botón «Ayuda», tareas guiadas con driver.js y el manual generado de ellas (19/11/2026, propuesta)
 
-**Contexto:** el autor pidió una ayuda que explique cada perfil, sobre todo el del alumno y el del docente, marcando cada pieza paso a paso, también en el móvil, visual y accesible. Se valoró además si bastaba un recorrido inicial o hacía falta una guía por tareas.
+**Contexto:** el autor pidió una ayuda que explique cada perfil, sobre todo el del alumno y el del docente, marcando cada pieza paso a paso: visual, accesible y también en el móvil. Además, que se pueda volver a ella para ver cómo se hace algo concreto, y que sirva casi de manual. La valoran mucho, y la cuenta del tribunal es de administración, así que su primera impresión será la ayuda.
 
 **Decisión:**
 
-- **Tres capas** (§2.12): una bienvenida corta la primera vez, unos primeros pasos con tareas guiadas que esperan a que el usuario haga cada acción, y balizas de ayuda en cada pantalla. Un recorrido largo al entrar casi siempre se salta; la ayuda que sirve es la que llega cuando se va a hacer la tarea.
-- **driver.js** (MIT, sin dependencias, ≈ 4 M descargas semanales en noviembre de 2026 y versiones frecuentes) para el recorrido y las balizas: oscurece la pantalla salvo la pieza que explica, su globo es un diálogo con título y no deja salir el foco, se maneja con teclado, se recoloca al cambiar el tamaño y puede esperar una acción del usuario (`advanceOn`). Solo la toca `GuideService`, así que cambiarla más adelante solo cambia esa clase.
-- **El panel de primeros pasos, propio con Material**, aunque driver.js trae un checklist: los textos de dos de sus botones para el lector de pantalla están fijos en inglés y no se configuran, y su aspecto no es el de la aplicación. El panel propio usa el tema, se traduce entero y se prueba como el resto.
-- **Lo visto y lo terminado, en el perfil** (`app_user.guide_state`, `jsonb`), no en `localStorage`: la ayuda no se repite en otro equipo. Una columna basta (no hace falta tabla nueva) y `jsonb` admite recorridos nuevos sin migraciones. Las tareas con datos (el docente ya tiene un bloque) se dan por hechas por esos datos, no por lo guardado.
+- **Un único punto de entrada,** el botón «Ayuda» de la barra superior, con un panel que reúne todo: los primeros pasos con su progreso, «¿Cómo se hace…?» con todas las tareas guiadas del perfil y un filtro, las balizas de la pantalla y la bienvenida. Antes eran cuatro mecanismos en sitios distintos: el usuario tendría que saber dónde buscar cada uno.
+- **Tareas guiadas antes que recorridos que solo enseñan:** un recorrido largo al entrar casi siempre se salta. Lo que se recuerda es lo que se hace, así que la tarea espera a que el usuario haga cada acción en la pantalla real y con sus datos. La bienvenida es corta (cinco pasos como mucho) y acaba señalando el botón «Ayuda».
+- **driver.js 1.14** (MIT, sin dependencias, ≈ 4 M descargas semanales en noviembre de 2026 y versiones frecuentes) para los recorridos y las balizas:
+  - **Aspecto:** oscurece la pantalla salvo la pieza que explica.
+  - **Accesibilidad:** su globo es un diálogo con título, y el ciclo del foco incluye la pieza resaltada (comprobado en su código).
+  - **Uso:** se maneja con teclado, se recoloca al cambiar el tamaño y puede esperar una acción del usuario (`advanceOn`).
+  - **Aislamiento:** solo lo importa `TourRunner`, y se carga cuando hace falta. Cambiar de librería solo cambiaría esa clase, porque las tareas son datos propios (`GuideTask`), no configuración de driver.js.
+- **El panel, propio con Material.** driver.js trae un checklist, pero:
+  - las etiquetas de dos de sus botones para el lector de pantalla están fijas en inglés y no se configuran;
+  - no tiene filtro ni secciones;
+  - su aspecto no es el de la aplicación.
+- **Lo visto y lo hecho, en el perfil** (`app_user.guide_state`, `jsonb`), no en `localStorage`:
+  - la ayuda no se repite en otro equipo;
+  - una columna basta (no hace falta tabla nueva);
+  - `jsonb` con identificadores estables admite tareas nuevas sin migraciones, y una versión de la bienvenida permite volver a enseñarla si se rehace;
+  - las tareas con datos se dan por hechas por esos datos, no por lo guardado.
+- **El manual sale de las tareas** (`npm run manual`, 7.0c): Playwright hace cada tarea y guarda el texto de cada globo con su captura. Así el manual no se desfasa de la aplicación, y de paso comprueba que todas las tareas siguen funcionando.
 
 **Alternativas:**
 
 - **Shepherd.js:** igual de buena en aspecto y accesibilidad, con envoltorio de Angular, pero con licencia AGPL-3.0, que obliga a publicar el código de toda la aplicación bajo esa licencia o a pagar la comercial.
 - **Intro.js:** también AGPL-3.0 y de aspecto más anticuado.
-- **ngx-ui-tour-md-menu:** hecha para Angular y Material, pero poco usada (≈ 21 k descargas semanales), sin oscurecer la pantalla, y sus globos son menús de Material (`role="menu"`) con texto dentro, que axe marca como error.
-- **TourGuide JS y OnboardJS:** abandonada la primera (sin versiones desde 2025) y sin interfaz y en versión de prueba la segunda.
-- **Solo un recorrido inicial:** más barato, pero enseña dónde está cada cosa sin enseñar a hacer nada.
-- **Una paleta de órdenes (Ctrl+K):** cada perfil tiene cinco pantallas como mucho y un solo atajo propio (Ctrl+Enter o ⌘+Enter para ejecutar en el editor), así que no ahorra nada. Además, Ctrl+K ya es un atajo del navegador (la barra de búsqueda en Chrome, Edge y Firefox), y quitárselo al usuario rompe un hábito suyo. El atajo del editor lo explica su baliza.
+- **ngx-ui-tour-md-menu:** hecha para Angular y Material, pero:
+  - poco usada (≈ 21 k descargas semanales);
+  - no oscurece la pantalla;
+  - sus globos son menús de Material (`role="menu"`) con texto dentro, que axe marca como error.
+- **TourGuide JS y OnboardJS:** abandonada la primera (sin versiones desde 2025); la segunda, sin interfaz y en versión de prueba.
+- **Solo un recorrido inicial:** más barato, pero enseña dónde está cada cosa sin enseñar a hacer nada, y no se puede volver a una tarea concreta.
+- **El checklist de driver.js,** retocando sus etiquetas al dibujarse: funciona, pero depende de su HTML interno y puede romperse con cualquier versión.
+- **Un manual escrito a mano:** se desfasa con cada cambio de pantalla.
+- **Una paleta de órdenes (Ctrl+K):**
+  - cada perfil tiene cinco pantallas como mucho y un solo atajo propio (Ctrl+Enter o ⌘+Enter para ejecutar en el editor), así que no ahorra nada;
+  - Ctrl+K ya es un atajo del navegador (la barra de búsqueda en Chrome, Edge y Firefox), y quitárselo al usuario rompe un hábito suyo;
+  - el filtro de «¿Cómo se hace…?» cubre lo que aportaría.
 
-**Consecuencias:** pasos 7.0a y 7.0b (≈ 7,5 h; la fase 7 pasa de ≈ 15 h a ≈ 22,5 h), antes del 7.1 para que sus e2e y axe ya recorran la ayuda. Una dependencia nueva (`driver.js`) y una columna en `app_user`. El CSS de driver.js se adapta con los tokens del tema en un parcial de `src/styles/` (D-039).
+**Por comprobar al empezar el 7.0a:** driver.js con los diálogos de Material, que tienen su propia trampa de foco y viven en `.cdk-overlay-container`: el foco, Esc y el orden de capas. Si no encajan, los pasos dentro de un diálogo se explican con un globo propio dentro del diálogo, y el resto no cambia.
 
-**Aprobación:** el autor eligió driver.js tras la comparación y el panel propio («si ves mejor la opción 2 la haces»), y dejó lo demás a criterio del agente («lo que veas mejor, que sea lo más compatible a futuro»).
+**Consecuencias:**
+
+- Pasos 7.0a (≈ 5 h), 7.0b (≈ 4 h) y 7.0c (≈ 2 h), antes del 7.1 para que sus e2e y axe ya recorran la ayuda. La fase 7 pasa de ≈ 15 h a ≈ 26 h.
+- Si falta tiempo, se recortan las tareas que no son primeros pasos, justo después del 7.3. Cada una es sobre todo texto, así que se pueden añadir más tarde.
+- Una dependencia nueva (`driver.js`), una columna en `app_user`, un store nuevo (`GuideStore`, §4.5) y la carpeta `core/guide/`.
+- El CSS de driver.js se adapta con los tokens del tema en `src/styles/guide.css` (D-039).
+- La pantalla de datos registrados cuenta qué se guarda de la ayuda.
+
+**Aprobación:**
+
+- El autor eligió driver.js tras la comparación y el panel propio («si ves mejor la opción 2 la haces»).
+- Pidió poder volver a ver cómo se hace algo concreto, aprobó el panel único («añade y actualiza, que quede bien completo») y quiere que sirva de manual.
+- El resto, a criterio del agente («lo que veas mejor, que sea lo más compatible a futuro»).
