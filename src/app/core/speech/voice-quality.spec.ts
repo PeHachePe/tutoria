@@ -54,6 +54,11 @@ describe('voice quality', () => {
       'Shelley',
       'Bells',
       'Zarvox',
+      // Grandma and Grandpa, translated by macOS as the joke voices are
+      'Abuela (español (España))',
+      'Abuelo',
+      'Àvia',
+      'Avi (català (Espanya))',
     ]) {
       expect(isNoveltyVoice(voice(name))).toBe(true);
     }

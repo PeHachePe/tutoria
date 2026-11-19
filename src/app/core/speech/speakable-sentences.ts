@@ -38,6 +38,9 @@ const INLINE_MARKS: readonly [RegExp, string][] = [
   [/[^\S\n]{2,}/g, ' '],
 ];
 const HAS_WORDS = /[\p{L}\p{N}]/u;
+const HAS_LETTERS = /\p{L}/u;
+/** One per language: it is built for every piece of an answer that arrives. */
+const SEGMENTERS = new Map<AppLocale, Intl.Segmenter>();
 
 /**
  * The text the tutor says aloud, sentence by sentence (2.11): no blocks of code, Markdown marks nor
@@ -46,7 +49,7 @@ const HAS_WORDS = /[\p{L}\p{N}]/u;
  */
 export function speakableSentences(text: string, options: SpeakableOptions): string[] {
   const hadBlock = text.includes(FENCE);
-  const segmenter = new Intl.Segmenter(options.locale, { granularity: 'sentence' });
+  const segmenter = segmenterOf(options.locale);
   const sentences = splitCodeBlocks(text)
     .filter((part) => part.kind === 'text')
     .flatMap((part) => sentencesOf(plain(part.text), segmenter, ABBREVIATIONS[options.locale]));
@@ -54,12 +57,26 @@ export function speakableSentences(text: string, options: SpeakableOptions): str
     const endsInBlock = text.split(FENCE).length % 2 === 0;
     const lastFence = text.lastIndexOf(FENCE);
     const tail = lastFence < 0 ? text : text.slice(lastFence + FENCE.length);
-    if (!endsInBlock && tail.trim()) sentences.pop();
+    if (!endsInBlock && tail.trim()) {
+      const last = sentences.pop();
+      // After «. » come digits or brackets and no letter yet: a lower case would join them to the
+      // sentence before («. 2 veces»), so it waits too (UAX #29, rule SB8)
+      if (last !== undefined && !HAS_LETTERS.test(last)) sentences.pop();
+    }
     return sentences.filter((sentence) => HAS_WORDS.test(sentence));
   }
   const spoken = sentences.filter((sentence) => HAS_WORDS.test(sentence));
   if (text.trim() && (hadBlock || options.leavesButton)) spoken.push(options.closing);
   return spoken;
+}
+
+function segmenterOf(locale: AppLocale): Intl.Segmenter {
+  let segmenter = SEGMENTERS.get(locale);
+  if (!segmenter) {
+    segmenter = new Intl.Segmenter(locale, { granularity: 'sentence' });
+    SEGMENTERS.set(locale, segmenter);
+  }
+  return segmenter;
 }
 
 function plain(text: string): string {

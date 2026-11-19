@@ -54,6 +54,8 @@ export class StudentVoice {
   private readonly samplingState = signal<string | null>(null);
   /** The voice being tried with «Probar», to offer stopping it; null in silence. */
   readonly sampling = this.samplingState.asReadonly();
+  /** Grows with each «Probar», so only the latest one ends the trying. */
+  private samples = 0;
 
   constructor() {
     // Boundary with Web Speech (4.8): the browser tells when its voices change (one downloaded with
@@ -80,14 +82,15 @@ export class StudentVoice {
     const speech = this.speech();
     if (!speech) return;
     speech.stopSpeaking();
+    const run = ++this.samples;
     this.samplingState.set(voiceId);
     try {
       await speech.speak(SAMPLE, { voiceId, rate: this.settings.speechRate() });
     } catch {
       // A sample that fails is only silence: the list is still there to try another voice
     }
-    // Another sample may have started meanwhile: that one is still sounding
-    if (this.samplingState() === voiceId) this.samplingState.set(null);
+    // Another sample may have started meanwhile, even of the same voice: that one is still sounding
+    if (run === this.samples) this.samplingState.set(null);
   }
 
   stop(): void {

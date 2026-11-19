@@ -156,6 +156,16 @@ describe('WebSpeechService', () => {
       expect(listener).toHaveBeenCalledOnce();
     });
 
+    it('does not say a sentence silenced while it waited for the voices', async () => {
+      synthesis.voices = [];
+      const said = speech.speak('Hola.', { voiceId: 'jorge', rate: 'normal' });
+      speech.stopSpeaking();
+      synthesis.voices = [jorge];
+      synthesis.dispatchEvent(new Event('voiceschanged'));
+      expect(await said).toBe('cancelled');
+      expect(synthesis.queue).toEqual([]);
+    });
+
     it('stops speaking', () => {
       speech.stopSpeaking();
       expect(synthesis.cancelled).toBe(1);

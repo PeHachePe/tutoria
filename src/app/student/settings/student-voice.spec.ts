@@ -153,6 +153,18 @@ describe('StudentVoice', () => {
     expect(voice.sampling()).toBeNull();
   });
 
+  it('still offers to stop a voice tried again while it sounds', async () => {
+    setup();
+    await turnOn();
+    const first = voice.sample('paulina');
+    const again = voice.sample('paulina');
+    await first;
+    expect(voice.sampling()).toBe('paulina');
+    fake.finish();
+    await again;
+    expect(voice.sampling()).toBeNull();
+  });
+
   it('follows the voices of the browser when they change, without looking for them again', async () => {
     setup();
     await turnOn();

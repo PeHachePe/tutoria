@@ -121,13 +121,26 @@ describe('speakableSentences', () => {
     ]);
   });
 
+  it('while partial, keeps back a sentence until a letter tells whether it ends', () => {
+    // «. 2 veces» does not split, but «. 2» does at the end: the sentence before waits
+    expect(speakableSentences('Revisa el bucle. 2', { ...es, partial: true })).toEqual([]);
+    expect(speakableSentences('Revisa el bucle. (', { ...es, partial: true })).toEqual([]);
+    expect(speakableSentences('🎉', { ...es, partial: true })).toEqual([]);
+    expect(speakableSentences('Revisa el bucle. 2 Ve', { ...es, partial: true })).toEqual([
+      'Revisa el bucle.',
+    ]);
+  });
+
   it('while partial, gives a prefix of the final sentences at every length', () => {
-    const answer =
-      'Mira **el bucle**, p. ej. For. ¿Dónde empieza?\n```js\nfor (;;) {}\n```\nVale 3.5. Usa `i`. 🎉 Bien.';
-    const final = speakableSentences(answer, es);
-    for (let length = 0; length <= answer.length; length++) {
-      const partial = speakableSentences(answer.slice(0, length), { ...es, partial: true });
-      expect(final.slice(0, partial.length)).toEqual(partial);
+    for (const answer of [
+      'Mira **el bucle**, p. ej. For. ¿Dónde empieza?\n```js\nfor (;;) {}\n```\nVale 3.5. Usa `i`. 🎉 Bien.',
+      'Revisa el bucle. 2 veces más. (pista) mira el índice. Bien.',
+    ]) {
+      const final = speakableSentences(answer, es);
+      for (let length = 0; length <= answer.length; length++) {
+        const partial = speakableSentences(answer.slice(0, length), { ...es, partial: true });
+        expect(final.slice(0, partial.length)).toEqual(partial);
+      }
     }
   });
 });

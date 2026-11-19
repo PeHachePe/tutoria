@@ -4,12 +4,19 @@ import type { SpeechVoice } from './speech-service';
 /** Words in the names of the voices that sound natural: neural, network or enhanced ones. */
 const NATURAL = /\b(natural|neural|online|premium|enhanced|mejorada|millorada|google)\b/i;
 
-/** The old Eloquence voices of macOS that Chrome offers: they speak, but sound robotic. */
+/**
+ * The old Eloquence voices of macOS that Chrome offers: they speak, but sound robotic. macOS
+ * translates Grandma and Grandpa as it does the joke voices, so they are in Spanish and Catalan too.
+ */
 const ROBOTIC = new Set([
   'eddy',
   'flo',
   'grandma',
   'grandpa',
+  'abuela',
+  'abuelo',
+  'àvia',
+  'avi',
   'reed',
   'rocko',
   'sandy',

@@ -181,6 +181,32 @@ describe('TutorSpeaker', () => {
     expect(speaker.speakingTurnId()).toBeNull();
   });
 
+  it('is not speaking while the answer has nothing to say yet', async () => {
+    const answer = await ask();
+    await settle();
+    expect(speaker.speakingTurnId()).toBeNull();
+    answer.say('Mira el bucle. E');
+    await settle();
+    expect(speaker.speakingTurnId()).toBe(tutor.turns().at(-1)?.id);
+  });
+
+  it('says a new answer once the voices arrive, if they were still on their way', async () => {
+    fake.changeVoices([]);
+    await vi.waitFor(() => {
+      TestBed.tick();
+      expect(speaker.ready()).toBe(false);
+    });
+    const answer = await ask();
+    answer.say('Mira el bucle. Y');
+    await settle();
+    expect(fake.spoken).toEqual([]);
+    fake.changeVoices([{ id: 'jorge', name: 'Jorge', lang: 'es-ES' }]);
+    await vi.waitFor(() => {
+      TestBed.tick();
+      expect(fake.sentences).toEqual(['Mira el bucle.']);
+    });
+  });
+
   it('says nothing by itself without reading aloud', async () => {
     settings.setReadAloud(false);
     const answer = await ask();

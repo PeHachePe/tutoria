@@ -51,6 +51,8 @@ export class TutorSpeaker {
    * before the effect ran, and again when a retry answers it.
    */
   private readonly seen = new Map<string, boolean>();
+  /** The answer followed, from start() until its last sentence ends or it is silenced. */
+  private turnId: string | null = null;
   private queue: string[] = [];
   /** How many sentences of the answer are already queued or said. */
   private taken = 0;
@@ -60,9 +62,11 @@ export class TutorSpeaker {
   private generation = 0;
 
   constructor() {
-    // Boundary with Web Speech (4.8): the answer grows in a signal, and the synthesis is imperative
+    // Boundary with Web Speech (4.8): the answer grows in a signal, and the synthesis is imperative.
+    // It follows ready() too: a new answer waits for the voices if they are still on their way
     effect(() => {
       const turns = this.tutor.turns();
+      this.ready();
       untracked(() => this.follow(turns));
     });
     inject(DestroyRef).onDestroy(() => this.stop());
@@ -78,6 +82,7 @@ export class TutorSpeaker {
   /** «Parar», and everything that silences the tutor. */
   stop(): void {
     this.generation++;
+    this.turnId = null;
     this.queue = [];
     this.taken = 0;
     this.whole = false;
@@ -88,15 +93,17 @@ export class TutorSpeaker {
 
   private follow(turns: readonly TutorTurn[]): void {
     const fresh = turns.filter((turn) => turn.fresh).at(-1);
+    // Read aloud, but the voices are still on their way: it is not seen until they arrive
+    if (fresh && this.settings.readAloud() && !this.ready() && !this.seen.has(keyOf(fresh))) return;
     if (fresh && this.isNew(fresh)) {
       // A new turn silences whatever sounded (start() too), read aloud or not
       if (this.readsAloud(fresh)) this.start(fresh);
       else this.stop();
       return;
     }
-    const speaking = this.speakingState();
-    if (!speaking) return;
-    const turn = turns.find((each) => each.id === speaking);
+    const followed = this.turnId;
+    if (!followed) return;
+    const turn = turns.find((each) => each.id === followed);
     if (!turn || turn.status === 'failed') this.stop();
     else this.feed(turn);
   }
@@ -124,7 +131,7 @@ export class TutorSpeaker {
 
   private start(turn: TutorTurn): void {
     this.stop();
-    this.speakingState.set(turn.id);
+    this.turnId = turn.id;
     this.feed(turn);
   }
 
@@ -146,10 +153,15 @@ export class TutorSpeaker {
     if (this.playing) return;
     const sentence = this.queue.shift();
     if (sentence === undefined) {
-      if (this.whole) this.speakingState.set(null);
+      if (this.whole) {
+        this.turnId = null;
+        this.speakingState.set(null);
+      }
       return;
     }
     this.playing = true;
+    // Speaking from its first sentence, not while the tutor still thinks it
+    this.speakingState.set(this.turnId);
     const generation = this.generation;
     this.voice.say(sentence).then(
       (outcome) => this.said(generation, outcome),

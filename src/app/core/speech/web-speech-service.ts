@@ -34,6 +34,8 @@ export class WebSpeechService extends SpeechService {
   private readonly Utterance = this.window?.SpeechSynthesisUtterance;
   /** Chrome drops an utterance nobody holds before it ends, so the current one is kept here. */
   private current: SpeechSynthesisUtterance | undefined;
+  /** Grows with each stop, so a sentence still waiting for the voices is not said after it. */
+  private stops = 0;
 
   readonly canSpeak = Boolean(this.synthesis && this.Utterance);
 
@@ -56,7 +58,10 @@ export class WebSpeechService extends SpeechService {
   }
 
   async speak(sentence: string, options: SpeakOptions): Promise<'ended' | 'cancelled'> {
+    const stops = this.stops;
     const voice = (await this.allVoices()).find((each) => each.voiceURI === options.voiceId);
+    // Silenced while it waited for the voices: cancel() found nothing to stop yet
+    if (stops !== this.stops) return 'cancelled';
     if (!voice || !this.synthesis || !this.Utterance) throw new SpeechError('voice-unavailable');
     const utterance = new this.Utterance(sentence);
     utterance.voice = voice;
@@ -77,6 +82,7 @@ export class WebSpeechService extends SpeechService {
   }
 
   stopSpeaking(): void {
+    this.stops++;
     this.synthesis?.cancel();
   }
 
