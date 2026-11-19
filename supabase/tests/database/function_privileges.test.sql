@@ -28,7 +28,7 @@ select set_eq(
     'open_attempt', 'retry_attempt', 'submit_attempt', 'hidden_test_count', 'save_exercise',
     'exercise_student_counts', 'assignment_student_counts', 'create_block', 'assign_exercises',
     'reorder_blocks', 'reorder_assignments', 'move_assignment', 'group_work_stats',
-    'group_deadline_stats', 'search_students', 'group_summaries'
+    'group_deadline_stats', 'search_students', 'group_summaries', 'enroll_students'
   ],
   'a signed-in user executes the helpers of the policies and the functions of the app, no other'
 );

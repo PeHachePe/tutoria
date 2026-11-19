@@ -180,13 +180,13 @@ describe('SupabaseGroupService', () => {
     expect(server.sentTo('POST', '/rest/v1/rpc/search_students')).toHaveLength(1);
   });
 
-  it('translates 42501 and 22023 on searching', async () => {
+  it('translates P0002 and 22023 on searching', async () => {
     server.on('POST', '/rest/v1/rpc/search_students', {
-      status: 403,
-      body: { message: 'No', code: '42501' },
+      status: 400,
+      body: { message: 'No such group', code: 'P0002' },
     });
     await expect(service.searchStudents('dam', 'lucía')).rejects.toMatchObject({
-      kind: 'forbidden',
+      kind: 'not_found',
     });
 
     server.on('POST', '/rest/v1/rpc/search_students', {
@@ -199,11 +199,10 @@ describe('SupabaseGroupService', () => {
   });
 
   it('enrolls several students in one request', async () => {
-    server.on('POST', '/rest/v1/enrollment', {
-      status: 201,
+    server.on('POST', '/rest/v1/rpc/enroll_students', {
       body: [
-        { id: 'e-1', app_user: LUCIA },
-        { id: 'e-2', app_user: HUGO },
+        { enrollment_id: 'e-1', ...LUCIA },
+        { enrollment_id: 'e-2', ...HUGO },
       ],
     });
 
@@ -211,20 +210,24 @@ describe('SupabaseGroupService', () => {
       { enrollmentId: 'e-1', student: LUCIA },
       { enrollmentId: 'e-2', student: HUGO },
     ]);
-    const [request] = server.sentTo('POST', '/rest/v1/enrollment');
-    expect(request.body).toEqual([
-      { group_id: 'daw', user_id: 'lucia' },
-      { group_id: 'daw', user_id: 'hugo' },
-    ]);
+    const [request] = server.sentTo('POST', '/rest/v1/rpc/enroll_students');
+    expect(request.body).toEqual({ target_group_id: 'daw', student_ids: ['lucia', 'hugo'] });
   });
 
-  it('translates 23505, somebody already in the group, into invalid', async () => {
-    server.on('POST', '/rest/v1/enrollment', {
-      status: 409,
-      body: { message: 'Duplicate', code: '23505' },
+  it.each([
+    // Somebody already in the group
+    ['23505', 'invalid'],
+    // Not an active student (check_enrolled_student)
+    ['23514', 'invalid'],
+    // A group the user does not manage
+    ['P0002', 'not_found'],
+  ])('translates %s on enrolling into %s', async (code, kind) => {
+    server.on('POST', '/rest/v1/rpc/enroll_students', {
+      status: 400,
+      body: { message: 'No', code },
     });
 
-    await expect(service.enroll('daw', ['lucia'])).rejects.toMatchObject({ kind: 'invalid' });
+    await expect(service.enroll('daw', ['lucia'])).rejects.toMatchObject({ kind });
   });
 
   it.each([

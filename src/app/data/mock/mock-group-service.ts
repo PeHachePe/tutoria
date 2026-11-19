@@ -49,8 +49,10 @@ export class MockGroupService extends GroupService {
         throw new DataError('forbidden', 'A teacher saves only groups of their own');
       }
       const tables = this.db.tables();
+      // As `check_group_teacher`: checked when chosen, so a group of a disabled teacher stays editable
       const teacher = tables.users.find((candidate) => candidate.id === draft.teacherId);
-      if (!teacher || !isActive(teacher, 'teacher')) {
+      const chosen = previous?.teacherId !== draft.teacherId;
+      if (chosen && (!teacher || !isActive(teacher, 'teacher'))) {
         throw new DataError('invalid', 'The teacher of a group is an active teacher');
       }
       const name = draft.name.trim();

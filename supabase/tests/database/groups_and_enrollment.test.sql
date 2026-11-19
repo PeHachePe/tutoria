@@ -4,7 +4,7 @@
 -- student and the administrator is ...001.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(34);
 
 create function pg_temp.sign_in(user_id uuid) returns void language plpgsql as $$
 begin
@@ -39,7 +39,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ select search_students('elena', '20000000-0000-4000-8000-000000000002') $$,
-  '42501', null,
+  'P0002', null,
   'nor for the group of another teacher'
 );
 select is_empty(
@@ -50,11 +50,14 @@ select is_empty(
   $$ select * from search_students('raúl', '20000000-0000-4000-8000-000000000001') $$,
   'nor a disabled student'
 );
-select lives_ok(
+-- With `returning`, as the app asks: the new row passes the policy to read it.
+select results_eq(
   $$ insert into class_group (id, name, school_year, teacher_id, subject_id) values
        ('20000000-0000-4000-8000-000000000099', 'Taller', '2026/27',
-        '10000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001') $$,
-  'a teacher creates a group of their own'
+        '10000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001')
+     returning name $$,
+  $$ values ('Taller') $$,
+  'a teacher creates a group of their own and reads it back'
 );
 select is(
   (select count(*)::integer from search_students('tutoria', '20000000-0000-4000-8000-000000000099')),
@@ -83,6 +86,41 @@ select throws_ok(
   $$ update class_group set school_year = '2026' where id = '20000000-0000-4000-8000-000000000001' $$,
   '23514', null,
   'the school year is like 2026/27'
+);
+select is(
+  (select array_agg(name) from enroll_students('20000000-0000-4000-8000-000000000099', array[
+     '10000000-0000-4000-8000-000000000041', '10000000-0000-4000-8000-000000000011']::uuid[])),
+  array['Elena Vázquez Lorenzo', 'Lucía Martín Gómez'],
+  'a teacher enrolls several students at once and reads their names, in the order given'
+);
+select throws_ok(
+  $$ select enroll_students('20000000-0000-4000-8000-000000000099', array[
+       '10000000-0000-4000-8000-000000000012', '10000000-0000-4000-8000-000000000050']::uuid[]) $$,
+  '23514', null,
+  'all or none: a disabled student stops the batch'
+);
+select is(
+  (select count(*)::integer from enrollment where group_id = '20000000-0000-4000-8000-000000000099'),
+  2,
+  'and nobody of it is enrolled'
+);
+select throws_ok(
+  $$ select enroll_students('20000000-0000-4000-8000-000000000099', array[
+       '10000000-0000-4000-8000-000000000012', '10000000-0000-4000-8000-000000000012']::uuid[]) $$,
+  '22023', null,
+  'each student once'
+);
+select throws_ok(
+  $$ select enroll_students('20000000-0000-4000-8000-000000000099', array(
+       select gen_random_uuid() from generate_series(1, 51))) $$,
+  '22023', null,
+  'fifty at most'
+);
+select throws_ok(
+  $$ select enroll_students('20000000-0000-4000-8000-000000000002', array[
+       '10000000-0000-4000-8000-000000000012']::uuid[]) $$,
+  'P0002', null,
+  'nor in the group of another teacher'
 );
 select lives_ok(
   $$ insert into enrollment (group_id, user_id) values
@@ -167,6 +205,11 @@ select lives_ok(
   $$ update class_group set teacher_id = '10000000-0000-4000-8000-000000000002'
      where id = '20000000-0000-4000-8000-000000000002' $$,
   'the administrator changes the teacher of a group'
+);
+select lives_ok(
+  $$ update class_group set name = '1.º DAM B (tarde)', teacher_id = '10000000-0000-4000-8000-000000000003'
+     where id = '20000000-0000-4000-8000-000000000004' $$,
+  'a group of a disabled teacher keeps its name editable until it is handed over'
 );
 select throws_ok(
   $$ update class_group set teacher_id = '10000000-0000-4000-8000-000000000011'

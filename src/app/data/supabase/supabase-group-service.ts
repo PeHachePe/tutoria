@@ -114,7 +114,11 @@ export class SupabaseGroupService extends GroupService {
     );
   }
 
-  /** One insert with every row: the whole batch is enrolled or none. */
+  /**
+   * With the RPC `enroll_students`, all or none: an insert with `returning` cannot read the
+   * students, as their new enrollments are what lets the teacher read them. The limits are checked
+   * here too, so a batch the server would reject is not sent.
+   */
   async enroll(groupId: string, userIds: readonly string[]): Promise<EnrolledStudent[]> {
     if (
       userIds.length === 0 ||
@@ -124,12 +128,12 @@ export class SupabaseGroupService extends GroupService {
       throw new DataError('invalid', 'Between one and the maximum, each student once');
     }
     const rows = unwrap(
-      await this.supabase
-        .from('enrollment')
-        .insert(userIds.map((userId) => ({ group_id: groupId, user_id: userId })))
-        .select('id, app_user(id, name, email)'),
+      await this.supabase.rpc('enroll_students', {
+        target_group_id: groupId,
+        student_ids: [...userIds],
+      }),
     );
-    return rows.map(toEnrolled);
+    return rows.map(({ enrollment_id, ...student }) => ({ enrollmentId: enrollment_id, student }));
   }
 
   async unenroll(enrollmentId: string): Promise<void> {

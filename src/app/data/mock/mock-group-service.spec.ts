@@ -153,6 +153,18 @@ describe('MockGroupService', () => {
     });
   });
 
+  it('keeps editable a group whose teacher was disabled, until it is handed over', async () => {
+    db.setSession(ADMIN_ID);
+    db.update('users', (users) =>
+      users.map((user) => (user.id === OTHER_TEACHER_ID ? { ...user, status: 'disabled' } : user)),
+    );
+    const dam = SEED.groups.find((group) => group.id === DAM_GROUP_ID)!;
+
+    await expect(service.saveGroup({ ...dam, name: '1.º DAM B (tarde)' })).resolves.toMatchObject({
+      group: { name: '1.º DAM B (tarde)', teacherId: OTHER_TEACHER_ID },
+    });
+  });
+
   describe('removeGroup', () => {
     it('removes a group nobody started, with its enrollments, blocks and assignments', async () => {
       const { group } = await service.saveGroup(DRAFT);

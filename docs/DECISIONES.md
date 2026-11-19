@@ -2117,6 +2117,12 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **Un grupo no cambia de asignatura** (`grant update (name, school_year, teacher_id)`), **solo se borra si nadie ha empezado nada en él** (`is_started_group`, como los bloques, D-058) y su curso tiene la forma `2026/27` (un `check`). La baja de una matrícula conserva los intentos.
 - **Se matricula a varios en una sola petición, 50 como mucho** (`MAX_ENROLLMENT_BATCH`), y todos o ninguno: un tope para una petición, más de lo que la pantalla elige de una vez.
 - **`group_summaries()`** (en lugar de `group_student_counts` del plan) da de cada grupo que gestiona quien llama sus alumnos y si está empezado, en una sola llamada: la lista no tiene que preguntar por cada grupo.
+- **Revisión del 5.2a (migración `groups_review`), tras probar el servicio contra Supabase local con peticiones reales:**
+  - La política de lectura de `class_group` mira la fila (`teacher_id` y el rol) en lugar de `teaches_group()`. Esa función lee la tabla con la foto de la sentencia, que no tiene la fila nueva: un docente no podía crear un grupo con `insert … returning`, que es como lo pide la app.
+  - Se matricula con la RPC `enroll_students` (de 1 a 50 alumnos distintos, todos o ninguno, `security invoker`). Un `insert … returning` con el alumno incrustado lo devolvía `null`, porque es la propia matrícula nueva la que deja al docente leer al alumno, y esa sentencia aún no la ve. El tope de 50 lo hace cumplir ahora el servidor, no solo el cliente.
+  - `search_students` y `enroll_students` responden `P0002` (`not_found`) con un grupo ajeno, igual que el resto de peticiones sobre un grupo y el servicio simulado.
+  - El docente de un grupo se comprueba solo al elegirlo, al crear el grupo o al cambiarlo: un grupo cuyo docente se dio de baja sigue editable hasta que se reasigna.
+  - pgTAP comprueba ahora las escrituras con `returning`, que es lo que hace la app. Así se habría visto el primer fallo.
 - **`listTeachers()`** lee `app_user`: a la administración le da los docentes activos y a un docente solo su cuenta, como la RLS, en las dos versiones.
 
 **Aprobación:** el plan y el límite de 8 a 64 caracteres, aprobados por el autor; la ampliación del 5.2a, propuesta al cerrar el paso.
@@ -2190,7 +2196,9 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 **Alternativas:** un solo paso, en una sesión demasiado larga para revisarla. Que `providerSettingOf()` avise de lo que quita: cambiaría la lectura que usan el tutor y `translate`. Marcar el `timeout` dentro de `ProviderError`: tocaría la clase compartida por una sola función.
 
-**Consecuencias:** el resultado tiene siempre un elemento por modelo válido del ajuste, en su orden. Un respaldo que `providerSettingOf()` descarta por otra razón (un secreto con un nombre no permitido, un formato que no existe) sigue sin aparecer: el formulario del 5.3b no deja escribirlo.
+**Consecuencias:** el resultado tiene siempre un elemento por modelo del ajuste, en su orden.
+
+**Revisión (19/11/2026, iteración 2 del 5.3a):** el autor pidió revisar el paso a fondo, y salieron dos fallos. Un respaldo que `providerSettingOf()` descarta (un modelo repetido, un secreto o un tiempo que no acepta) desaparecía del resultado, y el formulario del 5.3b no impide repetir un modelo. Ahora la función lee el ajuste respaldo a respaldo, y el que las funciones dejarían fuera sale como `invalid` en su sitio. Más de `MAX_FALLBACKS` respaldos, o unos que no son una lista, es `invalid` entero, como en la tabla. El simulado también marca el modelo repetido, y el texto de `invalid` pasa a «No es válido o está repetido en la lista». El otro fallo: los modelos se probaban uno tras otro, y seis de 2 min cada uno superaban el tiempo de una Edge Function. Ahora se prueban a la vez (`Promise.all`) y el resultado conserva el orden. En local, cuatro modelos tardaron lo que el más lento (16 s), no la suma.
 
 **Aprobación:** el autor aprobó partir el paso y las correcciones («Sí, empieza el 5.3a»).
 

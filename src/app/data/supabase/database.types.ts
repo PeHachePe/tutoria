@@ -740,6 +740,15 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Database['public']['Enums']['user_role'];
       };
+      enroll_students: {
+        Args: { student_ids: string[]; target_group_id: string };
+        Returns: {
+          email: string;
+          enrollment_id: string;
+          id: string;
+          name: string;
+        }[];
+      };
       exercise_student_counts: {
         Args: Record<PropertyKey, never>;
         Returns: {
