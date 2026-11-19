@@ -1,0 +1,123 @@
+<div class="flex flex-col gap-6" [attr.aria-busy]="groups.isLoading()">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-headline-medium" i18n="@@groups.heading">Grupos y matrícula</h1>
+      <p class="text-body-large text-on-surface-variant" i18n="@@groups.subheading">
+        Tus grupos y quién está en cada uno.
+      </p>
+    </div>
+    <button matButton="filled" type="button" [disabled]="!ready()" (click)="create()">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      <span i18n="@@groups.new">Nuevo grupo</span>
+    </button>
+  </header>
+
+  @if (groups.error(); as error) {
+    <app-load-error [error]="error" (retry)="groups.reload()" />
+  } @else if (firstLoad()) {
+    <app-loading-skeleton label="Cargando los grupos…" i18n-label="@@groups.loading">
+      <div class="flex flex-col gap-2">
+        @for (panel of skeletonPanels; track panel) {
+          <app-skeleton class="h-20 w-full rounded-xl" />
+        }
+      </div>
+    </app-loading-skeleton>
+  } @else if (panels().length === 0) {
+    <app-empty-state
+      heading="Aún no tienes grupos"
+      i18n-heading="@@groups.empty"
+      text="Crea uno y matricula a tu alumnado."
+      i18n-text="@@groups.empty.text"
+    >
+      <div class="mt-2 flex justify-center" emptyStateAction>
+        <button matButton="tonal" type="button" [disabled]="!ready()" (click)="create()">
+          <span i18n="@@groups.new">Nuevo grupo</span>
+        </button>
+      </div>
+    </app-empty-state>
+  } @else {
+    <!-- A reload after a failure: a thin bar over what is shown, never a jump (4.8) -->
+    <div class="-mt-3 h-1">
+      @if (groups.isLoading()) {
+        <mat-progress-bar mode="indeterminate" class="rounded-full" />
+      }
+    </div>
+    <mat-accordion class="-mt-3">
+      @for (panel of panels(); track panel.id) {
+        <mat-expansion-panel
+          [expanded]="isOpen(panel.id)"
+          (opened)="opened(panel.id)"
+          (closed)="closed(panel.id)"
+        >
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <!-- Inside: Material centres the items of the title itself -->
+              <div class="flex min-w-0 flex-col gap-1 py-3">
+                <span class="text-title-medium">{{ panel.managed.group.name }}</span>
+                <span class="flex flex-wrap gap-x-2 text-body-medium text-on-surface-variant">
+                  <span>{{ panel.subject }}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{{ panel.managed.group.schoolYear }}</span>
+                  <span aria-hidden="true">·</span>
+                  <span i18n="@@groups.students">{panel.managed.studentCount, plural,
+                    =0 {Sin alumnos}
+                    =1 {1 alumno}
+                    other {{{ panel.managed.studentCount }} alumnos}
+                  }</span>
+                  @if (isAdmin()) {
+                    <span aria-hidden="true">·</span>
+                    <span i18n="@@groups.teacher">Docente: {{ panel.managed.teacherName }}</span>
+                  }
+                </span>
+              </div>
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+
+          <ng-template matExpansionPanelContent>
+            <app-group-students
+              [groupId]="panel.id"
+              [groupName]="panel.managed.group.name"
+              (countChange)="countChanged(panel.id, $event)"
+            >
+              <button
+                matIconButton
+                type="button"
+                [matMenuTriggerFor]="actions"
+                [attr.aria-label]="panel.actionsLabel"
+              >
+                <mat-icon aria-hidden="true">more_vert</mat-icon>
+              </button>
+              <mat-menu #actions="matMenu" xPosition="before">
+                <button mat-menu-item type="button" (click)="edit(panel.managed)">
+                  <mat-icon aria-hidden="true">edit</mat-icon>
+                  <span i18n="@@groups.edit">Editar</span>
+                </button>
+                <a mat-menu-item [routerLink]="blocksPath" [queryParams]="panel.blocksQuery">
+                  <mat-icon aria-hidden="true">view_list</mat-icon>
+                  <span i18n="@@groups.blocks">Ver sus bloques</span>
+                </a>
+                @if (panel.managed.started) {
+                  <!-- Its students' work is kept (5.2a): it says why, at sight, and keeps the focus -->
+                  <button mat-menu-item type="button" disabled disabledInteractive>
+                    <mat-icon aria-hidden="true">delete</mat-icon>
+                    <span class="flex max-w-64 flex-col py-2">
+                      <span i18n="@@groups.remove">Eliminar</span>
+                      <span class="text-body-small" i18n="@@groups.remove.started"
+                        >No se puede eliminar: ya hay alumnos con trabajo en este grupo.</span
+                      >
+                    </span>
+                  </button>
+                } @else {
+                  <button mat-menu-item type="button" (click)="remove(panel.managed)">
+                    <mat-icon aria-hidden="true">delete</mat-icon>
+                    <span i18n="@@groups.remove">Eliminar</span>
+                  </button>
+                }
+              </mat-menu>
+            </app-group-students>
+          </ng-template>
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+  }
+</div>

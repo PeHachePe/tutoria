@@ -149,6 +149,14 @@ html {
       container-background-color: var(--app-panel),
     )
   );
+  // The header of a group says its subject, year and count under its name: its height follows.
+  @include mat.expansion-overrides(
+    (
+      container-background-color: var(--app-panel),
+      header-collapsed-state-height: auto,
+      header-expanded-state-height: auto,
+    )
+  );
   // Staff shell: side menu as a panel and content on the page colour; square edge when it is
   // docked beside the content.
   @include mat.sidenav-overrides(

@@ -14,6 +14,8 @@ describe('UserDialog', () => {
       data: { user: null, takenEmails: () => new Set(), roleLock: null, save },
     });
     const dialog = await screen.findByRole('dialog', { name: 'Nuevo usuario' });
+    // The dialog moves the focus in once open: typing before that loses the keys after the move
+    await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
 
     await userEvent.type(
       within(dialog).getByRole('textbox', { name: 'Nombre y apellidos' }),

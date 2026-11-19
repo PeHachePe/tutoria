@@ -10,6 +10,7 @@ import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
 import { provideLocalizedPaginator } from './core/i18n/localized-paginator-intl';
 import { AdminService } from './data/admin-service';
+import { GroupService } from './data/group-service';
 import { AttemptService } from './data/attempt-service';
 import { BlockService } from './data/block-service';
 import { CodeRunnerService } from './data/code-runner-service';
@@ -57,6 +58,13 @@ describe('app routes', () => {
         { provide: BlockService, useValue: { listGroups: () => Promise.resolve([]) } },
         { provide: StatsService, useValue: {} },
         { provide: AdminService, useValue: { listUsers: () => Promise.resolve([]) } },
+        {
+          provide: GroupService,
+          useValue: {
+            listGroups: () => Promise.resolve([]),
+            listTeachers: () => Promise.resolve([]),
+          },
+        },
       ],
     });
     await restoreSession();
@@ -103,9 +111,9 @@ describe('app routes', () => {
   });
 
   it('tells which step builds each placeholder screen', async () => {
-    await visit('teacher', '/docente/grupos');
+    await visit('admin', '/admin/sistema');
 
-    expect(screen.getByText('Esta pantalla se construye en el paso 5.2.')).toBeTruthy();
+    expect(screen.getByText('Esta pantalla se construye en el paso 5.3.')).toBeTruthy();
   });
 
   it.each<[Role, string]>([

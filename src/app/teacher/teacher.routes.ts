@@ -5,12 +5,12 @@ import { provideFormFieldDefaults } from '../core/form-field-defaults';
 import { provideLocalizedPaginator } from '../core/i18n/localized-paginator-intl';
 import { provideSnackBarDefaults } from '../core/snack-bar-defaults';
 import { unsavedChangesGuard } from '../core/unsaved-changes-guard';
-import { PlaceholderPage } from '../shared/placeholder-page/placeholder-page';
 import { StaffLayout } from '../shared/staff-layout/staff-layout';
 import { AttemptDetailPage } from './attempt-detail/attempt-detail-page';
 import { BlocksPage } from './blocks/blocks-page';
 import { ExerciseBankPage } from './exercises/exercise-bank-page';
 import { ExerciseFormPage } from './exercises/exercise-form-page';
+import { GroupsPage } from './groups/groups-page';
 import { HistoryPage } from './history/history-page';
 import { LivePage } from './live/live-page';
 import { LiveStore } from './live/live-store';
@@ -76,8 +76,7 @@ export const teacherRoutes: Routes = [
       {
         path: SEGMENTS.teacher.groups,
         title: $localize`:@@route.groups.title:Grupos`,
-        component: PlaceholderPage,
-        data: { heading: $localize`:@@route.groups.heading:Grupos y matrícula`, step: '5.2' },
+        component: GroupsPage,
       },
     ],
   },

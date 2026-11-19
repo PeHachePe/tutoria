@@ -21,6 +21,8 @@ describe('PasswordDialog', () => {
     );
     announce = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
     const dialog = await screen.findByRole('dialog', { name: 'Restablecer la contraseña' });
+    // The dialog moves the focus in once open: typing before that loses the keys after the move
+    await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
     return {
       ref,
       dialog,

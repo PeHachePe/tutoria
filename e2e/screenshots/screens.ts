@@ -52,4 +52,10 @@ export const SCREENS: readonly Screen[] = [
   },
   // The accounts of the seed, by name: the administration first, with «Tú» (5.1b)
   { code: '10-usuarios', path: '/admin/usuarios', user: 'admin' },
+  // The groups of Marta, with 1.º DAW A in basic programming open and its students (5.2b)
+  {
+    code: '11-grupos',
+    path: '/docente/grupos?grupo=20000000-0000-4000-8000-000000000001',
+    user: 'teacher',
+  },
 ];
