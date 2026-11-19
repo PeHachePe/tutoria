@@ -158,14 +158,18 @@ export class MockAdminService extends AdminService {
     return this.network.request(() => {
       this.db.requireUser('admin');
       if (!isValidAiProvider(setting)) return [{ model: setting.model, problem: 'invalid' }];
-      const models = [setting.model, ...(setting.fallbacks ?? [])].map((entry) =>
-        typeof entry === 'string' ? entry : entry.model,
-      );
-      return models.map((model) =>
-        model.includes(FAILING_MODEL)
+      const seen = new Set<string>();
+      return [setting, ...(setting.fallbacks ?? [])].map((entry): AiModelCheck => {
+        const { baseUrl = setting.baseUrl, model } =
+          typeof entry === 'string' ? { model: entry } : entry;
+        // As the Edge Function: a repeated model is not called twice, and says so in its place
+        const key = `${baseUrl} ${model}`;
+        if (seen.has(key)) return { model, problem: 'invalid' };
+        seen.add(key);
+        return model.includes(FAILING_MODEL)
           ? { model, problem: 'not_found' }
-          : { model, ms: MOCK_CHECK_MS },
-      );
+          : { model, ms: MOCK_CHECK_MS };
+      });
     });
   }
 }

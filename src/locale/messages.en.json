@@ -1092,7 +1092,7 @@
     "groups.remove.title": "Delete the group {$name}?",
     "groups.remove.confirm": "«{$name}» will be deleted with its blocks and its enrollment. This cannot be undone.",
     "groups.removed": "Group {$name} deleted",
-    "system.problem.invalid": "Some data of the provider is missing.",
+    "system.problem.invalid": "It is not valid or it is repeated in the list.",
     "system.problem.host": "That host is not allowed: add it to the AI_ALLOWED_HOSTS secret.",
     "system.problem.noKey": "The secret with its key is missing on the server.",
     "system.problem.unauthorized": "The provider rejects the key.",

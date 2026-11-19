@@ -1,7 +1,9 @@
 import { assertEquals, assertStringIncludes } from '@std/assert';
 
-import { OpenAICompatibleProvider } from '../_shared/llm-provider.ts';
-import type { ModelEndpoint } from '../_shared/provider-setting.ts';
+import type { AiModelCheck } from '../../../src/app/data/ai-provider-setting.ts';
+
+import { type LlmProvider, OpenAICompatibleProvider } from '../_shared/llm-provider.ts';
+import { MAX_FALLBACKS, type ModelEndpoint } from '../_shared/provider-setting.ts';
 import type { StaffRequestKind, StaffRequests } from '../_shared/staff-requests.ts';
 import {
   AI_CHECKS_PER_DAY,
@@ -138,9 +140,9 @@ Deno.test('checks every model in order, one result each, with its key', async ()
   });
 
   assertEquals(response.status, 200);
-  assertEquals(await response.json(), [
-    { model: 'flash', ms: 300 },
-    { model: 'gemma', ms: 300 },
+  assertEquals(withoutTimes(await response.json()), [
+    { model: 'flash', ms: 'n' },
+    { model: 'gemma', ms: 'n' },
     { model: 'llama', problem: 'no_key' },
     { model: 'other', problem: 'host_not_allowed' },
   ]);
@@ -148,6 +150,92 @@ Deno.test('checks every model in order, one result each, with its key', async ()
     { url: `${GEMINI}/chat/completions`, model: 'flash', key: 'Bearer gemini-key' },
     { url: `${GEMINI}/chat/completions`, model: 'gemma', key: 'Bearer gemini-key' },
   ]);
+});
+
+/** The results with each time as `n`: the models answer at once, in any order. */
+function withoutTimes(checks: AiModelCheck[]) {
+  return checks.map((check) => (check.ms === undefined ? check : { ...check, ms: 'n' }));
+}
+
+Deno.test('keeps in its place, as invalid, a fallback the functions would leave out', async () => {
+  const { call, asked } = setup();
+
+  const response = await call({
+    baseUrl: GEMINI,
+    model: 'flash',
+    fallbacks: [
+      'flash',
+      { model: 'gemma', keySecret: 'SUPABASE_SERVICE_ROLE_KEY' },
+      { model: 'slow', timeoutMs: 500_000 },
+      'gemma',
+      'gemma',
+    ],
+  });
+
+  assertEquals(withoutTimes(await response.json()), [
+    { model: 'flash', ms: 'n' },
+    { model: 'flash', problem: 'invalid' },
+    { model: 'gemma', problem: 'invalid' },
+    { model: 'slow', problem: 'invalid' },
+    { model: 'gemma', ms: 'n' },
+    { model: 'gemma', problem: 'invalid' },
+  ]);
+  assertEquals(
+    asked.map(({ model }) => model),
+    ['flash', 'gemma'],
+  );
+});
+
+Deno.test(
+  'takes as invalid more fallbacks than the table allows, or fallbacks that are no list',
+  async () => {
+    const { call, asked } = setup();
+    const fallbacks = Array.from({ length: MAX_FALLBACKS + 1 }, (_, index) => `m${index}`);
+
+    for (const body of [
+      { baseUrl: GEMINI, model: 'flash', fallbacks },
+      { baseUrl: GEMINI, model: 'flash', fallbacks: 'gemma' },
+    ]) {
+      assertEquals(await (await call(body)).json(), [{ model: 'flash', problem: 'invalid' }]);
+    }
+    assertEquals(asked, []);
+  },
+);
+
+Deno.test('asks every model at once, not one after another', async () => {
+  const staff = new FakeStaff();
+  let waiting = 0;
+  let release = () => {};
+  const allAsked = new Promise<void>((resolve) => (release = resolve));
+  const provider = (model: string): LlmProvider => ({
+    model,
+    async complete() {
+      if (++waiting === 3) release();
+      // Each answers only once all three were asked: one after another, it would never end
+      await allAsked;
+      return '{"ok":true}';
+    },
+  });
+  const handle = createAiCheckHandler({
+    store: new FakeStore(),
+    staff,
+    mayCall: () => true,
+    secretOf: () => 'key',
+    providerOf: ({ model }) => provider(model),
+  });
+
+  const response = await handle(
+    new Request('http://x', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer token-admin' },
+      body: JSON.stringify({ baseUrl: GEMINI, model: 'a', fallbacks: ['b', 'c'] }),
+    }),
+  );
+
+  assertEquals(
+    (await response.json()).map((check: AiModelCheck) => check.model),
+    ['a', 'b', 'c'],
+  );
 });
 
 Deno.test('translates each failure of the provider, never with its text', async () => {

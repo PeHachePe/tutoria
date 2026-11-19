@@ -250,6 +250,14 @@ describe('MockAdminService', () => {
         { model: 'llama-fail', problem: 'not_found' },
         { model: 'qwen', ms: expect.any(Number) },
       ]);
+      await expect(
+        service.checkAiProvider({ ...GROQ, fallbacks: ['llama-4', 'otro', { model: 'otro' }] }),
+      ).resolves.toEqual([
+        { model: 'llama-4', ms: expect.any(Number) },
+        { model: 'llama-4', problem: 'invalid' },
+        { model: 'otro', ms: expect.any(Number) },
+        { model: 'otro', problem: 'invalid' },
+      ]);
       await expect(service.checkAiProvider({ ...GROQ, fallbacks: undefined })).resolves.toEqual([
         { model: 'llama-4', ms: expect.any(Number) },
       ]);

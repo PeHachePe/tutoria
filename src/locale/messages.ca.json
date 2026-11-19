@@ -1092,7 +1092,7 @@
     "groups.remove.title": "Eliminar el grup {$name}?",
     "groups.remove.confirm": "S'eliminarà «{$name}» amb els seus blocs i la seva matrícula. No es pot desfer.",
     "groups.removed": "Grup {$name} eliminat",
-    "system.problem.invalid": "Falta alguna dada del proveïdor.",
+    "system.problem.invalid": "No és vàlid o està repetit a la llista.",
     "system.problem.host": "Aquest servidor no està permès: afegeix-lo al secret AI_ALLOWED_HOSTS.",
     "system.problem.noKey": "Falta el secret amb la seva clau al servidor.",
     "system.problem.unauthorized": "El proveïdor rebutja la clau.",

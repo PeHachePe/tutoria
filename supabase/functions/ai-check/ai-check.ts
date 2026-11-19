@@ -15,7 +15,11 @@ import {
   MODEL_TIMEOUT_MS,
   ProviderError,
 } from '../_shared/llm-provider.ts';
-import { type ModelEndpoint, providerSettingOf } from '../_shared/provider-setting.ts';
+import {
+  MAX_FALLBACKS,
+  type ModelEndpoint,
+  providerSettingOf,
+} from '../_shared/provider-setting.ts';
 import type { StaffRequests } from '../_shared/staff-requests.ts';
 
 /** Checks the administration may ask for in a minute: each one calls every model of the setting. */
@@ -65,8 +69,8 @@ export interface AiCheckDependencies {
 
 /**
  * The Edge Function `ai-check` (5.3a, RF-19, CU-07): before the administration saves a setting of the
- * AI provider, each of its models is asked for a minimal answer, one after another and in order, and
- * the screen gets one result per model: how long it took or why it did not answer. Only for an active
+ * AI provider, each of its models is asked for a minimal answer, all at once, and the screen gets one
+ * result per model, in the order of the setting: how long it took or why it did not answer. Only for an active
  * administrator, with its limits. Nothing is saved, and neither the text of the model nor that of its
  * error is answered: only the kind of the problem.
  */
@@ -94,17 +98,20 @@ export function createAiCheckHandler({
       if (wait === null) return failure(403, 'Only the administration checks the AI provider');
       if (wait > 0) return failure(429, 'Too many checks', { 'Retry-After': String(wait) });
 
-      // Every host first, so one that is not allowed says so instead of disappearing from the list
-      const setting = providerSettingOf(body, () => true);
-      if (!setting) return json(200, [problemOf(body, 'invalid')]);
-      const [main] = setting.models;
-      if (!mayCall(main.baseUrl))
+      const models = modelsOf(body);
+      if (!models) return json(200, [problemOf(body, 'invalid')]);
+      const [main] = models;
+      if (!mayCall(main.baseUrl)) {
         return json(200, [{ model: main.model, problem: 'host_not_allowed' }]);
-
-      const checks: AiModelCheck[] = [];
-      for (const endpoint of setting.models) {
-        checks.push(await check(endpoint, { mayCall, secretOf, providerOf, now }));
       }
+
+      // All at once, so the slowest model sets the time and not the sum of them: six models of
+      // two minutes each, one after another, would outlast the function itself
+      const checks = await Promise.all(
+        models.map((entry) =>
+          'problem' in entry ? entry : check(entry, { mayCall, secretOf, providerOf, now }),
+        ),
+      );
       return json(200, checks);
     } catch (error) {
       if (error instanceof BodyTooLargeError) return tooLarge();
@@ -112,6 +119,42 @@ export function createAiCheckHandler({
       return failure(500, 'The check of the AI provider failed');
     }
   };
+}
+
+/** A fallback that cannot be called: its name, to say so in its place of the list. */
+type InvalidModel = AiModelCheck & { readonly problem: 'invalid' };
+
+/**
+ * The main model and each fallback in its place, or `null` if the main one is not valid or there are
+ * more fallbacks than the table allows. Read as the functions read it (`providerSettingOf()`), but
+ * one fallback at a time and with any host: what the functions would leave out (a repeated model, a
+ * secret or a time they do not take) is `invalid` in its place instead of disappearing, and a host
+ * they may not call is told by `check()`.
+ */
+export function modelsOf(
+  body: unknown,
+): [ModelEndpoint, ...(ModelEndpoint | InvalidModel)[]] | null {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return null;
+  const { fallbacks = [], ...rest } = body as Record<string, unknown>;
+  if (!Array.isArray(fallbacks) || fallbacks.length > MAX_FALLBACKS) return null;
+  const main = providerSettingOf(rest, () => true)?.models[0];
+  if (!main) return null;
+  const seen = new Set([keyOf(main)]);
+  return [
+    main,
+    ...fallbacks.map((entry): ModelEndpoint | InvalidModel => {
+      const endpoint = providerSettingOf({ ...rest, fallbacks: [entry] }, () => true)?.models[1];
+      if (!endpoint || seen.has(keyOf(endpoint))) {
+        return { model: problemOf(entry, 'invalid').model, problem: 'invalid' };
+      }
+      seen.add(keyOf(endpoint));
+      return endpoint;
+    }),
+  ];
+}
+
+function keyOf({ baseUrl, model }: ModelEndpoint): string {
+  return `${baseUrl} ${model}`;
 }
 
 type CheckDependencies = Required<
@@ -148,11 +191,16 @@ export function problemOfStatus(status: number | undefined, timedOut: boolean): 
   return 'unavailable';
 }
 
-/** The result of a body that is not a setting: with its model, if it has one to show. */
+/** The result of what is not a model: with its name, if it has one to show. */
 function problemOf(body: unknown, problem: AiCheckProblem): AiModelCheck {
   const model =
-    typeof body === 'object' && body !== null && 'model' in body && typeof body.model === 'string'
-      ? body.model
-      : '';
+    typeof body === 'string'
+      ? body
+      : typeof body === 'object' &&
+          body !== null &&
+          'model' in body &&
+          typeof body.model === 'string'
+        ? body.model
+        : '';
   return { model, problem };
 }
