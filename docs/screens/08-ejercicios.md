@@ -1,6 +1,6 @@
 # 08 · Ejercicios
 
-`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3), 3 h (4.3b), 3 h (4.3c), 2 h (4.3d) y 3 h (4.3e)
+`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3), 3 h (4.3b), 3 h (4.3c), 2 h (4.3d), 3 h (4.3e) y parte del 5.2c
 
 ## Objetivo
 
@@ -8,7 +8,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 
 ## Datos
 
-**Bloques (4.3b, D-058):** `BlockService.listGroups()` (los grupos del docente con su asignatura; la administración, todos) y `listBlocks(groupId)` (los bloques en orden, ocultos incluidos, con sus ejercicios en orden y cuántos alumnos ha empezado cada uno). `createBlock`, `updateBlock`, `removeBlock` y `reorderBlocks`; `assign`, `updateAssignment` (oculta y fecha de entrega), `unassign` y `reorderAssignments`. Solo se borra lo que nadie empezó. Funciones puras: `moveItem()`, `toBlockFormModel()`, `toBlockDraft()`, `blockSchema` y, en `shared/`, `dueDistance()` y `withTime()`.
+**Bloques (4.3b, D-058):** `BlockService.listGroups()` (los grupos del docente con su asignatura; la administración, todos) y `listBlocks(groupId)` (los bloques en orden, ocultos incluidos, con sus ejercicios en orden y cuántos alumnos ha empezado cada uno). `createBlock`, `updateBlock`, `removeBlock` y `reorderBlocks`; `assign`, `updateAssignment` (oculta y fecha de entrega), `unassign` y `reorderAssignments`. Solo se borra lo que nadie empezó. `copyBlocks(origen, destino, conFechas)` (5.2c, D-079) copia los bloques de otro grupo detrás de los que hay; los grupos llegan con su curso (`PlannedGroup`). Funciones puras: `moveItem()`, `datesNote()` (en `shared/`), `toBlockFormModel()`, `toBlockDraft()`, `blockSchema` y, en `shared/`, `dueDistance()` y `withTime()`.
 
 **Probar y traducir (4.3c, D-059):** `CodeRunnerService.check({ code, functionName, tests })` ejecuta la solución del docente en `execute` sin intento, con el detalle de todas las pruebas, y no guarda nada. `ExerciseService.translate({ from, to, texts, functionName, parameters })` pide el borrador de una traducción a la Edge Function `translate`. Las dos, solo para docentes y administración y con un límite por minuto (`staff_request`). Funciones puras: `toSolutionCheck()`, `solutionSkeleton()`, `textFieldsOf()`, `toExerciseText()`, `fillFormModel()`, `subjectsByName()` y `formActionMessage()`.
 
@@ -58,6 +58,8 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - Una tarjeta por bloque: asa para arrastrar (no en el móvil), título en su idioma, cuántos ejercicios tiene, si está oculto y, hasta que se abre, cuándo («Se abre el lun 23 nov, 09:00 · en 8 días», 4.3d), «Visible» y un menú con «Editar el bloque», «Añadir ejercicios», «Fecha de entrega para todo el bloque», «Subir», «Bajar» y «Borrar» (desactivado si alguien ha empezado alguno de sus ejercicios).
 - Dentro, sus ejercicios en orden: asa, número, título (enlace al formulario), quién lo ha empezado, «Archivado» si lo está, dificultad, fecha de entrega («mié 18 nov, 23:59 · en 3 días» o «Sin fecha de entrega»), mostrar u ocultar y un menú con «Subir», «Bajar», «Mover a otro bloque» (un submenú con los demás bloques del grupo; desactivados los que ya lo tienen) y «Quitar del bloque». Debajo, «Añadir ejercicios».
 - «Nuevo bloque», botón flotante abajo a la derecha.
+- «Copiar de otro grupo» (5.2c), si el usuario tiene más de un grupo: sobre la lista y, en un grupo sin bloques, junto a «Nuevo bloque». Su diálogo elige el grupo de origen (los de la misma asignatura primero y, dentro, el curso más reciente), dice dónde irán los bloques («después de los 6 bloques que ya tiene») y, con «Con sus fechas», dónde caerán («pasan a 2027/28, el mismo día de la semana» o «Las mismas fechas»). Los bloques llegan con sus ejercicios, orden, visibilidad y traducciones; el aviso dice cuántos.
+- El desplegable de grupos añade el curso cuando «nombre · asignatura» se repite (la misma clase de otro año), como en Grupos.
 - Diálogos: el del bloque (título, idioma en que se escribe, títulos en los otros idiomas, «Oculto para los alumnos» y, opcional, el día y la hora en que se abre a los alumnos), «Añadir ejercicios» (el banco de la asignatura del grupo o de todas, con buscador; marca los que ya están y en qué otros bloques), la fecha de entrega (día y hora, «Quitar la fecha») y, desde el banco, «Asignar a un bloque…» (grupo y bloque).
 - El alumno ve la fecha en su catálogo («Entrega: vie 20 nov, 23:59 · en 5 días») hasta que entrega.
 
@@ -120,11 +122,12 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Mover un ejercicio a otro bloque del grupo, con el menú o arrastrándolo, aunque esté empezado (4.3d).
 - [x] Probar el ejercicio como alumno, con el tutor en vista previa y sin guardar nada (4.3e).
 - [x] Revisión visual del autor (4.3e).
+- [x] Copiar los bloques de otro grupo, con sus fechas en el curso del grupo o sin ellas (5.2c).
+- [ ] Revisión visual del autor de «Copiar de otro grupo» (5.2c).
 
 ## Fuera de alcance
 
 - Probar como alumno desde el banco, sin abrir el formulario ([PENDIENTES](../PENDIENTES.md)).
-- Copiar los bloques de un grupo en otro, para el curso siguiente o un grupo paralelo ([PENDIENTES](../PENDIENTES.md)).
 
 ## Pulido pendiente
 

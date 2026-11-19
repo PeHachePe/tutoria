@@ -2243,3 +2243,55 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Consecuencias:** desaparece el enlace del chat a los ajustes («Elige una voz para el tutor en los ajustes»). Esta decisión se explica en la memoria junto a la perspectiva de género, que cambia de «no elegir» a «elegir por calidad y dejar cambiarla».
 
 **Aprobación:** el autor la pidió («pon las mejores voces primero sí y selecciona por defecto la mejor… que la puedan elegir»).
+
+## D-079 · Preparar un curso nuevo: la clase son los grupos con el mismo nombre y curso, que se crean, duplican y matriculan juntos (19/11/2026)
+
+**Contexto:** en la revisión del 5.2b el autor dijo que preparar un curso nuevo «es un poco coñazo y poco intuitivo». Una clase son tantos grupos como asignaturas (`class_group`: nombre, curso, asignatura y docente), los mismos alumnos se matriculan en cada uno (solo ayudaba «Añadir los de otro grupo») y los bloques, que son de cada grupo, se rehacían a mano; los ejercicios sí se reutilizan del banco. Copiar los bloques de un grupo en otro ya estaba pendiente desde el 4.3d (D-060).
+
+**Decisión:**
+
+- **La clase no es una tabla:** son los grupos con el mismo nombre y curso (`classOf()`), como ya los distinguía el desplegable. No cambia el modelo de datos.
+- **«Nuevo grupo» en varias asignaturas:** el desplegable es múltiple y crea un grupo en cada una, con el mismo nombre, curso y docente, en un solo `insert` (todo o nada). `GroupService.createGroups()`.
+- **«Duplicar…» en el menú del grupo:** un grupo nuevo por cada grupo elegido de la clase (todos, al principio), en su asignatura, con el nombre, el curso (el siguiente, o el actual si el grupo es más antiguo) y el docente que se elijan, y, si se quiere, sus bloques con sus ejercicios, orden, visibilidad y traducciones, sus fechas y su alumnado activo (sin marcar: un curso nuevo es otra clase). RPC `duplicate_groups`, con seguridad del definidor, porque la matrícula solo entra por funciones (D-072): comprueba los grupos y el docente, y las comprobaciones de las tablas hacen el resto.
+- **Las fechas pasan al nuevo curso en semanas enteras:** `school_year_shift_days()` (y `schoolYearShiftDays()` en el cliente) redondea los años a semanas (364 días por un año), para que el viernes de entrega siga siendo viernes; en el mismo curso no se mueven. La suma se hace en la zona horaria del navegador (parámetro `time_zone`), para que las 23:59 sigan siéndolo aunque cambie la hora de verano. Sin fechas, los bloques llegan sin apertura ni entrega. El diálogo dice antes dónde caerán (`datesNote()`).
+- **Matricular en toda la clase:** el diálogo de matrícula añade «Matricular también en», con los otros grupos de la clase marcados. `enroll_students` admite `also_group_ids` (20 como mucho): allí salta a quien ya está, en lugar de rechazar el lote, y sigue devolviendo la matrícula del grupo abierto. Las cuentas de los demás se recargan.
+- **«Copiar de otro grupo» en Bloques:** los bloques de otro grupo del usuario detrás de los que hay (los de la misma asignatura primero, el curso más reciente antes), con o sin fechas. RPC `copy_blocks`, también del definidor y con sus comprobaciones, que comparte con `duplicate_groups` la copia (`copy_group_blocks`, sin permisos para nadie). Para eso, `BlockService.listGroups()` da también el curso (`PlannedGroup`), y el desplegable de Bloques lo añade cuando el nombre se repite.
+
+**Alternativas:**
+
+- **Una tabla `class` con sus grupos:** más limpia en teoría, pero cambiaba el modelo, las RLS y todas las pantallas que eligen grupo, para lo que ya resuelven el nombre y el curso.
+- **Mover las fechas un año exacto:** el día de la semana cambia (el viernes pasa a sábado) y el docente tendría que corregir cada entrega.
+- **Hacer la copia en el cliente, petición a petición:** un fallo a mitad dejaba un grupo con la mitad de los bloques; el servidor la hace en una transacción.
+- **Matricular en varios grupos rechazando a quien ya está en alguno:** obligaba a desmarcar grupos a mano por un solo alumno.
+
+**Consecuencias:**
+
+- Migración `20261119150000_school_year_setup.sql`, con 31 tests de pgTAP (`school_year_setup.test.sql`) y la lista de funciones de `function_privileges` ampliada. Tipos regenerados.
+- `GroupService` gana `createGroups()`, `duplicateGroups()` y el tercer argumento de `enroll()`; `BlockService`, `copyBlocks()`. En las dos versiones; la copia simulada imita la del servidor (`copy-group-blocks.ts`).
+- Sale de [PENDIENTES](PENDIENTES.md) copiar los bloques de un grupo en otro (4.3d) y preparar un curso nuevo (5.2b).
+
+**Aprobación:** el diseño, por el autor («Sí, las cuatro»); el detalle técnico (semanas enteras, zona horaria del navegador, alumnado sin marcar), por delegación del autor.
+
+## D-080 · Ayuda guiada: driver.js para los recorridos y las balizas, y un panel de primeros pasos propio (19/11/2026, propuesta)
+
+**Contexto:** el autor pidió una ayuda que explique cada perfil, sobre todo el del alumno y el del docente, marcando cada pieza paso a paso, también en el móvil, visual y accesible. Se valoró además si bastaba un recorrido inicial o hacía falta una guía por tareas.
+
+**Decisión:**
+
+- **Tres capas** (§2.12): una bienvenida corta la primera vez, unos primeros pasos con tareas guiadas que esperan a que el usuario haga cada acción, y balizas de ayuda en cada pantalla. Un recorrido largo al entrar casi siempre se salta; la ayuda que sirve es la que llega cuando se va a hacer la tarea.
+- **driver.js** (MIT, sin dependencias, ≈ 4 M descargas semanales en noviembre de 2026 y versiones frecuentes) para el recorrido y las balizas: oscurece la pantalla salvo la pieza que explica, su globo es un diálogo con título y no deja salir el foco, se maneja con teclado, se recoloca al cambiar el tamaño y puede esperar una acción del usuario (`advanceOn`). Solo la toca `GuideService`, así que cambiarla más adelante solo cambia esa clase.
+- **El panel de primeros pasos, propio con Material**, aunque driver.js trae un checklist: los textos de dos de sus botones para el lector de pantalla están fijos en inglés y no se configuran, y su aspecto no es el de la aplicación. El panel propio usa el tema, se traduce entero y se prueba como el resto.
+- **Lo visto y lo terminado, en el perfil** (`app_user.guide_state`, `jsonb`), no en `localStorage`: la ayuda no se repite en otro equipo. Una columna basta (no hace falta tabla nueva) y `jsonb` admite recorridos nuevos sin migraciones. Las tareas con datos (el docente ya tiene un bloque) se dan por hechas por esos datos, no por lo guardado.
+
+**Alternativas:**
+
+- **Shepherd.js:** igual de buena en aspecto y accesibilidad, con envoltorio de Angular, pero con licencia AGPL-3.0, que obliga a publicar el código de toda la aplicación bajo esa licencia o a pagar la comercial.
+- **Intro.js:** también AGPL-3.0 y de aspecto más anticuado.
+- **ngx-ui-tour-md-menu:** hecha para Angular y Material, pero poco usada (≈ 21 k descargas semanales), sin oscurecer la pantalla, y sus globos son menús de Material (`role="menu"`) con texto dentro, que axe marca como error.
+- **TourGuide JS y OnboardJS:** abandonada la primera (sin versiones desde 2025) y sin interfaz y en versión de prueba la segunda.
+- **Solo un recorrido inicial:** más barato, pero enseña dónde está cada cosa sin enseñar a hacer nada.
+- **Una paleta de órdenes (Ctrl+K):** cada perfil tiene cinco pantallas como mucho y un solo atajo propio (Ctrl+Enter o ⌘+Enter para ejecutar en el editor), así que no ahorra nada. Además, Ctrl+K ya es un atajo del navegador (la barra de búsqueda en Chrome, Edge y Firefox), y quitárselo al usuario rompe un hábito suyo. El atajo del editor lo explica su baliza.
+
+**Consecuencias:** pasos 7.0a y 7.0b (≈ 7,5 h; la fase 7 pasa de ≈ 15 h a ≈ 22,5 h), antes del 7.1 para que sus e2e y axe ya recorran la ayuda. Una dependencia nueva (`driver.js`) y una columna en `app_user`. El CSS de driver.js se adapta con los tokens del tema en un parcial de `src/styles/` (D-039).
+
+**Aprobación:** el autor eligió driver.js tras la comparación y el panel propio («si ves mejor la opción 2 la haces»), y dejó lo demás a criterio del agente («lo que veas mejor, que sea lo más compatible a futuro»).
