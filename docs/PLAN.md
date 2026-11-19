@@ -448,7 +448,7 @@ abstract class SpeechService {
 **Ajustes** (`SettingsStore`, ficha 05), por usuario y apagados por defecto:
 
 - `voice`: el interruptor general. Apagado, no hay micrófono, altavoz ni llamada, y no se carga `WebSpeechService`.
-- `tutorVoice`: la voz del tutor. **No tiene valor por defecto:** la API no dice el género de una voz, así que la aplicación no puede evitar una femenina eligiendo ella. El alumno escoge una de la lista (las del idioma de la interfaz, en orden alfabético y con «Probar»), y hasta entonces el tutor no habla; el dictado sí funciona.
+- `tutorVoice`: la voz del tutor. Mientras el alumno no elija otra, la más natural del idioma (D-078, que sustituye la voz sin elegir de D-066): las voces se ordenan por calidad y las robóticas de macOS se esconden tras «Ver todas las voces»; cada una con «Probar».
 - `speechRate`: lenta, normal o rápida.
 - `readAloud`: «Leer las respuestas en voz alta» fuera de una llamada. Apagado por defecto: en un aula, veinticinco tutores hablando a la vez no ayudan a nadie.
 - `headphones`: «Llevo auriculares: puedo interrumpir al tutor hablando» (modo llamada).
@@ -505,6 +505,8 @@ abstract class SpeechService {
   - el servidor valida cada frase completa (sin código) y la envía como un `delta` por una respuesta en streaming, que lee `SupabaseTutorService`; `TutorStore` no cambia;
   - si falla antes de la primera frase, sigue el camino de hoy: un reintento, entero. Si falla después, lo dicho no se puede retirar: el servidor corta, cierra con una frase fija en el idioma del alumno y lo cuenta en `rejected_answers`;
   - la interacción se guarda al final, como hoy, con el texto que se envió.
+
+**Siempre a la vista** (D-078): mientras el tutor habla, su cabecera enseña «Hablando» con «Parar». Mientras el micrófono está abierto (dictado o llamada), un indicador igual de claro dice que se le está escuchando («Te escucho», con el icono del micrófono animado), en el campo, en la cabecera y en la mascota plegada.
 
 **Privacidad** (2.10): nada nuevo se guarda. El audio no pasa por TutorIA ni se graba; solo existe el texto que el alumno envía, igual que si lo hubiera escrito. El micrófono solo se abre con «Dictar» o en una llamada, y siempre se ve que está abierto.
 

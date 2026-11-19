@@ -10,6 +10,8 @@ export interface SpeechVoice {
   readonly name: string;
   /** BCP 47, as the browser gives it (`es-ES`). */
   readonly lang: string;
+  /** False for a voice of the network, which usually sounds more natural. */
+  readonly local?: boolean;
 }
 
 export interface SpeakOptions {
@@ -33,7 +35,7 @@ export class SpeechError extends Error {
 export abstract class SpeechService {
   /** Whether this browser has speech synthesis at all. */
   abstract readonly canSpeak: boolean;
-  /** The voices of that language, in alphabetical order; none if it cannot speak. */
+  /** The voices of that language, the most natural first; none if it cannot speak. */
   abstract voices(language: AppLocale): Promise<readonly SpeechVoice[]>;
   /** Says one sentence; rejects with a SpeechError. */
   abstract speak(sentence: string, options: SpeakOptions): Promise<'ended' | 'cancelled'>;

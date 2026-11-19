@@ -2217,3 +2217,15 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Consecuencias:** el 6.1b y el 6.1c usarán `StudentVoice` para el dictado y la llamada. «Escuchar» solo aparece si el navegador tiene voces del idioma.
 
 **Aprobación:** el autor aprobó el plan del paso y las mejoras («hazlo todo lo mejor que veas, sí»).
+
+## D-078 · La voz del tutor: la más natural por defecto, y siempre a la vista cuando suena (19/11/2026)
+
+**Contexto:** D-066 dejaba la voz del tutor sin valor por defecto, porque la API no dice el género de una voz y la aplicación no debía elegir una por el alumno. Al probarlo, el autor vio dos problemas: muchas voces del navegador suenan robóticas (las antiguas de macOS que ofrece Chrome), y al cambiar de idioma «Escuchar» llevaba a los ajustes a elegir otra.
+
+**Decisión:** las voces se ordenan por calidad (`core/speech/voice-quality.ts`): primero las naturales o en red (`Natural`, `Online`, `Google`, `mejorada`, `Premium`, `localService` falso), después las del sistema y al final las de juguete de macOS, que se esconden tras «Ver todas las voces». Mientras el alumno no elija otra, el tutor habla con la primera, que es una elección por **calidad**, no por género: el nombre de las voces en red (como «Google español») ni siquiera lo dice. Los ajustes lo explican («Tiene la que suena más natural en tu navegador. Puedes elegir otra»). Mientras el tutor habla, su cabecera enseña «Hablando» con «Parar». El micrófono del 6.1b y del 6.1c tendrá un indicador igual de claro.
+
+**Alternativas:** mantener la voz sin elegir, como en D-066, con el coste de un paso más en cada idioma. Guardar una voz por idioma: sigue obligando a elegir la primera vez. Una síntesis de pago en el servidor: mejor sonido, pero con coste por respuesta y otro proveedor que recibe el texto (queda en `PENDIENTES.md`).
+
+**Consecuencias:** desaparece el enlace del chat a los ajustes («Elige una voz para el tutor en los ajustes»). Esta decisión se explica en la memoria junto a la perspectiva de género, que cambia de «no elegir» a «elegir por calidad y dejar cambiarla».
+
+**Aprobación:** el autor la pidió («pon las mejores voces primero sí y selecciona por defecto la mejor… que la puedan elegir»).

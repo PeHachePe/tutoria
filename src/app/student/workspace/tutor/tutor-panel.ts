@@ -13,10 +13,8 @@ import {
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../../auth/auth-store';
-import { APP_PATHS } from '../../../core/app-paths';
 import { MAX_HINT_LEVEL, raisesHintLevel } from '../../../data/tutor';
 import { Mascot, type MascotMood } from '../../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
@@ -59,7 +57,6 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
     MatIconButton,
     MatIcon,
     MatTooltip,
-    RouterLink,
     Mascot,
     LoadingSkeleton,
     Skeleton,
@@ -93,7 +90,6 @@ export class TutorPanel {
   protected readonly store = inject(TutorStore);
   /** The tutor's voice; none in the teacher's preview (D-061). */
   protected readonly speaker = inject(TutorSpeaker, { optional: true });
-  protected readonly settingsPath = APP_PATHS.student.settings;
   protected readonly isSessionExpired = isSessionExpired;
   private readonly attempt = inject(AttemptStore);
   private readonly user = inject(AuthStore).user;

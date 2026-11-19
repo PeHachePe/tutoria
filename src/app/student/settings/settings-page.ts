@@ -11,6 +11,7 @@ import { LanguageService } from '../../core/i18n/language-service';
 import { AppLocale, LANGUAGE_OPTIONS } from '../../core/i18n/locale';
 import { LOCALE_NAMES } from '../../core/i18n/locale-names';
 import type { SpeechRate, SpeechVoice } from '../../core/speech/speech-service';
+import { isNoveltyVoice } from '../../core/speech/voice-quality';
 import { ThemeMode, ThemeService } from '../../core/theme-service';
 import type { Intensity, ReactionKind } from '../../data/tutor';
 import { Mascot } from '../../shared/mascot/mascot';
@@ -128,8 +129,23 @@ export class SettingsPage {
   protected readonly dataPath = APP_PATHS.student.data;
   protected readonly rateChoices = RATE_CHOICES;
   protected readonly localeName = LOCALE_NAMES[this.locale];
+  /** The robotic and joke voices of macOS, hidden until asked for, unless it is the tutor's. */
+  protected readonly showAllVoices = signal(false);
+  private readonly shownVoices = computed(() =>
+    this.voice
+      .voices()
+      .filter(
+        (voice) =>
+          this.showAllVoices() ||
+          !isNoveltyVoice(voice) ||
+          voice.id === this.voice.tutorVoice()?.id,
+      ),
+  );
+  protected readonly hiddenVoices = computed(
+    () => this.voice.voices().length - this.shownVoices().length,
+  );
   protected readonly voiceOptions = computed(() =>
-    this.voice.voices().map((voice) => ({
+    this.shownVoices().map((voice) => ({
       ...voice,
       region: voiceRegion(voice, this.locale),
       tryLabel: $localize`:@@settings.voice.tryLabel:Probar la voz ${voice.name}:nombre:`,

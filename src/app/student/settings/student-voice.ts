@@ -10,8 +10,8 @@ const SAMPLE = $localize`:@@settings.voice.sample:Hola, soy tu tutor. ¿Seguimos
 
 /**
  * The student's voice settings joined with what the browser can do (2.11, D-071): it loads the
- * speech only with the voice on, gives the voices of the interface's language and the chosen one
- * while it still exists. Not a store: it keeps no state of its own. The settings, the chat and,
+ * speech only with the voice on, gives the voices of the interface's language, the most natural
+ * first, and the tutor's: the chosen one while it still exists, or else the most natural (D-078). Not a store: it keeps no state of its own. The settings, the chat and,
  * later, the dictation and the call use it.
  */
 @Service()
@@ -33,7 +33,7 @@ export class StudentVoice {
 
   /** The speech of the browser, loaded only with the voice on; undefined until then. */
   readonly speech: Signal<SpeechService | undefined> = this.speechResource.value;
-  /** The voices of the language of the interface; none until they load. */
+  /** The voices of the language of the interface, the most natural first; none until they load. */
   readonly voices: Signal<readonly SpeechVoice[]> = this.voicesResource.value;
   readonly voicesLoading = computed(
     () => this.speechResource.isLoading() || this.voicesResource.isLoading(),
@@ -41,9 +41,13 @@ export class StudentVoice {
   /** The voice is on and the browser has voices of the language: «Escuchar» is offered. */
   readonly canSpeak = computed(() => this.settings.voice() && this.voices().length > 0);
   /** The voice the student chose, if the browser still has it in this language. */
-  readonly tutorVoice = computed(() =>
+  private readonly chosenVoice = computed(() =>
     this.voices().find((voice) => voice.id === this.settings.tutorVoice()),
   );
+  /** The student chose the voice; if not, the tutor speaks with the most natural one (D-078). */
+  readonly chosen = computed(() => this.chosenVoice() !== undefined);
+  /** The voice of the tutor: the chosen one, or the most natural of the language. */
+  readonly tutorVoice = computed(() => this.chosenVoice() ?? this.voices()[0]);
 
   /** Says a sentence with the chosen voice and rate; `cancelled` without one. Rejects with a SpeechError. */
   async say(sentence: string): Promise<'ended' | 'cancelled'> {

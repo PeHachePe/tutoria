@@ -67,14 +67,17 @@ describe('StudentVoice', () => {
     expect(voice.voicesLoading()).toBe(true);
   });
 
-  it('gives the chosen voice only while it is in the list', async () => {
+  it('speaks with the most natural voice until the student chooses one in the list', async () => {
     setup();
     await turnOn();
-    expect(voice.tutorVoice()).toBeUndefined();
+    expect(voice.tutorVoice()).toEqual(paulina);
+    expect(voice.chosen()).toBe(false);
     settings.setTutorVoice('alex');
-    expect(voice.tutorVoice()).toBeUndefined();
+    expect(voice.tutorVoice()).toEqual(paulina);
+    expect(voice.chosen()).toBe(false);
     settings.setTutorVoice('jorge');
     expect(voice.tutorVoice()).toEqual(jorge);
+    expect(voice.chosen()).toBe(true);
   });
 
   it('cannot speak without voices of the language nor without synthesis', async () => {
@@ -101,10 +104,16 @@ describe('StudentVoice', () => {
     expect(voice.voices()).toEqual([]);
   });
 
-  it('says a sentence with the chosen voice and speed, and nothing without a voice', async () => {
+  it('says a sentence with the voice and speed, and nothing without a voice', async () => {
+    fake.voiceList = [alex];
     setup();
     await turnOn();
     expect(await voice.say('Hola.')).toBe('cancelled');
+
+    TestBed.resetTestingModule();
+    fake.voiceList = [paulina, jorge];
+    setup();
+    await turnOn();
     settings.setTutorVoice('jorge');
     settings.setSpeechRate('fast');
     const said = voice.say('Hola.');

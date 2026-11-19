@@ -8,6 +8,7 @@ import {
   SpeechService,
   type SpeechVoice,
 } from './speech-service';
+import { byQuality } from './voice-quality';
 
 /** How long to wait for the voices, which some browsers load after the first call. */
 export const VOICES_TIMEOUT_MS = 2000;
@@ -43,10 +44,15 @@ export class WebSpeechService extends SpeechService {
       const lang = voice.lang.replace('_', '-');
       const tag = lang.toLowerCase();
       if ((tag === language || tag.startsWith(`${language}-`)) && !unique.has(voice.voiceURI)) {
-        unique.set(voice.voiceURI, { id: voice.voiceURI, name: voice.name, lang });
+        unique.set(voice.voiceURI, {
+          id: voice.voiceURI,
+          name: voice.name,
+          lang,
+          local: voice.localService,
+        });
       }
     }
-    return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, language));
+    return [...unique.values()].sort(byQuality(language));
   }
 
   async speak(sentence: string, options: SpeakOptions): Promise<'ended' | 'cancelled'> {

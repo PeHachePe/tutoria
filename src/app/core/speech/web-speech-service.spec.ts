@@ -8,6 +8,7 @@ interface FakeVoice {
   voiceURI: string;
   name: string;
   lang: string;
+  localService?: boolean;
 }
 
 class FakeUtterance {
@@ -34,8 +35,8 @@ class FakeSynthesis extends EventTarget {
   }
 }
 
-const jorge = { voiceURI: 'jorge', name: 'Jorge', lang: 'es-ES' };
-const paulina = { voiceURI: 'paulina', name: 'Paulina', lang: 'es_MX' };
+const jorge = { voiceURI: 'jorge', name: 'Jorge', lang: 'es-ES', localService: true };
+const paulina = { voiceURI: 'paulina', name: 'Paulina', lang: 'es_MX', localService: false };
 const alex = { voiceURI: 'alex', name: 'Alex', lang: 'en-US' };
 
 function setup(window: object): WebSpeechService {
@@ -69,7 +70,7 @@ describe('WebSpeechService', () => {
     expect(speech.canSpeak).toBe(true);
   });
 
-  it('gives only the voices of the language, once each and in order', async () => {
+  it('gives only the voices of the language, once each and the most natural first', async () => {
     synthesis.voices = [
       paulina,
       alex,
@@ -78,8 +79,8 @@ describe('WebSpeechService', () => {
       { voiceURI: 'x', name: 'Es', lang: 'est' },
     ];
     expect(await speech.voices('es')).toEqual([
-      { id: 'jorge', name: 'Jorge', lang: 'es-ES' },
-      { id: 'paulina', name: 'Paulina', lang: 'es-MX' },
+      { id: 'paulina', name: 'Paulina', lang: 'es-MX', local: false },
+      { id: 'jorge', name: 'Jorge', lang: 'es-ES', local: true },
     ]);
   });
 

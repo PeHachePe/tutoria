@@ -248,14 +248,22 @@ describe('TutorSpeaker', () => {
     expect(speaker.speakingTurnId()).toBe(past.id);
   });
 
-  it('does not speak without a chosen voice', async () => {
+  it('speaks with the most natural voice when the chosen one is gone, and not without voices', async () => {
     settings.setTutorVoice('gone');
+    expect(speaker.ready()).toBe(true);
+    speaker.listen(tutor.turns()[0].id);
+    await settle();
+    expect(fake.spoken[0].options.voiceId).toBe('jorge');
+    speaker.stop();
+
+    settings.setVoice(false);
+    TestBed.tick();
     expect(speaker.ready()).toBe(false);
     speaker.listen(tutor.turns()[0].id);
     const answer = await ask();
     answer.say('Mira el bucle. Y');
     await settle();
-    expect(fake.spoken).toEqual([]);
+    expect(fake.spoken).toHaveLength(1);
   });
 
   it('stops without more when a sentence is cancelled or fails', async () => {

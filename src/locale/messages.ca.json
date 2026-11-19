@@ -1173,7 +1173,6 @@
     "system.subjects.created": "Assignatura creada",
     "system.subjects.saved": "Assignatura desada",
     "settings.voice.tutorVoice": "Veu del tutor",
-    "settings.voice.choose": "Tria una veu per al tutor",
     "settings.voice.loading": "Cercant les veus del teu navegador…",
     "settings.voice.none": "El teu navegador no té veus en {$INTERPOLATION}: el tutor t'escriurà.",
     "settings.voice.tryLabel": "Provar la veu {$nombre}",
@@ -1187,7 +1186,11 @@
     "settings.voice.screenReader": "Si fas servir un lector de pantalla, no cal activar la veu: ja et llegeix les respostes.",
     "tutor.voice.listen": "Escoltar",
     "tutor.voice.stop": "Aturar",
-    "tutor.voice.chooseVoice": "Tria una veu per al tutor a la configuració",
-    "tutor.voice.closing": "T'ho deixo al xat."
+    "tutor.voice.closing": "T'ho deixo al xat.",
+    "settings.voice.default": "Té la que sona més natural al teu navegador. En pots triar una altra.",
+    "settings.voice.showAll": "Veure totes les veus ({$INTERPOLATION} més)",
+    "settings.voice.better": "Sonen robòtiques? Edge té veus naturals, i en un Mac pots descarregar veus millorades a Configuració del Sistema › Accessibilitat › Contingut parlat.",
+    "tutor.voice.speaking": "Parlant",
+    "tutor.voice.speakingLabel": "El tutor està parlant. Aturar"
   }
 }

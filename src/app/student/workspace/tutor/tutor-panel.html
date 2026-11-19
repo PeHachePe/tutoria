@@ -13,6 +13,21 @@
     </h2>
     <app-hint-level-meter [level]="store.hintLevel()" />
   </div>
+  <!-- While the tutor speaks, always in sight, with a way to silence it (2.11) -->
+  @if (speaker?.speakingTurnId()) {
+    <button
+      matButton="tonal"
+      type="button"
+      class="self-start"
+      aria-label="El tutor está hablando. Parar"
+      i18n-aria-label="@@tutor.voice.speakingLabel"
+      (click)="speaker?.stop()"
+    >
+      <mat-icon class="motion-safe:animate-pulse">graphic_eq</mat-icon>
+      <ng-container i18n="@@tutor.voice.speaking">Hablando</ng-container>
+      <mat-icon iconPositionEnd>stop</mat-icon>
+    </button>
+  }
   <!-- Fixed in its column or floating over the code: the student chooses (proposal of step 1.7) -->
   @if (dock() !== 'none') {
     <button
@@ -226,45 +241,31 @@
                   >
                   @if (speaker?.available()) {
                     <!-- The same width saying «Escuchar» or «Parar», so a second click lands on it -->
-                    @if (speaker?.ready()) {
-                      @let speaking = speaker?.speakingTurnId() === turn.id;
-                      <button
-                        type="button"
-                        class="inline-grid min-h-6 place-items-center rounded-full px-2 text-label-medium text-primary outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary"
-                        (click)="toggleListen(turn.id)"
-                      >
-                        <span
-                          class="col-start-1 row-start-1 inline-flex items-center gap-1"
-                          [class.invisible]="speaking"
-                          [attr.aria-hidden]="speaking || null"
-                        >
-                          <mat-icon class="size-4! text-[1rem]!" aria-hidden="true"
-                            >volume_up</mat-icon
-                          >
-                          <ng-container i18n="@@tutor.voice.listen">Escuchar</ng-container>
-                        </span>
-                        <span
-                          class="col-start-1 row-start-1 inline-flex items-center gap-1"
-                          [class.invisible]="!speaking"
-                          [attr.aria-hidden]="!speaking || null"
-                        >
-                          <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">stop</mat-icon>
-                          <ng-container i18n="@@tutor.voice.stop">Parar</ng-container>
-                        </span>
-                      </button>
-                    } @else {
-                      <a
-                        class="inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-label-medium text-primary outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary"
-                        [routerLink]="settingsPath"
-                        i18n-matTooltip="@@tutor.voice.chooseVoice"
-                        matTooltip="Elige una voz para el tutor en los ajustes"
+                    @let speaking = speaker?.speakingTurnId() === turn.id;
+                    <button
+                      type="button"
+                      class="inline-grid min-h-6 place-items-center rounded-full px-2 text-label-medium text-primary outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary"
+                      (click)="toggleListen(turn.id)"
+                    >
+                      <span
+                        class="col-start-1 row-start-1 inline-flex items-center gap-1"
+                        [class.invisible]="speaking"
+                        [attr.aria-hidden]="speaking || null"
                       >
                         <mat-icon class="size-4! text-[1rem]!" aria-hidden="true"
                           >volume_up</mat-icon
                         >
                         <ng-container i18n="@@tutor.voice.listen">Escuchar</ng-container>
-                      </a>
-                    }
+                      </span>
+                      <span
+                        class="col-start-1 row-start-1 inline-flex items-center gap-1"
+                        [class.invisible]="!speaking"
+                        [attr.aria-hidden]="!speaking || null"
+                      >
+                        <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">stop</mat-icon>
+                        <ng-container i18n="@@tutor.voice.stop">Parar</ng-container>
+                      </span>
+                    </button>
                   }
                 </div>
               }

@@ -21,6 +21,7 @@ describe('SettingsPage', () => {
     fake.voiceList = [
       { id: 'monica', name: 'Mónica', lang: 'es-ES' },
       { id: 'jorge', name: 'Jorge', lang: 'es-MX' },
+      { id: 'eddy', name: 'Eddy (español (España))', lang: 'es-ES' },
     ];
   });
 
@@ -139,13 +140,14 @@ describe('SettingsPage', () => {
       return { ...page, toggle };
     }
 
-    it('shows its controls when turned on, without moving the focus, and no voice chosen', async () => {
+    it('shows its controls when turned on, without moving the focus, with the most natural voice', async () => {
       const { settings, toggle } = await turnVoiceOn();
       expect(settings.voice()).toBe(true);
       expect(document.activeElement).toBe(toggle);
-      expect(screen.getByText('Elige una voz para el tutor')).toBeTruthy();
+      expect(screen.getByText(/la que suena más natural en tu navegador/)).toBeTruthy();
       const voices = within(group('Voz del tutor')).getAllByRole('radio');
-      expect(voices.map((voice) => (voice as HTMLInputElement).checked)).toEqual([false, false]);
+      expect(voices.map((voice) => (voice as HTMLInputElement).checked)).toEqual([true, false]);
+      expect(screen.getByText(/¿Suenan robóticas\?/)).toBeTruthy();
       expect(screen.getByRole('radio', { name: /Jorge · México/ })).toBeTruthy();
       expect(screen.getByText(/Si usas un lector de pantalla/)).toBeTruthy();
     });
@@ -158,10 +160,27 @@ describe('SettingsPage', () => {
 
     it('saves the chosen voice and tries it', async () => {
       const { user, settings } = await turnVoiceOn();
-      await user.click(option('Voz del tutor', 'Mónica'));
-      expect(settings.tutorVoice()).toBe('monica');
-      expect(fake.spoken.at(-1)?.options.voiceId).toBe('monica');
-      expect(screen.queryByText('Elige una voz para el tutor')).toBeNull();
+      await user.click(option('Voz del tutor', 'Jorge'));
+      expect(settings.tutorVoice()).toBe('jorge');
+      expect(fake.spoken.at(-1)?.options.voiceId).toBe('jorge');
+      expect(screen.queryByText(/la que suena más natural/)).toBeNull();
+    });
+
+    it('shows a robotic voice if the student chose it', async () => {
+      const { user, settings } = await renderPage();
+      settings.setTutorVoice('eddy');
+      await user.click(screen.getByRole('switch', { name: 'Hablar con el tutor por voz' }));
+      expect(await screen.findByRole('radio', { name: /Eddy/ })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Ver todas las voces/ })).toBeNull();
+    });
+
+    it('hides the robotic voices until asked for, unless it is the chosen one', async () => {
+      const { user, settings } = await turnVoiceOn();
+      expect(screen.queryByRole('radio', { name: /Eddy/ })).toBeNull();
+      await user.click(screen.getByRole('button', { name: 'Ver todas las voces (1 más)' }));
+      await user.click(option('Voz del tutor', 'Eddy'));
+      expect(settings.tutorVoice()).toBe('eddy');
+      expect(screen.queryByRole('button', { name: /Ver todas las voces/ })).toBeNull();
     });
 
     it('tries a voice with the chosen speed', async () => {

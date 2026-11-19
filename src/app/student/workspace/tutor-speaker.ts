@@ -19,8 +19,8 @@ import { type TutorTurn, TutorStore, waitsForStudent } from './tutor-store';
 const CLOSING = $localize`:@@tutor.voice.closing:Te lo dejo en el chat.`;
 
 /** A turn as it was asked: a retry keeps the id, so its time tells it apart. */
-function keyOf(turn: TutorTurn | undefined): string | undefined {
-  return turn && `${turn.id}@${turn.createdAt}`;
+function keyOf(turn: TutorTurn): string {
+  return `${turn.id}@${turn.createdAt}`;
 }
 
 /**
@@ -43,11 +43,14 @@ export class TutorSpeaker {
   readonly speakingTurnId = this.speakingState.asReadonly();
   /** «Escuchar» is offered (StudentVoice.canSpeak). */
   readonly available = this.voice.canSpeak;
-  /** A voice is chosen: without it, «Escuchar» leads to the settings. */
+  /** There is a voice to speak with: the chosen one or the most natural (D-078). */
   readonly ready = computed(() => this.voice.tutorVoice() !== undefined);
 
-  /** Every fresh turn seen: a turn is new once, even if it arrived whole before the effect ran. */
-  private readonly seen = new Set<string>();
+  /**
+   * Every fresh turn seen, with whether it had failed: a turn is new once, even if it arrived whole
+   * before the effect ran, and again when a retry answers it.
+   */
+  private readonly seen = new Map<string, boolean>();
   private queue: string[] = [];
   /** How many sentences of the answer are already queued or said. */
   private taken = 0;
@@ -85,9 +88,7 @@ export class TutorSpeaker {
 
   private follow(turns: readonly TutorTurn[]): void {
     const fresh = turns.filter((turn) => turn.fresh).at(-1);
-    const key = keyOf(fresh);
-    if (fresh && key && !this.seen.has(key)) {
-      this.seen.add(key);
+    if (fresh && this.isNew(fresh)) {
       // A new turn silences whatever sounded, read aloud or not
       this.stop();
       if (
@@ -104,6 +105,15 @@ export class TutorSpeaker {
     const turn = turns.find((each) => each.id === speaking);
     if (!turn || turn.status === 'failed') this.stop();
     else this.feed(turn);
+  }
+
+  /** Seen for the first time, or answered again by a retry after failing. */
+  private isNew(turn: TutorTurn): boolean {
+    const key = keyOf(turn);
+    const failed = turn.status === 'failed';
+    const before = this.seen.get(key);
+    this.seen.set(key, failed);
+    return before === undefined || (before && !failed);
   }
 
   private start(turn: TutorTurn): void {

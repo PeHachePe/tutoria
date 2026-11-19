@@ -234,20 +234,20 @@
                 Tu navegador no tiene voces en {{ localeName }}: el tutor te escribirá.
               </p>
             } @else {
-              @if (!voice.tutorVoice()) {
-                <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.choose">
-                  Elige una voz para el tutor
+              @if (!voice.chosen()) {
+                <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.default">
+                  Tiene la que suena más natural en tu navegador. Puedes elegir otra.
                 </p>
               }
               <mat-radio-group
                 aria-labelledby="settings-tutor-voice"
-                class="scroll-shadows flex max-h-60 flex-col overflow-y-auto"
+                class="scroll-shadows flex max-h-60 flex-col overflow-x-hidden overflow-y-auto px-1"
                 [value]="voice.tutorVoice()?.id"
                 (change)="chooseVoice($event.value)"
               >
                 @for (option of voiceOptions(); track option.id) {
                   <div class="flex items-center justify-between gap-2">
-                    <mat-radio-button [value]="option.id">
+                    <mat-radio-button class="min-w-0 break-words" [value]="option.id">
                       {{ option.name }}
                       @if (option.region) {
                         <span class="text-body-small text-on-surface-variant">
@@ -266,6 +266,21 @@
                   </div>
                 }
               </mat-radio-group>
+              @if (hiddenVoices() > 0) {
+                <button
+                  matButton
+                  type="button"
+                  class="self-start"
+                  i18n="@@settings.voice.showAll"
+                  (click)="showAllVoices.set(true)"
+                >
+                  Ver todas las voces ({{ hiddenVoices() }} más)
+                </button>
+              }
+              <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.better">
+                ¿Suenan robóticas? Edge trae voces naturales, y en un Mac puedes descargar voces
+                mejoradas en Ajustes del Sistema › Accesibilidad › Contenido leído.
+              </p>
             }
           </div>
           <div class="flex flex-col gap-2">

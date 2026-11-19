@@ -90,11 +90,11 @@ interface Setup {
 }
 
 /** What the panel reads of the tutor's voice. */
-function fakeSpeaker({ available = true, ready = true } = {}) {
+function fakeSpeaker({ available = true } = {}) {
   const speakingTurnId = signal<string | null>(null);
   return {
     available: signal(available),
-    ready: signal(ready),
+    ready: signal(true),
     speakingTurnId,
     listen: vi.fn((turnId: string) => speakingTurnId.set(turnId)),
     stop: vi.fn(() => speakingTurnId.set(null)),
@@ -627,9 +627,23 @@ describe('TutorPanel', () => {
       expect(stop).toBe(buttons[0]);
       expect(document.querySelector('app-mascot')?.classList).toContain('mascot-speaking');
 
+      expect(screen.getByRole('button', { name: 'El tutor está hablando. Parar' })).toBeTruthy();
+
       await userEvent.click(stop);
       fixture.detectChanges();
       expect(speaker.stop).toHaveBeenCalled();
+      expect(screen.queryByRole('button', { name: /El tutor está hablando/ })).toBeNull();
+    });
+
+    it('silences the tutor from the header, wherever the answer is', async () => {
+      const speaker = fakeSpeaker();
+      const { fixture } = await renderPanel({ interactions: past, speaker });
+      speaker.listen('i-Empieza en cero.');
+      fixture.detectChanges();
+      await userEvent.click(screen.getByRole('button', { name: 'El tutor está hablando. Parar' }));
+      fixture.detectChanges();
+      expect(speaker.stop).toHaveBeenCalled();
+      expect(screen.getAllByRole('button', { name: 'Escuchar' })).toHaveLength(2);
       expect(screen.getAllByRole('button', { name: 'Escuchar' })).toHaveLength(2);
     });
 
@@ -649,16 +663,6 @@ describe('TutorPanel', () => {
         fixture.detectChanges();
         expect(screen.getByRole('button', { name: 'Escuchar' })).toBeTruthy();
       });
-    });
-
-    it('leads to the settings without a chosen voice', async () => {
-      await renderPanel({ interactions: past, speaker: fakeSpeaker({ ready: false }) });
-      const links = screen.getAllByRole('link', { name: /Escuchar/ });
-      expect(links[0].getAttribute('href')).toBe('/alumno/ajustes');
-      fireEvent.mouseEnter(links[0]);
-      expect(
-        await screen.findAllByText('Elige una voz para el tutor en los ajustes'),
-      ).not.toHaveLength(0);
     });
   });
 });
