@@ -1,7 +1,8 @@
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Component, computed, DestroyRef, inject, resource, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
-import { MatChipRemove, MatChipRow, MatChipSet } from '@angular/material/chips';
+import { MatChip, MatChipRemove, MatChipSet } from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
   MatDialogActions,
@@ -13,6 +14,7 @@ import {
 import { MatFormField, MatHint, MatLabel, MatPrefix } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
 
 import {
@@ -21,13 +23,26 @@ import {
   type UserRef,
 } from '../../data/group-service';
 import { createDebouncer } from '../../shared/create-debouncer';
+import { addToChoice } from './enroll-choice';
 import { groupActionMessage } from './group-action-message';
 
 /** How long the search waits after the last key before asking the server. */
 export const SEARCH_DELAY_MS = 300;
 
+/** Another group of the user, whose students can be taken at once. */
+export interface EnrollSource {
+  readonly id: string;
+  readonly label: string;
+}
+
 export interface EnrollDialogData {
   readonly groupName: string;
+  /** Who is in the group already: not chosen again from another group. */
+  readonly enrolledIds: ReadonlySet<string>;
+  /** The other groups of the user, such as the same class in another subject. */
+  readonly sources: readonly EnrollSource[];
+  /** The students of one of them. */
+  readonly studentsOf: (groupId: string) => Promise<UserRef[]>;
   /** Active students who are not in the group yet. */
   readonly search: (text: string) => Promise<UserRef[]>;
   /** Enrolls them; the dialog stays open, with the error, if it fails. */
@@ -48,7 +63,7 @@ export interface EnrollDialogData {
     MatButton,
     MatCheckbox,
     MatChipSet,
-    MatChipRow,
+    MatChip,
     MatChipRemove,
     MatFormField,
     MatLabel,
@@ -57,6 +72,9 @@ export interface EnrollDialogData {
     MatIcon,
     MatInput,
     MatProgressBar,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
   ],
   template: `
     <h2 mat-dialog-title i18n="@@enrollDialog.title">Matricular en {{ data.groupName }}</h2>
@@ -74,16 +92,42 @@ export interface EnrollDialogData {
           />
           <mat-hint i18n="@@enrollDialog.search.hint">Escribe al menos dos letras</mat-hint>
         </mat-form-field>
+        <!-- A class has one group per subject: its students, at once, instead of one by one -->
+        @if (data.sources.length > 0) {
+          <div>
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="full() || copying()"
+              [matMenuTriggerFor]="sourceMenu"
+            >
+              <mat-icon aria-hidden="true">group</mat-icon>
+              <span i18n="@@enrollDialog.copy">Añadir los de otro grupo</span>
+            </button>
+            <mat-menu #sourceMenu="matMenu">
+              @for (source of data.sources; track source.id) {
+                <button mat-menu-item type="button" (click)="copyFrom(source)">
+                  {{ source.label }}
+                </button>
+              }
+            </mat-menu>
+          </div>
+        }
 
         @if (chosen().length > 0) {
-          <mat-chip-set aria-label="Elegidos" i18n-aria-label="@@enrollDialog.chosen">
+          <!-- The students of a whole group can be many: they scroll, the dialog does not grow -->
+          <mat-chip-set
+            class="block max-h-32 overflow-y-auto"
+            aria-label="Elegidos"
+            i18n-aria-label="@@enrollDialog.chosen"
+          >
             @for (student of chosen(); track student.id) {
-              <mat-chip-row (removed)="toggle(student)">
+              <mat-chip (removed)="toggle(student)">
                 {{ student.name }}
                 <button matChipRemove [attr.aria-label]="removeLabel(student)">
                   <mat-icon aria-hidden="true">cancel</mat-icon>
                 </button>
-              </mat-chip-row>
+              </mat-chip>
             }
           </mat-chip-set>
         }
@@ -98,7 +142,17 @@ export interface EnrollDialogData {
             <mat-progress-bar mode="indeterminate" class="rounded-full" />
           }
         </div>
-        <div aria-live="polite" class="max-h-72 overflow-y-auto">
+        <!-- Says how many were found, not the whole list on every search -->
+        <p class="sr-only" aria-live="polite">
+          @if (results.hasValue()) {
+            <span i18n="@@enrollDialog.found">{results.value().length, plural,
+              =0 {Ningún alumno coincide}
+              =1 {1 alumno encontrado}
+              other {{{ results.value().length }} alumnos encontrados}
+            }</span>
+          }
+        </p>
+        <div class="max-h-72 overflow-y-auto">
           @if (results.error()) {
             <p class="text-body-medium text-error" i18n="@@enrollDialog.error">
               No se ha podido buscar. Inténtalo de nuevo.
@@ -175,6 +229,9 @@ export class EnrollDialog {
   protected readonly chosen = signal<readonly UserRef[]>([]);
   protected readonly full = computed(() => this.chosen().length >= MAX_ENROLLMENT_BATCH);
   protected readonly saving = signal(false);
+  /** Reading the students of another group. */
+  protected readonly copying = signal(false);
+  private readonly announcer = inject(LiveAnnouncer);
   protected readonly failure = signal<string | null>(null);
 
   constructor() {
@@ -196,6 +253,30 @@ export class EnrollDialog {
         ? chosen.filter(({ id }) => id !== student.id)
         : [...chosen, student],
     );
+  }
+
+  /** Chooses the students of another group who are not in this one, up to the batch. */
+  protected async copyFrom(source: EnrollSource): Promise<void> {
+    this.copying.set(true);
+    this.failure.set(null);
+    try {
+      const { chosen, added } = addToChoice(
+        this.chosen(),
+        await this.data.studentsOf(source.id),
+        this.data.enrolledIds,
+        MAX_ENROLLMENT_BATCH,
+      );
+      this.chosen.set(chosen);
+      void this.announcer.announce(
+        $localize`:@@enrollDialog.copied:${added}:count: elegidos de ${source.label}:group:`,
+      );
+    } catch {
+      this.failure.set(
+        $localize`:@@enrollDialog.copyError:No se ha podido leer ese grupo. Inténtalo de nuevo.`,
+      );
+    } finally {
+      this.copying.set(false);
+    }
   }
 
   protected removeLabel(student: UserRef): string {

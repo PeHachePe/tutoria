@@ -1,5 +1,5 @@
 import { SCHOOL_YEAR_PATTERN } from '../../data/group-service';
-import { schoolYearOf } from './school-year';
+import { isSchoolYear, schoolYearOf } from './school-year';
 
 describe('schoolYearOf', () => {
   it('is still the previous year on 31 August', () => {
@@ -17,5 +17,17 @@ describe('schoolYearOf', () => {
 
   it('matches the pattern of the database', () => {
     expect(schoolYearOf(new Date(2026, 10, 19))).toMatch(SCHOOL_YEAR_PATTERN);
+  });
+});
+
+describe('isSchoolYear', () => {
+  it('takes two years in a row, also across the century', () => {
+    expect(isSchoolYear('2026/27')).toBe(true);
+    expect(isSchoolYear('2099/00')).toBe(true);
+  });
+
+  it('refuses another shape or years apart', () => {
+    expect(isSchoolYear('2026-27')).toBe(false);
+    expect(isSchoolYear('2026/99')).toBe(false);
   });
 });

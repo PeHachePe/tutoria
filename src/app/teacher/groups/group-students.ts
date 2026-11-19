@@ -1,13 +1,15 @@
 import {
+  afterNextRender,
   Component,
   computed,
+  type ElementRef,
   inject,
   Injector,
   input,
   linkedSignal,
   output,
   resource,
-  signal,
+  viewChild,
 } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -22,19 +24,19 @@ import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { EnrollDialog, type EnrollDialogData } from './enroll-dialog';
+import { EnrollDialog, type EnrollDialogData, type EnrollSource } from './enroll-dialog';
 import { groupActionMessage } from './group-action-message';
 import { filterStudents, STUDENT_FILTER_THRESHOLD } from './student-filter';
 
-const SKELETON_ROWS = [1, 2, 3];
+const SKELETON_ROWS = [1, 2, 3, 4];
 
 function byStudentName(a: EnrolledStudent, b: EnrolledStudent): number {
   return a.student.name.localeCompare(b.student.name, 'es');
 }
 
 /**
- * The enrollment of one group, inside its panel (ficha 11): asked for when the panel opens, it
- * loads and fails on its own. Enrolls and unenrolls, and tells the page how many there are.
+ * The enrollment of the group chosen (ficha 11): loads and fails on its own, enrolls (also the
+ * students of another group) and unenrolls, and tells the page how many there are.
  */
 @Component({
   selector: 'app-group-students',
@@ -51,18 +53,37 @@ function byStudentName(a: EnrolledStudent, b: EnrolledStudent): number {
     Skeleton,
   ],
   template: `
-    <div class="flex flex-col gap-3" [attr.aria-busy]="students.isLoading()">
-      <div class="flex flex-wrap items-center justify-between gap-2">
+    <!-- Focusable from code: it takes the focus of a row that leaves -->
+    <div
+      #zone
+      tabindex="-1"
+      class="flex flex-col gap-3 outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+      [attr.aria-busy]="students.isLoading()"
+    >
+      <div class="flex flex-wrap items-center gap-3">
+        @if (showFilter()) {
+          <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-72">
+            <mat-label i18n="@@groups.filter">Filtrar alumnos</mat-label>
+            <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+            <input
+              matInput
+              type="search"
+              autocomplete="off"
+              [value]="filter()"
+              (input)="onFilter($event)"
+            />
+          </mat-form-field>
+        }
         <button
           matButton="tonal"
           type="button"
+          class="sm:ml-auto"
           [disabled]="!students.hasValue()"
           (click)="enroll()"
         >
           <mat-icon aria-hidden="true">group_add</mat-icon>
           <span i18n="@@groups.enroll">Matricular alumnos</span>
         </button>
-        <ng-content />
       </div>
 
       @if (students.error(); as error) {
@@ -77,22 +98,15 @@ function byStudentName(a: EnrolledStudent, b: EnrolledStudent): number {
         </app-loading-skeleton>
       } @else if (entries().length === 0) {
         <p
-          class="py-4 text-center text-body-medium text-on-surface-variant"
+          class="py-8 text-center text-body-medium text-on-surface-variant"
           i18n="@@groups.noStudents"
         >
           Este grupo aún no tiene alumnos
         </p>
       } @else {
-        @if (entries().length > filterThreshold) {
-          <mat-form-field subscriptSizing="dynamic" class="sm:w-72">
-            <mat-label i18n="@@groups.filter">Filtrar alumnos</mat-label>
-            <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-            <input matInput type="search" autocomplete="off" (input)="onFilter($event)" />
-          </mat-form-field>
-        }
-        <!-- A long group scrolls in its own zone: it never stretches the page (5.4) -->
+        <!-- It scrolls in its own zone, with what the window leaves: never the page (5.4) -->
         <ul
-          class="flex max-h-96 flex-col overflow-y-auto scroll-shadows"
+          class="flex max-h-[max(12rem,calc(100dvh-25rem))] flex-col overflow-y-auto scroll-shadows"
           aria-label="Alumnado"
           i18n-aria-label="@@groups.students.list"
         >
@@ -136,12 +150,14 @@ export class GroupStudents {
   private readonly injector = inject(Injector);
 
   readonly groupId = input.required<string>();
+  /** «Name · subject»: what tells this group apart in the dialogs. */
   readonly groupName = input.required<string>();
-  /** How many are enrolled, after each change. */
+  /** Every group of the user: the others can lend their students. */
+  readonly groups = input.required<readonly EnrollSource[]>();
+  /** How many are enrolled, after each load or change. */
   readonly countChange = output<number>();
 
   protected readonly skeletonRows = SKELETON_ROWS;
-  protected readonly filterThreshold = STUDENT_FILTER_THRESHOLD;
 
   protected readonly students = resource({
     params: () => this.groupId(),
@@ -158,13 +174,20 @@ export class GroupStudents {
     this.students.hasValue() ? this.students.value() : [],
   );
 
-  /** Nothing to show yet: a skeleton. A reload keeps the list. */
+  /** Nothing to show yet, as when another group is chosen: a skeleton. A reload keeps the list. */
   protected readonly firstLoad = computed(
     () => this.students.isLoading() && this.entries().length === 0,
   );
 
-  private readonly filter = signal('');
+  /** Empty again for every group. */
+  protected readonly filter = linkedSignal({ source: this.groupId, computation: () => '' });
+  /** Also while it filters: a list that drops to the threshold keeps its way back. */
+  protected readonly showFilter = computed(
+    () => this.entries().length > STUDENT_FILTER_THRESHOLD || this.filter() !== '',
+  );
   protected readonly shown = computed(() => filterStudents(this.entries(), this.filter()));
+
+  private readonly zone = viewChild.required<ElementRef<HTMLElement>>('zone');
 
   protected onFilter(event: Event): void {
     this.filter.set((event.target as HTMLInputElement).value);
@@ -179,6 +202,10 @@ export class GroupStudents {
     const ref = this.dialog.open<EnrollDialog, EnrollDialogData, boolean>(EnrollDialog, {
       data: {
         groupName: this.groupName(),
+        enrolledIds: new Set(this.entries().map(({ student }) => student.id)),
+        sources: this.groups().filter(({ id }) => id !== groupId),
+        studentsOf: async (sourceId) =>
+          (await this.service.listStudents(sourceId)).map(({ student }) => student),
         search: (text) => this.service.searchStudents(groupId, text),
         enroll: async (chosen) => {
           try {
@@ -219,6 +246,8 @@ export class GroupStudents {
     this.change((entries) =>
       entries.filter(({ enrollmentId }) => enrollmentId !== row.enrollmentId),
     );
+    // Its button, which had the focus, is gone: the focus stays in the group, not on the body
+    afterNextRender(() => this.zone().nativeElement.focus(), { injector: this.injector });
     this.snackBar.open($localize`:@@groups.unenrolled:${name}:name: ya no está en el grupo`);
   }
 

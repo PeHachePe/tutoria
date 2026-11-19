@@ -15,6 +15,9 @@ const STUDENTS: UserRef[] = [
 function open(overrides: Partial<EnrollDialogData> = {}) {
   const data: EnrollDialogData = {
     groupName: '1.º DAW A',
+    enrolledIds: new Set(),
+    sources: [],
+    studentsOf: () => Promise.resolve([]),
     search: vi.fn(() => Promise.resolve(STUDENTS)),
     enroll: vi.fn(() => Promise.resolve()),
     ...overrides,
@@ -27,7 +30,7 @@ async function typeSearch(text: string): Promise<HTMLElement> {
   const dialog = await screen.findByRole('dialog', { name: 'Matricular en 1.º DAW A' });
   // The dialog moves the focus in once open: typing before that loses the keys after the move
   await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
-  await userEvent.type(within(dialog).getByRole('searchbox'), text);
+  if (text) await userEvent.type(within(dialog).getByRole('searchbox'), text);
   return dialog;
 }
 
@@ -91,4 +94,30 @@ describe('EnrollDialog', () => {
     expect(within(dialog).getByText(/Como mucho 50 de una vez/)).toBeTruthy();
     expect(boxes[MAX_ENROLLMENT_BATCH]).toHaveProperty('disabled', true);
   }, 30_000);
+
+  it('chooses the students of another group who are not in this one, or says it could not', async () => {
+    let calls = 0;
+    open({
+      enrolledIds: new Set(['a']),
+      sources: [{ id: 'web', label: '1.º DAW A · Web' }],
+      studentsOf: () =>
+        calls++ === 0 ? Promise.resolve(STUDENTS) : Promise.reject(new Error('boom')),
+    });
+    const dialog = await typeSearch('');
+    const copy = async () => {
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: 'Añadir los de otro grupo' }),
+      );
+      await userEvent.click(await screen.findByRole('menuitem', { name: '1.º DAW A · Web' }));
+    };
+
+    await copy();
+    expect(await within(dialog).findByRole('button', { name: 'Matricular (1)' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Quitar a Bruno Sanz' })).toBeTruthy();
+
+    await copy();
+    expect((await within(dialog).findByRole('alert')).textContent).toContain(
+      'No se ha podido leer ese grupo',
+    );
+  });
 });

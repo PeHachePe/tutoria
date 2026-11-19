@@ -22,6 +22,7 @@ import {
   type GroupFormDefaults,
   type GroupFormModel,
   groupSchema,
+  teacherChoices,
   toGroupFormModel,
 } from './group-form';
 
@@ -106,12 +107,14 @@ export interface GroupDialogData {
               }
             </mat-form-field>
           }
-          @if (data.teachers; as teachers) {
+          @if (teachers; as teachers) {
             <mat-form-field>
               <mat-label i18n="@@groupDialog.teacher">Docente</mat-label>
               <mat-select [formField]="groupForm.teacherId">
                 @for (teacher of teachers; track teacher.id) {
-                  <mat-option [value]="teacher.id">{{ teacher.name }}</mat-option>
+                  <mat-option [value]="teacher.id" [disabled]="teacher.disabled">{{
+                    teacher.name
+                  }}</mat-option>
                 }
               </mat-select>
               @if (groupForm.teacherId().errors()[0]; as error) {
@@ -144,6 +147,10 @@ export interface GroupDialogData {
 export class GroupDialog {
   protected readonly data = inject<GroupDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<GroupDialog, boolean>>(MatDialogRef);
+
+  /** For an administrator: the active teachers, and the group's own if it was disabled. */
+  protected readonly teachers =
+    this.data.teachers && teacherChoices(this.data.teachers, this.data.managed);
 
   /** What the server said when saving failed, or null. */
   protected readonly failure = signal<string | null>(null);

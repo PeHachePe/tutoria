@@ -10,6 +10,7 @@ import {
   type GroupFormModel,
   groupSchema,
   MAX_GROUP_NAME_LENGTH,
+  teacherChoices,
   toGroupDraft,
   toGroupFormModel,
 } from './group-form';
@@ -85,6 +86,29 @@ describe('groupSchema', () => {
     });
     expect(errors['name']).toEqual([`Como mucho ${MAX_GROUP_NAME_LENGTH} caracteres`]);
     expect(errors['schoolYear']).toEqual(['Escribe el curso como 2026/27']);
+  });
+});
+
+describe('groupSchema, beyond the shape', () => {
+  it('refuses a name of only spaces and a year of years apart', () => {
+    const errors = errorsOf({ ...VALID, name: '   ', schoolYear: '2026/99' });
+    expect(errors['name']).toEqual(['Escribe el nombre del grupo']);
+    expect(errors['schoolYear']).toEqual(['Un curso son dos años seguidos, como 2026/27']);
+  });
+});
+
+describe('teacherChoices', () => {
+  const marta = { id: TEACHER_ID, name: 'Marta', email: 'marta@tutoria.test' };
+
+  it('offers the active teachers', () => {
+    expect(teacherChoices([marta], null)).toEqual([{ ...marta, disabled: false }]);
+    expect(teacherChoices([marta], DAW)).toEqual([{ ...marta, disabled: false }]);
+  });
+
+  it('keeps the disabled teacher of a group, which cannot be chosen again', () => {
+    expect(teacherChoices([], DAW)).toEqual([
+      { id: TEACHER_ID, name: 'Carmen (cuenta desactivada)', email: '', disabled: true },
+    ]);
   });
 });
 

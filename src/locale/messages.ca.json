@@ -1197,6 +1197,15 @@
     "system.fallback.noKey": "sense clau",
     "system.save.unchanged": "No hi ha canvis per desar",
     "providerForm.error.repeated": "Ja és abans a la llista",
-    "subjectForm.error.taken": "Ja hi ha una assignatura amb aquest nom"
+    "subjectForm.error.taken": "Ja hi ha una assignatura amb aquest nom",
+    "enrollDialog.copy": "Afegeix els d'un altre grup",
+    "enrollDialog.found": "{VAR_PLURAL, plural, =0 {Cap alumne coincideix} =1 {1 alumne trobat} other {{INTERPOLATION} alumnes trobats}}",
+    "enrollDialog.copied": "{$count} triats de {$group}",
+    "enrollDialog.copyError": "No s'ha pogut llegir aquest grup. Torna-ho a provar.",
+    "groupForm.error.yearRange": "Un curs són dos anys seguits, com ara 2026/27",
+    "groupForm.teacher.disabled": "{$name} (compte desactivat)",
+    "groups.subheading.admin": "Els grups del centre i qui hi ha a cadascun.",
+    "groups.group": "Grup",
+    "groups.empty.admin": "Encara no hi ha grups"
   }
 }

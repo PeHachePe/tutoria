@@ -1,24 +1,22 @@
 import {
+  afterNextRender,
   Component,
   computed,
+  type ElementRef,
   inject,
   Injector,
   input,
   linkedSignal,
   resource,
+  viewChild,
 } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import {
-  MatAccordion,
-  MatExpansionPanel,
-  MatExpansionPanelContent,
-  MatExpansionPanelHeader,
-  MatExpansionPanelTitle,
-} from '@angular/material/expansion';
+import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatOption, MatSelect } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -28,7 +26,6 @@ import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
 import { ExerciseService } from '../../data/exercise-service';
 import { GroupService, type ManagedGroup } from '../../data/group-service';
-import { subjectName } from '../../data/localized-text';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
@@ -37,22 +34,14 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { groupActionMessage } from './group-action-message';
 import { GroupDialog, type GroupDialogData } from './group-dialog';
 import { type GroupFormModel, toGroupDraft } from './group-form';
+import { type GroupOption, labelGroups, sortGroups } from './group-list';
 import { GroupStudents } from './group-students';
 import { schoolYearOf } from './school-year';
 
-const SKELETON_PANELS = [1, 2, 3];
-
-function byNameAndSubject(a: ManagedGroup, b: ManagedGroup): number {
-  return (
-    a.group.name.localeCompare(b.group.name, 'es') ||
-    a.subject.name.localeCompare(b.subject.name, 'es')
-  );
-}
-
 /**
- * The groups of a teacher, or all of them for an administrator, with their enrollment
- * (/docente/grupos, ficha 11, RF-16, CU-07). One panel open at a time, in the URL (`?grupo=`); its
- * enrollment is asked for when it opens.
+ * The groups of a teacher, or all of them for an administrator, and the enrollment of one
+ * (/docente/grupos?grupo=, ficha 11, RF-16, CU-07). The group is chosen as in Bloques and
+ * Histórico: a selector of «name · subject» in the URL, the first one without it.
  */
 @Component({
   selector: 'app-groups-page',
@@ -60,15 +49,14 @@ function byNameAndSubject(a: ManagedGroup, b: ManagedGroup): number {
     MatButton,
     MatIconButton,
     MatIcon,
+    MatFormField,
+    MatLabel,
+    MatSelect,
+    MatOption,
     MatMenu,
     MatMenuItem,
     MatMenuTrigger,
     MatProgressBar,
-    MatAccordion,
-    MatExpansionPanel,
-    MatExpansionPanelHeader,
-    MatExpansionPanelTitle,
-    MatExpansionPanelContent,
     RouterLink,
     EmptyState,
     LoadError,
@@ -88,11 +76,10 @@ export class GroupsPage {
   private readonly injector = inject(Injector);
   private readonly locale = inject(LanguageService).locale;
 
-  /** The open group, from the query parameters of the URL (withComponentInputBinding). */
+  /** The group chosen, from the query parameters of the URL (withComponentInputBinding). */
   readonly grupo = input<string>();
 
   protected readonly blocksPath = APP_PATHS.teacher.blocks;
-  protected readonly skeletonPanels = SKELETON_PANELS;
   protected readonly isAdmin = computed(() => this.auth.role() === 'admin');
 
   protected readonly groups = resource({ loader: () => this.service.listGroups() });
@@ -107,16 +94,20 @@ export class GroupsPage {
     loader: () => this.service.listTeachers(),
   });
 
-  /** Changed in place after each action until the next load. */
+  /** Changed in place after each action until the next load; the current year first. */
   private readonly entries = linkedSignal<ManagedGroup[]>(() =>
-    this.groups.hasValue() ? this.groups.value() : [],
+    this.groups.hasValue() ? sortGroups(this.groups.value(), this.locale) : [],
   );
 
   protected readonly firstLoad = computed(
     () => this.groups.isLoading() && this.entries().length === 0,
   );
 
-  /** What can create a group: the list, the subjects and, for an administrator, the teachers. */
+  /** Without the subjects (or, for an administrator, the teachers) no group can be created. */
+  protected readonly loadError = computed(
+    () => this.groups.error() ?? this.subjects.error() ?? this.teachers.error(),
+  );
+
   protected readonly ready = computed(
     () =>
       this.groups.hasValue() &&
@@ -124,33 +115,38 @@ export class GroupsPage {
       (!this.isAdmin() || this.teachers.status() === 'resolved'),
   );
 
-  /** The panel open: the URL, or the one opened since, until the URL catches up. */
-  private readonly openId = linkedSignal(() => this.grupo() ?? null);
-
-  protected readonly panels = computed(() =>
-    this.entries().map((managed) => ({
-      managed,
-      id: managed.group.id,
-      subject: subjectName(managed.subject, this.locale).name,
-      blocksQuery: { [TEACHER_PARAMS.group]: managed.group.id },
-      actionsLabel: $localize`:@@groups.actions:Acciones de ${managed.group.name}:name:`,
+  protected readonly options = computed(() =>
+    labelGroups(this.entries(), this.locale).map((option) => ({
+      ...option,
+      blocksQuery: { [TEACHER_PARAMS.group]: option.id },
+      actionsLabel: $localize`:@@groups.actions:Acciones de ${option.label}:name:`,
     })),
   );
 
-  protected isOpen(groupId: string): boolean {
-    return this.openId() === groupId;
+  /** The group of the URL or, without one (or an unknown one), the first. */
+  protected readonly current = computed(() => {
+    const options = this.options();
+    return options.find(({ id }) => id === this.grupo()) ?? options.at(0) ?? null;
+  });
+
+  protected readonly emptyHeading = computed(() =>
+    this.isAdmin()
+      ? $localize`:@@groups.empty.admin:Aún no hay grupos`
+      : $localize`:@@groups.empty:Aún no tienes grupos`,
+  );
+
+  /** Where the focus goes when the group that had it is removed. */
+  private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+
+  /** Reloads what failed (and the rest, which is cheap): the page needs the three. */
+  protected retry(): void {
+    this.groups.reload();
+    this.subjects.reload();
+    this.teachers.reload();
   }
 
-  protected opened(groupId: string): void {
-    this.openId.set(groupId);
-    this.navigate(groupId);
-  }
-
-  /** Opening another panel closes this one first: only the open one clears the URL. */
-  protected closed(groupId: string): void {
-    if (this.openId() !== groupId) return;
-    this.openId.set(null);
-    this.navigate(null);
+  protected select(groupId: string): void {
+    void this.router.navigate([], { queryParams: { [TEACHER_PARAMS.group]: groupId } });
   }
 
   protected countChanged(groupId: string, studentCount: number): void {
@@ -161,8 +157,8 @@ export class GroupsPage {
 
   protected async create(): Promise<void> {
     const subjects = this.subjects.value();
-    let createdId: string | null = null;
-    const created = await this.openGroupDialog({
+    let created: ManagedGroup | undefined;
+    const saved = await this.openGroupDialog({
       managed: null,
       subjects,
       teachers: this.teacherOptions(),
@@ -174,38 +170,39 @@ export class GroupsPage {
       },
       save: (model) =>
         this.saving(async () => {
-          const managed = await this.service.saveGroup(toGroupDraft(model));
-          createdId = managed.group.id;
-          this.entries.update((entries) => [...entries, managed].sort(byNameAndSubject));
+          created = await this.service.saveGroup(toGroupDraft(model));
+          const group = created;
+          this.entries.update((entries) => sortGroups([...entries, group], this.locale));
         }),
     });
-    if (created && createdId) {
-      this.opened(createdId);
+    if (saved && created) {
+      this.select(created.group.id);
       this.snackBar.open($localize`:@@groups.created:Grupo creado`);
     }
   }
 
-  protected async edit(managed: ManagedGroup): Promise<void> {
+  protected async edit(option: GroupOption): Promise<void> {
     const saved = await this.openGroupDialog({
-      managed,
+      managed: option.managed,
       subjects: this.subjects.value(),
       teachers: this.teacherOptions(),
-      defaults: managed.group,
+      defaults: option.managed.group,
       save: (model: GroupFormModel) =>
         this.saving(async () => {
-          const changed = await this.service.saveGroup(toGroupDraft(model, managed.group.id));
+          const changed = await this.service.saveGroup(toGroupDraft(model, option.id));
           this.entries.update((entries) =>
-            entries
-              .map((entry) => (entry.group.id === changed.group.id ? changed : entry))
-              .sort(byNameAndSubject),
+            sortGroups(
+              entries.map((entry) => (entry.group.id === changed.group.id ? changed : entry)),
+              this.locale,
+            ),
           );
         }),
     });
     if (saved) this.snackBar.open($localize`:@@groups.saved:Cambios guardados`);
   }
 
-  protected async remove(managed: ManagedGroup): Promise<void> {
-    const { name } = managed.group;
+  protected async remove(option: GroupOption): Promise<void> {
+    const name = option.label;
     const confirmed = await confirmAction(this.dialog, {
       title: $localize`:@@groups.remove.title:¿Eliminar el grupo ${name}:name:?`,
       text: $localize`:@@groups.remove.confirm:Se eliminará «${name}:name:» con sus bloques y su matrícula. No se puede deshacer.`,
@@ -213,29 +210,24 @@ export class GroupsPage {
     });
     if (!confirmed) return;
     try {
-      await this.service.removeGroup(managed.group.id);
+      await this.service.removeGroup(option.id);
     } catch (error) {
       this.snackBar.open(groupActionMessage('remove', error));
       this.groups.reload();
       return;
     }
-    this.entries.update((entries) =>
-      entries.filter((entry) => entry.group.id !== managed.group.id),
-    );
-    this.closed(managed.group.id);
+    this.entries.update((entries) => entries.filter((entry) => entry.group.id !== option.id));
+    void this.router.navigate([], {
+      queryParams: { [TEACHER_PARAMS.group]: null },
+      replaceUrl: true,
+    });
+    // Its menu, which had the focus, is gone: back to the top of the page, not to the body
+    afterNextRender(() => this.heading().nativeElement.focus(), { injector: this.injector });
     this.snackBar.open($localize`:@@groups.removed:Grupo ${name}:name: eliminado`);
   }
 
   private teacherOptions() {
     return this.isAdmin() ? this.teachers.value() : null;
-  }
-
-  private navigate(groupId: string | null): void {
-    void this.router.navigate([], {
-      queryParams: { [TEACHER_PARAMS.group]: groupId },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
   }
 
   private async openGroupDialog(data: GroupDialogData): Promise<boolean> {

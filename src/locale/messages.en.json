@@ -1197,6 +1197,15 @@
     "system.fallback.noKey": "no key",
     "system.save.unchanged": "There are no changes to save",
     "providerForm.error.repeated": "Already earlier in the list",
-    "subjectForm.error.taken": "There is already a subject with that name"
+    "subjectForm.error.taken": "There is already a subject with that name",
+    "enrollDialog.copy": "Add those of another group",
+    "enrollDialog.found": "{VAR_PLURAL, plural, =0 {No student matches} =1 {1 student found} other {{INTERPOLATION} students found}}",
+    "enrollDialog.copied": "{$count} chosen from {$group}",
+    "enrollDialog.copyError": "That group could not be read. Try again.",
+    "groupForm.error.yearRange": "A school year is two years in a row, such as 2026/27",
+    "groupForm.teacher.disabled": "{$name} (disabled account)",
+    "groups.subheading.admin": "The groups of the school and who is in each one.",
+    "groups.group": "Group",
+    "groups.empty.admin": "There are no groups yet"
   }
 }
