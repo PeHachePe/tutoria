@@ -76,7 +76,12 @@ describe('EnrollDialog', () => {
       search: () => (calls++ === 0 ? Promise.resolve([]) : Promise.reject(new Error('boom'))),
     });
     const dialog = await typeSearch('zz');
-    expect(await within(dialog).findByText(/Ningún alumno coincide/)).toBeTruthy();
+    // The visible text, not the count announced to screen readers, which starts the same
+    expect(
+      await within(dialog).findByText(
+        'Ningún alumno coincide. Las cuentas las crea la administración.',
+      ),
+    ).toBeTruthy();
     await userEvent.type(within(dialog).getByRole('searchbox'), 'z');
     expect(await within(dialog).findByText(/No se ha podido buscar/)).toBeTruthy();
   });
