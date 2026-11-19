@@ -428,14 +428,14 @@ La misma conversación con el tutor, hablada (capa 3, RF-08 y CU-02 1a; diseño 
 - **Dictado** (6.1b): el alumno dicta la pregunta en el campo, la corrige si hace falta y la envía él.
 - **Modo llamada** (6.1c): una conversación por turnos y sin manos, mientras programa.
 
-**`SpeechService`** (`core/speech/`) es la abstracción, y `WebSpeechService`, la única clase que toca `speechSynthesis` y `SpeechRecognition`; la carga `SpeechLoader` con `injectAsync` solo si el alumno tiene la voz activada, en un chunk propio (11 KB). Todo lo demás se prueba con `FakeSpeechService` (`speech-testing.ts`). `StudentVoice` (`student/settings/`, D-071) junta los ajustes con lo que puede el navegador, y `TutorSpeaker` (`student/workspace/`) dice las respuestas. La parte de hablar quedó así en el 6.1a (`speech-service.ts`): `voices(language: AppLocale)`, `speak(sentence, { voiceId, rate })` y `SpeechError` con `voice-unavailable` o `synthesis-failed`. El contrato que falta, orientativo (el 6.1b fija las firmas):
+**`SpeechService`** (`core/speech/`) es la abstracción, y `WebSpeechService`, la única clase que toca `speechSynthesis` y `SpeechRecognition`; la carga `SpeechLoader` con `injectAsync` solo si el alumno tiene la voz activada, en un chunk propio (11 KB). Todo lo demás se prueba con `FakeSpeechService` (`speech-testing.ts`). `StudentVoice` (`student/settings/`, D-071) junta los ajustes con lo que puede el navegador, y `TutorSpeaker` (`student/workspace/`) dice las respuestas. La parte de hablar quedó así en el 6.1a (`speech-service.ts`): `voices(language: AppLocale)` (de la más natural a la menos), `onVoicesChanged(listener)` (que devuelve cómo dejar de escuchar), `speak(sentence, { voiceId, rate })` y `SpeechError` con `voice-unavailable` o `synthesis-failed`. El contrato que falta, orientativo (el 6.1b fija las firmas):
 
 ```ts
 abstract class SpeechService {
   abstract readonly canSpeak: boolean;
   /** Where the audio would be transcribed in this browser, or that it cannot be. */
   abstract recognition(language: Locale): Promise<'device' | 'downloadable' | 'server' | 'none'>;
-  /** The voices of that language, in alphabetical order. */
+  /** The voices of that language, the most natural first (D-078). */
   abstract voices(language: Locale): Promise<readonly SpeechVoice[]>;
   /** Says one sentence; rejects with a SpeechError. */
   abstract speak(sentence: string, options: SpeakOptions): Promise<'ended' | 'cancelled'>;
@@ -458,8 +458,8 @@ abstract class SpeechService {
 - **Qué se dice:** en una llamada, cada respuesta nueva del tutor (`fresh`), también sus intervenciones (2.7). Fuera de ella, solo con `readAloud`, o la respuesta en la que el alumno pulse «Escuchar», que sí puede ser del historial.
 - **Texto hablable:** la función pura `speakableSentences()` quita los bloques de código, las marcas de Markdown y los emojis, deja el código en línea como palabra y parte el texto en frases con `Intl.Segmenter` y el idioma de la interfaz. Si la respuesta traía un bloque de código o deja un botón (2.5e), acaba con una frase fija: «Te lo dejo en el chat».
 - **Frase a frase:** una locución por frase, que se encola en cuanto esa frase está completa en `turn.answer`, sin esperar al resto (D-067).
-- **Idioma:** el de la interfaz. Si la voz elegida no es de ese idioma o ya no existe, los ajustes piden elegir otra. Si el navegador no tiene ninguna voz del idioma (pasa con el catalán), se dice en los ajustes y la conversación sigue por escrito.
-- **Se calla** con «Parar», al enviar otra pregunta, al cambiar de ejercicio, al salir de la pantalla y al ocultar la pestaña (`visibilitychange`; con la ventana sin foco pero a la vista, sigue hablando).
+- **Idioma:** el de la interfaz. Si la voz elegida no es de ese idioma o ya no existe, el tutor habla con la más natural del idioma (D-078). La lista sigue a las voces del navegador sin recargar (`voiceschanged`): una voz descargada con la página abierta aparece sola. Si el navegador no tiene ninguna voz del idioma (pasa con el catalán), se dice en los ajustes y la conversación sigue por escrito.
+- **Se calla** con «Parar» (bajo la respuesta o «Hablando» en la cabecera), al enviar otra pregunta, al cambiar de ejercicio, al salir de la pantalla y al ocultar la pestaña (`visibilitychange`; con la ventana sin foco pero a la vista, sigue hablando).
 
 **Dictado:**
 

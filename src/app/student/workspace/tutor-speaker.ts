@@ -89,15 +89,9 @@ export class TutorSpeaker {
   private follow(turns: readonly TutorTurn[]): void {
     const fresh = turns.filter((turn) => turn.fresh).at(-1);
     if (fresh && this.isNew(fresh)) {
-      // A new turn silences whatever sounded, read aloud or not
-      this.stop();
-      if (
-        fresh.status !== 'failed' &&
-        this.settings.readAloud() &&
-        this.ready() &&
-        this.document.visibilityState !== 'hidden'
-      )
-        this.start(fresh);
+      // A new turn silences whatever sounded (start() too), read aloud or not
+      if (this.readsAloud(fresh)) this.start(fresh);
+      else this.stop();
       return;
     }
     const speaking = this.speakingState();
@@ -107,13 +101,25 @@ export class TutorSpeaker {
     else this.feed(turn);
   }
 
+  /** A new answer is said by itself: with «Leer en voz alta», a voice and the tab in sight. */
+  private readsAloud(turn: TutorTurn): boolean {
+    return (
+      turn.status !== 'failed' &&
+      this.settings.readAloud() &&
+      this.ready() &&
+      this.document.visibilityState !== 'hidden'
+    );
+  }
+
   /** Seen for the first time, or answered again by a retry after failing. */
   private isNew(turn: TutorTurn): boolean {
     const key = keyOf(turn);
     const failed = turn.status === 'failed';
     const before = this.seen.get(key);
+    if (before === failed) return false;
     this.seen.set(key, failed);
-    return before === undefined || (before && !failed);
+    // Unseen, or a failed turn answering again; one that has just failed is not new
+    return before === undefined || !failed;
   }
 
   private start(turn: TutorTurn): void {

@@ -26,7 +26,7 @@ describe('SettingsPage', () => {
   });
 
   async function renderPage() {
-    await render(SettingsPage, {
+    const view = await render(SettingsPage, {
       providers: [
         provideRouter([]),
         provideFakeSpeech(fake),
@@ -45,7 +45,11 @@ describe('SettingsPage', () => {
         },
       ],
     });
-    return { user: userEvent.setup(), settings: TestBed.inject(SettingsStore) };
+    return {
+      user: userEvent.setup(),
+      settings: TestBed.inject(SettingsStore),
+      fixture: view.fixture,
+    };
   }
 
   const group = (name: string) => screen.getByRole('radiogroup', { name });
@@ -196,6 +200,21 @@ describe('SettingsPage', () => {
       await user.click(screen.getByRole('button', { name: 'Parar la prueba de la voz Jorge' }));
       expect(fake.stops).toBe(stops + 1);
       expect(screen.getByRole('button', { name: 'Probar la voz Jorge' })).toBeTruthy();
+    });
+
+    it('silences a voice being tried when leaving the settings, and nothing else', async () => {
+      const { user, fixture } = await turnVoiceOn();
+      await user.click(screen.getByRole('button', { name: 'Probar la voz Jorge' }));
+      const stops = fake.stops;
+      fixture.destroy();
+      expect(fake.stops).toBe(stops + 1);
+    });
+
+    it('silences nothing when leaving the settings in silence', async () => {
+      const { fixture } = await turnVoiceOn();
+      const stops = fake.stops;
+      fixture.destroy();
+      expect(fake.stops).toBe(stops);
     });
 
     it('says when the browser has no voices of the language', async () => {

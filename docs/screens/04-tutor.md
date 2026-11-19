@@ -43,7 +43,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Atajo «Pregúntale al tutor»** (6.2d): un botón junto a cada ejemplo visible que falla en los resultados de la ejecución (ficha 03). Envía la pregunta de un clic con sus datos («¿Por qué falla `suma([1,2,3])`? Devuelve 5 y se espera 6»), en el nivel actual. Nunca hay avisos sueltos dentro del editor.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
 - **Voz** (6.1, §2.11, D-066), solo con la voz activada en los ajustes:
-  - **Escuchar** (6.1a): bajo cada respuesta del tutor, «Escuchar», que pasa a «Parar» mientras suena. Con «Leer las respuestas en voz alta» en los ajustes, las respuestas nuevas suenan solas. Mientras habla, la mascota mueve la boca. Sin una voz elegida, «Escuchar» lleva a los ajustes («Elige una voz para el tutor»);
+  - **Escuchar** (6.1a): bajo cada respuesta del tutor, «Escuchar», que pasa a «Parar» mientras suena. Con «Leer las respuestas en voz alta» en los ajustes, las respuestas nuevas suenan solas. Mientras habla, la mascota mueve la lengua (también plegada) y la cabecera enseña «Hablando» con «Parar», para que se vea aunque la respuesta quede fuera de la vista. Sin voz elegida, habla con la más natural del navegador (D-078);
   - **Dictar** (6.1b): un botón con un micrófono junto a enviar. Mientras escucha, el botón queda marcado, dice «Dejar de dictar» y bajo el campo se lee «Te escucho…»; lo reconocido aparece en el campo. La primera vez, si el audio sale del equipo, un aviso junto al botón lo dice, con «Entendido». En un navegador sin reconocimiento, el botón no existe;
   - **Llamar al tutor** (6.1c): un botón con un teléfono en la cabecera. En una llamada, una barra sobre el pie con el estado («Te escucho», lo que va entendiendo, «Pensando…», «Hablando…» o «En espera»), y sus botones según el estado: «Interrumpir» mientras el tutor habla, «Corregir» mientras el alumno habla, «Seguir hablando» en espera y siempre «Colgar». El campo de la pregunta y «Pedir pista» siguen debajo: voz y teclado se mezclan;
   - con el tutor plegado, la llamada sigue: la mascota muestra el estado y el bocadillo enseña lo que se va entendiendo, «pensando» y la respuesta. En el móvil, la llamada vive en la pestaña «Tutor» y sigue al cambiar de pestaña.
@@ -147,7 +147,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] El atajo sale solo en los ejemplos visibles que fallan y en el móvil cambia a la pestaña «Tutor» (6.2d).
 - [ ] Una intervención de ayuda reacciona en reducido y un logro, completo (6.2d).
 - [ ] axe sin infracciones en claro y oscuro con el bocadillo en «pensando», con respuesta y con error (6.2d).
-- [x] Con la voz activada y una voz elegida, «Escuchar» dice la respuesta frase a frase sin leer el código, y «Parar» la calla; sin voz elegida, lleva a los ajustes (6.1a).
+- [x] Con la voz activada, «Escuchar» dice la respuesta frase a frase sin leer el código, con la voz elegida o la más natural, y «Parar» (bajo la respuesta o en la cabecera) la calla (6.1a).
 - [x] Con la voz desactivada no aparece ningún control de voz ni se descarga su código (6.1a).
 - [ ] «Dictar» escribe en el campo lo que se dice sin borrar lo escrito y no envía nada; sin permiso para el micrófono, el aviso dice qué hacer y se puede seguir escribiendo (6.1b).
 - [ ] En un navegador sin reconocimiento no hay «Dictar» ni «Llamar al tutor», y el resto funciona (6.1b).

@@ -80,6 +80,13 @@ export class WebSpeechService extends SpeechService {
     this.synthesis?.cancel();
   }
 
+  onVoicesChanged(listener: () => void): () => void {
+    const synthesis = this.synthesis;
+    if (!synthesis || !this.canSpeak) return () => undefined;
+    synthesis.addEventListener('voiceschanged', listener);
+    return () => synthesis.removeEventListener('voiceschanged', listener);
+  }
+
   /** Every voice: some browsers give none until `voiceschanged`, and some never fire it. */
   private allVoices(): Promise<SpeechSynthesisVoice[]> {
     const synthesis = this.synthesis;

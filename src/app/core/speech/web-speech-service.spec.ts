@@ -61,6 +61,7 @@ describe('WebSpeechService', () => {
     expect(without.canSpeak).toBe(false);
     expect(await without.voices('es')).toEqual([]);
     without.stopSpeaking();
+    without.onVoicesChanged(() => undefined)();
     await expect(without.speak('Hola.', { voiceId: 'jorge', rate: 'normal' })).rejects.toEqual(
       new SpeechError('voice-unavailable'),
     );
@@ -144,6 +145,15 @@ describe('WebSpeechService', () => {
       await expect(speech.speak('Hola.', { voiceId: 'nadie', rate: 'normal' })).rejects.toEqual(
         new SpeechError('voice-unavailable'),
       );
+    });
+
+    it('tells when the voices change, until it stops listening', () => {
+      const listener = vi.fn();
+      const off = speech.onVoicesChanged(listener);
+      synthesis.dispatchEvent(new Event('voiceschanged'));
+      off();
+      synthesis.dispatchEvent(new Event('voiceschanged'));
+      expect(listener).toHaveBeenCalledOnce();
     });
 
     it('stops speaking', () => {

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatAnchor, MatButton, MatIconButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatIcon } from '@angular/material/icon';
@@ -92,7 +92,8 @@ export function sampleReaction(tryIndex: number): Omit<Reaction, 'id'> {
 
 /**
  * The student's settings (/alumno/ajustes, ficha 05): appearance, the tutor's reactions, the
- * mascot and the tutor, with its voice (2.11). Each choice applies and is saved at once, so there is no form to submit.
+ * mascot and the tutor, with its voice (2.11). Each choice applies and is saved at once, so there is
+ * no form to submit.
  */
 @Component({
   selector: 'app-settings-page',
@@ -152,6 +153,13 @@ export class SettingsPage {
       stopLabel: $localize`:@@settings.voice.stopLabel:Parar la prueba de la voz ${voice.name}:nombre:`,
     })),
   );
+
+  constructor() {
+    // A voice being tried does not follow the student out of the settings (2.11)
+    inject(DestroyRef).onDestroy(() => {
+      if (this.voice.sampling()) this.voice.stop();
+    });
+  }
 
   private samples = 0;
   protected readonly sample = signal<Reaction | null>(null);

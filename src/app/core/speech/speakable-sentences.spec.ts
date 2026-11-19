@@ -65,6 +65,10 @@ describe('speakableSentences', () => {
     ]);
   });
 
+  it('keeps a comparison at the start of a line, unlike a quote', () => {
+    expect(speakableSentences('>= 0 vale.', es)).toEqual(['>= 0 vale.']);
+  });
+
   it('keeps the text of a link', () => {
     expect(speakableSentences('Lee [la guía](https://example.com/a.b).', es)).toEqual([
       'Lee la guía.',

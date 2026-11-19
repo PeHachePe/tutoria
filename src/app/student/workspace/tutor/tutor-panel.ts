@@ -118,8 +118,9 @@ export class TutorPanel {
   );
 
   protected readonly mascotMood = computed<MascotMood>(() => {
-    if (this.store.answering()) return 'thinking';
+    // Speaking wins: an answer read aloud while it still arrives is already being said
     if (this.speaker?.speakingTurnId()) return 'speaking';
+    if (this.store.answering()) return 'thinking';
     return this.composing() ? 'chat' : 'idle';
   });
 

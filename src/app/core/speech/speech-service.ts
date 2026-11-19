@@ -37,6 +37,11 @@ export abstract class SpeechService {
   abstract readonly canSpeak: boolean;
   /** The voices of that language, the most natural first; none if it cannot speak. */
   abstract voices(language: AppLocale): Promise<readonly SpeechVoice[]>;
+  /**
+   * Calls the listener when the browser's voices change (one downloaded with the page open, or the
+   * network ones arriving late); gives back what stops listening.
+   */
+  abstract onVoicesChanged(listener: () => void): () => void;
   /** Says one sentence; rejects with a SpeechError. */
   abstract speak(sentence: string, options: SpeakOptions): Promise<'ended' | 'cancelled'>;
   abstract stopSpeaking(): void;

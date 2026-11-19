@@ -1,4 +1,4 @@
-import { computed, inject, resource, Service, type Signal, signal } from '@angular/core';
+import { computed, effect, inject, resource, Service, type Signal, signal } from '@angular/core';
 
 import { LanguageService } from '../../core/i18n/language-service';
 import { SpeechLoader } from '../../core/speech/speech-loader';
@@ -11,8 +11,9 @@ const SAMPLE = $localize`:@@settings.voice.sample:Hola, soy tu tutor. ¿Seguimos
 /**
  * The student's voice settings joined with what the browser can do (2.11, D-071): it loads the
  * speech only with the voice on, gives the voices of the interface's language, the most natural
- * first, and the tutor's: the chosen one while it still exists, or else the most natural (D-078). Not a store: it keeps no state of its own. The settings, the chat and,
- * later, the dictation and the call use it.
+ * first, and the tutor's: the chosen one while it still exists, or else the most natural (D-078).
+ * Not a store: it keeps no state but what is being tried. The settings, the chat and, later, the
+ * dictation and the call use it.
  */
 @Service()
 export class StudentVoice {
@@ -35,8 +36,9 @@ export class StudentVoice {
   readonly speech: Signal<SpeechService | undefined> = this.speechResource.value;
   /** The voices of the language of the interface, the most natural first; none until they load. */
   readonly voices: Signal<readonly SpeechVoice[]> = this.voicesResource.value;
+  /** Looking for the voices the first time; a change of them reloads the list in the background. */
   readonly voicesLoading = computed(
-    () => this.speechResource.isLoading() || this.voicesResource.isLoading(),
+    () => this.speechResource.isLoading() || this.voicesResource.status() === 'loading',
   );
   /** The voice is on and the browser has voices of the language: «Escuchar» is offered. */
   readonly canSpeak = computed(() => this.settings.voice() && this.voices().length > 0);
@@ -53,7 +55,19 @@ export class StudentVoice {
   /** The voice being tried with «Probar», to offer stopping it; null in silence. */
   readonly sampling = this.samplingState.asReadonly();
 
-  /** Says a sentence with the chosen voice and rate; `cancelled` without one. Rejects with a SpeechError. */
+  constructor() {
+    // Boundary with Web Speech (4.8): the browser tells when its voices change (one downloaded with
+    // the page open, as the settings suggest), and the list follows without reloading the page
+    effect((onCleanup) => {
+      const speech = this.speech();
+      if (speech) onCleanup(speech.onVoicesChanged(() => this.voicesResource.reload()));
+    });
+  }
+
+  /**
+   * Says a sentence with the tutor's voice and rate; `cancelled` without one. Rejects with a
+   * SpeechError.
+   */
   async say(sentence: string): Promise<'ended' | 'cancelled'> {
     const speech = this.speech();
     const voice = this.tutorVoice();

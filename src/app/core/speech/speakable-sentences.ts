@@ -21,7 +21,8 @@ const ABBREVIATIONS: Readonly<Record<AppLocale, readonly string[]>> = {
 const FENCE = '```';
 const LINE_MARKS: readonly [RegExp, string][] = [
   [/^\s{0,3}#{1,6}\s+/, ''],
-  [/^\s*>\s?/, ''],
+  // A quote, not a comparison («>= 0»)
+  [/^\s*>(?!=)\s?/, ''],
   [/^\s*[-*•]\s+/, ''],
   [/^\s*(\d+)[.)]\s+/, '$1, '],
 ];
@@ -32,7 +33,7 @@ const INLINE_MARKS: readonly [RegExp, string][] = [
   [/(?<![\p{L}\p{N}*])\*(?=\S)(.+?)(?<=\S)\*(?![\p{L}\p{N}*])/gu, '$1'],
   [/(?<![\p{L}\p{N}_])_(?=\S)(.+?)(?<=\S)_(?![\p{L}\p{N}_])/gu, '$1'],
   [/`/g, ''],
-  [/(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍)+/gu, ''],
+  [/(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\uFE0F|\u200D)+/gu, ''],
   [/[^\S\n]+(?=[.,;:!?])/g, ''],
   [/[^\S\n]{2,}/g, ' '],
 ];

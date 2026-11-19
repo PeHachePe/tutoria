@@ -153,6 +153,24 @@ describe('StudentVoice', () => {
     expect(voice.sampling()).toBeNull();
   });
 
+  it('follows the voices of the browser when they change, without looking for them again', async () => {
+    setup();
+    await turnOn();
+    const monica = { id: 'monica', name: 'Mónica (mejorada)', lang: 'es-ES' };
+    fake.changeVoices([monica, paulina, jorge]);
+    TestBed.tick();
+    expect(voice.voicesLoading()).toBe(false);
+    await vi.waitFor(() => {
+      TestBed.tick();
+      expect(voice.voices()).toEqual([monica, paulina, jorge]);
+    });
+    expect(voice.tutorVoice()).toEqual(monica);
+
+    settings.setVoice(false);
+    TestBed.tick();
+    expect(fake.voicesWatchers).toBe(0);
+  });
+
   it('unloads the speech when the voice is turned off', async () => {
     setup();
     await turnOn();

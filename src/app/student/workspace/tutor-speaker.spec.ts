@@ -71,8 +71,8 @@ function controlled(actions?: ToolRequest[]) {
   return {
     events,
     say: (text: string) => push({ value: { type: 'delta', text }, done: false }),
-    end: () => {
-      push({ value: { type: 'done', interactionId: 'i1', silent: false }, done: false });
+    end: (silent = false) => {
+      push({ value: { type: 'done', interactionId: silent ? null : 'i1', silent }, done: false });
       push({ value: undefined, done: true });
     },
     fail: () => failWith?.(new Error('lost')),
@@ -140,15 +140,18 @@ describe('TutorSpeaker', () => {
     });
   });
 
-  /** Asks and waits for the answer to start. */
+  /** Asks and waits until the tutor has been asked. */
   async function ask(question = '¿Y ahora?') {
+    const asked = answers.length;
     void tutor.ask(question);
-    await vi.waitFor(() => expect(answers).toHaveLength(answers.length || 1));
-    const answer = answers.at(-1)!;
-    return answer;
+    await vi.waitFor(() => expect(answers).toHaveLength(asked + 1));
+    return answers[asked];
   }
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
 
   async function settle() {
     await vi.waitFor(() => TestBed.tick());
@@ -218,16 +221,37 @@ describe('TutorSpeaker', () => {
     expect(speaker.speakingTurnId()).toBe(failed.id);
   });
 
+  it('says a retry made in the same millisecond as the failure, with the same key', async () => {
+    // Without fake timers, only Date is frozen: the answer still arrives
+    vi.setSystemTime(new Date('2026-11-19T10:00:00.000Z'));
+    const first = await ask();
+    first.fail();
+    await settle();
+    const failed = tutor.turns().at(-1)!;
+    void tutor.retry(failed.id);
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    expect(tutor.turns().at(-1)?.createdAt).toBe(failed.createdAt);
+    answers[1].say('Ahora sí. Y');
+    await settle();
+    expect(fake.sentences).toEqual(['Ahora sí.']);
+  });
+
   it('silences the answer before with a new question', async () => {
     const first = await ask();
-    first.say('Mira el bucle. Y');
+    first.say('Mira el bucle. Empieza en cero.');
     first.end();
     await settle();
+    const firstId = speaker.speakingTurnId();
+    expect(fake.sentences).toEqual(['Mira el bucle.']);
+
     const stops = fake.stops;
-    first.end();
-    await ask('Otra');
+    const second = await ask('Otra');
     await settle();
-    expect(fake.stops).toBeGreaterThan(stops);
+    expect(fake.stops).toBe(stops + 1);
+    expect(speaker.speakingTurnId()).not.toBe(firstId);
+    second.say('Vale. Y');
+    await settle();
+    expect(fake.sentences).toEqual(['Mira el bucle.', 'Vale.']);
   });
 
   it('says an answer of the history with «Escuchar», and another replaces it', async () => {
@@ -318,20 +342,22 @@ describe('TutorSpeaker', () => {
     expect(fake.sentences).toEqual(['Mira el bucle.']);
   });
 
-  it('does not say an older answer again when a turn goes away', async () => {
+  it('does not say an older answer again when the newest goes away', async () => {
     const first = await ask();
     first.say('Mira el bucle.');
     first.end();
     await settle();
     fake.finish();
     await settle();
-    const second = await ask('Otra');
-    second.fail();
+    expect(speaker.speakingTurnId()).toBeNull();
+
+    // The tutor chose to stay silent (2.7): its turn goes, and the first is the newest again
+    const silent = await ask('Otra');
+    silent.end(true);
     await settle();
-    const said = fake.spoken.length;
-    void tutor.retry(tutor.turns().at(-1)!.id);
-    await settle();
-    expect(fake.spoken).toHaveLength(said);
+    expect(tutor.turns().at(-1)?.answer).toBe('Mira el bucle.');
+    expect(fake.sentences).toEqual(['Mira el bucle.']);
+    expect(speaker.speakingTurnId()).toBeNull();
   });
 
   it('ends with the closing when the answer leaves a button', async () => {

@@ -10,12 +10,16 @@ import {
   type SpeechVoice,
 } from './speech-service';
 
-/** A speech that only remembers what it was asked: each sentence waits for `finish()` or `fail()`. */
+/**
+ * A speech that only remembers what it was asked: each sentence waits for `finish()` or `fail()`,
+ * and `changeVoices()` replaces the voices as the browser would.
+ */
 export class FakeSpeechService extends SpeechService {
   canSpeak = true;
   voiceList: SpeechVoice[] = [];
   readonly spoken: { sentence: string; options: SpeakOptions }[] = [];
   stops = 0;
+  private readonly voicesListeners = new Set<() => void>();
   private settle: ((outcome: 'ended' | 'cancelled' | SpeechError) => void) | undefined;
 
   voices(language: AppLocale): Promise<readonly SpeechVoice[]> {
@@ -35,6 +39,22 @@ export class FakeSpeechService extends SpeechService {
   stopSpeaking(): void {
     this.stops++;
     this.end('cancelled');
+  }
+
+  onVoicesChanged(listener: () => void): () => void {
+    this.voicesListeners.add(listener);
+    return () => this.voicesListeners.delete(listener);
+  }
+
+  /** The browser's voices change: those who listen hear it. */
+  changeVoices(voices: SpeechVoice[]): void {
+    this.voiceList = voices;
+    for (const listener of this.voicesListeners) listener();
+  }
+
+  /** How many listen to the changes of the voices. */
+  get voicesWatchers(): number {
+    return this.voicesListeners.size;
   }
 
   /** The sentence that sounds ends. */
