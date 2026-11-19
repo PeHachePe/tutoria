@@ -63,7 +63,7 @@ Escritorio, tablet y móvil en una columna:
 - [x] Cambiar el nombre y el rol; el rol, bloqueado con su motivo en la cuenta propia (3b) y en quien tiene grupos o matrículas (D-072).
 - [x] Restablecer la contraseña, generada o escrita.
 - [x] Desactivar con confirmación y activar; la cuenta propia no se desactiva (3b).
-- [ ] Revisión visual del autor.
+- [x] Revisión visual del autor.
 
 ## Fuera de alcance
 
