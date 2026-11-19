@@ -1,6 +1,6 @@
 # Pendiente de hoy (19/11/2026) · fichero temporal
 
-Lo que queda del paso 6.1a (voz: síntesis), para hacerlo desde otro equipo. Cuando esté hecho, se pasa lo que quede a `PENDIENTES.md` y **este fichero se borra**.
+Lo que queda de los pasos 6.1a (voz: síntesis, apartados 1, 2 y 4) y 5.2b (grupos y matrícula, apartado 3), para hacerlo desde otro equipo. Cuando esté hecho, se pasa lo que quede a `PENDIENTES.md` y **este fichero se borra**.
 
 ## 1. Revisión del 6.1a con esfuerzo alto
 
@@ -24,7 +24,16 @@ La revisión de la iteración 4 se hizo en la misma sesión larga del paso. La r
 
 Activar la voz, contar las voces del español, mirar cuál sale por defecto y oír una respuesta. Después, completar la columna de síntesis de la tabla de motores (§2.11) y quitar la fila de `PENDIENTES.md`.
 
-## 3. Cerrar
+## 3. Lo que queda del 5.2b (grupos y matrícula)
+
+La pantalla se rehízo en su revisión (desplegable «Grupo», commits `f8c144e` a `7512312`) con poco margen de tokens.
+
+- **Revisión visual del autor de la versión rehecha** (`npm start`): como docente y como administrador, en claro y en oscuro, y en el móvil. Al darla por buena, marcar la casilla de `docs/screens/11-grupos.md` y apuntarlo en `docs/bitacora/5.2b-grupos-pantalla.md`.
+- **Probar contra Supabase local** (`npm run db:start` y `npm run start:local`), que no se ha hecho con la versión rehecha. Como docente: crear un grupo (la revisión del 5.2a arregló que fallaba), matricular buscando, «Añadir los de otro grupo», dar de baja, editar y eliminar un grupo sin empezar. Como administrador: cambiar el docente de un grupo.
+- **Revisión con esfuerzo alto del código rehecho** (`/code-review high`) sobre `src/app/teacher/groups/`: `groups-page`, `group-students`, `enroll-dialog`, `group-list`, `enroll-choice` y sus specs. Sobre todo, que los tests comprueben lo que dicen y que no haya lógica duplicada.
+- Lo que salga, como iteración 3 en la bitácora del 5.2b, con su commit.
+
+## 4. Cerrar
 
 - Apuntar los hashes y las métricas de la iteración 5 en la bitácora y en `REGISTRO.md`.
 - Borrar este fichero.

@@ -55,7 +55,7 @@ Escritorio, tablet y móvil en una columna:
 - [x] Crear, editar y eliminar un grupo; el empezado no se elimina, con su motivo.
 - [x] Matricular buscando por nombre o correo, varios a la vez o el alumnado de otro grupo; dar de baja conservando el trabajo (RF-16).
 - [x] El grupo elegido, en la URL.
-- [x] Revisión visual del autor de la versión rehecha.
+- [ ] Revisión visual del autor de la versión rehecha.
 
 ## Fuera de alcance
 
