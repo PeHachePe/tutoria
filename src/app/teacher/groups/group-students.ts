@@ -106,7 +106,7 @@ function byStudentName(a: EnrolledStudent, b: EnrolledStudent): number {
       } @else {
         <!-- It scrolls in its own zone, with what the window leaves: never the page (5.4) -->
         <ul
-          class="flex max-h-[max(12rem,calc(100dvh-25rem))] flex-col overflow-y-auto scroll-shadows"
+          class="flex max-h-[max(9rem,calc(100dvh-33rem))] flex-col overflow-y-auto scroll-shadows sm:max-h-[max(12rem,calc(100dvh-28rem))]"
           aria-label="Alumnado"
           i18n-aria-label="@@groups.students.list"
         >
