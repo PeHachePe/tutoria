@@ -1,6 +1,6 @@
 # 11 · Grupos y matrícula
 
-`/docente/grupos?grupo=` · Docente y administrador · Capa 2 · 2 h (5.2b)
+`/docente/grupos?grupo=` · Docente y administrador · Capa 2 · 2 h (5.2b, rehecha en su revisión)
 
 ## Objetivo
 
@@ -17,45 +17,45 @@ Que el docente cree sus grupos, cada uno de una asignatura, y matricule o dé de
 
 Escritorio, tablet y móvil en una columna:
 
-- Cabecera: «Grupos y matrícula», lo que es la pantalla y el botón «Nuevo grupo».
-- Un `mat-accordion` con un panel por grupo y uno abierto cada vez; el abierto va en la URL (`?grupo=`).
-  - **Cabecera del panel:** el nombre; debajo, la asignatura, el curso, «N alumnos» y, para el administrador, «Docente: …».
-  - **Dentro:** «Matricular alumnos» y el menú del grupo («Editar», «Ver sus bloques», que lleva a `/docente/bloques?grupo=`, y «Eliminar», deshabilitado con su motivo si alguien ya ha empezado algo).
-  - **El alumnado** por nombre, con su correo y «Dar de baja del grupo». Con más de 10 alumnos, un campo «Filtrar alumnos» (sin tildes ni mayúsculas, sin peticiones). La lista tiene una altura máxima y se desplaza dentro de su zona: un grupo de 30 no estira la página.
-- Diálogo del grupo: nombre, curso (con su pista «Como 2026/27»), asignatura (se elige al crear; al editar se lee, con su motivo) y, solo para el administrador, el docente.
-- Diálogo de matrícula: el buscador, los resultados como casillas con nombre y correo, los elegidos como chips que se quitan y «Matricular (n)». No se eligen más de 50 de una vez.
+- Cabecera: «Grupos y matrícula», lo que es la pantalla («Tus grupos…»; para el administrador, «Los grupos del centro…») y el botón «Nuevo grupo».
+- El grupo se elige como en Bloques e Histórico: un desplegable «Grupo» con «nombre · asignatura» (y el curso si se repite), en la URL (`?grupo=`), el primero sin ella. Con un solo grupo, su nombre como texto. Los grupos van del curso más reciente al más antiguo y, dentro de cada curso, por nombre y asignatura.
+- Junto al desplegable, el menú del grupo («Editar», «Ver sus bloques», que lleva a `/docente/bloques?grupo=`, y «Eliminar», deshabilitado con su motivo si alguien ya ha empezado algo).
+- Un panel con el grupo elegido: el curso, «N alumnos» y, para el administrador, «Docente: …»; «Matricular alumnos»; con más de 10 alumnos (o mientras se filtra), «Filtrar alumnos» (sin tildes ni mayúsculas, sin peticiones); y el alumnado por nombre, con su correo y «Dar de baja del grupo». La lista se desplaza dentro de su zona con el alto que deja la ventana: la página no se desplaza.
+- Diálogo del grupo: nombre, curso (con su pista «Como 2026/27»), asignatura (se elige al crear; al editar se lee, con su motivo) y, solo para el administrador, el docente (si el del grupo está desactivado, aparece como «(cuenta desactivada)» y no se vuelve a elegir).
+- Diálogo de matrícula: el buscador, «Añadir los de otro grupo» (el alumnado de otro grupo del usuario, como la misma clase en otra asignatura), los resultados como casillas con nombre y correo, los elegidos como chips que se quitan y «Matricular (n)». No se eligen más de 50 de una vez.
 
 ## Interacciones
 
-- **Abrir un panel:** escribe `?grupo=` sin llenar el historial y pide su matrícula; al recargar se abre el mismo.
-- **Nuevo grupo:** el curso viene con el actual, y la asignatura elegida si solo hay una. El panel nuevo aparece en su sitio y se abre.
-- **Editar:** cambia el panel en el sitio.
-- **Eliminar:** pregunta antes («Se eliminará … con sus bloques y su matrícula…»).
-- **Matricular:** busca 300 ms después de dejar de escribir (`createDebouncer`), desde dos letras; los matriculados aparecen en la lista por nombre y la cuenta sube.
-- **Dar de baja:** pregunta antes («… dejará de ver este grupo. Su trabajo se conserva.»); la fila sale y la cuenta baja.
+- **Elegir un grupo:** cambia `?grupo=` y pide su matrícula; al recargar se ve el mismo. El filtro empieza vacío en cada grupo.
+- **Nuevo grupo:** el curso viene con el actual, y la asignatura elegida si solo hay una. El grupo nuevo queda elegido.
+- **Editar:** cambia el grupo en el sitio.
+- **Eliminar:** pregunta antes («Se eliminará … con sus bloques y su matrícula…»); después, el foco va al encabezado.
+- **Matricular:** busca 300 ms después de dejar de escribir (`createDebouncer`), desde dos letras, o toma el alumnado de otro grupo que no esté ya en este; los matriculados aparecen en la lista por nombre y la cuenta sube.
+- **Dar de baja:** pregunta antes («… dejará de ver este grupo. Su trabajo se conserva.»); la fila sale, la cuenta baja y el foco se queda en el panel del grupo.
 - Cada acción se avisa con un `MatSnackBar`. Un fallo en un diálogo se dice en él y recarga; el de eliminar o dar de baja, en el aviso.
 
 ## Estados
 
-- **Cargando:** esqueleto de tres paneles.
-- **Vacío:** `EmptyState` «Aún no tienes grupos» con «Nuevo grupo». Un grupo sin alumnos: «Este grupo aún no tiene alumnos» con «Matricular alumnos».
-- **Error:** `LoadError` con «Reintentar»; la matrícula de un panel carga y falla por separado, con su propio reintento.
+- **Cargando:** esqueleto del desplegable y del panel.
+- **Vacío:** `EmptyState` «Aún no tienes grupos» («Aún no hay grupos» para el administrador) con «Nuevo grupo». Un grupo sin alumnos: «Este grupo aún no tiene alumnos».
+- **Error:** `LoadError` con «Reintentar» si fallan los grupos, las asignaturas o (para el administrador) los docentes; la matrícula del grupo carga y falla por separado, con su propio reintento.
 - **Buscando:** barra fina en el diálogo. Menos de dos letras, la pista; sin resultados, «Ningún alumno coincide. Las cuentas las crea la administración.».
 - **Guardando:** «Guardando…» en el botón del diálogo y el error junto a él (`role="alert"`) sin cerrarlo.
 
 ## Accesibilidad
 
-- El menú de cada grupo y la baja de cada alumno tienen nombre propio («Acciones de 1.º DAW A», «Dar de baja a Lucía…»).
-- «Eliminar» deshabilitado sigue enfocable (`disabledInteractive`) con su motivo escrito; la asignatura fija, con su pista enlazada.
-- Los resultados de la búsqueda se anuncian (`aria-live`).
+- El menú del grupo y la baja de cada alumno tienen nombre propio («Acciones de 1.º DAW A · Programación básica», «Dar de baja a Lucía… del grupo»), y el panel se llama como el grupo.
+- «Eliminar» deshabilitado sigue enfocable (`disabledInteractive`) con su motivo escrito; la asignatura fija, con su pista.
+- En el buscador se anuncia cuántos alumnos se encuentran, no la lista entera; al tomar los de otro grupo, cuántos se han elegido.
+- Tras dar de baja o eliminar, el foco no se pierde: va al panel del grupo o al encabezado.
 
 ## Criterios de aceptación
 
-- [ ] Lista de los grupos del docente (todos, para el administrador, con su docente).
-- [ ] Crear, editar y eliminar un grupo; el empezado no se elimina, con su motivo.
-- [ ] Matricular buscando por nombre o correo, varios a la vez; dar de baja conservando el trabajo (RF-16).
-- [ ] El grupo abierto, en la URL.
-- [ ] Revisión visual del autor.
+- [x] Los grupos del docente (todos, para el administrador, con su docente).
+- [x] Crear, editar y eliminar un grupo; el empezado no se elimina, con su motivo.
+- [x] Matricular buscando por nombre o correo, varios a la vez o el alumnado de otro grupo; dar de baja conservando el trabajo (RF-16).
+- [x] El grupo elegido, en la URL.
+- [ ] Revisión visual del autor de la versión rehecha.
 
 ## Fuera de alcance
 
