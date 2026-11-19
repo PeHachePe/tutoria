@@ -115,7 +115,7 @@ Lo lanza el autor: lee `supabase/functions/.env`, que el agente no toca.
 npx supabase functions deploy --remote
 ```
 
-Despliega `execute`, `tutor`, `translate` (4.3c) y `admin-users` (5.1a). Todas importan ficheros de `src/app/data/` (los contratos compartidos con la app); si la CLI no los empaqueta, el despliegue falla con un error de módulo no encontrado: pásaselo a Claude.
+Despliega `execute`, `tutor`, `translate` (4.3c), `admin-users` (5.1a) y `ai-check` (5.3a). Todas importan ficheros de `src/app/data/` (los contratos compartidos con la app); si la CLI no los empaqueta, el despliegue falla con un error de módulo no encontrado: pásaselo a Claude.
 
 La CLI las empaqueta bien (1,2 MB `execute` y 1,9 MB `tutor`, con QuickJS). Avisa de que `import_map` en `config.toml` ya no se admite como opción; no afecta, porque Deno encuentra solo el `deno.json` de `supabase/functions/`.
 

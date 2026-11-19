@@ -2181,3 +2181,15 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Consecuencias:** la lista pesa algo más (los nombres de los grupos), dentro del tope de 1000 filas ya apuntado. El 5.2a, que pasa los grupos a `GroupService`, no toca esta consulta: la administración sigue leyendo `class_group` y `enrollment` por su RLS.
 
 **Aprobación:** el autor aprobó el ajuste con el boceto («Sí, adelante») y pidió el orden por columnas y el filtro de estado.
+
+## D-076 · La prueba del proveedor de IA: un resultado por modelo, también con un host no permitido (19/11/2026)
+
+**Contexto:** el 5.3 era un paso de ≈2,5 h con una Edge Function nueva y una pantalla. Además, la migración prevista (`20261119100000_ai_check.sql`) repetía el número de `groups_and_enrollment`. Y la función `ai-check` lee el ajuste con `providerSettingOf()`, que quita sin avisar los respaldos de un host no permitido: la administración no los vería en el resultado ni sabría por qué.
+
+**Decisión:** el paso se parte en el 5.3a (datos, migración y función, sin pantalla) y el 5.3b (la pantalla), como el 5.1 y el 5.2. La migración pasa a `20261119120000_ai_check.sql`. La función lee el ajuste aceptando cualquier host y comprueba después cada modelo: el principal de un host no permitido da un solo resultado `host_not_allowed`, y un respaldo, su propio `host_not_allowed` en su sitio de la lista. Al límite de 5 por minuto se suma uno de 100 al día (`AI_CHECKS_PER_DAY`), como el de `translate` (D-063), porque cada prueba llama a todos los modelos. Un fallo sin respuesta del proveedor es `timeout` si ha pasado el tiempo máximo del modelo y `unavailable` si no, sin tocar `ProviderError`. La forma del ajuste que pide la tabla (`is_valid_ai_provider`) se escribe en `isValidAiProvider()`, que usa el servicio simulado y usará el formulario del 5.3b. Los proveedores predefinidos usan JSON simple con Groq y OpenRouter, porque no todos sus modelos siguen un esquema, y el esquema con Gemini y Ollama.
+
+**Alternativas:** un solo paso, en una sesión demasiado larga para revisarla. Que `providerSettingOf()` avise de lo que quita: cambiaría la lectura que usan el tutor y `translate`. Marcar el `timeout` dentro de `ProviderError`: tocaría la clase compartida por una sola función.
+
+**Consecuencias:** el resultado tiene siempre un elemento por modelo válido del ajuste, en su orden. Un respaldo que `providerSettingOf()` descarta por otra razón (un secreto con un nombre no permitido, un formato que no existe) sigue sin aparecer: el formulario del 5.3b no deja escribirlo.
+
+**Aprobación:** el autor aprobó partir el paso y las correcciones («Sí, empieza el 5.3a»).
