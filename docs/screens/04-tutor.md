@@ -147,8 +147,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] El atajo sale solo en los ejemplos visibles que fallan y en el móvil cambia a la pestaña «Tutor» (6.2d).
 - [ ] Una intervención de ayuda reacciona en reducido y un logro, completo (6.2d).
 - [ ] axe sin infracciones en claro y oscuro con el bocadillo en «pensando», con respuesta y con error (6.2d).
-- [ ] Con la voz activada y una voz elegida, «Escuchar» dice la respuesta frase a frase sin leer el código, y «Parar» la calla; sin voz elegida, lleva a los ajustes (6.1a).
-- [ ] Con la voz desactivada no aparece ningún control de voz ni se descarga su código (6.1a).
+- [x] Con la voz activada y una voz elegida, «Escuchar» dice la respuesta frase a frase sin leer el código, y «Parar» la calla; sin voz elegida, lleva a los ajustes (6.1a).
+- [x] Con la voz desactivada no aparece ningún control de voz ni se descarga su código (6.1a).
 - [ ] «Dictar» escribe en el campo lo que se dice sin borrar lo escrito y no envía nada; sin permiso para el micrófono, el aviso dice qué hacer y se puede seguir escribiendo (6.1b).
 - [ ] En un navegador sin reconocimiento no hay «Dictar» ni «Llamar al tutor», y el resto funciona (6.1b).
 - [ ] En una llamada, una pregunta dicha se envía tras el silencio, su respuesta se oye y se lee, y el micrófono vuelve a abrirse al acabar (6.1c).

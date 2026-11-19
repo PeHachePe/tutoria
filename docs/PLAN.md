@@ -428,7 +428,7 @@ La misma conversación con el tutor, hablada (capa 3, RF-08 y CU-02 1a; diseño 
 - **Dictado** (6.1b): el alumno dicta la pregunta en el campo, la corrige si hace falta y la envía él.
 - **Modo llamada** (6.1c): una conversación por turnos y sin manos, mientras programa.
 
-**`SpeechService`** (`core/speech/`) es la abstracción, y `WebSpeechService`, la única clase que toca `speechSynthesis` y `SpeechRecognition`; se carga con `injectAsync` solo si el alumno tiene la voz activada. Todo lo demás se prueba con un `SpeechService` falso. El contrato, orientativo (el 6.1a y el 6.1b fijan las firmas):
+**`SpeechService`** (`core/speech/`) es la abstracción, y `WebSpeechService`, la única clase que toca `speechSynthesis` y `SpeechRecognition`; la carga `SpeechLoader` con `injectAsync` solo si el alumno tiene la voz activada, en un chunk propio (11 KB). Todo lo demás se prueba con `FakeSpeechService` (`speech-testing.ts`). `StudentVoice` (`student/settings/`, D-071) junta los ajustes con lo que puede el navegador, y `TutorSpeaker` (`student/workspace/`) dice las respuestas. La parte de hablar quedó así en el 6.1a (`speech-service.ts`): `voices(language: AppLocale)`, `speak(sentence, { voiceId, rate })` y `SpeechError` con `voice-unavailable` o `synthesis-failed`. El contrato que falta, orientativo (el 6.1b fija las firmas):
 
 ```ts
 abstract class SpeechService {
@@ -459,7 +459,7 @@ abstract class SpeechService {
 - **Texto hablable:** la función pura `speakableSentences()` quita los bloques de código, las marcas de Markdown y los emojis, deja el código en línea como palabra y parte el texto en frases con `Intl.Segmenter` y el idioma de la interfaz. Si la respuesta traía un bloque de código o deja un botón (2.5e), acaba con una frase fija: «Te lo dejo en el chat».
 - **Frase a frase:** una locución por frase, que se encola en cuanto esa frase está completa en `turn.answer`, sin esperar al resto (D-067).
 - **Idioma:** el de la interfaz. Si la voz elegida no es de ese idioma o ya no existe, los ajustes piden elegir otra. Si el navegador no tiene ninguna voz del idioma (pasa con el catalán), se dice en los ajustes y la conversación sigue por escrito.
-- **Se calla** con «Parar», al enviar otra pregunta, al cambiar de ejercicio, al salir de la pantalla y al ocultar la pestaña.
+- **Se calla** con «Parar», al enviar otra pregunta, al cambiar de ejercicio, al salir de la pantalla y al ocultar la pestaña (`visibilitychange`; con la ventana sin foco pero a la vista, sigue hablando).
 
 **Dictado:**
 
@@ -487,7 +487,7 @@ abstract class SpeechService {
 - **Silencios:**
   - el navegador corta el reconocimiento cuando no oye nada: `VoiceCall` lo vuelve a abrir, salvo que se cierre tres veces seguidas en menos de un segundo, que acaba la llamada con un aviso;
   - 90 segundos sin voz dejan la llamada **en espera**, con el micrófono cerrado: en un aula, un micrófono abierto recoge a los compañeros. Se retoma con «Seguir hablando» o el atajo;
-  - con la pestaña oculta (`awaySince()`), en espera al momento y sin voz; al volver, sigue en espera;
+  - con la pestaña oculta (`visibilitychange`, no `awaySince()`, que también cuenta una ventana sin foco), en espera al momento y sin voz; al volver, sigue en espera;
   - una intervención del tutor con la llamada en espera se dice en voz alta y abre el micrófono 10 segundos para contestar; sin respuesta, vuelve a la espera;
   - mientras el tutor piensa, la pantalla lo dice al instante; no hay frases de relleno;
   - si la respuesta falla, el tutor lo dice («No he podido responder») y el chat ofrece «Reintentar»; con el límite de turnos (429), dice cuánto hay que esperar y deja la llamada en espera.
@@ -510,13 +510,13 @@ abstract class SpeechService {
 
 **Motor de cada navegador.** Lo que dicen el plan y MDN; el 6.1a (síntesis) y el 6.1b (reconocimiento) lo comprueban en cada uno y completan la tabla, que va también a la memoria:
 
-| Navegador            | Reconocimiento                                                                                         | Síntesis                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| Chrome de escritorio | Servicio de Google; en el equipo si la versión lo admite y el paquete del idioma está instalado        | Voces del sistema y en red    |
-| Edge                 | Servicio de Microsoft; en el equipo, por comprobar                                                     | Voces del sistema y en red    |
-| Safari               | El dictado de Apple, por comprobar dónde transcribe                                                    | Voces del sistema             |
-| Firefox              | No tiene                                                                                               | Voces del sistema             |
-| Chrome en Android    | Servicio de Google; por comprobar si avisa con un sonido cada vez que abre el micrófono (modo llamada) | Motor de síntesis del sistema |
+| Navegador            | Reconocimiento                                                                                         | Síntesis                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Chrome de escritorio | Servicio de Google; en el equipo si la versión lo admite y el paquete del idioma está instalado        | Voces del sistema y en red; comprobado en macOS (6.1a): 180 voces, varias por región del español, y la respuesta suena frase a frase |
+| Edge                 | Servicio de Microsoft; en el equipo, por comprobar                                                     | Voces del sistema y en red                                                                                                           |
+| Safari               | El dictado de Apple, por comprobar dónde transcribe                                                    | Voces del sistema                                                                                                                    |
+| Firefox              | No tiene                                                                                               | Voces del sistema                                                                                                                    |
+| Chrome en Android    | Servicio de Google; por comprobar si avisa con un sonido cada vez que abre el micrófono (modo llamada) | Motor de síntesis del sistema                                                                                                        |
 
 ---
 
@@ -573,9 +573,10 @@ src/app/
   app.ts  app.html  app.config.ts  app.routes.ts   # generated by ng new; app.routes.ts lazy-loads each role
   auth/               # login-page/, auth-store.ts, role-guard.ts, guest-guard.ts, home-path.ts
   student/            # student.routes.ts, student-layout/, catalog/, workspace/, settings/
-                      # settings/: settings-store.ts, the student's settings (1.8 starts it with the reactions)
+                      # settings/: settings-store.ts, the student's settings (1.8 starts it with the reactions);
+                      # student-voice.ts, the settings of the voice with what the browser can do (6.1a, D-071)
                       # workspace/: workspace.routes.ts (lazy, with its stores), the page and one folder
-                      # per zone: statement-zone/, code-zone/, tutor/ (chat) (D-033)
+                      # per zone: statement-zone/, code-zone/, tutor/ (chat) (D-033); tutor-speaker.ts (6.1a)
   teacher/            # teacher.routes.ts, live/, history/, exercises/, groups/
   admin/              # admin.routes.ts, users/, system/
   not-found/          # not-found-page.ts: the 404, also for the pages of another role
@@ -584,8 +585,8 @@ src/app/
     i18n/             # languages of the interface (D-023): locale.ts, load-locale.ts, language-service.ts,
                       # localized-paginator-intl.ts
     tools/            # app-tool.ts: the tools of the tutor and of WebMCP, their registry (2.5e, D-051)
-    speech/           # speech-service.ts (abstract) and its Web Speech version, loaded only with the voice on;
-                      # speakable-sentences.ts (2.11, step 6.1)
+    speech/           # speech-service.ts (abstract), web-speech-service.ts, loaded only with the voice on by
+                      # speech-loader.ts; speakable-sentences.ts; speech-testing.ts (2.11, step 6.1)
   data/
     user.ts  exercise.ts  attempt.ts  process-event.ts  tutor.ts  ai-provider-setting.ts   # data types, one file per concept
     *-service.ts      # data services as abstract classes: exercise-service.ts, attempt-service.ts...
@@ -3466,6 +3467,8 @@ El diseño (≈0,5 h, sin código) dejó escritos 2.11, las dos fichas, D-066 y 
 
 🧪 Primero los tests de `speakableSentences()`: bloques de código fuera y su frase fija una sola vez, código en línea, Markdown y emojis, decimales y abreviaturas que no parten la frase, los tres idiomas y el texto vacío. Después: los ajustes nuevos por usuario; `WebSpeechService` con un `speechSynthesis` falso (voces que llegan tarde con `voiceschanged`, solo las del idioma, una locución por frase, parar y el error); `TutorSpeaker` con un `SpeechService` falso (habla mientras la respuesta crece, nunca el historial ni una respuesta fallida, y se calla con otra pregunta, otro ejercicio, la pestaña oculta y al salir); los ajustes por rol y texto (ninguna voz elegida, «Probar», sin voces del idioma); «Escuchar» y «Parar» en el chat; axe.
 Commit: `feat(voice): the tutor reads its answers aloud (step 6.1a)`.
+
+✅ Hecho el 19/11/2026 ([bitácora](bitacora/6.1a-voz-sintesis.md), D-071): además del plan, la región de cada voz y «Escuchar»/«Parar» de ancho fijo; una respuesta que llega entera también se lee.
 
 **Plan de implementación del 6.1a** (17/11/2026, tras leer el código: quien lo implemente no tiene que decidir nada)
 

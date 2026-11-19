@@ -20,8 +20,8 @@ Que el alumno adapte TutorIA a su gusto: aspecto, idioma, reacciones del tutor (
   - **Apariencia:** tema (claro, oscuro, sistema) e idioma, con botones conmutadores; bajo el idioma, «Al cambiarlo, la página se vuelve a cargar».
   - **Mascota:** la mascota en vista previa en directo y tres interruptores: auriculares con micro, pajarita de cuadros (los dos activados por defecto) y puntero de hueso al pasar por encima.
   - **Reacciones del tutor:** completas, reducidas o desactivadas, con una línea que explica la elegida; «Emojis 3D»; «Probar una reacción», que lanza una reacción alegre distinta cada vez, pasando por las tres intensidades, con la opción elegida (y la mascota de la vista previa se mueve con ella).
-  - **Tutor:** «El tutor puede escribirme por iniciativa propia» (activado por defecto; actúa desde el paso 6.2) y «Hablar con el tutor por voz», deshabilitado con «Pronto podrás…» hasta el 6.1a.
-  - **Voz** (6.1a y 6.1b, §2.11, D-066), dentro de la tarjeta del tutor. «Hablar con el tutor por voz» está apagado por defecto y dice «Podrás escucharle, dictarle y llamarle. Nunca se graba el audio». Al activarlo aparecen:
+  - **Tutor:** «El tutor puede escribirme por iniciativa propia» (activado por defecto; actúa desde el paso 6.2) y «Hablar con el tutor por voz», que funciona desde el 6.1a.
+  - **Voz** (6.1a y 6.1b, §2.11, D-066), dentro de la tarjeta del tutor. «Hablar con el tutor por voz» está apagado por defecto y dice lo que ya funciona: «Podrás escuchar sus respuestas. Nunca se graba el audio» en el 6.1a; el 6.1b y el 6.1c lo amplían. Al activarlo aparecen:
     - **Voz del tutor:** un grupo de opciones con las voces del navegador para el idioma de la interfaz, con el nombre que les da el sistema, en orden alfabético y **ninguna elegida**, bajo «Elige una voz para el tutor»; cada una con «Probar», que dice una frase corta. La aplicación no elige por el alumno (perspectiva de género de la memoria). Sin voces del idioma: «Tu navegador no tiene voces en catalán: el tutor te escribirá»;
     - **Velocidad:** lenta, normal o rápida, con botones conmutadores; «Probar» la usa;
     - «Leer las respuestas en voz alta» (apagado por defecto): fuera de una llamada, las respuestas nuevas suenan solas;
@@ -56,7 +56,7 @@ Solo el de con datos: la pantalla no lee nada que tarde.
 - [x] La mascota de la vista previa, la del tutor y la del catálogo llevan los accesorios elegidos.
 - [x] «Probar una reacción» respeta el modo y los emojis elegidos, y enseña las tres intensidades.
 - [x] Sin scroll horizontal a 375 px.
-- [ ] Al activar la voz no hay ninguna voz elegida y el tutor no habla hasta elegir una; «Probar» suena con la voz y la velocidad elegidas; todo sigue tras recargar, por usuario (6.1a).
+- [x] Al activar la voz no hay ninguna voz elegida y el tutor no habla hasta elegir una; «Probar» suena con la voz y la velocidad elegidas; todo sigue tras recargar, por usuario (6.1a).
 - [ ] La línea «Dónde se transcribe tu voz» dice lo que hace este navegador, y en uno sin reconocimiento la voz se puede activar igual para escuchar (6.1b).
 - [ ] axe sin infracciones en claro y oscuro con la voz activada (6.1a).
 

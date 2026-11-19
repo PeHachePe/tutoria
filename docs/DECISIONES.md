@@ -2205,3 +2205,15 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Consecuencias:** `toProviderSetting()` ya no recibe los respaldos conservados; el formulario los edita todos. `system.fallbacks.kept` del plan no existe. La pantalla provisional (`PlaceholderPage`) deja de usarse con el 5.3b y se borra.
 
 **Aprobación:** el autor preguntó por qué no se podían editar y, tras la explicación, eligió «Sí, editables».
+
+## D-071 · La voz del alumno: `StudentVoice`, y qué respuesta dice el tutor (19/11/2026)
+
+**Contexto:** la voz (6.1a) necesita en tres sitios lo mismo: si está activada, las voces del idioma, la voz elegida si sigue existiendo y decir una frase con su velocidad. Son los ajustes, el chat y, después, el dictado y la llamada. Además, `TutorSpeaker` tiene que saber qué respuesta es nueva para leerla sola.
+
+**Decisión:** `StudentVoice` (`student/settings/`, `@Service()`) junta `SettingsStore` con lo que puede el navegador. No es un store, porque no guarda estado propio: carga el habla con `resource()` solo con `voice` activado y deriva el resto con `computed()`. Si el código de la voz o sus voces no cargan, se queda en silencio, porque todo está escrito. `TutorSpeaker` dice sola cada respuesta `fresh` nueva, identificada por `id` y `createdAt` (un reintento conserva el `id`), la primera vez que la ve, tanto si llega a medias como si llega entera. No vuelve a decir una ya vista cuando desaparece la última. La lista de voces enseña la región (`Intl.DisplayNames`) solo si el nombre no la dice.
+
+**Alternativas:** que cada pantalla lea los ajustes y cargue el habla por su cuenta (repetido tres veces). Hacer de la voz un store nuevo: §4.5 solo prevé los que hay, y no tiene estado que guardar. Empezar solo con turnos `answering`, como decía el plan: con los datos simulados, la respuesta llega entera antes de que corra el `effect()` y no se leía.
+
+**Consecuencias:** el 6.1b y el 6.1c usarán `StudentVoice` para el dictado y la llamada. «Escuchar» solo aparece si el navegador tiene voces del idioma.
+
+**Aprobación:** el autor aprobó el plan del paso y las mejoras («hazlo todo lo mejor que veas, sí»).
