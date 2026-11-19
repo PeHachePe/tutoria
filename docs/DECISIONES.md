@@ -2110,7 +2110,16 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Restablecer una contraseña no cierra las sesiones abiertas de esa cuenta (la API de administración no cierra las sesiones de otro usuario por su id): a `PENDIENTES.md`. Para echar a alguien al momento está la baja.
 - En la nube, la longitud mínima de la contraseña se cambia en el panel (`DESPLIEGUE.md`).
 
-**Aprobación:** el plan y el límite de 8 a 64 caracteres, aprobados por el autor.
+**Ampliación del 5.2a (19/11/2026): grupos y matrícula.**
+
+- **El docente gestiona sus grupos y su matrícula** (RF-16): crea grupos suyos, cambia su nombre y su curso, y matricula a alumnos activos de todo el centro, que busca con `search_students` (`security definer`, solo nombre y correo, al menos dos letras y 20 como mucho, sin tildes ni mayúsculas con `unaccent`). El administrador gestiona todos y es el único que cambia el docente de un grupo. Las operaciones pasan de `AdminService` a `GroupService`.
+- **Quién puede escribir lo dice la RLS (`42501`, `forbidden`); si el docente o el alumno valen, un disparador antes de ella (`check_group_teacher`, `check_enrolled_student`, `23514`, `invalid`).** Así Supabase distingue los dos casos igual que el servicio simulado: dar el grupo a otro docente está prohibido, y elegir como docente a un alumno, a un administrador o a una cuenta desactivada no es válido. El plan lo ponía todo en la RLS, que habría dado `forbidden` a todo.
+- **Un grupo no cambia de asignatura** (`grant update (name, school_year, teacher_id)`), **solo se borra si nadie ha empezado nada en él** (`is_started_group`, como los bloques, D-058) y su curso tiene la forma `2026/27` (un `check`). La baja de una matrícula conserva los intentos.
+- **Se matricula a varios en una sola petición, 50 como mucho** (`MAX_ENROLLMENT_BATCH`), y todos o ninguno: un tope para una petición, más de lo que la pantalla elige de una vez.
+- **`group_summaries()`** (en lugar de `group_student_counts` del plan) da de cada grupo que gestiona quien llama sus alumnos y si está empezado, en una sola llamada: la lista no tiene que preguntar por cada grupo.
+- **`listTeachers()`** lee `app_user`: a la administración le da los docentes activos y a un docente solo su cuenta, como la RLS, en las dos versiones.
+
+**Aprobación:** el plan y el límite de 8 a 64 caracteres, aprobados por el autor; la ampliación del 5.2a, propuesta al cerrar el paso.
 
 ## D-073 · El histórico: lo que ya pasó, bloque a bloque, para dos decisiones fuera de clase (18/11/2026)
 
