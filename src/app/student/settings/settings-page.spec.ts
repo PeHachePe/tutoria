@@ -6,18 +6,29 @@ import userEvent from '@testing-library/user-event';
 
 import { AuthStore } from '../../auth/auth-store';
 import { LanguageService } from '../../core/i18n/language-service';
+import { FakeSpeechService, provideFakeSpeech } from '../../core/speech/speech-testing';
 import { ThemeService } from '../../core/theme-service';
 import { MASCOT_ACCESSORIES } from '../../shared/mascot/mascot-accessories';
-import { sampleReaction, SettingsPage } from './settings-page';
+import { sampleReaction, SettingsPage, voiceRegion } from './settings-page';
 import { SettingsStore } from './settings-store';
 
 describe('SettingsPage', () => {
   const setLocale = vi.fn();
+  let fake: FakeSpeechService;
+
+  beforeEach(() => {
+    fake = new FakeSpeechService();
+    fake.voiceList = [
+      { id: 'monica', name: 'Mónica', lang: 'es-ES' },
+      { id: 'jorge', name: 'Jorge', lang: 'es-MX' },
+    ];
+  });
 
   async function renderPage() {
     await render(SettingsPage, {
       providers: [
         provideRouter([]),
+        provideFakeSpeech(fake),
         { provide: AuthStore, useValue: { userId: signal('u1') } },
         { provide: LanguageService, useValue: { locale: 'es', setLocale } },
         {
@@ -111,15 +122,95 @@ describe('SettingsPage', () => {
     expect(document.querySelector('app-mascot')?.classList).not.toContain('mascot-bone');
   });
 
-  it('lets the student turn the proactive tutor off, and shows the voice as coming soon', async () => {
+  it('lets the student turn the proactive tutor off', async () => {
     const { user, settings } = await renderPage();
 
     await user.click(screen.getByRole('switch', { name: /por iniciativa propia/ }));
     expect(settings.proactive()).toBe(false);
+  });
 
-    const voice = screen.getByRole('switch', { name: 'Hablar con el tutor por voz' });
-    expect(voice.hasAttribute('disabled')).toBe(true);
-    expect(voice.getAttribute('aria-describedby')).toContain('settings-voice-hint');
+  describe('voice', () => {
+    async function turnVoiceOn() {
+      const page = await renderPage();
+      const toggle = screen.getByRole('switch', { name: 'Hablar con el tutor por voz' });
+      expect(toggle.getAttribute('aria-describedby')).toContain('settings-voice-hint');
+      await page.user.click(toggle);
+      await screen.findByRole('radiogroup', { name: 'Voz del tutor' });
+      return { ...page, toggle };
+    }
+
+    it('shows its controls when turned on, without moving the focus, and no voice chosen', async () => {
+      const { settings, toggle } = await turnVoiceOn();
+      expect(settings.voice()).toBe(true);
+      expect(document.activeElement).toBe(toggle);
+      expect(screen.getByText('Elige una voz para el tutor')).toBeTruthy();
+      const voices = within(group('Voz del tutor')).getAllByRole('radio');
+      expect(voices.map((voice) => (voice as HTMLInputElement).checked)).toEqual([false, false]);
+      expect(screen.getByRole('radio', { name: /Jorge · México/ })).toBeTruthy();
+      expect(screen.getByText(/Si usas un lector de pantalla/)).toBeTruthy();
+    });
+
+    it('says it is looking for the voices', async () => {
+      const { user } = await renderPage();
+      await user.click(screen.getByRole('switch', { name: 'Hablar con el tutor por voz' }));
+      expect(screen.getByText('Buscando las voces de tu navegador…')).toBeTruthy();
+    });
+
+    it('saves the chosen voice and tries it', async () => {
+      const { user, settings } = await turnVoiceOn();
+      await user.click(option('Voz del tutor', 'Mónica'));
+      expect(settings.tutorVoice()).toBe('monica');
+      expect(fake.spoken.at(-1)?.options.voiceId).toBe('monica');
+      expect(screen.queryByText('Elige una voz para el tutor')).toBeNull();
+    });
+
+    it('tries a voice with the chosen speed', async () => {
+      const { user, settings } = await turnVoiceOn();
+      await user.click(option('Velocidad', 'Rápida'));
+      expect(settings.speechRate()).toBe('fast');
+      await user.click(screen.getByRole('button', { name: 'Probar la voz Jorge' }));
+      expect(fake.spoken.at(-1)).toEqual({
+        sentence: 'Hola, soy tu tutor. ¿Seguimos con el ejercicio?',
+        options: { voiceId: 'jorge', rate: 'fast' },
+      });
+    });
+
+    it('says when the browser has no voices of the language', async () => {
+      fake.voiceList = [{ id: 'alex', name: 'Alex', lang: 'en-US' }];
+      const { user } = await renderPage();
+      await user.click(screen.getByRole('switch', { name: 'Hablar con el tutor por voz' }));
+      expect(
+        await screen.findByText('Tu navegador no tiene voces en español: el tutor te escribirá.'),
+      ).toBeTruthy();
+    });
+
+    it('saves reading the answers aloud', async () => {
+      const { user, settings } = await turnVoiceOn();
+      const readAloud = screen.getByRole('switch', { name: 'Leer las respuestas en voz alta' });
+      expect(readAloud.getAttribute('aria-describedby')).toBe('settings-read-aloud-hint');
+      await user.click(readAloud);
+      expect(settings.readAloud()).toBe(true);
+    });
+
+    it('folds, silences the tutor and keeps the choice when turned off', async () => {
+      const { user, settings, toggle } = await turnVoiceOn();
+      await user.click(option('Voz del tutor', 'Jorge'));
+      const stops = fake.stops;
+      await user.click(toggle);
+      expect(settings.voice()).toBe(false);
+      expect(fake.stops).toBe(stops + 1);
+      expect(screen.queryByRole('radiogroup', { name: 'Voz del tutor' })).toBeNull();
+      expect(settings.tutorVoice()).toBe('jorge');
+    });
+
+    it('names the region of a voice only when it has one its name does not say', () => {
+      const voice = (name: string, lang: string) => ({ id: name, name, lang });
+      expect(voiceRegion(voice('Mónica', 'es-ES'), 'es')).toBe('España');
+      expect(voiceRegion(voice('Mónica', 'es-ES'), 'en')).toBe('Spain');
+      expect(voiceRegion(voice('Eddy (español (España))', 'es-ES'), 'es')).toBeUndefined();
+      expect(voiceRegion(voice('Mónica', 'es'), 'es')).toBeUndefined();
+      expect(voiceRegion(voice('Mónica', 'es-419'), 'es')).toBeUndefined();
+    });
   });
 
   it('leads to the registered data', async () => {

@@ -13,14 +13,17 @@ import {
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../../auth/auth-store';
+import { APP_PATHS } from '../../../core/app-paths';
 import { MAX_HINT_LEVEL, raisesHintLevel } from '../../../data/tutor';
 import { Mascot, type MascotMood } from '../../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { SettingsStore } from '../../settings/settings-store';
 import { AttemptStore } from '../attempt-store';
+import { TutorSpeaker } from '../tutor-speaker';
 import { TutorStore, type TutorTurn } from '../tutor-store';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
 import { TutorComposer } from './tutor-composer';
@@ -56,6 +59,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
     MatIconButton,
     MatIcon,
     MatTooltip,
+    RouterLink,
     Mascot,
     LoadingSkeleton,
     Skeleton,
@@ -87,6 +91,9 @@ export class TutorPanel {
   readonly minimize = output<void>();
 
   protected readonly store = inject(TutorStore);
+  /** The tutor's voice; none in the teacher's preview (D-061). */
+  protected readonly speaker = inject(TutorSpeaker, { optional: true });
+  protected readonly settingsPath = APP_PATHS.student.settings;
   protected readonly isSessionExpired = isSessionExpired;
   private readonly attempt = inject(AttemptStore);
   private readonly user = inject(AuthStore).user;
@@ -116,6 +123,7 @@ export class TutorPanel {
 
   protected readonly mascotMood = computed<MascotMood>(() => {
     if (this.store.answering()) return 'thinking';
+    if (this.speaker?.speakingTurnId()) return 'speaking';
     return this.composing() ? 'chat' : 'idle';
   });
 
@@ -184,6 +192,12 @@ export class TutorPanel {
 
   protected requestHint(): void {
     void this.store.requestHint();
+  }
+
+  /** «Escuchar» says that answer; «Parar» silences it. */
+  protected toggleListen(turnId: string): void {
+    if (this.speaker?.speakingTurnId() === turnId) this.speaker.stop();
+    else this.speaker?.listen(turnId);
   }
 
   protected retry(turn: TutorTurn): void {

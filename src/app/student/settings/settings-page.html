@@ -200,7 +200,8 @@
       <div class="flex flex-col gap-1">
         <mat-slide-toggle
           aria-describedby="settings-voice-hint"
-          disabled
+          [checked]="settings.voice()"
+          (change)="setVoice($event.checked)"
           i18n="@@settings.tutor.voice"
         >
           Hablar con el tutor por voz
@@ -210,9 +211,102 @@
           class="ps-14 text-body-small text-on-surface-variant"
           i18n="@@settings.tutor.voice.hint"
         >
-          Pronto podrás hablarle y escuchar sus respuestas. Nunca se graba el audio.
+          Podrás escuchar sus respuestas. Nunca se graba el audio.
         </p>
       </div>
+      @if (settings.voice()) {
+        <!-- The voice (2.11): shown without taking the focus, under the switch like its hint -->
+        <div class="flex flex-col gap-5 ps-14">
+          <div class="flex flex-col gap-2">
+            <h3
+              id="settings-tutor-voice"
+              class="text-title-small"
+              i18n="@@settings.voice.tutorVoice"
+            >
+              Voz del tutor
+            </h3>
+            @if (voice.voicesLoading()) {
+              <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.loading">
+                Buscando las voces de tu navegador…
+              </p>
+            } @else if (voice.voices().length === 0) {
+              <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.none">
+                Tu navegador no tiene voces en {{ localeName }}: el tutor te escribirá.
+              </p>
+            } @else {
+              @if (!voice.tutorVoice()) {
+                <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.choose">
+                  Elige una voz para el tutor
+                </p>
+              }
+              <mat-radio-group
+                aria-labelledby="settings-tutor-voice"
+                class="scroll-shadows flex max-h-60 flex-col overflow-y-auto"
+                [value]="voice.tutorVoice()?.id"
+                (change)="chooseVoice($event.value)"
+              >
+                @for (option of voiceOptions(); track option.id) {
+                  <div class="flex items-center justify-between gap-2">
+                    <mat-radio-button [value]="option.id">
+                      {{ option.name }}
+                      @if (option.region) {
+                        <span class="text-body-small text-on-surface-variant">
+                          · {{ option.region }}</span
+                        >
+                      }
+                    </mat-radio-button>
+                    <button
+                      matIconButton
+                      type="button"
+                      [attr.aria-label]="option.tryLabel"
+                      (click)="tryVoice(option.id)"
+                    >
+                      <mat-icon>play_arrow</mat-icon>
+                    </button>
+                  </div>
+                }
+              </mat-radio-group>
+            }
+          </div>
+          <div class="flex flex-col gap-2">
+            <h3 id="settings-speech-rate" class="text-title-small" i18n="@@settings.voice.rate">
+              Velocidad
+            </h3>
+            <div class="max-w-full overflow-x-auto">
+              <mat-button-toggle-group
+                aria-labelledby="settings-speech-rate"
+                hideSingleSelectionIndicator
+                [value]="settings.speechRate()"
+                (change)="settings.setSpeechRate($event.value)"
+              >
+                @for (choice of rateChoices; track choice.rate) {
+                  <mat-button-toggle [value]="choice.rate">{{ choice.label }}</mat-button-toggle>
+                }
+              </mat-button-toggle-group>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1">
+            <mat-slide-toggle
+              aria-describedby="settings-read-aloud-hint"
+              [checked]="settings.readAloud()"
+              (change)="settings.setReadAloud($event.checked)"
+              i18n="@@settings.voice.readAloud"
+            >
+              Leer las respuestas en voz alta
+            </mat-slide-toggle>
+            <p
+              id="settings-read-aloud-hint"
+              class="ps-14 text-body-small text-on-surface-variant"
+              i18n="@@settings.voice.readAloud.hint"
+            >
+              Las respuestas nuevas suenan solas. Si no, pulsa «Escuchar» bajo la que quieras oír.
+            </p>
+          </div>
+          <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.screenReader">
+            Si usas un lector de pantalla, no necesitas activar la voz: ya te lee las respuestas.
+          </p>
+        </div>
+      }
     </section>
   </div>
 

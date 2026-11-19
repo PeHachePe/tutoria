@@ -15,13 +15,14 @@ import { MASCOT_ACCESSORIES } from './mascot-accessories';
 import { MascotMovement, pickMovement } from './pick-movement';
 
 /** What the mascot is doing: resting, with the chat open, waiting for the tutor or celebrating. */
-export type MascotMood = 'idle' | 'chat' | 'thinking' | 'joy';
+export type MascotMood = 'idle' | 'chat' | 'thinking' | 'speaking' | 'joy';
 
 /** Class of each mood, animated in mascot.css (4.8). Resting needs none: it is the default. */
 const MOOD_CLASSES: Record<MascotMood, string> = {
   idle: '',
   chat: 'mascot-chat',
   thinking: 'mascot-thinking',
+  speaking: 'mascot-speaking',
   joy: 'mascot-joy',
 };
 

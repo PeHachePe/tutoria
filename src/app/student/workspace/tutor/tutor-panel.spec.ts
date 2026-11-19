@@ -13,6 +13,7 @@ import type { HintLevel, TutorEvent, TutorInteraction, TutorRequest } from '../.
 import { TutorService } from '../../../data/tutor-service';
 import { SettingsStore } from '../../settings/settings-store';
 import { AttemptStore } from '../attempt-store';
+import { TutorSpeaker } from '../tutor-speaker';
 import { TutorStore } from '../tutor-store';
 import { MAX_QUESTION_LENGTH } from './tutor-composer';
 import { TutorPanel } from './tutor-panel';
@@ -84,7 +85,22 @@ interface Setup {
   /** False when a request is left pending: then the panel cannot become stable. */
   settle?: boolean;
   signedIn?: boolean;
+  /** The tutor's voice; none, as in the teacher's preview. */
+  speaker?: FakeSpeaker;
 }
+
+/** What the panel reads of the tutor's voice. */
+function fakeSpeaker({ available = true, ready = true } = {}) {
+  const speakingTurnId = signal<string | null>(null);
+  return {
+    available: signal(available),
+    ready: signal(ready),
+    speakingTurnId,
+    listen: vi.fn((turnId: string) => speakingTurnId.set(turnId)),
+    stop: vi.fn(() => speakingTurnId.set(null)),
+  };
+}
+type FakeSpeaker = ReturnType<typeof fakeSpeaker>;
 
 async function renderPanel({
   status = 'in_progress',
@@ -93,6 +109,7 @@ async function renderPanel({
   ask,
   settle = true,
   signedIn = true,
+  speaker,
 }: Setup = {}) {
   const attempt = signal(attemptOf(status));
   let hints = interactions.filter((interaction) => interaction.trigger === 'hint').length;
@@ -126,6 +143,7 @@ async function renderPanel({
         },
       },
       { provide: TutorService, useValue: { ask: askTutor } },
+      speaker ? [{ provide: TutorSpeaker, useValue: speaker }] : [],
     ],
   });
   await restoreSession();
@@ -577,5 +595,70 @@ describe('TutorPanel', () => {
     expect(settings).toHaveBeenLastCalledWith({ theme: 'light' }, expect.anything());
     await fixture.whenStable();
     expect(within(actions).getByText('Ajustes como estaban')).toBeTruthy();
+  });
+
+  describe('voice', () => {
+    const past = [
+      interactionOf('question', 'Mira el bucle.', { studentMessage: '¿Qué hago?' }),
+      interactionOf('hint', 'Empieza en cero.'),
+    ];
+
+    it('offers no «Escuchar» without the voice, with it off or without voices', async () => {
+      await renderPanel({ interactions: past });
+      expect(screen.queryByRole('button', { name: /Escuchar/ })).toBeNull();
+      expect(screen.queryByRole('link', { name: /Escuchar/ })).toBeNull();
+    });
+
+    it('offers no «Escuchar» when the browser cannot speak the language', async () => {
+      await renderPanel({ interactions: past, speaker: fakeSpeaker({ available: false }) });
+      expect(screen.queryByRole('button', { name: /Escuchar/ })).toBeNull();
+    });
+
+    it('says an answer with «Escuchar», which turns into «Parar» and back', async () => {
+      const speaker = fakeSpeaker();
+      const { fixture } = await renderPanel({ interactions: past, speaker });
+      const buttons = screen.getAllByRole('button', { name: 'Escuchar' });
+      expect(buttons).toHaveLength(2);
+
+      await userEvent.click(buttons[0]);
+      fixture.detectChanges();
+      expect(speaker.listen).toHaveBeenCalledWith('i-Mira el bucle.');
+      const stop = screen.getByRole('button', { name: 'Parar' });
+      expect(stop).toBe(buttons[0]);
+      expect(document.querySelector('app-mascot')?.classList).toContain('mascot-speaking');
+
+      await userEvent.click(stop);
+      fixture.detectChanges();
+      expect(speaker.stop).toHaveBeenCalled();
+      expect(screen.getAllByRole('button', { name: 'Escuchar' })).toHaveLength(2);
+    });
+
+    it('offers «Escuchar» only under a whole answer', async () => {
+      const rest = deferred<void>();
+      const { fixture } = await renderPanel({
+        speaker: fakeSpeaker(),
+        settle: false,
+        ask: (request) => answer(request, 1, rest.promise),
+      });
+      await fixture.whenStable();
+      await userEvent.click(screen.getByRole('button', { name: /pista/ }));
+      fixture.detectChanges();
+      expect(screen.queryByRole('button', { name: 'Escuchar' })).toBeNull();
+      rest.resolve();
+      await vi.waitFor(() => {
+        fixture.detectChanges();
+        expect(screen.getByRole('button', { name: 'Escuchar' })).toBeTruthy();
+      });
+    });
+
+    it('leads to the settings without a chosen voice', async () => {
+      await renderPanel({ interactions: past, speaker: fakeSpeaker({ ready: false }) });
+      const links = screen.getAllByRole('link', { name: /Escuchar/ });
+      expect(links[0].getAttribute('href')).toBe('/alumno/ajustes');
+      fireEvent.mouseEnter(links[0]);
+      expect(
+        await screen.findAllByText('Elige una voz para el tutor en los ajustes'),
+      ).not.toHaveLength(0);
+    });
   });
 });

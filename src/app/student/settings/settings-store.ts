@@ -1,6 +1,7 @@
 import { inject, linkedSignal, Service, type WritableSignal } from '@angular/core';
 
 import { AuthStore } from '../../auth/auth-store';
+import { SPEECH_RATES, type SpeechRate } from '../../core/speech/speech-service';
 import { REACTION_MODES, type ReactionMode } from '../../shared/reactions/reaction';
 
 /** Name of each setting in localStorage, before the user id. */
@@ -11,6 +12,10 @@ const STORAGE_KEYS = {
   mascotHeadset: 'tutoria.mascot-headset',
   mascotBowTie: 'tutoria.mascot-bow-tie',
   mascotBoneCursor: 'tutoria.mascot-bone-cursor',
+  voice: 'tutoria.voice',
+  tutorVoice: 'tutoria.tutor-voice',
+  speechRate: 'tutoria.speech-rate',
+  readAloud: 'tutoria.read-aloud',
 } as const;
 
 export type SettingName = keyof typeof STORAGE_KEYS;
@@ -23,7 +28,8 @@ export function settingKey(setting: SettingName, userId: string): string {
 /**
  * The student's settings (4.5, ficha 05), remembered per user in this browser: how the tutor's
  * reactions show (1.8), whether the tutor may speak first (it does from step 6.2) and the mascot's
- * accessories. The colour mode is for the whole browser, because the login uses it too:
+ * accessories, and the voice (2.11): whether it is on, the tutor's voice (none until the student
+ * chooses one), its speed and whether new answers are read aloud. The colour mode is for the whole browser, because the login uses it too:
  * ThemeService keeps it. Whether the data notice was seen is part of the user (AuthStore, RF-07).
  */
 @Service()
@@ -39,6 +45,16 @@ export class SettingsStore {
   private readonly mascotHeadsetState = this.flag('mascotHeadset', true);
   private readonly mascotBowTieState = this.flag('mascotBowTie', true);
   private readonly mascotBoneCursorState = this.flag('mascotBoneCursor', true);
+  private readonly voiceState = this.flag('voice', false);
+  /** Its `voiceURI`, one for every language; no default: the app does not choose for the student. */
+  private readonly tutorVoiceState = this.setting<string | null>(
+    'tutorVoice',
+    (saved) => saved || null,
+  );
+  private readonly speechRateState = this.setting<SpeechRate>('speechRate', (saved) =>
+    toSpeechRate(saved),
+  );
+  private readonly readAloudState = this.flag('readAloud', false);
 
   readonly reactions = this.reactionsState.asReadonly();
   readonly reactionEmojis = this.reactionEmojisState.asReadonly();
@@ -46,6 +62,10 @@ export class SettingsStore {
   readonly mascotHeadset = this.mascotHeadsetState.asReadonly();
   readonly mascotBowTie = this.mascotBowTieState.asReadonly();
   readonly mascotBoneCursor = this.mascotBoneCursorState.asReadonly();
+  readonly voice = this.voiceState.asReadonly();
+  readonly tutorVoice = this.tutorVoiceState.asReadonly();
+  readonly speechRate = this.speechRateState.asReadonly();
+  readonly readAloud = this.readAloudState.asReadonly();
 
   setReactions(mode: ReactionMode): void {
     this.update('reactions', this.reactionsState, mode);
@@ -71,6 +91,22 @@ export class SettingsStore {
     this.update('mascotBoneCursor', this.mascotBoneCursorState, on);
   }
 
+  setVoice(on: boolean): void {
+    this.update('voice', this.voiceState, on);
+  }
+
+  setTutorVoice(id: string): void {
+    this.update('tutorVoice', this.tutorVoiceState, id);
+  }
+
+  setSpeechRate(rate: SpeechRate): void {
+    this.update('speechRate', this.speechRateState, rate);
+  }
+
+  setReadAloud(on: boolean): void {
+    this.update('readAloud', this.readAloudState, on);
+  }
+
   /** Read again for each user who signs in; a choice without a user lasts until the page closes. */
   private setting<T>(name: SettingName, parse: (saved: string | null) => T): WritableSignal<T> {
     return linkedSignal(() => parse(read(this.userId(), name)));
@@ -80,7 +116,7 @@ export class SettingsStore {
     return this.setting(name, (saved) => (saved === null ? byDefault : saved === 'true'));
   }
 
-  private update<T extends string | boolean>(
+  private update<T extends string | boolean | null>(
     name: SettingName,
     state: WritableSignal<T>,
     value: T,
@@ -98,6 +134,10 @@ export class SettingsStore {
 
 function toReactionMode(saved: string | null): ReactionMode {
   return REACTION_MODES.find((mode) => mode === saved) ?? 'full';
+}
+
+function toSpeechRate(saved: string | null): SpeechRate {
+  return SPEECH_RATES.find((rate) => rate === saved) ?? 'normal';
 }
 
 /** What the user saved, or null without a user, a value or storage. */

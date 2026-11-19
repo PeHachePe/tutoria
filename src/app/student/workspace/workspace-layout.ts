@@ -44,6 +44,7 @@ import {
   StatementZone,
 } from './statement-zone/statement-zone';
 import { TutorPanel } from './tutor/tutor-panel';
+import { TutorSpeaker } from './tutor-speaker';
 import { type Pointer, TutorStore } from './tutor-store';
 
 /**
@@ -111,6 +112,8 @@ export class WorkspaceLayout {
   private readonly userId = inject(AuthStore).userId;
   private readonly store = inject(AttemptStore);
   private readonly tutor = inject(TutorStore);
+  /** Not in the teacher's preview, who has no voice settings (D-061). */
+  private readonly speaker = inject(TutorSpeaker, { optional: true });
   private readonly settings = inject(SettingsStore);
   protected readonly reactionMode = this.settings.reactions;
   protected readonly reactionEmojis = this.settings.reactionEmojis;
@@ -204,6 +207,7 @@ export class WorkspaceLayout {
    */
   protected readonly floatingMascotMood = computed<MascotMood>(() => {
     if (this.tutorOpen()) return 'chat';
+    if (this.speaker?.speakingTurnId()) return 'speaking';
     return this.tutor.answering() ? 'thinking' : 'idle';
   });
 

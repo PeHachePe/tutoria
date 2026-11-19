@@ -286,7 +286,7 @@
     "settings.tutor.proactive": "El tutor em pot escriure per iniciativa pròpia",
     "settings.tutor.proactive.hint": "Si portes una estona sense avançar o superes alguna cosa que se't resistia, t'escriu sense que li ho demanis.",
     "settings.tutor.voice": "Parlar amb el tutor per veu",
-    "settings.tutor.voice.hint": "Aviat podràs parlar-li i escoltar les seves respostes. Mai no s'enregistra l'àudio.",
+    "settings.tutor.voice.hint": "Podràs escoltar les seves respostes. Mai no s'enregistra l'àudio.",
     "settings.privacy": "Privadesa",
     "settings.privacy.text": "Què registra TutorIA mentre treballes, per a què i qui ho pot veure.",
     "settings.privacy.link": "Veure les dades registrades",
@@ -1171,6 +1171,23 @@
     "system.fallback.down": "Baixa la reserva {$position}",
     "system.saved": "Proveïdor d'IA desat",
     "system.subjects.created": "Assignatura creada",
-    "system.subjects.saved": "Assignatura desada"
+    "system.subjects.saved": "Assignatura desada",
+    "settings.voice.tutorVoice": "Veu del tutor",
+    "settings.voice.choose": "Tria una veu per al tutor",
+    "settings.voice.loading": "Cercant les veus del teu navegador…",
+    "settings.voice.none": "El teu navegador no té veus en {$INTERPOLATION}: el tutor t'escriurà.",
+    "settings.voice.tryLabel": "Provar la veu {$nombre}",
+    "settings.voice.sample": "Hola, soc el teu tutor. Continuem amb l'exercici?",
+    "settings.voice.rate": "Velocitat",
+    "settings.voice.rate.slow": "Lenta",
+    "settings.voice.rate.normal": "Normal",
+    "settings.voice.rate.fast": "Ràpida",
+    "settings.voice.readAloud": "Llegir les respostes en veu alta",
+    "settings.voice.readAloud.hint": "Les respostes noves sonen soles. Si no, prem «Escoltar» sota la que vulguis sentir.",
+    "settings.voice.screenReader": "Si fas servir un lector de pantalla, no cal activar la veu: ja et llegeix les respostes.",
+    "tutor.voice.listen": "Escoltar",
+    "tutor.voice.stop": "Aturar",
+    "tutor.voice.chooseVoice": "Tria una veu per al tutor a la configuració",
+    "tutor.voice.closing": "T'ho deixo al xat."
   }
 }

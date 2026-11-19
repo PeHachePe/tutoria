@@ -57,6 +57,21 @@
   animation: mascot-tilt 1.6s ease-in-out infinite;
 }
 
+/* The tutor speaks (6.1a): it has no mouth of its own, so the tongue moves */
+.mascot-speaking .mascot-tongue {
+  animation: mascot-talk 0.45s ease-in-out infinite;
+}
+
+@keyframes mascot-talk {
+  0%,
+  100% {
+    transform: scale(0.6, 0.24);
+  }
+  50% {
+    transform: scale(0.7, 0.6);
+  }
+}
+
 /* Tests passed or a welcome: two hops */
 .mascot-joy .mascot-head {
   animation: mascot-hop 0.6s ease-out 2;

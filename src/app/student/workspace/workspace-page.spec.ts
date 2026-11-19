@@ -28,7 +28,10 @@ import { BrowserSignals } from './browser-signals';
 import { FakeTabChannel, provideTestEditingTab, takenByOtherTab } from './editing-tab-testing';
 import { CODE_SHARE, paneShareKey, STATEMENT_SHARE, tutorFloatingKey } from './pane-share';
 import { SettingsStore } from '../settings/settings-store';
+import { TutorSpeaker } from './tutor-speaker';
 import { TutorStore } from './tutor-store';
+import { FakeSpeechService, provideFakeSpeech } from '../../core/speech/speech-testing';
+import { StudentVoice } from '../settings/student-voice';
 import { COMPACT_WORKSPACE_QUERY } from './workspace-layout';
 import { WorkspacePage } from './workspace-page';
 
@@ -118,6 +121,13 @@ interface Setup {
 }
 
 describe('WorkspacePage', () => {
+  let speech: FakeSpeechService;
+
+  beforeEach(() => {
+    speech = new FakeSpeechService();
+    speech.voiceList = [{ id: 'jorge', name: 'Jorge', lang: 'es-ES' }];
+  });
+
   /**
    * Creates the page with TestBed rather than `render()`, which waits until the page is stable: a
    * request that never answers would keep it waiting forever.
@@ -159,6 +169,8 @@ describe('WorkspacePage', () => {
         AttemptStore,
         ...provideTestEditingTab(channel),
         TutorStore,
+        TutorSpeaker,
+        provideFakeSpeech(speech),
         BrowserSignals,
         { provide: TutorService, useValue: { ask: () => tutorAnswer() } },
         { provide: EventService, useValue: { send: sendEvents } },
@@ -450,6 +462,13 @@ describe('WorkspacePage', () => {
       await showEditor(fixture);
 
       expect(screen.queryByRole('textbox', { name: 'Código' })).toBeNull();
+    });
+
+    it('silences the tutor when the tab is hidden', async () => {
+      await renderPage();
+      const stop = vi.spyOn(TestBed.inject(TutorSpeaker), 'stop');
+      hideTab();
+      expect(stop).toHaveBeenCalled();
     });
 
     it('saves what the student typed when the tab is hidden, and says so', async () => {
@@ -1096,6 +1115,25 @@ describe('WorkspacePage', () => {
       await fixture.whenStable();
       expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
       expect(screen.queryByRole('button', { name: 'Mira el bucle.' })).toBeNull();
+    });
+
+    it('moves the tongue of the folded mascot while the tutor speaks', async () => {
+      const { fixture } = await renderPage();
+      await expand();
+      const settings = TestBed.inject(SettingsStore);
+      settings.setVoice(true);
+      settings.setTutorVoice('jorge');
+      settings.setReadAloud(true);
+      const voice = TestBed.inject(StudentVoice);
+      await vi.waitFor(() => {
+        TestBed.tick();
+        expect(voice.tutorVoice()).toBeDefined();
+      });
+
+      await TestBed.inject(TutorStore).requestHint();
+      await fixture.whenStable();
+      expect(speech.sentences).toEqual(['Mira el bucle.']);
+      expect(mascot().querySelector('app-mascot')?.classList).toContain('mascot-speaking');
     });
 
     it('tilts the head of the folded mascot while the tutor answers', async () => {

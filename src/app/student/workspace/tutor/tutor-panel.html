@@ -218,11 +218,55 @@
                 />
               }
               @if (turn.status === 'done') {
-                <time
-                  class="text-label-small text-on-surface-variant"
-                  [attr.datetime]="turn.createdAt"
-                  >{{ turn.createdAt | date: 'shortTime' }}</time
-                >
+                <div class="flex items-center gap-2">
+                  <time
+                    class="text-label-small text-on-surface-variant"
+                    [attr.datetime]="turn.createdAt"
+                    >{{ turn.createdAt | date: 'shortTime' }}</time
+                  >
+                  @if (speaker?.available()) {
+                    <!-- The same width saying «Escuchar» or «Parar», so a second click lands on it -->
+                    @if (speaker?.ready()) {
+                      @let speaking = speaker?.speakingTurnId() === turn.id;
+                      <button
+                        type="button"
+                        class="inline-grid min-h-6 place-items-center rounded-full px-2 text-label-medium text-primary outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary"
+                        (click)="toggleListen(turn.id)"
+                      >
+                        <span
+                          class="col-start-1 row-start-1 inline-flex items-center gap-1"
+                          [class.invisible]="speaking"
+                          [attr.aria-hidden]="speaking || null"
+                        >
+                          <mat-icon class="size-4! text-[1rem]!" aria-hidden="true"
+                            >volume_up</mat-icon
+                          >
+                          <ng-container i18n="@@tutor.voice.listen">Escuchar</ng-container>
+                        </span>
+                        <span
+                          class="col-start-1 row-start-1 inline-flex items-center gap-1"
+                          [class.invisible]="!speaking"
+                          [attr.aria-hidden]="!speaking || null"
+                        >
+                          <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">stop</mat-icon>
+                          <ng-container i18n="@@tutor.voice.stop">Parar</ng-container>
+                        </span>
+                      </button>
+                    } @else {
+                      <a
+                        class="inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-label-medium text-primary outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary"
+                        [routerLink]="settingsPath"
+                        i18n-matTooltip="@@tutor.voice.chooseVoice"
+                        matTooltip="Elige una voz para el tutor en los ajustes"
+                      >
+                        <mat-icon class="size-4! text-[1rem]!" aria-hidden="true"
+                          >volume_up</mat-icon
+                        >
+                        <ng-container i18n="@@tutor.voice.listen">Escuchar</ng-container>
+                      </a>
+                    }
+                  }
+                </div>
               }
             </div>
             <!-- The tutor turned down a request for the solution: the ways that do help (D-044) -->

@@ -98,4 +98,43 @@ describe('SettingsStore', () => {
     set(true);
     expect(get()).toBe(true);
   });
+
+  it('keeps the voice off, with no voice chosen, the normal speed and nothing read aloud', () => {
+    expect(store.voice()).toBe(false);
+    expect(store.tutorVoice()).toBeNull();
+    expect(store.speechRate()).toBe('normal');
+    expect(store.readAloud()).toBe(false);
+  });
+
+  it('remembers per user the voice, its speed and reading aloud', () => {
+    store.setVoice(true);
+    store.setTutorVoice('jorge');
+    store.setSpeechRate('slow');
+    store.setReadAloud(true);
+    expect(localStorage.getItem(settingKey('tutorVoice', 'u1'))).toBe('jorge');
+    expect(localStorage.getItem(settingKey('speechRate', 'u1'))).toBe('slow');
+
+    userId.set('u2');
+    expect([store.voice(), store.tutorVoice(), store.speechRate(), store.readAloud()]).toEqual([
+      false,
+      null,
+      'normal',
+      false,
+    ]);
+    userId.set('u1');
+    expect([store.voice(), store.tutorVoice(), store.speechRate(), store.readAloud()]).toEqual([
+      true,
+      'jorge',
+      'slow',
+      true,
+    ]);
+  });
+
+  it('takes an unknown saved speed as normal and an empty voice as none', () => {
+    localStorage.setItem(settingKey('speechRate', 'u2'), 'turbo');
+    localStorage.setItem(settingKey('tutorVoice', 'u2'), '');
+    userId.set('u2');
+    expect(store.speechRate()).toBe('normal');
+    expect(store.tutorVoice()).toBeNull();
+  });
 });

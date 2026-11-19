@@ -45,6 +45,7 @@ describe('Mascot', () => {
   it.each<[MascotMood, string]>([
     ['chat', 'mascot-chat'],
     ['thinking', 'mascot-thinking'],
+    ['speaking', 'mascot-speaking'],
     ['joy', 'mascot-joy'],
   ])('shows the %s mood with the class that animates it', async (mood, moodClass) => {
     const host = await renderMascot({ mood });

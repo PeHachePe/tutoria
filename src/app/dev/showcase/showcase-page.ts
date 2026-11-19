@@ -321,6 +321,7 @@ export class ShowcasePage {
     { value: 'idle', label: 'Reposo' },
     { value: 'chat', label: 'Chat abierto' },
     { value: 'thinking', label: 'Pensando' },
+    { value: 'speaking', label: 'Hablando' },
     { value: 'joy', label: 'Alegría' },
   ];
   protected readonly mascotMood = signal<MascotMood>('idle');

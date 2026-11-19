@@ -286,7 +286,7 @@
     "settings.tutor.proactive": "The tutor may write to me on its own",
     "settings.tutor.proactive.hint": "If you have been stuck for a while or you get past something that was resisting you, it writes without you asking.",
     "settings.tutor.voice": "Talk to the tutor by voice",
-    "settings.tutor.voice.hint": "Soon you will be able to talk to it and hear its answers. The audio is never recorded.",
+    "settings.tutor.voice.hint": "You will be able to listen to its answers. The audio is never recorded.",
     "settings.privacy": "Privacy",
     "settings.privacy.text": "What TutorIA records while you work, what for and who can see it.",
     "settings.privacy.link": "See the recorded data",
@@ -1171,6 +1171,23 @@
     "system.fallback.down": "Move fallback {$position} down",
     "system.saved": "AI provider saved",
     "system.subjects.created": "Subject created",
-    "system.subjects.saved": "Subject saved"
+    "system.subjects.saved": "Subject saved",
+    "settings.voice.tutorVoice": "Voice of the tutor",
+    "settings.voice.choose": "Choose a voice for the tutor",
+    "settings.voice.loading": "Looking for the voices of your browser…",
+    "settings.voice.none": "Your browser has no voices in {$INTERPOLATION}: the tutor will write to you.",
+    "settings.voice.tryLabel": "Try the voice {$nombre}",
+    "settings.voice.sample": "Hi, I am your tutor. Shall we go on with the exercise?",
+    "settings.voice.rate": "Speed",
+    "settings.voice.rate.slow": "Slow",
+    "settings.voice.rate.normal": "Normal",
+    "settings.voice.rate.fast": "Fast",
+    "settings.voice.readAloud": "Read the answers aloud",
+    "settings.voice.readAloud.hint": "New answers play by themselves. Otherwise, press «Listen» under the one you want to hear.",
+    "settings.voice.screenReader": "If you use a screen reader, you do not need to turn the voice on: it already reads the answers to you.",
+    "tutor.voice.listen": "Listen",
+    "tutor.voice.stop": "Stop",
+    "tutor.voice.chooseVoice": "Choose a voice for the tutor in the settings",
+    "tutor.voice.closing": "I have left it for you in the chat."
   }
 }

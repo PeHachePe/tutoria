@@ -20,6 +20,7 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { StatusChip } from '../../shared/status-chip/status-chip';
 import { nextInBlock } from '../catalog/catalog-blocks';
 import { AttemptStore } from './attempt-store';
+import { TutorSpeaker } from './tutor-speaker';
 import { BrowserSignals } from './browser-signals';
 import { WorkspaceLayout } from './workspace-layout';
 
@@ -88,6 +89,8 @@ export class WorkspacePage {
   protected readonly store = inject(AttemptStore);
   /** Pastes and absences, recorded for the attempt open for changes (2.8). */
   protected readonly signals = inject(BrowserSignals);
+  /** The tutor's voice: silent with the tab hidden (2.11). */
+  private readonly speaker = inject(TutorSpeaker);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
   protected readonly detail = resource({
@@ -192,6 +195,7 @@ export class WorkspacePage {
     if (this.document.visibilityState === 'hidden') {
       this.store.saveNow();
       this.signals.hidden();
+      this.speaker.stop();
     } else if (this.document.hasFocus()) {
       this.signals.returned();
     }
