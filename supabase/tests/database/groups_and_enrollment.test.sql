@@ -122,9 +122,14 @@ select throws_ok(
   'P0002', null,
   'nor in the group of another teacher'
 );
-select lives_ok(
+select throws_ok(
   $$ insert into enrollment (group_id, user_id) values
        ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000041') $$,
+  '42501', null,
+  'nobody enrolls but through enroll_students, which keeps its limit'
+);
+select lives_ok(
+  $$ select enroll_students('20000000-0000-4000-8000-000000000001', array['10000000-0000-4000-8000-000000000041']::uuid[]) $$,
   'a teacher enrolls a student in their group'
 );
 select is_empty(
@@ -132,28 +137,19 @@ select is_empty(
   'who is no longer found for it'
 );
 select throws_ok(
-  $$ insert into enrollment (group_id, user_id) values
-       ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000041') $$,
+  $$ select enroll_students('20000000-0000-4000-8000-000000000001', array['10000000-0000-4000-8000-000000000041']::uuid[]) $$,
   '23505', null,
   'only once'
 );
 select throws_ok(
-  $$ insert into enrollment (group_id, user_id) values
-       ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000003') $$,
+  $$ select enroll_students('20000000-0000-4000-8000-000000000001', array['10000000-0000-4000-8000-000000000003']::uuid[]) $$,
   '23514', null,
   'a teacher is not enrolled'
 );
 select throws_ok(
-  $$ insert into enrollment (group_id, user_id) values
-       ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000050') $$,
+  $$ select enroll_students('20000000-0000-4000-8000-000000000001', array['10000000-0000-4000-8000-000000000050']::uuid[]) $$,
   '23514', null,
   'nor a disabled student'
-);
-select throws_ok(
-  $$ insert into enrollment (group_id, user_id) values
-       ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000011') $$,
-  '42501', null,
-  'nor anybody in the group of another teacher'
 );
 select is(
   pg_temp.changed_rows($$ delete from enrollment where id = '30000000-0000-4000-8000-000000000025' $$),

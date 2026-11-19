@@ -48,7 +48,7 @@ export abstract class GroupService {
    */
   abstract saveGroup(draft: GroupDraft): Promise<ManagedGroup>;
 
-  /** `invalid` if a student started anything in it. */
+  /** `invalid` if a student started anything in it; `not_found` for a group of others. */
   abstract removeGroup(groupId: string): Promise<void>;
 
   /** By name. `not_found` for a group of others. */
@@ -58,8 +58,8 @@ export abstract class GroupService {
   abstract searchStudents(groupId: string, search: string): Promise<UserRef[]>;
 
   /**
-   * In one request, `MAX_ENROLLMENT_BATCH` at most; `invalid` for anybody who is not an active
-   * student or is already in the group.
+   * In one request, `MAX_ENROLLMENT_BATCH` at most, all or none; `invalid` for anybody who is not
+   * an active student or is already in the group, `not_found` for a group of others.
    */
   abstract enroll(groupId: string, userIds: readonly string[]): Promise<EnrolledStudent[]>;
 

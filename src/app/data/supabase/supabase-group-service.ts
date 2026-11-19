@@ -84,12 +84,19 @@ export class SupabaseGroupService extends GroupService {
     return toManaged(row, summaries.get(id) ?? EMPTY);
   }
 
-  /** The RLS deletes no row of a group somebody started, without an error. */
+  /**
+   * The RLS deletes no row, without an error, of a group somebody started or of one the user does
+   * not manage: only then a second request tells them apart, as the mock service does.
+   */
   async removeGroup(groupId: string): Promise<void> {
     const deleted = unwrap(
       await this.supabase.from('class_group').delete().eq('id', groupId).select('id'),
     );
-    if (deleted.length === 0) throw new DataError('invalid', 'The group cannot be deleted');
+    if (deleted.length > 0) return;
+    const seen = unwrap(await this.supabase.from('class_group').select('id').eq('id', groupId));
+    throw seen.length > 0
+      ? new DataError('invalid', 'A group somebody started keeps their attempts')
+      : new DataError('not_found');
   }
 
   /** Through the group, so one the RLS hides is `not_found` and not an empty list. */

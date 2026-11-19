@@ -45,19 +45,21 @@ export class MockGroupService extends GroupService {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
       const previous = id === undefined ? undefined : this.findGroup(id);
-      if (user.role !== 'admin' && draft.teacherId !== user.id) {
-        throw new DataError('forbidden', 'A teacher saves only groups of their own');
-      }
       const tables = this.db.tables();
-      // As `check_group_teacher`: checked when chosen, so a group of a disabled teacher stays editable
+      // In the order of Postgres: `check_group_teacher`, the RLS, the checks and the foreign key.
+      // The teacher is checked when chosen, so a group of a disabled teacher stays editable.
       const teacher = tables.users.find((candidate) => candidate.id === draft.teacherId);
       const chosen = previous?.teacherId !== draft.teacherId;
       if (chosen && (!teacher || !isActive(teacher, 'teacher'))) {
         throw new DataError('invalid', 'The teacher of a group is an active teacher');
       }
+      if (user.role !== 'admin' && draft.teacherId !== user.id) {
+        throw new DataError('forbidden', 'A teacher saves only groups of their own');
+      }
       const name = draft.name.trim();
       if (!name || !SCHOOL_YEAR_PATTERN.test(draft.schoolYear)) throw new DataError('invalid');
-      if (!tables.subjects.some((subject) => subject.id === draft.subjectId)) {
+      // A change keeps the subject: only a new group needs one that exists
+      if (!previous && !tables.subjects.some((subject) => subject.id === draft.subjectId)) {
         throw new DataError('invalid');
       }
       const group: ClassGroup = previous

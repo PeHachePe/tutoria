@@ -106,6 +106,22 @@ describe('MockGroupService', () => {
       });
     });
 
+    it('tells a teacher who is not valid before one of another teacher, as the trigger runs before the RLS', async () => {
+      const daw = SEED.groups.find((group) => group.id === DAW_GROUP_ID)!;
+
+      await expect(
+        service.saveGroup({ ...daw, teacherId: DAW_STUDENT_IDS[0] }),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+    });
+
+    it('ignores the subject of a change, even one that does not exist', async () => {
+      const daw = SEED.groups.find((group) => group.id === DAW_GROUP_ID)!;
+
+      await expect(service.saveGroup({ ...daw, subjectId: 'nope' })).resolves.toMatchObject({
+        group: { subjectId: daw.subjectId },
+      });
+    });
+
     it('changes the name and year but keeps the subject', async () => {
       const daw = SEED.groups.find((group) => group.id === DAW_GROUP_ID)!;
       const other = SEED.subjects.find((subject) => subject.id !== daw.subjectId)!;
@@ -124,6 +140,7 @@ describe('MockGroupService', () => {
       ['an empty name', { name: '  ' }],
       ['a year not like 2026/27', { schoolYear: '2026' }],
       ['an unknown subject', { subjectId: 'nope' }],
+      ['a student as the teacher', { teacherId: DAW_STUDENT_IDS[0] }],
     ])('rejects %s', async (_, changes) => {
       await expect(service.saveGroup({ ...DRAFT, ...changes })).rejects.toMatchObject({
         kind: 'invalid',

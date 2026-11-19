@@ -130,13 +130,23 @@ describe('SupabaseGroupService', () => {
     await expect(service.saveGroup(DRAFT)).rejects.toMatchObject({ kind });
   });
 
-  it('removes a group, and one the RLS keeps is invalid', async () => {
+  it('removes a group', async () => {
     server.on('DELETE', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
+
     await expect(service.removeGroup('daw')).resolves.toBeUndefined();
     expect(server.sentTo('DELETE', '/rest/v1/class_group')[0].params.get('id')).toBe('eq.daw');
+    expect(server.sentTo('GET', '/rest/v1/class_group')).toHaveLength(0);
+  });
 
-    server.on('DELETE', '/rest/v1/class_group', { body: [] });
+  it('keeps a started group it still sees as invalid, and one it does not see is not found', async () => {
+    server
+      .on('DELETE', '/rest/v1/class_group', { body: [] })
+      .on('GET', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
     await expect(service.removeGroup('daw')).rejects.toMatchObject({ kind: 'invalid' });
+    expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('id')).toBe('eq.daw');
+
+    server.on('GET', '/rest/v1/class_group', { body: [] });
+    await expect(service.removeGroup('dam')).rejects.toMatchObject({ kind: 'not_found' });
   });
 
   it('lists the students of a group by name', async () => {
