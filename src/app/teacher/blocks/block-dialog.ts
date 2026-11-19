@@ -122,7 +122,7 @@ export interface BlockDialogData {
           >
           <!-- A resit or an exam appears by itself on its day: until then, as if hidden -->
           <div class="mt-4 flex flex-col gap-x-4 sm:flex-row">
-            <mat-form-field class="sm:flex-1">
+            <mat-form-field class="sm:flex-3">
               <mat-label i18n="@@blockDialog.opensDay">Se abre a los alumnos el día</mat-label>
               <input matInput [matDatepicker]="dayPicker" [formField]="blockForm.opensDay" />
               <mat-datepicker-toggle matIconSuffix [for]="dayPicker" />
@@ -134,7 +134,7 @@ export interface BlockDialogData {
                 <mat-error>{{ error.message }}</mat-error>
               }
             </mat-form-field>
-            <mat-form-field class="sm:flex-1">
+            <mat-form-field class="sm:flex-2">
               <mat-label i18n="@@blockDialog.opensTime">Hora</mat-label>
               <input matInput [matTimepicker]="timePicker" [formField]="blockForm.opensTime" />
               <mat-timepicker-toggle matIconSuffix [for]="timePicker" />
