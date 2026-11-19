@@ -5,6 +5,7 @@ import { AdminService } from '../admin-service';
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
 import { BlockService } from '../block-service';
+import { GroupService } from '../group-service';
 import { StatsService } from '../stats-service';
 import { CodeRunnerService } from '../code-runner-service';
 import { EventService } from '../event-service';
@@ -21,6 +22,7 @@ import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
 import { SupabaseLiveService } from './supabase-live-service';
 import { SupabaseBlockService } from './supabase-block-service';
+import { SupabaseGroupService } from './supabase-group-service';
 import { SupabaseStatsService } from './supabase-stats-service';
 import { SupabaseTutorService } from './supabase-tutor-service';
 
@@ -50,6 +52,7 @@ describe('provideSupabaseData', () => {
     expect(TestBed.inject(TutorService)).toBeInstanceOf(SupabaseTutorService);
     expect(TestBed.inject(LiveService)).toBeInstanceOf(SupabaseLiveService);
     expect(TestBed.inject(BlockService)).toBeInstanceOf(SupabaseBlockService);
+    expect(TestBed.inject(GroupService)).toBeInstanceOf(SupabaseGroupService);
     expect(TestBed.inject(StatsService)).toBeInstanceOf(SupabaseStatsService);
     expect(TestBed.inject(AdminService)).toBeInstanceOf(SupabaseAdminService);
   });

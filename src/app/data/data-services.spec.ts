@@ -5,6 +5,7 @@ import { AdminService } from './admin-service';
 import { AttemptService } from './attempt-service';
 import { AuthService } from './auth-service';
 import { BlockService } from './block-service';
+import { GroupService } from './group-service';
 import { CodeRunnerService } from './code-runner-service';
 import { EventService } from './event-service';
 import { ExerciseService } from './exercise-service';
@@ -21,6 +22,7 @@ const DATA_SERVICES: AbstractType<unknown>[] = [
   EventService,
   LiveService,
   BlockService,
+  GroupService,
   StatsService,
   AdminService,
 ];

@@ -761,6 +761,14 @@ export type Database = {
           on_time: number;
         }[];
       };
+      group_summaries: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          group_id: string;
+          is_started: boolean;
+          student_count: number;
+        }[];
+      };
       group_work_stats: {
         Args: { target_group_id: string };
         Returns: {
@@ -778,6 +786,8 @@ export type Database = {
         }[];
       };
       hidden_test_count: { Args: { target_exercise_id: string }; Returns: number };
+      is_active_student: { Args: { target_user_id: string }; Returns: boolean };
+      is_active_teacher: { Args: { target_user_id: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_assigned_by_others: { Args: { target_exercise_id: string }; Returns: boolean };
       is_assigned_to_me: { Args: { target_exercise_id: string }; Returns: boolean };
@@ -790,6 +800,7 @@ export type Database = {
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_started_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       is_started_block: { Args: { target_block_id: string }; Returns: boolean };
+      is_started_group: { Args: { target_group_id: string }; Returns: boolean };
       is_valid_ai_provider: { Args: { setting: Json }; Returns: boolean };
       is_valid_exercise_translations: {
         Args: { source_locale: Database['public']['Enums']['app_locale']; translations: Json };
@@ -933,6 +944,14 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      search_students: {
+        Args: { search: string; target_group_id: string };
+        Returns: {
+          email: string;
+          id: string;
+          name: string;
+        }[];
       };
       submit_attempt: {
         Args: { target_attempt_id: string };

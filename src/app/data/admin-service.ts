@@ -1,7 +1,7 @@
 import type { UserLinks } from './admin/user-rules';
 import type { AiProviderSetting } from './ai-provider-setting';
 import type { Subject } from './subject';
-import type { AppUser, ClassGroup, Enrollment, Role, UserStatus } from './user';
+import type { AppUser, Role, UserStatus } from './user';
 
 export interface NewUser {
   readonly name: string;
@@ -28,14 +28,11 @@ export interface UserEntry {
   readonly links: UserLinks;
 }
 
-/** A new group has no id yet; an existing one keeps it. */
-export type GroupDraft = Omit<ClassGroup, 'id'> & { readonly id?: string };
-
 /** A new subject has no id yet; an existing one keeps it. */
 export type SubjectDraft = Omit<Subject, 'id'> & { readonly id?: string };
 
 /**
- * Users, groups, enrollment and system settings: administrators only. Abstract class without a decorator:
+ * Users, subjects and system settings: administrators only; the groups are in `GroupService` (5.2a). Abstract class without a decorator:
  * it is the injection token (4.2, D-005). Refined in phase 5.
  */
 export abstract class AdminService {
@@ -58,16 +55,6 @@ export abstract class AdminService {
   abstract listSubjects(): Promise<Subject[]>;
 
   abstract saveSubject(subject: SubjectDraft): Promise<Subject>;
-
-  abstract listGroups(): Promise<ClassGroup[]>;
-
-  abstract saveGroup(group: GroupDraft): Promise<ClassGroup>;
-
-  abstract listEnrollments(groupId: string): Promise<Enrollment[]>;
-
-  abstract enroll(groupId: string, userId: string): Promise<Enrollment>;
-
-  abstract unenroll(enrollmentId: string): Promise<void>;
 
   abstract getAiProvider(): Promise<AiProviderSetting>;
 

@@ -5,6 +5,7 @@ import { AdminService } from '../admin-service';
 import { AttemptService } from '../attempt-service';
 import { AuthService } from '../auth-service';
 import { BlockService } from '../block-service';
+import { GroupService } from '../group-service';
 import { CodeRunnerService } from '../code-runner-service';
 import { EventService } from '../event-service';
 import { ExerciseService } from '../exercise-service';
@@ -18,6 +19,7 @@ import { SupabaseAdminService } from './supabase-admin-service';
 import { SupabaseAttemptService } from './supabase-attempt-service';
 import { SupabaseAuthService } from './supabase-auth-service';
 import { SupabaseBlockService } from './supabase-block-service';
+import { SupabaseGroupService } from './supabase-group-service';
 import { SupabaseCodeRunnerService } from './supabase-code-runner-service';
 import { SupabaseEventService } from './supabase-event-service';
 import { SupabaseExerciseService } from './supabase-exercise-service';
@@ -46,6 +48,7 @@ export function provideSupabaseData(config: SupabaseConfig): EnvironmentProvider
     { provide: TutorService, useClass: SupabaseTutorService },
     { provide: LiveService, useClass: SupabaseLiveService },
     { provide: BlockService, useClass: SupabaseBlockService },
+    { provide: GroupService, useClass: SupabaseGroupService },
     { provide: StatsService, useClass: SupabaseStatsService },
     { provide: AdminService, useClass: SupabaseAdminService },
   ]);

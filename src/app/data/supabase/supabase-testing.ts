@@ -179,6 +179,17 @@ export function exerciseRow(overrides: Partial<Row<'exercise'>> = {}): Row<'exer
   };
 }
 
+export function groupRow(overrides: Partial<Row<'class_group'>> = {}): Row<'class_group'> {
+  return {
+    id: 'daw',
+    name: '1.º DAW A',
+    school_year: '2026/27',
+    teacher_id: 'teacher-1',
+    subject_id: 'subject-1',
+    ...overrides,
+  };
+}
+
 export function subjectRow(overrides: Partial<Row<'subject'>> = {}): Row<'subject'> {
   return {
     id: 'subject-1',

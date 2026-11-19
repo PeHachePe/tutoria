@@ -5,7 +5,7 @@ import { AdminService, type NewUser, type UserChanges, type UserEntry } from '..
 import type { AiProviderSetting } from '../ai-provider-setting';
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
-import type { AppUser, ClassGroup, Enrollment } from '../user';
+import type { AppUser } from '../user';
 import { SUPABASE_CLIENT } from './supabase-client';
 import { toFunctionDataError, unwrap } from './supabase-error';
 import { type Row, toAppUser } from './supabase-rows';
@@ -17,8 +17,8 @@ export const ADMIN_USERS_FUNCTION = 'admin-users';
  * The administration in Supabase (5.1a, D-072). The list of accounts is read from `app_user`, which
  * the RLS gives whole to the administration; the accounts are created and changed by the Edge
  * Function `admin-users`, the only one with the API of administration of Auth. Its 409 (an email
- * with an account, a change the rules forbid) arrives as `invalid`. The groups, the subjects and the
- * provider arrive in 5.2a and 5.3.
+ * with an account, a change the rules forbid) arrives as `invalid`. The subjects and the provider
+ * arrive in 5.3; the groups are in `SupabaseGroupService` (5.2a).
  */
 @Service({ autoProvided: false })
 export class SupabaseAdminService extends AdminService {
@@ -63,26 +63,6 @@ export class SupabaseAdminService extends AdminService {
     return unavailable();
   }
 
-  listGroups(): Promise<ClassGroup[]> {
-    return unavailable();
-  }
-
-  saveGroup(): Promise<ClassGroup> {
-    return unavailable();
-  }
-
-  listEnrollments(): Promise<Enrollment[]> {
-    return unavailable();
-  }
-
-  enroll(): Promise<Enrollment> {
-    return unavailable();
-  }
-
-  unenroll(): Promise<void> {
-    return unavailable();
-  }
-
   getAiProvider(): Promise<AiProviderSetting> {
     return unavailable();
   }
@@ -102,7 +82,7 @@ export class SupabaseAdminService extends AdminService {
   }
 }
 
-/** What arrives in 5.2a and 5.3. */
+/** What arrives in 5.3. */
 function unavailable(): Promise<never> {
   return Promise.reject(new DataError('unavailable'));
 }

@@ -108,15 +108,10 @@ describe('SupabaseAdminService', () => {
     });
   });
 
-  it('leaves the groups, the subjects and the provider for 5.2a and 5.3', async () => {
+  it('leaves the subjects and the provider for 5.3', async () => {
     const pending = [
       service.listSubjects(),
       service.saveSubject(),
-      service.listGroups(),
-      service.saveGroup(),
-      service.listEnrollments(),
-      service.enroll(),
-      service.unenroll(),
       service.getAiProvider(),
       service.setAiProvider(),
     ];

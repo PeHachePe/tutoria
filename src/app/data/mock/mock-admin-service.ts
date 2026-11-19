@@ -13,7 +13,7 @@ import { AdminService, type NewUser, type UserChanges, type UserEntry } from '..
 import type { AiProviderSetting } from '../ai-provider-setting';
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
-import type { AppUser, ClassGroup, Enrollment } from '../user';
+import type { AppUser, ClassGroup } from '../user';
 import { findRow, now } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -21,7 +21,7 @@ import { MockNetwork } from './mock-network';
 /**
  * The accounts in MockDb, with the rules of the Edge Function `admin-users` (5.1a, D-072): only the
  * administration, an email has one account, and the same limits and changes as the function. The
- * groups, the subjects and the provider arrive in 5.2a and 5.3.
+ * subjects and the provider arrive in 5.3; the groups are in `MockGroupService` (5.2a).
  */
 @Service({ autoProvided: false })
 export class MockAdminService extends AdminService {
@@ -115,26 +115,6 @@ export class MockAdminService extends AdminService {
     return unavailable();
   }
 
-  listGroups(): Promise<ClassGroup[]> {
-    return unavailable();
-  }
-
-  saveGroup(): Promise<ClassGroup> {
-    return unavailable();
-  }
-
-  listEnrollments(): Promise<Enrollment[]> {
-    return unavailable();
-  }
-
-  enroll(): Promise<Enrollment> {
-    return unavailable();
-  }
-
-  unenroll(): Promise<void> {
-    return unavailable();
-  }
-
   getAiProvider(): Promise<AiProviderSetting> {
     return unavailable();
   }
@@ -144,7 +124,7 @@ export class MockAdminService extends AdminService {
   }
 }
 
-/** What arrives in 5.2a and 5.3. */
+/** What arrives in 5.3. */
 function unavailable(): Promise<never> {
   return Promise.reject(new DataError('unavailable'));
 }
