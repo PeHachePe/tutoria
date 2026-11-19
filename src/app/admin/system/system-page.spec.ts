@@ -231,6 +231,28 @@ describe('SystemPage', () => {
     );
   });
 
+  it('saves when only a fallback fails, which it says', async () => {
+    await renderSystem();
+    const fallback = within(screen.getByRole('group', { name: 'Respaldo 1' })).getByRole(
+      'textbox',
+      {
+        name: 'Modelo',
+      },
+    );
+    await userEvent.clear(fallback);
+    await userEvent.type(fallback, 'gemma-fail');
+
+    await checkConnection();
+    expect(text(screen.getByRole('status'))).toContain(
+      'gemma-fail: El proveedor no conoce ese modelo.',
+    );
+    expect(screen.queryByText(/El modelo principal no responde/)).toBeNull();
+    const setProvider = vi.spyOn(service, 'setAiProvider');
+    await userEvent.click(button('Guardar'));
+    await settle();
+    expect(setProvider).toHaveBeenCalled();
+  });
+
   it('says when the check or the save fails', async () => {
     await renderSystem();
     vi.spyOn(service, 'checkAiProvider').mockRejectedValueOnce(new DataError('rate_limited'));

@@ -1160,7 +1160,7 @@
     "system.subjects.edit": "Edit",
     "system.preset.ollama": "Ollama (on the server)",
     "system.preset.other": "Other",
-    "system.preset.same": "The main one",
+    "system.preset.same": "Same as the main one",
     "system.format.schema": "JSON with a schema",
     "system.format.object": "Plain JSON",
     "system.format.none": "No format",
@@ -1195,6 +1195,8 @@
     "settings.voice.stopLabel": "Stop trying the voice {$nombre}",
     "providerForm.error.provider": "Some data of the provider is missing",
     "system.fallback.noKey": "no key",
-    "system.save.unchanged": "There are no changes to save"
+    "system.save.unchanged": "There are no changes to save",
+    "providerForm.error.repeated": "Already earlier in the list",
+    "subjectForm.error.taken": "There is already a subject with that name"
   }
 }

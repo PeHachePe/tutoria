@@ -341,7 +341,7 @@ export class SystemPage {
       ]);
     };
     const ref = this.dialog.open<SubjectDialog, SubjectDialogData, boolean>(SubjectDialog, {
-      data: { subject, locale: this.locale, save },
+      data: { subject, subjects: this.subjectList(), locale: this.locale, save },
       injector: this.injector,
     });
     return (await firstValueFrom(ref.afterClosed())) === true;

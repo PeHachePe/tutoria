@@ -129,9 +129,31 @@ export function toProviderFormModel(setting: AiProviderSetting): ProviderFormMod
   };
 }
 
+/** The Edge Functions only take whole milliseconds (`isTimeout`): a field may have decimals. */
+function msOf(seconds: number): number {
+  return Math.round(seconds * MS_PER_SECOND);
+}
+
+/**
+ * Whether a fallback calls a model already called before it, the main one included: the Edge
+ * Functions leave it out (`providerSettingOf`), and the check says it is `invalid`. A model is its
+ * URL and its name: the same name at another provider is another model.
+ */
+function repeatsEarlier(model: ProviderFormModel, fallback: FallbackFormModel): boolean {
+  const keyOf = (baseUrl: string, name: string) => `${baseUrl.trim()} ${name.trim()}`;
+  const fallbackKey = (entry: FallbackFormModel) =>
+    keyOf(entry.presetId === SAME_PROVIDER ? model.baseUrl : entry.baseUrl, entry.model);
+  const index = model.fallbacks.indexOf(fallback);
+  const earlier = [
+    keyOf(model.baseUrl, model.model),
+    ...model.fallbacks.slice(0, index).map(fallbackKey),
+  ];
+  return earlier.includes(fallbackKey(fallback));
+}
+
 function toFallbackSetting(fallback: FallbackFormModel): AiModelSetting {
   const model = fallback.model.trim();
-  const timeoutMs = fallback.timeoutSeconds * MS_PER_SECOND;
+  const timeoutMs = msOf(fallback.timeoutSeconds);
   if (fallback.presetId === SAME_PROVIDER) return { model, timeoutMs };
   return {
     baseUrl: fallback.baseUrl.trim(),
@@ -155,7 +177,7 @@ export function toProviderSetting(model: ProviderFormModel): AiProviderSetting {
     ...(model.responseFormat === DEFAULT_RESPONSE_FORMAT
       ? {}
       : { responseFormat: model.responseFormat }),
-    timeoutMs: model.timeoutSeconds * MS_PER_SECOND,
+    timeoutMs: msOf(model.timeoutSeconds),
     ...(model.fallbacks.length === 0 ? {} : { fallbacks: model.fallbacks.map(toFallbackSetting) }),
   };
 }
@@ -264,6 +286,14 @@ export function providerSchema(path: SchemaPathTree<ProviderFormModel>): void {
   );
   applyEach(path.fallbacks, (fallback) => {
     modelRules(fallback);
+    validate(fallback.model, ({ value, valueOf }) =>
+      value().trim() !== '' && repeatsEarlier(valueOf(path), valueOf(fallback))
+        ? {
+            kind: 'repeated',
+            message: $localize`:@@providerForm.error.repeated:Ya está antes en la lista`,
+          }
+        : null,
+    );
     applyWhen(fallback, ({ value }) => value().presetId === OTHER_PROVIDER, callRules);
   });
   // The rules above say what is wrong field by field; this one keeps the form from ever allowing

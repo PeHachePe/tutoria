@@ -18,11 +18,18 @@ import { LOCALE_NAMES } from '../../core/i18n/locale-names';
 import type { SubjectDraft } from '../../data/admin-service';
 import type { ContentLocale } from '../../data/localized-text';
 import type { Subject } from '../../data/subject';
-import { subjectSchema, toSubjectDraft, toSubjectFormModel } from './subject-form';
+import {
+  subjectSchema,
+  takenSubjectNames,
+  toSubjectDraft,
+  toSubjectFormModel,
+} from './subject-form';
 
 /** The subject to edit, or null for a new one, and the language of the interface. */
 export interface SubjectDialogData {
   readonly subject: Subject | null;
+  /** Every subject, to turn down a name another one already shows. */
+  readonly subjects: readonly Subject[];
   readonly locale: ContentLocale;
   /** Saves the subject; the dialog stays open, with the error, if it fails. */
   readonly save: (draft: SubjectDraft) => Promise<void>;
@@ -124,20 +131,26 @@ export class SubjectDialog {
 
   private readonly model = signal(toSubjectFormModel(this.data.subject, this.data.locale));
 
-  protected readonly subjectForm = form(this.model, subjectSchema, {
-    submission: {
-      action: async (field) => {
-        this.failed.set(false);
-        try {
-          await this.data.save(toSubjectDraft(field().value(), this.data.subject?.id ?? null));
-          this.ref.close(true);
-        } catch {
-          this.failed.set(true);
-        }
-        return undefined;
+  private readonly taken = takenSubjectNames(this.data.subjects, this.data.subject?.id ?? null);
+
+  protected readonly subjectForm = form(
+    this.model,
+    subjectSchema(() => this.taken),
+    {
+      submission: {
+        action: async (field) => {
+          this.failed.set(false);
+          try {
+            await this.data.save(toSubjectDraft(field().value(), this.data.subject?.id ?? null));
+            this.ref.close(true);
+          } catch {
+            this.failed.set(true);
+          }
+          return undefined;
+        },
       },
     },
-  });
+  );
 
   /** The name in the language it is written in. */
   protected readonly source = computed(() => {

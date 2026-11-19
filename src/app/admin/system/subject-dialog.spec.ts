@@ -4,6 +4,7 @@ import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { DataError } from '../../data/data-error';
+import type { Subject } from '../../data/subject';
 import { SubjectDialog, type SubjectDialogData } from './subject-dialog';
 
 async function openDialog(data: SubjectDialogData, name: string) {
@@ -17,17 +18,30 @@ async function openDialog(data: SubjectDialogData, name: string) {
   return { ref, dialog };
 }
 
+const WEB: Subject = { id: 's', name: 'Web', sourceLocale: 'es', translations: {} };
+
 describe('SubjectDialog', () => {
   it('creates a subject with a translation, and stays open if it fails', async () => {
     let fail!: (error: unknown) => void;
     const save = vi.fn<SubjectDialogData['save']>(
       () => new Promise((_, reject) => (fail = reject)),
     );
-    const { dialog } = await openDialog({ subject: null, locale: 'es', save }, 'Nueva asignatura');
+    const { dialog } = await openDialog(
+      { subject: null, subjects: [WEB], locale: 'es', save },
+      'Nueva asignatura',
+    );
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Crear la asignatura' }));
     expect(save).not.toHaveBeenCalled();
     expect(within(dialog).getByText('Escribe el nombre de la asignatura')).toBeTruthy();
+
+    // A name another subject has, with other capitals, is not saved either
+    const name = within(dialog).getByRole('textbox', { name: 'Nombre' });
+    await userEvent.type(name, 'web');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear la asignatura' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(within(dialog).getByText('Ya hay una asignatura con ese nombre')).toBeTruthy();
+    await userEvent.clear(name);
 
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), 'Bases de datos');
     await userEvent.type(
@@ -50,7 +64,9 @@ describe('SubjectDialog', () => {
     const save = vi.fn<SubjectDialogData['save']>(() => Promise.resolve());
     const { ref, dialog } = await openDialog(
       {
-        subject: { id: 's', name: 'Web', sourceLocale: 'es', translations: {} },
+        subject: WEB,
+        // Its own name is not taken
+        subjects: [WEB],
         locale: 'en',
         save,
       },

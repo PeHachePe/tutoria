@@ -1195,6 +1195,8 @@
     "settings.voice.stopLabel": "Aturar la prova de la veu {$nombre}",
     "providerForm.error.provider": "Falta alguna dada del proveïdor",
     "system.fallback.noKey": "sense clau",
-    "system.save.unchanged": "No hi ha canvis per desar"
+    "system.save.unchanged": "No hi ha canvis per desar",
+    "providerForm.error.repeated": "Ja és abans a la llista",
+    "subjectForm.error.taken": "Ja hi ha una assignatura amb aquest nom"
   }
 }

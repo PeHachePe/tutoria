@@ -17,11 +17,11 @@ Que la administración elija el proveedor de IA que responde como tutor y traduc
 Una columna, con un ancho máximo de lectura, en los tres tamaños; las dos secciones, una tras otra, cada una en su tarjeta con su `h2`:
 
 - **Proveedor de IA:** su explicación; «Proveedor» (Gemini, Groq, OpenRouter, Ollama local u «Otro»), «URL base», «Modelo principal», «Tiempo máximo (segundos)», «Nombre del secreto con la clave» (con su pista: la clave no se escribe aquí) y «Formato de la respuesta». Con un proveedor predefinido, la URL, el secreto y el formato se ven bloqueados. En escritorio y tablet, modelo y tiempo en una fila, y secreto y formato en otra; en móvil, uno bajo otro.
-  - **Respaldos, en orden (D-077):** una fila por respaldo con su proveedor («El del principal» por defecto, uno predefinido u «Otro»), su modelo, sus segundos, «Subir», «Bajar» y «Quitar». Con un predefinido, su URL y su secreto (o «sin clave») en una línea; con «Otro», sus campos. En el móvil, el modelo y los segundos en una fila. «Añadir un respaldo» se deshabilita con cinco.
+  - **Respaldos, en orden (D-077):** una fila por respaldo con su proveedor («El del principal» por defecto, uno predefinido u «Otro»), su modelo, sus segundos, «Subir», «Bajar» y «Quitar». Con un predefinido, su URL y su secreto (o «sin clave») en una línea; con «Otro», sus campos. En el móvil, el modelo y los segundos en una fila. Un respaldo que repite un modelo de antes (el principal incluido; el mismo nombre en otro proveedor es otro modelo) dice «Ya está antes en la lista», porque las funciones lo descartarían. «Añadir un respaldo» se deshabilita con cinco.
   - **Pie:** «Probar la conexión», «Guardar» y «Descartar los cambios». «Guardar» está deshabilitado, con su motivo debajo, mientras no haya nada que guardar («No hay cambios que guardar»), falte la prueba de lo que se va a guardar («Prueba la conexión antes de guardar») o el principal no la supere.
   - **Resultado de la prueba:** una lista bajo el pie, una línea por modelo con su icono y «Responde en N ms» o su problema.
 - **Asignaturas:** la lista por nombre en el idioma de la interfaz, cada una con los idiomas en que está y «Editar»; «Nueva asignatura» en la cabecera. Con muchas, la lista se desplaza dentro de su zona.
-- Diálogo de la asignatura: idioma en que se escribe, nombre y traducciones opcionales, como el de los bloques.
+- Diálogo de la asignatura: idioma en que se escribe, nombre y traducciones opcionales, como el de los bloques. Ningún nombre puede ser uno que otra asignatura ya muestra en ese idioma (sin tildes ni mayúsculas): «Ya hay una asignatura con ese nombre», porque los docentes no las distinguirían al elegir la de un grupo.
 
 ## Interacciones
 

@@ -114,6 +114,17 @@ describe('toProviderSetting', () => {
     expect(toProviderSetting(toProviderFormModel(setting))).toEqual(setting);
   });
 
+  it('saves whole milliseconds, the only ones the Edge Functions take', () => {
+    const model = toProviderFormModel(SEED);
+    const setting = toProviderSetting({
+      ...model,
+      timeoutSeconds: 10.0005,
+      fallbacks: [{ ...model.fallbacks[0], timeoutSeconds: 2.5 }],
+    });
+    expect(setting.timeoutMs).toBe(10001);
+    expect(setting.fallbacks).toEqual([{ model: 'gemma-4-31b-it', timeoutMs: 2500 }]);
+  });
+
   it('saves a fallback opened with only its name as an object', () => {
     const setting = toProviderSetting(toProviderFormModel({ ...SEED, fallbacks: ['gemma-x'] }));
     expect(setting.fallbacks).toEqual([{ model: 'gemma-x', timeoutMs: 10000 }]);
@@ -269,6 +280,30 @@ describe('providerSchema', () => {
     expect(kinds(tree.fallbacks[0].baseUrl)).toEqual([]);
     expect(kinds(tree.fallbacks[1].baseUrl)).toEqual(['pattern']);
     expect(kinds(tree.fallbacks[1].keySecret)).toEqual(['pattern']);
+  });
+
+  it('turns down a model already in the list, the main one included, as the Edge Functions', () => {
+    const base = toProviderFormModel(SEED);
+    const groq = (model: string) => ({ ...applyPreset(newFallback(30), 'groq'), model });
+    const tree = formOf({
+      ...base,
+      fallbacks: [
+        { ...newFallback(30), model: ' gemini-3.5-flash-lite ' },
+        { ...newFallback(30), model: 'gemma-4-31b-it' },
+        { ...newFallback(30), model: 'gemma-4-31b-it' },
+        groq('gemma-4-31b-it'),
+        groq('gemma-4-31b-it'),
+      ],
+    });
+    expect([0, 1, 2, 3, 4].map((index) => kinds(tree.fallbacks[index].model))).toEqual([
+      ['repeated'],
+      [],
+      ['repeated'],
+      // Another provider: another model, though its name is the same
+      [],
+      ['repeated'],
+    ]);
+    expect(tree.fallbacks[0].model().errors()[0].message).toBe('Ya está antes en la lista');
   });
 
   it(`takes ${MAX_AI_FALLBACKS} fallbacks at most`, () => {
