@@ -42,6 +42,20 @@ async function focused(dialog: HTMLElement): Promise<void> {
 }
 
 describe('GroupDialog', () => {
+  it('shows how to write the year only while it is not right', async () => {
+    open({});
+    const dialog = await screen.findByRole('dialog', { name: 'Nuevo grupo' });
+    await focused(dialog);
+    expect(within(dialog).queryByText('Como 2026/27')).toBeNull();
+
+    const year = within(dialog).getByRole('textbox', { name: 'Curso' });
+    await userEvent.clear(year);
+    await userEvent.type(year, '2026');
+    expect(within(dialog).getByText('Como 2026/27')).toBeTruthy();
+    await userEvent.type(year, '/27');
+    expect(within(dialog).queryByText('Como 2026/27')).toBeNull();
+  });
+
   it('creates a group of the teacher, without a field for its teacher', async () => {
     const save = open({});
     const dialog = await screen.findByRole('dialog', { name: 'Nuevo grupo' });

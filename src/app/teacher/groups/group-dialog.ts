@@ -80,7 +80,10 @@ export interface GroupDialogData {
           <mat-form-field>
             <mat-label i18n="@@groupDialog.year">Curso</mat-label>
             <input matInput [formField]="groupForm.schoolYear" autocomplete="off" />
-            <mat-hint i18n="@@groupDialog.year.hint">Como 2026/27</mat-hint>
+            <!-- Only while it is not right: under a right year it read as a second value -->
+            @if (groupForm.schoolYear().invalid()) {
+              <mat-hint i18n="@@groupDialog.year.hint">Como 2026/27</mat-hint>
+            }
             @if (groupForm.schoolYear().errors()[0]; as error) {
               <mat-error>{{ error.message }}</mat-error>
             }
