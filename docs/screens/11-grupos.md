@@ -73,7 +73,7 @@ Escritorio, tablet y móvil, en un solo panel que llega hasta el final de la ven
 - [x] Los grupos del docente (todos, para el administrador, con su docente).
 - [x] Crear, editar y eliminar un grupo; el empezado no se elimina, con su motivo.
 - [x] Matricular buscando por nombre o correo, varios a la vez o el alumnado de otra clase; dar de baja conservando el trabajo (RF-16).
-- [ ] Revisión visual del autor de la versión rehecha.
+- [x] Revisión visual del autor de la versión rehecha (dada por buena el 20/11/2026, con la del 5.2d).
 - [x] Duplicar una clase para el curso siguiente o una paralela, con sus bloques (fechas movidas o sin ellas) y, si se quiere, su alumnado (5.2c).
 - [x] La clase existe una sola vez y la comparten sus docentes; quien crea una que ya existe se une a ella (5.2d).
 - [x] El alumnado es de la clase: matricular en ella llega a todas sus asignaturas, y cada grupo admite excepciones (5.2d).
@@ -87,7 +87,7 @@ Escritorio, tablet y móvil, en un solo panel que llega hasta el final de la ven
 - [x] El curso se elige, nunca se escribe: «Este curso» o «El que viene» (5.2d).
 - [x] La tabla ocupa todo el alto de la ventana, con la columna de los nombres fija y con fondo propio (5.2d).
 - [x] «Añadir asignaturas» con la estética de matricular, para muchas asignaturas: filtro, elegidas abajo, cada una de toda la clase o desdoble (5.2d).
-- [ ] Revisión visual del autor de lo del 5.2d.
+- [x] Revisión visual del autor de lo del 5.2d (20/11/2026: «de momento la doy por buena»).
 
 ## Fuera de alcance
 
