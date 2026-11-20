@@ -1,103 +1,66 @@
-import {
-  maxLength,
-  pattern,
-  required,
-  type SchemaPathTree,
-  validate,
-} from '@angular/forms/signals';
+import { maxLength, required, type SchemaPathTree, validate } from '@angular/forms/signals';
 
 import {
-  type ClassDraft,
+  type GroupDraft,
   type ManagedGroup,
-  SCHOOL_YEAR_PATTERN,
+  MAX_GROUP_LABEL_LENGTH,
   type UserRef,
 } from '../../data/group-service';
-import { isSchoolYear } from './school-year';
 
-/** Enough for «2.º DAW A · Mañanas»: the name goes in the header of its panel. */
-export const MAX_GROUP_NAME_LENGTH = 60;
-
-/** A group as its dialog edits it (5.2b), or a class as it is created in several subjects (5.2c). */
+/** A group of a class as its dialog edits it (5.2d): its subject, the label of a split, its teacher. */
 export interface GroupFormModel {
-  readonly name: string;
-  readonly schoolYear: string;
-  /** A group of each, when it is created; that of the group, which never changes, when edited. */
-  readonly subjectIds: readonly string[];
+  readonly subjectId: string;
+  /** Empty for the group of the whole class. */
+  readonly label: string;
   readonly teacherId: string;
 }
 
-export interface GroupFormDefaults {
-  /** The current one, from `schoolYearOf()`. */
-  readonly schoolYear: string;
-  /** The only subject there is, or none to choose them. */
-  readonly subjectIds: readonly string[];
-  /** A teacher's groups are their own; an administrator chooses one (none, undefined). */
-  readonly teacherId: string | undefined;
-}
-
-/** The group to edit, or a new one with the defaults. */
+/** The group to edit, or a new one of the teacher given (none for an administrator, who chooses). */
 export function toGroupFormModel(
   managed: ManagedGroup | null,
-  defaults: GroupFormDefaults,
+  teacherId: string | undefined,
 ): GroupFormModel {
-  if (!managed) return { name: '', ...defaults, teacherId: defaults.teacherId ?? '' };
-  const { name, schoolYear, subjectId, teacherId } = managed.group;
-  return { name, schoolYear, subjectIds: [subjectId], teacherId };
-}
-
-/** Everything is required, and the year is like `2026/27`, as the database checks it. */
-export function groupSchema(path: SchemaPathTree<GroupFormModel>): void {
-  classSchema(path);
-  // `required` takes an empty list as a value
-  validate(path.subjectIds, ({ value }) =>
-    value().length === 0
-      ? {
-          kind: 'required',
-          message: $localize`:@@groupForm.error.subject:Elige la asignatura`,
-        }
-      : null,
-  );
+  if (!managed) return { subjectId: '', label: '', teacherId: teacherId ?? '' };
+  const { subjectId, label, teacherId: current } = managed.group;
+  return { subjectId, label: label ?? '', teacherId: current };
 }
 
 /**
- * What every group of a class shares: the name, the year and the teacher (5.2c). Also the schema of
- * duplicating a class.
+ * The subject and the teacher are required, and a label is short. A class has each subject once
+ * per label (D-081): a second group of one needs a label of its own, the label of a split.
+ * `siblings` are the other groups of the class.
  */
-export function classSchema(
-  path: SchemaPathTree<Pick<GroupFormModel, 'name' | 'schoolYear' | 'teacherId'>>,
-): void {
-  required(path.name, { message: $localize`:@@groupForm.error.name:Escribe el nombre del grupo` });
-  maxLength(path.name, MAX_GROUP_NAME_LENGTH, {
-    message: $localize`:@@groupForm.error.nameLength:Como mucho ${MAX_GROUP_NAME_LENGTH}:max: caracteres`,
-  });
-  // Only spaces is no name: the server would refuse it with a generic error
-  validate(path.name, ({ value }) =>
-    value() !== '' && value().trim() === ''
-      ? { kind: 'blank', message: $localize`:@@groupForm.error.name:Escribe el nombre del grupo` }
-      : null,
-  );
-  required(path.schoolYear, { message: $localize`:@@groupForm.error.year:Escribe el curso` });
-  pattern(path.schoolYear, SCHOOL_YEAR_PATTERN, {
-    message: $localize`:@@groupForm.error.yearFormat:Escribe el curso como 2026/27`,
-  });
-  validate(path.schoolYear, ({ value }) =>
-    SCHOOL_YEAR_PATTERN.test(value()) && !isSchoolYear(value())
-      ? {
-          kind: 'schoolYear',
-          message: $localize`:@@groupForm.error.yearRange:Un curso son dos años seguidos, como 2026/27`,
-        }
-      : null,
-  );
-  required(path.teacherId, { message: $localize`:@@groupForm.error.teacher:Elige el docente` });
+export function groupSchema(siblings: readonly ManagedGroup[]) {
+  return (path: SchemaPathTree<GroupFormModel>): void => {
+    required(path.subjectId, {
+      message: $localize`:@@groupForm.error.subject:Elige la asignatura`,
+    });
+    required(path.teacherId, { message: $localize`:@@groupForm.error.teacher:Elige el docente` });
+    maxLength(path.label, MAX_GROUP_LABEL_LENGTH, {
+      message: $localize`:@@groupForm.error.labelLength:Como mucho ${MAX_GROUP_LABEL_LENGTH}:max: caracteres`,
+    });
+    validate(path.label, ({ value, valueOf }) => {
+      const label = value().trim() || null;
+      const same = siblings.filter(({ group }) => group.subjectId === valueOf(path.subjectId));
+      if (!same.some(({ group }) => group.label === label)) return null;
+      return label === null
+        ? {
+            kind: 'split',
+            message: $localize`:@@groupForm.error.split:La clase ya tiene esta asignatura: ponle un nombre al desdoble`,
+          }
+        : {
+            kind: 'taken',
+            message: $localize`:@@groupForm.error.labelTaken:Ya hay un desdoble de esta asignatura con ese nombre`,
+          };
+    });
+  };
 }
 
-/** What the groups of the class share, with the texts without surrounding spaces. */
-export function toClassDraft(
-  model: Pick<GroupFormModel, 'name' | 'schoolYear' | 'teacherId'>,
-): ClassDraft {
+/** What the service is asked for: the label without surrounding spaces, or none. */
+export function toGroupDraft(model: GroupFormModel): GroupDraft {
   return {
-    name: model.name.trim(),
-    schoolYear: model.schoolYear.trim(),
+    subjectId: model.subjectId,
+    label: model.label.trim() || null,
     teacherId: model.teacherId,
   };
 }

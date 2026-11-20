@@ -1,16 +1,18 @@
-import type { EnrolledStudent } from '../../data/group-service';
+import type { RosterStudent } from '../../data/group-service';
 import { filterStudents } from './student-filter';
 
-const STUDENTS: EnrolledStudent[] = [
+const STUDENTS: RosterStudent[] = [
   {
-    enrollmentId: '1',
     student: { id: 'a', name: 'Álvaro Gil', email: 'alvaro@tutoria.test' },
     active: true,
+    member: true,
+    groupIds: [],
   },
   {
-    enrollmentId: '2',
     student: { id: 'b', name: 'Lucía Martín', email: 'lucia@tutoria.test' },
     active: true,
+    member: true,
+    groupIds: [],
   },
 ];
 

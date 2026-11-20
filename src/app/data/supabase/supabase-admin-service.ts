@@ -10,6 +10,7 @@ import {
 } from '../admin-service';
 import type { AiModelCheck, AiProviderSetting } from '../ai-provider-setting';
 import { DataError } from '../data-error';
+import { groupName } from '../group-name';
 import type { Subject } from '../subject';
 import type { AppUser } from '../user';
 import { SUPABASE_CLIENT } from './supabase-client';
@@ -47,15 +48,17 @@ export class SupabaseAdminService extends AdminService {
       await this.supabase
         .from('app_user')
         .select(
-          '*, taught:class_group!class_group_teacher_id_fkey(name), enrollment(class_group(name))',
+          '*, taught:class_group!class_group_teacher_id_fkey(label, school_class(name)), enrollment(class_group(label, school_class(name)))',
         ),
     );
     return rows
       .map(({ taught, enrollment, ...user }) =>
         toUserEntry(
           toAppUser(user),
-          taught.map((group) => group.name),
-          enrollment.map((row) => row.class_group.name),
+          taught.map((group) => groupName(group.school_class.name, group.label)),
+          enrollment.map((row) =>
+            groupName(row.class_group.school_class.name, row.class_group.label),
+          ),
         ),
       )
       .sort((a, b) => a.user.name.localeCompare(b.user.name, 'es'));

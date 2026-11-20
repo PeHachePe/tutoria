@@ -29,29 +29,27 @@ import { groupActionMessage } from './group-action-message';
 /** How long the search waits after the last key before asking the server. */
 export const SEARCH_DELAY_MS = 300;
 
-/** Another group of the user, whose students can be taken at once. */
+/** Another class of the user, whose students can be taken at once. */
 export interface EnrollSource {
   readonly id: string;
   readonly label: string;
 }
 
 export interface EnrollDialogData {
-  readonly groupName: string;
-  /** Who is in the group already: not chosen again from another group. */
+  /** The class, or one group of it: «1.º DAW A · 2026/27». */
+  readonly targetName: string;
+  /** What enrolling there does, under the title. */
+  readonly intro: string;
+  /** Who is there already: not chosen again from another class. */
   readonly enrolledIds: ReadonlySet<string>;
-  /** The other groups of the user, such as the same class in another subject. */
+  /** The other classes of the user, such as last year's. */
   readonly sources: readonly EnrollSource[];
-  /**
-   * The other groups of the class (5.2c): the same name and year, in another subject. Those chosen
-   * are enrolled in them too, all checked at first.
-   */
-  readonly classmates: readonly EnrollSource[];
-  /** The students of one of them. */
-  readonly studentsOf: (groupId: string) => Promise<UserRef[]>;
-  /** Active students who are not in the group yet. */
+  /** The active students of one of them. */
+  readonly studentsOf: (classId: string) => Promise<UserRef[]>;
+  /** Active students who are not there yet. */
   readonly search: (text: string) => Promise<UserRef[]>;
-  /** Enrolls them, also in those groups; the dialog stays open, with the error, if it fails. */
-  readonly enroll: (students: readonly UserRef[], alsoGroupIds: readonly string[]) => Promise<void>;
+  /** Enrolls them; the dialog stays open, with the error, if it fails. */
+  readonly enroll: (students: readonly UserRef[]) => Promise<void>;
 }
 
 /**
@@ -82,9 +80,10 @@ export interface EnrollDialogData {
     MatMenuTrigger,
   ],
   template: `
-    <h2 mat-dialog-title i18n="@@enrollDialog.title">Matricular en {{ data.groupName }}</h2>
+    <h2 mat-dialog-title i18n="@@enrollDialog.title.target">Matricular en {{ data.targetName }}</h2>
     <mat-dialog-content>
       <div class="flex flex-col gap-3 pt-2 sm:min-w-md">
+        <p class="text-body-medium text-on-surface-variant">{{ data.intro }}</p>
         <mat-form-field>
           <mat-label i18n="@@enrollDialog.search">Buscar alumnos por nombre o correo</mat-label>
           <mat-icon matPrefix aria-hidden="true">search</mat-icon>
@@ -97,7 +96,7 @@ export interface EnrollDialogData {
           />
           <mat-hint i18n="@@enrollDialog.search.hint">Escribe al menos dos letras</mat-hint>
         </mat-form-field>
-        <!-- A class has one group per subject: its students, at once, instead of one by one -->
+        <!-- The students of another class (last year's), at once, instead of one by one -->
         @if (data.sources.length > 0) {
           <div>
             <button
@@ -107,7 +106,7 @@ export interface EnrollDialogData {
               [matMenuTriggerFor]="sourceMenu"
             >
               <mat-icon aria-hidden="true">group</mat-icon>
-              <span i18n="@@enrollDialog.copy">Añadir los de otro grupo</span>
+              <span i18n="@@enrollDialog.copyClass">Añadir los de otra clase</span>
             </button>
             <mat-menu #sourceMenu="matMenu">
               @for (source of data.sources; track source.id) {
@@ -187,21 +186,6 @@ export interface EnrollDialogData {
             </ul>
           }
         </div>
-        @if (data.classmates.length > 0) {
-          <fieldset class="flex flex-col">
-            <legend class="text-title-small" i18n="@@enrollDialog.also">
-              Matricular también en
-            </legend>
-            @for (group of data.classmates; track group.id) {
-              <mat-checkbox [checked]="also().has(group.id)" (change)="toggleAlso(group)">
-                {{ group.label }}
-              </mat-checkbox>
-            }
-            <p class="text-body-small text-on-surface-variant" i18n="@@enrollDialog.also.hint">
-              Los que ya estén en alguno se quedan como están.
-            </p>
-          </fieldset>
-        }
         @if (failure(); as message) {
           <p class="text-body-medium text-error" role="alert">{{ message }}</p>
         }
@@ -249,15 +233,10 @@ export class EnrollDialog {
   protected readonly chosen = signal<readonly UserRef[]>([]);
   protected readonly full = computed(() => this.chosen().length >= MAX_ENROLLMENT_BATCH);
   protected readonly saving = signal(false);
-  /** Reading the students of another group. */
+  /** Reading the students of another class. */
   protected readonly copying = signal(false);
   private readonly announcer = inject(LiveAnnouncer);
   protected readonly failure = signal<string | null>(null);
-
-  /** The other groups of the class where they are enrolled too: all of them at first. */
-  protected readonly also = signal<ReadonlySet<string>>(
-    new Set(this.data.classmates.map(({ id }) => id)),
-  );
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.debouncer.cancel());
@@ -280,7 +259,7 @@ export class EnrollDialog {
     );
   }
 
-  /** Chooses the students of another group who are not in this one, up to the batch. */
+  /** Chooses the students of another class who are not here, up to the batch. */
   protected async copyFrom(source: EnrollSource): Promise<void> {
     this.copying.set(true);
     this.failure.set(null);
@@ -297,19 +276,11 @@ export class EnrollDialog {
       );
     } catch {
       this.failure.set(
-        $localize`:@@enrollDialog.copyError:No se ha podido leer ese grupo. Inténtalo de nuevo.`,
+        $localize`:@@enrollDialog.copyClassError:No se ha podido leer esa clase. Inténtalo de nuevo.`,
       );
     } finally {
       this.copying.set(false);
     }
-  }
-
-  protected toggleAlso(group: EnrollSource): void {
-    this.also.update((also) => {
-      const next = new Set(also);
-      if (!next.delete(group.id)) next.add(group.id);
-      return next;
-    });
   }
 
   protected removeLabel(student: UserRef): string {
@@ -320,9 +291,7 @@ export class EnrollDialog {
     this.saving.set(true);
     this.failure.set(null);
     try {
-      // In the order of the class, whatever the order of the clicks
-      const also = this.data.classmates.map(({ id }) => id).filter((id) => this.also().has(id));
-      await this.data.enroll(this.chosen(), also);
+      await this.data.enroll(this.chosen());
       this.ref.close(true);
     } catch (error) {
       this.failure.set(groupActionMessage('enroll', error));

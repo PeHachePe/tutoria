@@ -24,12 +24,14 @@ select set_eq(
     'can_edit_exercise', 'is_started_assignment', 'is_started_block', 'is_browser_event',
     'is_valid_exercise_translations', 'is_valid_text_translations', 'are_valid_parameters',
     'is_valid_ai_provider', 'is_started_group', 'is_active_student', 'is_active_teacher',
+    'teaches_class', 'manages_class', 'studies_in_class', 'is_empty_class',
     -- What the app calls
     'open_attempt', 'retry_attempt', 'submit_attempt', 'hidden_test_count', 'save_exercise',
     'exercise_student_counts', 'assignment_student_counts', 'create_block', 'assign_exercises',
     'reorder_blocks', 'reorder_assignments', 'move_assignment', 'group_work_stats',
-    'group_deadline_stats', 'search_students', 'group_summaries', 'enroll_students',
-    'copy_blocks', 'duplicate_groups'
+    'group_deadline_stats', 'search_students', 'enroll_students', 'copy_blocks', 'create_class',
+    'add_class_group', 'duplicate_class', 'managed_classes', 'class_overview', 'class_roster',
+    'search_class_students', 'enroll_class_members', 'remove_class_member'
   ],
   'a signed-in user executes the helpers of the policies and the functions of the app, no other'
 );

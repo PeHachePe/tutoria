@@ -25,6 +25,7 @@ import { type AssignmentCard, assignedExercise, summarizeAttempt } from '../atte
 import {
   canManageGroup,
   canSeeAssignment,
+  classOfGroup,
   enrolledGroupIds,
   findRow,
   findVisibleAssignment,
@@ -33,6 +34,7 @@ import {
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 import { isIdentifier } from '../exercise-names';
+import { groupName } from '../group-name';
 
 /** Exercises, tests and assignments in MockDb. The bank is shared by every teacher (2.3). */
 @Service({ autoProvided: false })
@@ -241,7 +243,12 @@ export class MockExerciseService extends ExerciseService {
     return {
       exercise: findRow(tables.exercises, assignment.exerciseId),
       assignmentId: assignment.id,
-      group: { id: group.id, name: group.name, subject: findRow(tables.subjects, group.subjectId) },
+      group: {
+        id: group.id,
+        name: classOfGroup(tables, group).name,
+        label: group.label,
+        subject: findRow(tables.subjects, group.subjectId),
+      },
       block: findRow(tables.classBlocks, assignment.blockId),
       dueAt: assignment.dueAt,
     };
@@ -272,7 +279,10 @@ export class MockExerciseService extends ExerciseService {
     );
     const groups = tables.groups
       .filter((group) => groupIds.has(group.id) && canManageGroup(user, group))
-      .map(({ id, name }) => ({ id, name }))
+      .map((group) => ({
+        id: group.id,
+        name: groupName(classOfGroup(tables, group).name, group.label),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
     return { studentCount: new Set(students).size, groups };
   }

@@ -31,23 +31,37 @@ describe('SupabaseBlockService', () => {
     service = TestBed.inject(SupabaseBlockService);
   });
 
-  it('lists the groups the RLS gives, by name and subject', async () => {
+  it('lists the groups the RLS gives, with their class, by name, subject and label', async () => {
     const web = subjectRow({ id: 'web', name: 'Desarrollo web' });
+    const daw = { name: '1.º DAW A', school_year: '2026/27' };
     server.on('GET', '/rest/v1/class_group', {
       body: [
-        { id: 'daw', name: '1.º DAW A', school_year: '2026/27', subject: subjectRow() },
-        { id: 'dam', name: '1.º DAM B', school_year: '2026/27', subject: subjectRow() },
-        { id: 'daw-web', name: '1.º DAW A', school_year: '2026/27', subject: web },
+        { id: 'daw', label: null, school_class: daw, subject: subjectRow() },
+        {
+          id: 'dam',
+          label: null,
+          school_class: { name: '1.º DAM B', school_year: '2026/27' },
+          subject: subjectRow(),
+        },
+        { id: 'daw-en', label: 'Desdoble inglés', school_class: daw, subject: subjectRow() },
+        { id: 'daw-de', label: 'Desdoble alemán', school_class: daw, subject: subjectRow() },
+        { id: 'daw-web', label: null, school_class: daw, subject: web },
       ],
     });
 
     const groups = await service.listGroups();
 
-    expect(groups.map((group) => group.id)).toEqual(['dam', 'daw-web', 'daw']);
+    expect(groups.map((group) => group.id)).toEqual(['dam', 'daw-web', 'daw', 'daw-de', 'daw-en']);
     expect(groups[1]).toMatchObject({
+      name: '1.º DAW A',
+      label: null,
       schoolYear: '2026/27',
       subject: { id: 'web', name: 'Desarrollo web' },
     });
+    expect(groups[4].label).toBe('Desdoble inglés');
+    expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('select')).toBe(
+      'id,label,school_class(name,school_year),subject(*)',
+    );
   });
 
   it('lists the blocks of a group in order, with their exercises and who started them', async () => {

@@ -36,6 +36,7 @@ import {
 } from '../../data/block-service';
 import type { AssignedGroup, ClassBlock } from '../../data/exercise';
 import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
+import { groupTitle } from '../../data/group-name';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { DueLabel } from '../../shared/due-label/due-label';
@@ -129,8 +130,8 @@ export class BlocksPage {
   /** «Name · subject», with the year when that is not enough: the same class of another year. */
   protected readonly groupOptions = computed(() => {
     const groups = this.groupList();
-    const labels = groups.map(
-      (group) => `${group.name} · ${subjectName(group.subject, this.locale).name}`,
+    const labels = groups.map((group) =>
+      groupTitle(group.name, subjectName(group.subject, this.locale).name, group.label),
     );
     return groups.map((group, index) => ({
       group,

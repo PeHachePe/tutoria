@@ -12,7 +12,7 @@ import type { ClassBlock, ExerciseAssignment } from '../exercise';
 import { schoolYearShiftDays } from '../school-year-shift';
 import type { ClassGroup } from '../user';
 import { copyGroupBlocks } from './copy-group-blocks';
-import { canManageGroup, findRow } from './mock-access';
+import { canManageGroup, classOfGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 
@@ -31,16 +31,21 @@ export class MockBlockService extends BlockService {
       const tables = this.db.tables();
       return tables.groups
         .filter((group) => canManageGroup(user, group))
-        .map((group) => ({
-          id: group.id,
-          name: group.name,
-          schoolYear: group.schoolYear,
-          subject: findRow(tables.subjects, group.subjectId),
-        }))
+        .map((group) => {
+          const { name, schoolYear } = classOfGroup(tables, group);
+          return {
+            id: group.id,
+            name,
+            label: group.label,
+            schoolYear,
+            subject: findRow(tables.subjects, group.subjectId),
+          };
+        })
         .sort(
           (a, b) =>
             a.name.localeCompare(b.name, 'es') ||
-            a.subject.name.localeCompare(b.subject.name, 'es'),
+            a.subject.name.localeCompare(b.subject.name, 'es') ||
+            (a.label ?? '').localeCompare(b.label ?? '', 'es'),
         );
     });
   }
@@ -181,7 +186,13 @@ export class MockBlockService extends BlockService {
       if (source.id === target.id) {
         throw new DataError('invalid', 'A group is copied into another');
       }
-      const shift = withDates ? schoolYearShiftDays(source.schoolYear, target.schoolYear) : null;
+      const tables = this.db.tables();
+      const shift = withDates
+        ? schoolYearShiftDays(
+            classOfGroup(tables, source).schoolYear,
+            classOfGroup(tables, target).schoolYear,
+          )
+        : null;
       return copyGroupBlocks(this.db, source.id, target.id, shift);
     });
   }

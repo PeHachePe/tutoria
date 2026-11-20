@@ -2328,3 +2328,38 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - El autor eligió driver.js tras la comparación y el panel propio («si ves mejor la opción 2 la haces»).
 - Pidió poder volver a ver cómo se hace algo concreto, aprobó el panel único («añade y actualiza, que quede bien completo») y quiere que sirva de manual.
 - El resto, a criterio del agente («lo que veas mejor, que sea lo más compatible a futuro»).
+
+## D-081 · La clase, compartida por los docentes del centro: una tabla con su alumnado, y los desdobles con nombre (20/11/2026)
+
+**Contexto:** el 5.2c hizo la clase implícita: los grupos con el mismo nombre y curso (D-079). En su revisión el autor vio tres problemas: la clase dependía de escribir el mismo nombre a mano, «Duplicar» estaba en el menú de una asignatura pero duplicaba la clase entera y, sobre todo, varios docentes dan clase en la misma clase (Marta Programación, Javier Bases de datos en 1.º DAW A), así que cada uno tendría «su» clase. Además, hay asignaturas que se dan partidas en desdobles (una parte en inglés, por ejemplo).
+
+**Decisión:**
+
+- **La clase es una tabla, una vez por centro:** `school_class` (nombre, curso, quién la creó), única por nombre (sin distinguir mayúsculas) y curso. La lee todo el profesorado, para unirse a ella, y el alumnado de sus grupos, para ver su nombre. La crea cualquier docente o la administración; la renombran su creador o la administración, y la borran solo vacía (sin grupos).
+- **`class_group` cuelga de su clase** (`class_id`) y pierde el nombre y el curso, que pasan a la clase: una sola fuente. El grupo sigue siendo de su docente: bloques, panel en vivo y analítica no cambian.
+- **El alumnado de la clase, en `class_member`, y la matrícula «copiada con excepciones»:** `enrollment` sigue siendo la matrícula de cada grupo, con sus RLS intactas. Matricular en la clase matricula en todos sus grupos y quitar de la clase quita de todos, también de los de otros docentes; un grupo nuevo empieza con el alumnado activo de la clase. Cada docente puede dar de baja a alguien solo de su grupo (una convalidada), volver a matricularlo o matricular solo en su grupo a alguien de otra clase.
+- **Desdobles:** dos grupos de la misma asignatura en una clase se distinguen por `class_group.label` («Nombre del desdoble», 30 caracteres como mucho, opcional y editable por el docente del grupo o la administración), única por clase, asignatura y nombre (`unique nulls not distinct`). Al añadir una asignatura que la clase ya tiene, el nombre viene como «Desdoble N». Regla única: **un grupo sin nombre es el de toda la clase** (toma su alumnado al crearse y al matricular en la clase); **uno con nombre es un desdoble**, cuyo alumnado se elige a mano. En los selectores: «1.º DAW A · Programación básica · Desdoble inglés».
+- **Qué lee un docente de la clase (D-062):** el nombre y el correo de todo su alumnado (`class_roster`), y en qué grupos de la clase está cada uno, porque lo necesita para mantener la lista. El trabajo de un alumno lo sigue leyendo solo el docente del grupo donde lo hace (`teaches_assignment()`). También ve qué asignaturas tiene la clase y quién las da (`class_overview`): no es un secreto entre el profesorado.
+- **Todo lo que crea grupos o toca la matrícula, por funciones** con seguridad del definidor (`create_class`, `add_class_group`, `duplicate_class`, `enroll_class_members`, `remove_class_member`, `enroll_students`), como ya era la matrícula (D-072); el `insert` directo en `class_group` se retira. Editar un grupo (su nombre de desdoble y, la administración, su docente) y renombrar o borrar una clase siguen siendo escrituras directas con su RLS.
+- **«Duplicar» va en el menú de la clase** y copia solo los grupos de quien duplica (todos, para la administración), con su asignatura, nombre de desdoble y docente, en la clase del nombre y curso elegidos (creada, o la existente, a la que se une); con sus bloques y las fechas en semanas enteras (D-079) y, si se quiere, su alumnado. Los demás docentes añaden después sus asignaturas.
+- **La pantalla de grupos se rehace alrededor de la clase** (`?clase=`): se elige la clase; a un lado sus asignaturas (de todos sus docentes, con menú solo en las propias) y al otro su alumnado, con una nota por alumno («No cursa: …», el desdoble en que está o «De otra clase: …») y sus acciones. «Nueva clase» sugiere las clases que existen y, si se escribe una, se une a ella.
+- **La migración rellena las clases** a partir de los grupos de hoy por nombre (sin espacios ni mayúsculas) y curso; dos grupos de la misma asignatura en una clase pasan a «Desdoble 2», «Desdoble 3»…, y el alumnado de la clase es la unión de sus grupos. Se probó con datos de antes de migrar.
+
+**Alternativas:**
+
+- **La clase implícita de D-079:** sin tabla, pero dependía de escribir igual el nombre y no podía compartirse entre docentes.
+- **Una clase por docente:** cada docente con su copia de 1.º DAW A y su lista de alumnos; justo lo que el autor vio raro.
+- **Matrícula derivada de la clase** (el grupo lee el alumnado de la clase menos sus excepciones): obligaba a rehacer `is_enrolled()` y casi todas las políticas, el panel en vivo y las estadísticas.
+- **Una sola asignatura por clase:** evitaba duplicados por despiste, pero no permitía los desdobles, que el autor confirmó que no son raros («a veces dan en inglés algunos»). El aviso y el nombre del desdoble cubren el despiste.
+- **Distinguir el desdoble editando el nombre del grupo:** el nombre ya es de la clase; volvería a depender de escribirlo a mano.
+- **Mantener el nombre y el curso también en el grupo, sincronizados por un disparador:** dos copias del mismo dato.
+
+**Consecuencias:**
+
+- Migración `20261119160000_shared_classes.sql` y 43 tests de pgTAP nuevos (`shared_classes.test.sql`); `school_year_setup.test.sql` se queda con las fechas y «Copiar de otro grupo». 15 tablas en §2.3.
+- `GroupService` se rehace (clases, alumnado de la clase, desdobles) en sus dos versiones; los demás servicios leen el nombre y el curso de la clase, y los selectores de Bloques, Histórico, panel en vivo y catálogo añaden el nombre del desdoble (`groupTitle()`, `groupName()`).
+- El seed gana las dos clases y un desdoble de Javier en 1.º DAW A («Desdoble inglés», sin alumnos): una clase con dos docentes y dos grupos de una asignatura.
+- Supera la clase implícita de D-079: salen `classOf()`, «Matricular también en» (`also_group_ids`) y `duplicate_groups`. «Copiar de otro grupo» en Bloques se queda.
+- Para la memoria y la presentación: la clase compartida y los desdobles son un caso real de los centros de FP que el modelo de la memoria no contemplaba.
+
+**Aprobación:** el autor eligió la clase compartida y aprobó las cinco decisiones (quién crea las clases, la matrícula copiada con excepciones, qué lee un docente de la clase, los desdobles con nombre y quitar el nombre y el curso del grupo), pidió los desdobles con un nombre editable que viniera relleno («Desdoble inglés, Desdoble alemán…») y que consten para la memoria y la presentación. El detalle técnico, por delegación del autor («adelante con todo»).

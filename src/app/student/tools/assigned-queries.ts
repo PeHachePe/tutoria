@@ -6,6 +6,7 @@ import {
   exerciseText,
   subjectName,
 } from '../../data/localized-text';
+import { groupName } from '../../data/group-name';
 import type { TOOL_STATUSES } from '../../data/tutor/tutor-tools';
 import { countByStatus, nextExercise } from '../catalog/catalog-blocks';
 
@@ -66,7 +67,7 @@ export function progressSummary(
   const subjects = groups
     .map((ofGroup) => ({
       subject: subjectName(ofGroup[0].group.subject, locale).name,
-      group: ofGroup[0].group.name,
+      group: groupName(ofGroup[0].group.name, ofGroup[0].group.label),
       ...counts(ofGroup),
     }))
     .filter((each) => !subject || normalized(each.subject).includes(normalized(subject)));

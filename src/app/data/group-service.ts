@@ -1,7 +1,7 @@
 import type { Subject } from './subject';
-import type { ClassGroup } from './user';
+import type { ClassGroup, SchoolClass } from './user';
 
-/** A group as its screen shows it. */
+/** A group as the screen of its class shows it. */
 export interface ManagedGroup {
   readonly group: ClassGroup;
   readonly subject: Subject;
@@ -9,16 +9,27 @@ export interface ManagedGroup {
   readonly studentCount: number;
   /** Somebody opened an attempt in it: it cannot be removed. */
   readonly started: boolean;
+  /** The user teaches it, or is the administrator: they change it and its students. */
+  readonly mine: boolean;
 }
 
-/** A new group has no id yet; of an existing one, only name, year and teacher change. */
-export type GroupDraft = Omit<ClassGroup, 'id'> & { readonly id?: string };
+/** A class as the user looks after it (5.2d, D-081). */
+export interface ManagedClass {
+  readonly schoolClass: SchoolClass;
+  /** Every group of the class, those of other teachers too. */
+  readonly groups: readonly ManagedGroup[];
+  /** Its creator or the administrator: they rename it and, while it has no groups, delete it. */
+  readonly canEdit: boolean;
+}
 
-/**
- * A class: the groups with the same name and year, one per subject (5.2c, D-079). What its new
- * groups share.
- */
-export type ClassDraft = Omit<ClassGroup, 'id' | 'subjectId'>;
+/** What a class is: its name and year. */
+export type ClassDraft = Pick<SchoolClass, 'name' | 'schoolYear'>;
+
+/** A new group of a class: a subject, a label for a split and its teacher. */
+export type GroupDraft = Pick<ClassGroup, 'subjectId' | 'label' | 'teacherId'>;
+
+/** Of an existing group, only its label and (the administrator) its teacher change. */
+export type GroupChanges = Pick<ClassGroup, 'label' | 'teacherId'>;
 
 /** What a duplicated group brings of its source (5.2c). */
 export interface DuplicateOptions {
@@ -26,89 +37,126 @@ export interface DuplicateOptions {
   readonly blocks: boolean;
   /** The dates of those blocks, moved to the new year in whole weeks; without them, none. */
   readonly dates: boolean;
-  /** Its active students. */
+  /** The active students of the class and of each group. */
   readonly students: boolean;
 }
 
-/** Who a group lists: a student or, for the administrator, a teacher. */
+/** Who a class lists: a student or, for the administrator, a teacher. */
 export interface UserRef {
   readonly id: string;
   readonly name: string;
   readonly email: string;
 }
 
-export interface EnrolledStudent {
-  readonly enrollmentId: string;
+/** A student of a class, or of one of its groups only (a subject taken from another class). */
+export interface RosterStudent {
   readonly student: UserRef;
-  /** A disabled account stays enrolled, but cannot be enrolled in another group. */
+  /** A disabled account stays where it was, but cannot be enrolled anywhere else. */
   readonly active: boolean;
+  /** In the class: groups of the whole class take them. */
+  readonly member: boolean;
+  /** The groups of the class they are in. */
+  readonly groupIds: readonly string[];
 }
+
+/** Where students are enrolled: the class (and its groups of the whole class) or one group. */
+export type EnrollTarget =
+  { readonly kind: 'class'; readonly id: string } | { readonly kind: 'group'; readonly id: string };
 
 export const MIN_STUDENT_SEARCH_LENGTH = 2;
 export const MAX_STUDENT_SEARCH_RESULTS = 20;
 /** Students enrolled in one request: a bound for a request, more than a screen chooses at once. */
 export const MAX_ENROLLMENT_BATCH = 50;
-/** Groups made or reached in one request (5.2c): more subjects than a class has. */
+/** Groups made in one request (5.2c): more subjects than a class has. */
 export const MAX_GROUP_BATCH = 20;
-/** As `class_group_school_year_format`: `2026/27`. */
+/** As `class_group_label_format`: «Desdoble inglés». */
+export const MAX_GROUP_LABEL_LENGTH = 30;
+/** As `school_class_school_year_format`: `2026/27`. */
 export const SCHOOL_YEAR_PATTERN = /^\d{4}\/\d{2}$/;
 
 /**
- * Groups and their enrollment (5.2a, RF-16): a teacher manages their own groups, an administrator
- * all of them and their teacher. Abstract class without a decorator: it is the injection token
- * (4.2, D-005).
+ * Classes, their groups and their students (5.2a, 5.2d, RF-16). A class is shared by the teachers of
+ * the school: any of them creates one or joins it with a group of theirs, and its students are
+ * looked after by its teachers; each group stays its teacher's. The administrator manages all.
+ * Abstract class without a decorator: it is the injection token (4.2, D-005).
+ *
+ * A group without a label is the group of the whole class: it takes the students of the class when
+ * it is created and when the class is enrolled. One with a label is a split, enrolled by hand.
  */
 export abstract class GroupService {
-  /** Those the user teaches, or all for an administrator, by name and subject. */
-  abstract listGroups(): Promise<ManagedGroup[]>;
+  /** Those the user teaches in or created, or all for an administrator. */
+  abstract listClasses(): Promise<ManagedClass[]>;
+
+  /** Every class of the school, to join one with a subject. */
+  abstract listAllClasses(): Promise<SchoolClass[]>;
 
   /**
-   * A teacher saves only groups of their own (`forbidden` otherwise); `invalid` if the teacher is
-   * not an active one, with an empty name or a year not like `2026/27`.
+   * A class (or the one with that name and year, whatever its capitals, which the user joins) with
+   * a group of the teacher in each subject, all or none; it returns the class. `forbidden` for groups
+   * of another teacher; `invalid` with a blank name, a year not like `2026/27`, a teacher who is not
+   * an active one, a subject the class already has or more than `MAX_GROUP_BATCH`.
    */
-  abstract saveGroup(draft: GroupDraft): Promise<ManagedGroup>;
-
-  /**
-   * The same class in several subjects (5.2c): a group for each, in the order given, all or none.
-   * As `saveGroup`, and `invalid` without subjects, with one twice or with more than
-   * `MAX_GROUP_BATCH`.
-   */
-  abstract createGroups(draft: ClassDraft, subjectIds: readonly string[]): Promise<ManagedGroup[]>;
-
-  /**
-   * A new group for each source group, in its subject, with the name, year and teacher of `draft`
-   * and what `options` brings of the source (5.2c): all or none, in the order given. As
-   * `saveGroup`; `not_found` for a group of others.
-   */
-  abstract duplicateGroups(
-    sourceGroupIds: readonly string[],
+  abstract createClass(
     draft: ClassDraft,
-    options: DuplicateOptions,
-  ): Promise<ManagedGroup[]>;
+    subjectIds: readonly string[],
+    teacherId: string,
+  ): Promise<string>;
+
+  /** Its creator or the administrator (`forbidden` otherwise); `invalid` as `createClass`, or taken. */
+  abstract saveClass(classId: string, draft: ClassDraft): Promise<void>;
+
+  /** Its creator or the administrator, while it has no groups (`invalid`). */
+  abstract removeClass(classId: string): Promise<void>;
+
+  /**
+   * A group in any class, as `createClass`; `invalid` for a subject the class has with the same
+   * label, or a label longer than `MAX_GROUP_LABEL_LENGTH`. It returns the group.
+   */
+  abstract addGroup(classId: string, draft: GroupDraft): Promise<string>;
+
+  /** Only the administrator changes the teacher; `not_found` for a group of others. */
+  abstract saveGroup(groupId: string, changes: GroupChanges): Promise<void>;
 
   /** `invalid` if a student started anything in it; `not_found` for a group of others. */
   abstract removeGroup(groupId: string): Promise<void>;
 
-  /** By name. `not_found` for a group of others. */
-  abstract listStudents(groupId: string): Promise<EnrolledStudent[]>;
+  /**
+   * The class with the name and year of `draft` (created, or joined if it exists) with a copy of each
+   * group given, with its subject, label and teacher and what `options` brings, all or none; it
+   * returns the class. `not_found` for a class the user does not look after or a group of others,
+   * `invalid` into the same class.
+   */
+  abstract duplicateClass(
+    classId: string,
+    draft: ClassDraft,
+    groupIds: readonly string[],
+    options: DuplicateOptions,
+  ): Promise<string>;
 
-  /** Active students who are not in the group; none with a search shorter than the minimum. */
-  abstract searchStudents(groupId: string, search: string): Promise<UserRef[]>;
+  /** By name; `not_found` for a class the user does not look after. */
+  abstract listRoster(classId: string): Promise<RosterStudent[]>;
+
+  /** Active students not in the class (or the group); none with a search shorter than the minimum. */
+  abstract searchStudents(target: EnrollTarget, search: string): Promise<UserRef[]>;
 
   /**
-   * In one request, `MAX_ENROLLMENT_BATCH` at most, all or none; `invalid` for anybody who is not
-   * an active student or is already in the group, `not_found` for a group of others. Also in
-   * `alsoGroupIds` (5.2c), the other groups of the class, where those already in them are skipped;
-   * it returns the enrollments of `groupId`.
+   * Into the class and its groups of the whole class, those of other teachers too, all or none:
+   * `MAX_ENROLLMENT_BATCH` at most, active students only (`invalid`). Who is already there is
+   * skipped.
    */
-  abstract enroll(
-    groupId: string,
-    userIds: readonly string[],
-    alsoGroupIds?: readonly string[],
-  ): Promise<EnrolledStudent[]>;
+  abstract enrollInClass(classId: string, userIds: readonly string[]): Promise<void>;
 
-  /** Their attempts are kept. */
-  abstract unenroll(enrollmentId: string): Promise<void>;
+  /** Out of the class and all its groups; their attempts are kept. */
+  abstract removeFromClass(classId: string, userId: string): Promise<void>;
+
+  /**
+   * Into one group of the user, as `enrollInClass`; `invalid` too for anybody already in it,
+   * `not_found` for a group of others.
+   */
+  abstract enroll(groupId: string, userIds: readonly string[]): Promise<void>;
+
+  /** Out of one group of the user; their attempts are kept. */
+  abstract unenroll(groupId: string, userId: string): Promise<void>;
 
   /**
    * The active teachers, by name, for the administrator to choose one. A teacher reads only their

@@ -14,6 +14,7 @@ import { studentTools } from './student-tools';
 const GROUP: AssignedGroup = {
   id: 'dam',
   name: '1.º DAM B',
+  label: null,
   subject: { id: 'basic', name: 'Programación básica', sourceLocale: 'es', translations: {} },
 };
 

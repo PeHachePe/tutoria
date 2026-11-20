@@ -2,39 +2,57 @@ import { Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
 
-import { BASIC_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
-import { GROUPS, TEACHER_ID } from '../../data/mock/fixtures/users';
-import type { ManagedGroup } from '../../data/group-service';
-import { SUBJECTS } from '../../data/mock/fixtures/subjects';
+import { type ManagedGroup, MAX_GROUP_LABEL_LENGTH } from '../../data/group-service';
+import {
+  ADVANCED_PROGRAMMING_ID,
+  BASIC_PROGRAMMING_ID,
+  SUBJECTS,
+} from '../../data/mock/fixtures/subjects';
+import { GROUPS, OTHER_TEACHER_ID, TEACHER_ID } from '../../data/mock/fixtures/users';
 import {
   type GroupFormModel,
   groupSchema,
-  MAX_GROUP_NAME_LENGTH,
   teacherChoices,
-  toClassDraft,
+  toGroupDraft,
   toGroupFormModel,
 } from './group-form';
 
-const DEFAULTS = { schoolYear: '2026/27', subjectIds: [], teacherId: TEACHER_ID };
-
-const VALID: GroupFormModel = {
-  name: '2.º DAW A',
-  schoolYear: '2026/27',
-  subjectIds: [BASIC_PROGRAMMING_ID],
-  teacherId: TEACHER_ID,
-};
-
+/** 1.º DAW A in basic programming, the group of the whole class. */
 const DAW: ManagedGroup = {
   group: GROUPS[0],
   subject: SUBJECTS[0],
-  teacherName: 'Carmen',
-  studentCount: 26,
+  teacherName: 'Marta',
+  studentCount: 24,
   started: true,
+  mine: true,
 };
 
-function errorsOf(model: GroupFormModel): Record<string, string[]> {
-  const groupForm = form(signal(model), groupSchema, { injector: TestBed.inject(Injector) });
-  const keys = ['name', 'schoolYear', 'subjectIds', 'teacherId'] as const;
+/** Its split in English, of another teacher. */
+const ENGLISH: ManagedGroup = {
+  group: GROUPS[4],
+  subject: SUBJECTS[0],
+  teacherName: 'Javier',
+  studentCount: 0,
+  started: false,
+  mine: false,
+};
+
+const VALID: GroupFormModel = {
+  subjectId: ADVANCED_PROGRAMMING_ID,
+  label: '',
+  teacherId: TEACHER_ID,
+};
+
+type Field = keyof GroupFormModel;
+
+function errorsOf(
+  model: GroupFormModel,
+  siblings: readonly ManagedGroup[] = [DAW, ENGLISH],
+): Record<Field, string[]> {
+  const groupForm = form(signal(model), groupSchema(siblings), {
+    injector: TestBed.inject(Injector),
+  });
+  const keys: Field[] = ['subjectId', 'label', 'teacherId'];
   return Object.fromEntries(
     keys.map((key) => [
       key,
@@ -42,58 +60,80 @@ function errorsOf(model: GroupFormModel): Record<string, string[]> {
         .errors()
         .map((error) => error.message ?? ''),
     ]),
-  );
+  ) as Record<Field, string[]>;
 }
 
 describe('toGroupFormModel', () => {
-  it('starts a new group with the defaults', () => {
-    expect(toGroupFormModel(null, DEFAULTS)).toEqual({ name: '', ...DEFAULTS });
+  it('starts a new group of the teacher given', () => {
+    expect(toGroupFormModel(null, TEACHER_ID)).toEqual({
+      subjectId: '',
+      label: '',
+      teacherId: TEACHER_ID,
+    });
   });
 
   it('leaves the teacher to choose without one', () => {
-    expect(toGroupFormModel(null, { ...DEFAULTS, teacherId: undefined }).teacherId).toBe('');
+    expect(toGroupFormModel(null, undefined).teacherId).toBe('');
   });
 
-  it('takes the fields of a group', () => {
-    expect(toGroupFormModel(DAW, DEFAULTS)).toEqual({
-      name: '1.º DAW A',
-      schoolYear: '2026/27',
-      subjectIds: [BASIC_PROGRAMMING_ID],
+  it('takes the subject, label and teacher of a group, not the teacher given', () => {
+    expect(toGroupFormModel(DAW, OTHER_TEACHER_ID)).toEqual({
+      subjectId: BASIC_PROGRAMMING_ID,
+      label: '',
       teacherId: TEACHER_ID,
+    });
+    expect(toGroupFormModel(ENGLISH, undefined)).toEqual({
+      subjectId: BASIC_PROGRAMMING_ID,
+      label: 'Desdoble inglés',
+      teacherId: OTHER_TEACHER_ID,
     });
   });
 });
 
 describe('groupSchema', () => {
-  it('takes a valid group', () => {
+  it('takes a subject the class does not have, without a label or with one', () => {
     expect(Object.values(errorsOf(VALID)).flat()).toEqual([]);
+    expect(Object.values(errorsOf({ ...VALID, label: 'Tarde' }, [])).flat()).toEqual([]);
   });
 
-  it('requires every field', () => {
-    expect(errorsOf({ name: '', schoolYear: '', subjectIds: [], teacherId: '' })).toEqual({
-      name: ['Escribe el nombre del grupo'],
-      schoolYear: ['Escribe el curso'],
-      subjectIds: ['Elige la asignatura'],
+  it('requires the subject and the teacher', () => {
+    expect(errorsOf({ subjectId: '', label: '', teacherId: '' })).toEqual({
+      subjectId: ['Elige la asignatura'],
+      label: [],
       teacherId: ['Elige el docente'],
     });
   });
 
-  it('checks the shape of the year and the length of the name', () => {
-    const errors = errorsOf({
-      ...VALID,
-      name: 'x'.repeat(MAX_GROUP_NAME_LENGTH + 1),
-      schoolYear: '2026-27',
-    });
-    expect(errors['name']).toEqual([`Como mucho ${MAX_GROUP_NAME_LENGTH} caracteres`]);
-    expect(errors['schoolYear']).toEqual(['Escribe el curso como 2026/27']);
+  it('keeps a label short', () => {
+    expect(errorsOf({ ...VALID, label: 'x'.repeat(MAX_GROUP_LABEL_LENGTH + 1) }).label).toEqual([
+      `Como mucho ${MAX_GROUP_LABEL_LENGTH} caracteres`,
+    ]);
+  });
+
+  it('asks for the label of a split of a subject the class has', () => {
+    const split = { ...VALID, subjectId: BASIC_PROGRAMMING_ID, label: '  ' };
+    expect(errorsOf(split).label).toEqual([
+      'La clase ya tiene esta asignatura: ponle un nombre al desdoble',
+    ]);
+    expect(errorsOf({ ...split, label: 'Desdoble 3' }).label).toEqual([]);
+  });
+
+  it('refuses the label of another split of the subject', () => {
+    const taken = { ...VALID, subjectId: BASIC_PROGRAMMING_ID, label: ' Desdoble inglés ' };
+    expect(errorsOf(taken).label).toEqual(['Ya hay un desdoble de esta asignatura con ese nombre']);
+    // Without the split among its siblings, as when that split is the group edited
+    expect(errorsOf(taken, [DAW]).label).toEqual([]);
   });
 });
 
-describe('groupSchema, beyond the shape', () => {
-  it('refuses a name of only spaces and a year of years apart', () => {
-    const errors = errorsOf({ ...VALID, name: '   ', schoolYear: '2026/99' });
-    expect(errors['name']).toEqual(['Escribe el nombre del grupo']);
-    expect(errors['schoolYear']).toEqual(['Un curso son dos años seguidos, como 2026/27']);
+describe('toGroupDraft', () => {
+  it('trims the label, and leaves none when it is blank', () => {
+    expect(toGroupDraft({ ...VALID, label: ' Tarde ' })).toEqual({
+      subjectId: ADVANCED_PROGRAMMING_ID,
+      label: 'Tarde',
+      teacherId: TEACHER_ID,
+    });
+    expect(toGroupDraft({ ...VALID, label: '   ' }).label).toBeNull();
   });
 });
 
@@ -106,18 +146,9 @@ describe('teacherChoices', () => {
   });
 
   it('keeps the disabled teacher of a group, which cannot be chosen again', () => {
-    expect(teacherChoices([], DAW)).toEqual([
-      { id: TEACHER_ID, name: 'Carmen (cuenta desactivada)', email: '', disabled: true },
+    expect(teacherChoices([marta], ENGLISH)).toEqual([
+      { ...marta, disabled: false },
+      { id: OTHER_TEACHER_ID, name: 'Javier (cuenta desactivada)', email: '', disabled: true },
     ]);
-  });
-});
-
-describe('toClassDraft', () => {
-  it('trims the texts and leaves the subjects out', () => {
-    expect(toClassDraft({ ...VALID, name: ' 2.º DAW A ', schoolYear: '2026/27 ' })).toEqual({
-      name: '2.º DAW A',
-      schoolYear: '2026/27',
-      teacherId: TEACHER_ID,
-    });
   });
 });

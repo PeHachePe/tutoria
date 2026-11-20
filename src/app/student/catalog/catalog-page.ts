@@ -15,6 +15,7 @@ import type { AttemptStatus } from '../../data/attempt';
 import type { AssignedGroup, ClassBlock, Exercise } from '../../data/exercise';
 import { ExerciseService } from '../../data/exercise-service';
 import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
+import { groupName } from '../../data/group-name';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { DueLabel } from '../../shared/due-label/due-label';
 import { EmptyState } from '../../shared/empty-state/empty-state';
@@ -114,7 +115,9 @@ export class CatalogPage {
       const repeated = names.filter((name) => name.text === names[index].text).length > 1;
       return {
         id: group.id,
-        label: repeated ? `${names[index].text} · ${group.name}` : names[index].text,
+        label: repeated
+          ? `${names[index].text} · ${groupName(group.name, group.label)}`
+          : names[index].text,
         lang: names[index].lang,
         active: group.id === this.selectedId(),
         queryParams: { [STUDENT_PARAMS.group]: group.id },

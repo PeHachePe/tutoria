@@ -72,6 +72,8 @@ export const TEACHER_ALL_BLOCKS = 'todos';
 export const TEACHER_PARAMS = {
   /** The group followed live, or whose blocks are shown: its id. */
   group: 'grupo',
+  /** The class whose groups and students are shown (5.2d): its id. */
+  class: 'clase',
   /** The block of that group: its id, or `todos` for the whole group live. */
   block: 'bloque',
   /** The exercise a new one copies («Duplicar», 4.3): its id. */

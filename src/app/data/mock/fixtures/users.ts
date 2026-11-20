@@ -1,4 +1,12 @@
-import type { AppUser, ClassGroup, Enrollment, Role, UserStatus } from '../../user';
+import type {
+  AppUser,
+  ClassGroup,
+  ClassMember,
+  Enrollment,
+  Role,
+  SchoolClass,
+  UserStatus,
+} from '../../user';
 import { fixtureId } from './fixture-id';
 import { ADVANCED_PROGRAMMING_ID, BASIC_PROGRAMMING_ID, WEB_CLIENT_ID } from './subjects';
 
@@ -13,9 +21,13 @@ const CREATED_AT = '2026-09-01T08:00:00.000Z';
 export const ADMIN_ID = fixtureId('user', 1);
 /** Teacher of 1.º DAW A. */
 export const TEACHER_ID = fixtureId('user', 2);
-/** Teacher of 1.º DAM B. */
+/** Teacher of 1.º DAM B and of a split of 1.º DAW A. */
 export const OTHER_TEACHER_ID = fixtureId('user', 3);
 export const DISABLED_STUDENT_ID = fixtureId('user', 50);
+
+/** 1.º DAW A, shared by both teachers (5.2d). */
+export const DAW_CLASS_ID = fixtureId('class', 1);
+export const DAM_CLASS_ID = fixtureId('class', 2);
 
 export const DAW_GROUP_ID = fixtureId('group', 1);
 export const DAM_GROUP_ID = fixtureId('group', 2);
@@ -23,6 +35,11 @@ export const DAM_GROUP_ID = fixtureId('group', 2);
 export const DAW_WEB_GROUP_ID = fixtureId('group', 3);
 /** 1.º DAM B in advanced programming, with its own teacher: other subjects than 1.º DAW A. */
 export const DAM_ADVANCED_GROUP_ID = fixtureId('group', 4);
+/**
+ * A split of 1.º DAW A in basic programming, taught in English by the teacher of 1.º DAM B (5.2d):
+ * a class with two teachers and two groups of one subject. Nobody chose its students yet.
+ */
+export const DAW_ENGLISH_GROUP_ID = fixtureId('group', 5);
 
 /** Students of 1.º DAW A, a full class (24): the first four have the richest history. */
 const DAW_STUDENTS: readonly (readonly [name: string, email: string])[] = [
@@ -99,34 +116,63 @@ export const USERS: readonly AppUser[] = [
   user(DISABLED_STUDENT_ID, 'Raúl Medina Cortés', 'raul.medina', 'student', 'disabled'),
 ];
 
+export const CLASSES: readonly SchoolClass[] = [
+  {
+    id: DAW_CLASS_ID,
+    name: '1.º DAW A',
+    schoolYear: '2026/27',
+    createdBy: TEACHER_ID,
+    createdAt: CREATED_AT,
+  },
+  {
+    id: DAM_CLASS_ID,
+    name: '1.º DAM B',
+    schoolYear: '2026/27',
+    createdBy: OTHER_TEACHER_ID,
+    createdAt: CREATED_AT,
+  },
+];
+
+export const CLASS_MEMBERS: readonly ClassMember[] = [
+  ...DAW_STUDENT_IDS.map((userId) => ({ classId: DAW_CLASS_ID, userId })),
+  ...DAM_STUDENT_IDS.map((userId) => ({ classId: DAM_CLASS_ID, userId })),
+];
+
 export const GROUPS: readonly ClassGroup[] = [
   {
     id: DAW_GROUP_ID,
-    name: '1.º DAW A',
-    schoolYear: '2026/27',
+    classId: DAW_CLASS_ID,
+    label: null,
     teacherId: TEACHER_ID,
     subjectId: BASIC_PROGRAMMING_ID,
   },
   {
     id: DAM_GROUP_ID,
-    name: '1.º DAM B',
-    schoolYear: '2026/27',
+    classId: DAM_CLASS_ID,
+    label: null,
     teacherId: OTHER_TEACHER_ID,
     subjectId: BASIC_PROGRAMMING_ID,
   },
   {
     id: DAW_WEB_GROUP_ID,
-    name: '1.º DAW A',
-    schoolYear: '2026/27',
+    classId: DAW_CLASS_ID,
+    label: null,
     teacherId: TEACHER_ID,
     subjectId: WEB_CLIENT_ID,
   },
   {
     id: DAM_ADVANCED_GROUP_ID,
-    name: '1.º DAM B',
-    schoolYear: '2026/27',
+    classId: DAM_CLASS_ID,
+    label: null,
     teacherId: OTHER_TEACHER_ID,
     subjectId: ADVANCED_PROGRAMMING_ID,
+  },
+  {
+    id: DAW_ENGLISH_GROUP_ID,
+    classId: DAW_CLASS_ID,
+    label: 'Desdoble inglés',
+    teacherId: OTHER_TEACHER_ID,
+    subjectId: BASIC_PROGRAMMING_ID,
   },
 ];
 

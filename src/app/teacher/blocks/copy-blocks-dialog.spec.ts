@@ -10,7 +10,7 @@ const [basic] = SUBJECTS;
 
 function source(id: string, schoolYear: string) {
   return {
-    group: { id, name: '1.º DAW A', schoolYear, subject: basic },
+    group: { id, name: '1.º DAW A', label: null, schoolYear, subject: basic },
     label: `1.º DAW A · ${schoolYear}`,
   };
 }

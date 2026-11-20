@@ -21,7 +21,7 @@ describe('assignedExercise', () => {
   const base = {
     exercise: SEED.exercises[0],
     assignmentId: SEED.assignments[0].id,
-    group: { id: SEED.groups[0].id, name: '1.º DAW A', subject: SEED.subjects[0] },
+    group: { id: SEED.groups[0].id, name: '1.º DAW A', label: null, subject: SEED.subjects[0] },
     block: SEED.classBlocks[0],
     dueAt: null,
   };

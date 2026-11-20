@@ -48,7 +48,8 @@ function detailOf(index: number): ExerciseDetail {
     assignmentId: assignment.id,
     group: {
       id: group.id,
-      name: group.name,
+      name: SEED.classes.find((row) => row.id === group.classId)!.name,
+      label: group.label,
       subject: SEED.subjects.find((subject) => subject.id === group.subjectId)!,
     },
     block: SEED.classBlocks.find((block) => block.id === assignment.blockId)!,

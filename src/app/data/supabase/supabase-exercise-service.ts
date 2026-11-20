@@ -2,6 +2,7 @@ import { inject, Service } from '@angular/core';
 
 import { assignedExercise, type AttemptSummary, summarizeAttempt } from '../attempt-progress';
 import { DataError } from '../data-error';
+import { groupName } from '../group-name';
 import type { AssignedExercise, AssignedGroup, Exercise, ExerciseDetail } from '../exercise';
 import {
   type BankExercise,
@@ -51,7 +52,7 @@ export class SupabaseExerciseService extends ExerciseService {
       this.supabase
         .from('exercise_assignment')
         .select(
-          'id, due_at, exercise(*), class_block(*), class_group!inner(id, name, subject(*), enrollment!inner(user_id))',
+          'id, due_at, exercise(*), class_block(*), class_group!inner(id, label, school_class(name), subject(*), enrollment!inner(user_id))',
         )
         .eq('class_group.enrollment.user_id', userId)
         .order('position'),
@@ -99,7 +100,7 @@ export class SupabaseExerciseService extends ExerciseService {
       await this.supabase
         .from('exercise_assignment')
         .select(
-          'id, due_at, exercise(*, test(*)), class_block(*), class_group(id, name, subject(*))',
+          'id, due_at, exercise(*, test(*)), class_block(*), class_group(id, label, school_class(name), subject(*))',
         )
         .eq('id', assignmentId)
         .eq('exercise.test.is_hidden', false)
@@ -137,7 +138,7 @@ export class SupabaseExerciseService extends ExerciseService {
       .from('exercise')
       .select(
         // `subjects` keeps them all for the chips; `scope`, inner, only filters
-        `*, test(count), subjects:exercise_subject(subject_id), exercise_assignment(class_group(id, name))${wanted ? ', scope:exercise_subject!inner(subject_id)' : ''}`,
+        `*, test(count), subjects:exercise_subject(subject_id), exercise_assignment(class_group(id, label, school_class(name)))${wanted ? ', scope:exercise_subject!inner(subject_id)' : ''}`,
       )
       .order('created_at', { ascending: false });
     if (wanted) query = query.in('scope.subject_id', [...wanted]);
@@ -176,7 +177,7 @@ export class SupabaseExerciseService extends ExerciseService {
       this.supabase
         .from('exercise')
         .select(
-          '*, test(*), exercise_subject(subject_id), exercise_assignment(class_group(id, name))',
+          '*, test(*), exercise_subject(subject_id), exercise_assignment(class_group(id, label, school_class(name)))',
         )
         .eq('id', exerciseId)
         .order('position', { referencedTable: 'test' })
@@ -271,37 +272,48 @@ export class SupabaseExerciseService extends ExerciseService {
   }
 }
 
-/** The group of an assignment, with its subject. */
+/** The group of an assignment, with its class and subject. */
 function toAssignedGroup(row: {
   id: string;
-  name: string;
+  label: string | null;
+  school_class: { name: string };
   subject: Row<'subject'>;
 }): AssignedGroup {
-  return { id: row.id, name: row.name, subject: toSubject(row.subject) };
+  return {
+    id: row.id,
+    name: row.school_class.name,
+    label: row.label,
+    subject: toSubject(row.subject),
+  };
+}
+
+/** A group as the bank names it, by its class. */
+interface UsageGroupRow {
+  id: string;
+  label: string | null;
+  school_class: { name: string };
 }
 
 /** A row of the bank as the query of `listBank` brings it. */
 type BankRow = Row<'exercise'> & {
   test: { count: number }[];
   subjects: { subject_id: string }[];
-  exercise_assignment: { class_group: { id: string; name: string } }[];
+  exercise_assignment: { class_group: UsageGroupRow }[];
   scope?: unknown;
 };
 
 /** The groups of the assignments the user reads, once each, by name. */
-function groupsOf(
-  assignments: readonly { class_group: { id: string; name: string } }[],
-): ExerciseUsage['groups'] {
+function groupsOf(assignments: readonly { class_group: UsageGroupRow }[]): ExerciseUsage['groups'] {
   const groups = new Map(assignments.map(({ class_group }) => [class_group.id, class_group]));
   return [...groups.values()]
-    .map(({ id, name }) => ({ id, name }))
+    .map(({ id, label, school_class }) => ({ id, name: groupName(school_class.name, label) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function usage(
   exerciseId: string,
   counts: ReadonlyMap<string, number>,
-  assignments: readonly { class_group: { id: string; name: string } }[],
+  assignments: readonly { class_group: UsageGroupRow }[],
 ): ExerciseUsage {
   return { studentCount: counts.get(exerciseId) ?? 0, groups: groupsOf(assignments) };
 }

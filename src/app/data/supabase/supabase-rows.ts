@@ -4,7 +4,7 @@ import type { ExerciseTranslations } from '../localized-text';
 import type { ProcessEvent } from '../process-event';
 import type { Subject } from '../subject';
 import type { HintLevel, Intensity, ToolRequest, TutorInteraction } from '../tutor';
-import type { AppUser, ClassGroup } from '../user';
+import type { AppUser, ClassGroup, SchoolClass } from '../user';
 import type { Database } from './database.types';
 
 type Tables = Database['public']['Tables'];
@@ -63,10 +63,20 @@ export function toExercise(row: Row<'exercise'>): Exercise {
 export function toClassGroup(row: Row<'class_group'>): ClassGroup {
   return {
     id: row.id,
-    name: row.name,
-    schoolYear: row.school_year,
+    classId: row.class_id,
+    label: row.label,
     teacherId: row.teacher_id,
     subjectId: row.subject_id,
+  };
+}
+
+export function toSchoolClass(row: Row<'school_class'>): SchoolClass {
+  return {
+    id: row.id,
+    name: row.name,
+    schoolYear: row.school_year,
+    createdBy: row.created_by,
+    createdAt: toIso(row.created_at),
   };
 }
 

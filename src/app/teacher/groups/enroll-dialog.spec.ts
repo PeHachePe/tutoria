@@ -14,10 +14,10 @@ const STUDENTS: UserRef[] = [
 
 function open(overrides: Partial<EnrollDialogData> = {}) {
   const data: EnrollDialogData = {
-    groupName: '1.º DAW A',
+    targetName: '1.º DAW A · 2026/27',
+    intro: 'Entran en todas sus asignaturas.',
     enrolledIds: new Set(),
     sources: [],
-    classmates: [],
     studentsOf: () => Promise.resolve([]),
     search: vi.fn(() => Promise.resolve(STUDENTS)),
     enroll: vi.fn(() => Promise.resolve()),
@@ -28,7 +28,7 @@ function open(overrides: Partial<EnrollDialogData> = {}) {
 }
 
 async function typeSearch(text: string): Promise<HTMLElement> {
-  const dialog = await screen.findByRole('dialog', { name: 'Matricular en 1.º DAW A' });
+  const dialog = await screen.findByRole('dialog', { name: 'Matricular en 1.º DAW A · 2026/27' });
   // The dialog moves the focus in once open: typing before that loses the keys after the move
   await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
   if (text) await userEvent.type(within(dialog).getByRole('searchbox'), text);
@@ -36,9 +36,10 @@ async function typeSearch(text: string): Promise<HTMLElement> {
 }
 
 describe('EnrollDialog', () => {
-  it('does not search below the minimum', async () => {
+  it('says what enrolling there does, and does not search below the minimum', async () => {
     const data = open();
     const dialog = await typeSearch('a');
+    expect(within(dialog).getByText('Entran en todas sus asignaturas.')).toBeTruthy();
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(data.search).not.toHaveBeenCalled();
     expect(within(dialog).getByText('Escribe al menos dos letras')).toBeTruthy();
@@ -65,8 +66,7 @@ describe('EnrollDialog', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (2)' }));
 
     expect(data.search).toHaveBeenCalledWith('an');
-    expect(data.enroll).toHaveBeenCalledWith([STUDENTS[0], STUDENTS[1]], []);
-    expect(within(dialog).queryByRole('group', { name: 'Matricular también en' })).toBeNull();
+    expect(data.enroll).toHaveBeenCalledWith([STUDENTS[0], STUDENTS[1]]);
     expect(await within(dialog).findByText('Matriculando…')).toBeTruthy();
     fail(new DataError('invalid'));
     expect((await within(dialog).findByRole('alert')).textContent).toContain('vuelve a buscarlo');
@@ -102,20 +102,20 @@ describe('EnrollDialog', () => {
     expect(boxes[MAX_ENROLLMENT_BATCH]).toHaveProperty('disabled', true);
   }, 30_000);
 
-  it('chooses the students of another group who are not in this one, or says it could not', async () => {
+  it('chooses the students of another class who are not here, or says it could not', async () => {
     let calls = 0;
     open({
       enrolledIds: new Set(['a']),
-      sources: [{ id: 'web', label: '1.º DAW A · Web' }],
+      sources: [{ id: 'dam', label: '1.º DAM B · 2026/27' }],
       studentsOf: () =>
         calls++ === 0 ? Promise.resolve(STUDENTS) : Promise.reject(new Error('boom')),
     });
     const dialog = await typeSearch('');
     const copy = async () => {
       await userEvent.click(
-        within(dialog).getByRole('button', { name: 'Añadir los de otro grupo' }),
+        within(dialog).getByRole('button', { name: 'Añadir los de otra clase' }),
       );
-      await userEvent.click(await screen.findByRole('menuitem', { name: '1.º DAW A · Web' }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: '1.º DAM B · 2026/27' }));
     };
 
     await copy();
@@ -124,32 +124,20 @@ describe('EnrollDialog', () => {
 
     await copy();
     expect((await within(dialog).findByRole('alert')).textContent).toContain(
-      'No se ha podido leer ese grupo',
+      'No se ha podido leer esa clase',
     );
   });
 
-  it('enrolls in the other groups of the class too, those left checked in their order', async () => {
-    const data = open({
-      classmates: [
-        { id: 'web', label: '1.º DAW A · Web' },
-        { id: 'db', label: '1.º DAW A · Bases de datos' },
-      ],
-      // The first one fails, so the dialog stays open for the second
-      enroll: vi.fn<EnrollDialogData['enroll']>().mockRejectedValueOnce(new DataError('network')),
-    });
+  it('closes once they are enrolled', async () => {
+    const data = open();
+    const ref = TestBed.inject(MatDialog).openDialogs[0];
+    const closed = vi.fn();
+    ref.afterClosed().subscribe(closed);
     const dialog = await typeSearch('an');
-    const also = within(dialog).getByRole('group', { name: 'Matricular también en' });
-    const web = within(also).getByRole('checkbox', { name: '1.º DAW A · Web' });
-    expect(web).toHaveProperty('checked', true);
-
-    await userEvent.click(web);
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Ana Ruiz/ }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (1)' }));
-    expect(data.enroll).toHaveBeenLastCalledWith([STUDENTS[0]], ['db']);
-    expect(await within(dialog).findByRole('alert')).toBeTruthy();
 
-    await userEvent.click(web);
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (1)' }));
-    expect(data.enroll).toHaveBeenLastCalledWith([STUDENTS[0]], ['web', 'db']);
+    await vi.waitFor(() => expect(closed).toHaveBeenCalledWith(true));
+    expect(data.enroll).toHaveBeenCalledWith([STUDENTS[0]]);
   });
 });

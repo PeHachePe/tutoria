@@ -185,28 +185,35 @@ export type Database = {
       };
       class_group: {
         Row: {
+          class_id: string;
           id: string;
-          name: string;
-          school_year: string;
+          label: string | null;
           subject_id: string;
           teacher_id: string;
         };
         ComputedFields: never;
         Insert: {
+          class_id: string;
           id?: string;
-          name: string;
-          school_year: string;
+          label?: string | null;
           subject_id: string;
           teacher_id: string;
         };
         Update: {
+          class_id?: string;
           id?: string;
-          name?: string;
-          school_year?: string;
+          label?: string | null;
           subject_id?: string;
           teacher_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'class_group_class_id_fkey';
+            columns: ['class_id'];
+            isOneToOne: false;
+            referencedRelation: 'school_class';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'class_group_subject_id_fkey';
             columns: ['subject_id'];
@@ -217,6 +224,37 @@ export type Database = {
           {
             foreignKeyName: 'class_group_teacher_id_fkey';
             columns: ['teacher_id'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      class_member: {
+        Row: {
+          class_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          class_id: string;
+          user_id: string;
+        };
+        Update: {
+          class_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'class_member_class_id_fkey';
+            columns: ['class_id'];
+            isOneToOne: false;
+            referencedRelation: 'school_class';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'class_member_user_id_fkey';
+            columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'app_user';
             referencedColumns: ['id'];
@@ -446,6 +484,39 @@ export type Database = {
           },
         ];
       };
+      school_class: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          name: string;
+          school_year: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name: string;
+          school_year: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name?: string;
+          school_year?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'school_class_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       staff_request: {
         Row: {
           id: number;
@@ -662,6 +733,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      add_class_group: {
+        Args: {
+          group_label: string;
+          group_teacher_id: string;
+          target_class_id: string;
+          target_subject_id: string;
+        };
+        Returns: string;
+      };
       are_valid_parameters: { Args: { names: string[] }; Returns: boolean };
       assign_exercises: {
         Args: { exercise_ids: string[]; target_block_id: string };
@@ -710,6 +790,31 @@ export type Database = {
         };
         Returns: number;
       };
+      class_overview: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          class_id: string;
+          group_id: string;
+          is_mine: boolean;
+          is_started: boolean;
+          label: string;
+          student_count: number;
+          subject_id: string;
+          teacher_id: string;
+          teacher_name: string;
+        }[];
+      };
+      class_roster: {
+        Args: { target_class_id: string };
+        Returns: {
+          email: string;
+          group_ids: string[];
+          id: string;
+          is_active: boolean;
+          is_member: boolean;
+          name: string;
+        }[];
+      };
       copy_blocks: {
         Args: {
           source_group_id: string;
@@ -754,37 +859,48 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      create_class: {
+        Args: {
+          class_name: string;
+          class_school_year: string;
+          group_teacher_id: string;
+          subject_ids: string[];
+        };
+        Returns: string;
+      };
+      create_class_group: {
+        Args: {
+          group_label: string;
+          group_teacher_id: string;
+          target_class_id: string;
+          target_subject_id: string;
+          with_class_students: boolean;
+        };
+        Returns: string;
+      };
       current_app_role: {
         Args: Record<PropertyKey, never>;
         Returns: Database['public']['Enums']['user_role'];
       };
-      duplicate_groups: {
+      duplicate_class: {
         Args: {
-          group_name: string;
-          group_school_year: string;
-          group_teacher_id: string;
+          class_name: string;
+          class_school_year: string;
+          source_class_id: string;
           source_group_ids: string[];
           time_zone?: string;
           with_blocks: boolean;
           with_dates: boolean;
           with_students: boolean;
         };
-        Returns: {
-          id: string;
-          name: string;
-          school_year: string;
-          subject_id: string;
-          teacher_id: string;
-        }[];
-        SetofOptions: {
-          from: '*';
-          to: 'class_group';
-          isOneToOne: false;
-          isSetofReturn: true;
-        };
+        Returns: string;
+      };
+      enroll_class_members: {
+        Args: { student_ids: string[]; target_class_id: string };
+        Returns: undefined;
       };
       enroll_students: {
-        Args: { also_group_ids?: string[]; student_ids: string[]; target_group_id: string };
+        Args: { student_ids: string[]; target_group_id: string };
         Returns: {
           email: string;
           enrollment_id: string;
@@ -799,6 +915,10 @@ export type Database = {
           student_count: number;
         }[];
       };
+      find_or_create_class: {
+        Args: { class_name: string; class_school_year: string };
+        Returns: string;
+      };
       group_deadline_stats: {
         Args: { target_group_id: string };
         Returns: {
@@ -811,14 +931,6 @@ export type Database = {
           missing_names: string[];
           missing_pending: number[];
           on_time: number;
-        }[];
-      };
-      group_summaries: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          group_id: string;
-          is_started: boolean;
-          student_count: number;
         }[];
       };
       group_work_stats: {
@@ -847,6 +959,7 @@ export type Database = {
         Args: { event_type: Database['public']['Enums']['process_event_type'] };
         Returns: boolean;
       };
+      is_empty_class: { Args: { target_class_id: string }; Returns: boolean };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
       is_open_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -871,6 +984,18 @@ export type Database = {
         Args: { asked_calls: Json; target_request_id: string; target_user_id: string };
         Returns: undefined;
       };
+      managed_classes: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          can_edit: boolean;
+          created_at: string;
+          created_by: string;
+          id: string;
+          name: string;
+          school_year: string;
+        }[];
+      };
+      manages_class: { Args: { target_class_id: string }; Returns: boolean };
       move_assignment: {
         Args: { target_assignment_id: string; target_block_id: string; target_position: number };
         Returns: {
@@ -939,6 +1064,10 @@ export type Database = {
         };
         Returns: string;
       };
+      remove_class_member: {
+        Args: { student_id: string; target_class_id: string };
+        Returns: undefined;
+      };
       reorder_assignments: {
         Args: { assignment_ids: string[]; target_block_id: string };
         Returns: undefined;
@@ -1001,6 +1130,14 @@ export type Database = {
         Args: { source_year: string; target_year: string };
         Returns: number;
       };
+      search_class_students: {
+        Args: { search: string; target_class_id: string };
+        Returns: {
+          email: string;
+          id: string;
+          name: string;
+        }[];
+      };
       search_students: {
         Args: { search: string; target_group_id: string };
         Returns: {
@@ -1009,6 +1146,7 @@ export type Database = {
           name: string;
         }[];
       };
+      studies_in_class: { Args: { target_class_id: string }; Returns: boolean };
       submit_attempt: {
         Args: { target_attempt_id: string };
         Returns: {
@@ -1036,6 +1174,7 @@ export type Database = {
         Returns: Json;
       };
       teaches_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
+      teaches_class: { Args: { target_class_id: string }; Returns: boolean };
       teaches_group: { Args: { target_group_id: string }; Returns: boolean };
       teaches_student: { Args: { target_user_id: string }; Returns: boolean };
     };

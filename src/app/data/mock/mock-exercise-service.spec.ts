@@ -115,7 +115,7 @@ describe('MockExerciseService', () => {
       ]);
       expect(entries[0]).toMatchObject({
         exercise: SEED.exercises[0],
-        group: { id: DAW_GROUP_ID, name: '1.º DAW A', subject: SEED.subjects[0] },
+        group: { id: DAW_GROUP_ID, name: '1.º DAW A', label: null, subject: SEED.subjects[0] },
         block: { id: fixtureId('block', 1), title: 'Tema 1: Bucles y condicionales' },
         practice: null,
         repetitions: 0,
@@ -123,6 +123,7 @@ describe('MockExerciseService', () => {
       expect(entries.find((entry) => entry.group.id === DAW_WEB_GROUP_ID)?.group).toEqual({
         id: DAW_WEB_GROUP_ID,
         name: '1.º DAW A',
+        label: null,
         subject: SEED.subjects[2],
       });
     });

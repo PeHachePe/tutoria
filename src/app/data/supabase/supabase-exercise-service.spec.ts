@@ -49,7 +49,12 @@ describe('SupabaseExerciseService', () => {
   });
 
   describe('listAssigned', () => {
-    const GROUP = { id: 'daw', name: '1.º DAW A', subject: subjectRow() };
+    const GROUP = {
+      id: 'daw',
+      label: null,
+      school_class: { name: '1.º DAW A' },
+      subject: subjectRow(),
+    };
 
     beforeEach(() => {
       server
@@ -122,6 +127,7 @@ describe('SupabaseExerciseService', () => {
         group: {
           id: 'daw',
           name: '1.º DAW A',
+          label: null,
           subject: {
             id: 'subject-1',
             name: 'Programación básica',
@@ -178,7 +184,12 @@ describe('SupabaseExerciseService', () => {
             due_at: null,
             exercise: { ...SUM, test: [testRow({ id: 't-1' }), testRow({ id: 't-2' })] },
             class_block: blockRow(),
-            class_group: { id: 'daw', name: '1.º DAW A', subject: subjectRow() },
+            class_group: {
+              id: 'daw',
+              label: 'Desdoble inglés',
+              school_class: { name: '1.º DAW A' },
+              subject: subjectRow(),
+            },
           },
         })
         .on('POST', '/rest/v1/rpc/hidden_test_count', { body: 3 });
@@ -188,7 +199,7 @@ describe('SupabaseExerciseService', () => {
       expect(detail).toMatchObject({
         exercise: { id: 'sum' },
         assignmentId: 'a-1',
-        group: { id: 'daw', subject: { name: 'Programación básica' } },
+        group: { id: 'daw', label: 'Desdoble inglés', subject: { name: 'Programación básica' } },
         block: { title: 'Tema 1: Bucles' },
         dueAt: null,
         hiddenTestCount: 3,
@@ -229,8 +240,8 @@ describe('SupabaseExerciseService', () => {
       { exercise_id: 'sum', student_count: 30 },
       { exercise_id: 'vowels', student_count: 0 },
     ];
-    const DAW = { id: 'g-1', name: '1.º DAW A' };
-    const DAM = { id: 'g-2', name: '1.º DAM B' };
+    const DAW = { id: 'g-1', label: null, school_class: { name: '1.º DAW A' } };
+    const DAM = { id: 'g-2', label: 'Tarde', school_class: { name: '1.º DAM B' } };
 
     beforeEach(() => {
       server.on('POST', '/rest/v1/rpc/exercise_student_counts', { body: COUNTS });
@@ -276,7 +287,10 @@ describe('SupabaseExerciseService', () => {
         subjectIds: ['subject-1', 'subject-2'],
         testCount: 5,
         studentCount: 30,
-        groups: [DAM, DAW],
+        groups: [
+          { id: 'g-2', name: '1.º DAM B · Tarde' },
+          { id: 'g-1', name: '1.º DAW A' },
+        ],
       });
       expect(bank.exercises[1]).toMatchObject({ testCount: 0, studentCount: 0, groups: [] });
       expect(bank.exercises[0].exercise).not.toHaveProperty('test');
@@ -344,7 +358,10 @@ describe('SupabaseExerciseService', () => {
       expect(entry.exercise).not.toHaveProperty('test');
       expect(entry.tests.map((test) => test.isHidden)).toEqual([false, true]);
       expect(entry.subjectIds).toEqual(['subject-1']);
-      expect(entry).toMatchObject({ studentCount: 30, groups: [DAW] });
+      expect(entry).toMatchObject({
+        studentCount: 30,
+        groups: [{ id: 'g-1', name: '1.º DAW A' }],
+      });
 
       // An exercise nobody started is not among the counts
       server.on('POST', '/rest/v1/rpc/exercise_student_counts', { body: [] });

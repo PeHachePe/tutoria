@@ -8,6 +8,7 @@ import { TEACHER_PARAMS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
 import { BlockService } from '../../data/block-service';
 import { subjectName } from '../../data/localized-text';
+import { groupTitle } from '../../data/group-name';
 import { type GroupHistory, StatsService } from '../../data/stats-service';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
@@ -79,7 +80,7 @@ export class HistoryPage {
   protected readonly groupOptions = computed(() =>
     this.groupList().map((group) => ({
       id: group.id,
-      label: `${group.name} · ${subjectName(group.subject, this.locale).name}`,
+      label: groupTitle(group.name, subjectName(group.subject, this.locale).name, group.label),
     })),
   );
 

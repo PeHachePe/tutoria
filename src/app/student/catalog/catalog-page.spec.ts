@@ -13,8 +13,8 @@ import type { HintLevel } from '../../data/tutor';
 import { LOADING_INDICATOR_DELAY_MS } from '../../shared/skeleton/loading-skeleton';
 import { CatalogPage } from './catalog-page';
 
-const DAW: AssignedGroup = { id: 'daw', name: '1.º DAW A', subject: SEED.subjects[0] };
-const WEB: AssignedGroup = { id: 'web', name: '1.º DAW A', subject: SEED.subjects[2] };
+const DAW: AssignedGroup = { id: 'daw', name: '1.º DAW A', label: null, subject: SEED.subjects[0] };
+const WEB: AssignedGroup = { id: 'web', name: '1.º DAW A', label: null, subject: SEED.subjects[2] };
 
 function block(position: number, title: string, group = DAW): ClassBlock {
   return {

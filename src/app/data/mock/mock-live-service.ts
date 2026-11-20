@@ -10,7 +10,7 @@ import {
   type LiveSnapshot,
   type LiveUpdate,
 } from '../live-service';
-import { canManageGroup, findRow } from './mock-access';
+import { canManageGroup, classOfGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
 import type { MockTables } from './mock-tables';
 import { MockNetwork } from './mock-network';
@@ -187,7 +187,8 @@ export function mockLiveGroups(
         );
       return {
         id: group.id,
-        name: group.name,
+        name: classOfGroup(tables, group).name,
+        label: group.label,
         subject,
         blocks: tables.classBlocks
           .filter((block) => block.groupId === group.id)

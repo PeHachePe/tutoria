@@ -35,13 +35,15 @@ describe('SupabaseLiveService', () => {
           body: [
             {
               id: 'daw',
-              name: '1.º DAW A',
+              label: null,
+              school_class: { name: '1.º DAW A' },
               subject: subjectRow(),
               class_block: [blockRow({ id: 'b2', position: 2 }), blockRow({ id: 'b1' })],
             },
             {
               id: 'web',
-              name: '1.º DAW A',
+              label: null,
+              school_class: { name: '1.º DAW A' },
               subject: subjectRow({ id: 's2', name: 'Desarrollo web' }),
               class_block: [],
             },
@@ -71,8 +73,20 @@ describe('SupabaseLiveService', () => {
       server
         .on('GET', '/rest/v1/class_group', {
           body: [
-            { id: 'b', name: 'X', subject: subjectRow({ name: 'Zeta' }), class_block: [] },
-            { id: 'a', name: 'X', subject: subjectRow({ name: 'Alfa' }), class_block: [] },
+            {
+              id: 'b',
+              label: null,
+              school_class: { name: 'X' },
+              subject: subjectRow({ name: 'Zeta' }),
+              class_block: [],
+            },
+            {
+              id: 'a',
+              label: null,
+              school_class: { name: 'X' },
+              subject: subjectRow({ name: 'Alfa' }),
+              class_block: [],
+            },
           ],
         })
         .on('GET', '/rest/v1/attempt', { body: null });

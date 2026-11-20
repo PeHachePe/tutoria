@@ -5,6 +5,7 @@ import { findAssigned, progressSummary, searchAssigned } from './assigned-querie
 const BASIC: AssignedGroup = {
   id: 'dam',
   name: '1.º DAM B',
+  label: null,
   subject: {
     id: 'basic',
     name: 'Programación básica',
@@ -15,6 +16,7 @@ const BASIC: AssignedGroup = {
 const ADVANCED: AssignedGroup = {
   id: 'dam-adv',
   name: '1.º DAM B',
+  label: null,
   subject: { id: 'adv', name: 'Programación avanzada', sourceLocale: 'es', translations: {} },
 };
 

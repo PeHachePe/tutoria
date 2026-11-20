@@ -4,12 +4,14 @@ import type { ClassBlock, Exercise, ExerciseAssignment, Test } from '../exercise
 import type { ProcessEvent } from '../process-event';
 import type { ExerciseSubject, Subject } from '../subject';
 import type { TutorInteraction } from '../tutor';
-import type { AppUser, ClassGroup, Enrollment } from '../user';
+import type { AppUser, ClassGroup, ClassMember, Enrollment, SchoolClass } from '../user';
 
 /** Every table of the data model (2.3), as the mock data keeps them. */
 export interface MockTables {
   readonly users: readonly AppUser[];
   readonly subjects: readonly Subject[];
+  readonly classes: readonly SchoolClass[];
+  readonly classMembers: readonly ClassMember[];
   readonly groups: readonly ClassGroup[];
   readonly enrollments: readonly Enrollment[];
   readonly classBlocks: readonly ClassBlock[];

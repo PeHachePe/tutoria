@@ -23,21 +23,26 @@ import { localTimeZone } from './time-zone';
 export class SupabaseBlockService extends BlockService {
   private readonly supabase = inject(SUPABASE_CLIENT);
 
-  /** The RLS gives a teacher their groups and the administration every group. */
+  /** The RLS gives a teacher their groups and the administration every group, with their class. */
   async listGroups(): Promise<PlannedGroup[]> {
     const rows = unwrap(
-      await this.supabase.from('class_group').select('id, name, school_year, subject(*)'),
+      await this.supabase
+        .from('class_group')
+        .select('id, label, school_class(name, school_year), subject(*)'),
     );
     return rows
       .map((row) => ({
         id: row.id,
-        name: row.name,
-        schoolYear: row.school_year,
+        name: row.school_class.name,
+        label: row.label,
+        schoolYear: row.school_class.school_year,
         subject: toSubject(row.subject),
       }))
       .sort(
         (a, b) =>
-          a.name.localeCompare(b.name, 'es') || a.subject.name.localeCompare(b.subject.name, 'es'),
+          a.name.localeCompare(b.name, 'es') ||
+          a.subject.name.localeCompare(b.subject.name, 'es') ||
+          labelOrder(a.label).localeCompare(labelOrder(b.label), 'es'),
       );
   }
 
@@ -194,4 +199,9 @@ export class SupabaseBlockService extends BlockService {
     );
     return toAssignment(row);
   }
+}
+
+/** The group of the whole class (no label) before its splits. */
+function labelOrder(label: string | null): string {
+  return label ?? '';
 }

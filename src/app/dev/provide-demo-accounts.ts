@@ -6,13 +6,13 @@ import {
   DAM_STUDENT_IDS,
   DAW_STUDENT_IDS,
   DISABLED_STUDENT_ID,
-  GROUPS,
+  CLASSES,
   MOCK_PASSWORD,
   TEACHER_ID,
   USERS,
 } from '../data/mock/fixtures/users';
 
-const [DAW_GROUP, DAM_GROUP] = GROUPS;
+const [DAW_CLASS, DAM_CLASS] = CLASSES;
 
 /**
  * One seed account per role, plus the disabled one to see how the login rejects it. Two students,
@@ -26,9 +26,9 @@ const ACCOUNTS: readonly (readonly [
   userId: string,
   group?: string,
 ])[] = [
-  [$localize`:@@demo.student:Alumna`, 'school', DAW_STUDENT_IDS[0], DAW_GROUP.name],
-  [$localize`:@@demo.student:Alumna`, 'school', DAM_STUDENT_IDS[0], DAM_GROUP.name],
-  [$localize`:@@demo.teacher:Docente`, 'co_present', TEACHER_ID, DAW_GROUP.name],
+  [$localize`:@@demo.student:Alumna`, 'school', DAW_STUDENT_IDS[0], DAW_CLASS.name],
+  [$localize`:@@demo.student:Alumna`, 'school', DAM_STUDENT_IDS[0], DAM_CLASS.name],
+  [$localize`:@@demo.teacher:Docente`, 'co_present', TEACHER_ID, DAW_CLASS.name],
   [$localize`:@@demo.admin:Administración`, 'admin_panel_settings', ADMIN_ID],
   [$localize`:@@demo.disabled:Cuenta desactivada`, 'person_off', DISABLED_STUDENT_ID],
 ];

@@ -54,11 +54,13 @@ describe('seed fixtures', () => {
     expect(roles.filter((role) => role === 'admin')).toHaveLength(1);
     expect(roles.filter((role) => role === 'teacher')).toHaveLength(2);
     expect(new Set(emails).size).toBe(emails.length);
-    expect(SEED.groups.map((group) => group.name)).toEqual([
-      '1.º DAW A',
-      '1.º DAM B',
-      '1.º DAW A',
-      '1.º DAM B',
+    expect(SEED.classes.map(({ name }) => name)).toEqual(['1.º DAW A', '1.º DAM B']);
+    expect(SEED.groups.map(({ classId, label }) => [classId, label])).toEqual([
+      [SEED.classes[0].id, null],
+      [SEED.classes[1].id, null],
+      [SEED.classes[0].id, null],
+      [SEED.classes[1].id, null],
+      [SEED.classes[0].id, 'Desdoble inglés'],
     ]);
     expect(SEED.enrollments.filter((e) => e.groupId === DAW_GROUP_ID)).toHaveLength(24);
     expect(SEED.enrollments.filter((e) => e.groupId === DAW_WEB_GROUP_ID)).toHaveLength(24);
@@ -84,8 +86,9 @@ describe('seed fixtures', () => {
       const count = SEED.exerciseSubjects.filter((row) => row.subjectId === subject.id).length;
       expect(count, subject.name).toBeGreaterThanOrEqual(15);
     }
-    // Each group has every exercise of its subject in some block
-    for (const group of SEED.groups) {
+    // Each group of a whole class has every exercise of its subject in some block; a split starts
+    // empty (5.2d)
+    for (const group of SEED.groups.filter(({ label }) => label === null)) {
       const assigned = new Set(
         SEED.assignments.filter((a) => a.groupId === group.id).map((a) => a.exerciseId),
       );

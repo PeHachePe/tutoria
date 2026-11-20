@@ -16,6 +16,7 @@ import { RouterLink } from '@angular/router';
 import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
 import { BlockService } from '../../data/block-service';
 import { blockTitle, type ContentLocale, subjectName } from '../../data/localized-text';
+import { groupTitle } from '../../data/group-name';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
@@ -167,7 +168,11 @@ export class AssignDialog {
       .value()
       .map((group) => ({
         id: group.id,
-        label: `${group.name} · ${subjectName(group.subject, this.data.locale).name}`,
+        label: groupTitle(
+          group.name,
+          subjectName(group.subject, this.data.locale).name,
+          group.label,
+        ),
         fits: subjects.has(group.subject.id),
       }))
       .sort((a, b) => Number(b.fits) - Number(a.fits));

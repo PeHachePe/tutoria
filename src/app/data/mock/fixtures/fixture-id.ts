@@ -11,6 +11,7 @@ const TABLE_PREFIXES = {
   event: '90000000',
   block: 'a0000000',
   subject: 'b0000000',
+  class: 'c0000000',
 } as const;
 
 export type FixtureTable = keyof typeof TABLE_PREFIXES;

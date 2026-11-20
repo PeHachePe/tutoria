@@ -189,11 +189,19 @@ export const GROUPS: LiveGroup[] = [
   {
     id: 'g1',
     name: '1.º DAW A',
+    label: null,
     subject: SUBJECTS[0],
     blocks: [block('b1', 1), block('b2', 2)],
     latestBlockId: 'b2',
   },
-  { id: 'g2', name: '1.º DAM B', subject: SUBJECTS[0], blocks: [], latestBlockId: null },
+  {
+    id: 'g2',
+    name: '1.º DAM B',
+    label: null,
+    subject: SUBJECTS[0],
+    blocks: [],
+    latestBlockId: null,
+  },
 ];
 
 /** A LiveService whose answers each test decides, and whose live changes it sends. */

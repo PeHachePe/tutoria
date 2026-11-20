@@ -1056,19 +1056,24 @@ describe('BlocksPage', () => {
 
     /** The same class next year, without blocks, and a group of the same subject without any. */
     function newGroups(db: MockDb): void {
+      db.update('classes', (classes) => [
+        ...classes,
+        { ...classes[0], id: 'next-class', schoolYear: '2027/28' },
+        { ...classes[0], id: 'workshop', name: 'Taller' },
+      ]);
       db.update('groups', (groups) => [
         ...groups,
         {
           id: NEXT,
-          name: '1.º DAW A',
-          schoolYear: '2027/28',
+          classId: 'next-class',
+          label: null,
           teacherId: TEACHER_ID,
           subjectId: BASIC_PROGRAMMING_ID,
         },
         {
           id: EMPTY,
-          name: 'Taller',
-          schoolYear: '2026/27',
+          classId: 'workshop',
+          label: null,
           teacherId: TEACHER_ID,
           subjectId: BASIC_PROGRAMMING_ID,
         },

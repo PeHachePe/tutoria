@@ -24,7 +24,8 @@ import {
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
 import type { AppUser, ClassGroup } from '../user';
-import { findRow, now } from './mock-access';
+import { classOfGroup, findRow, now } from './mock-access';
+import { groupName } from '../group-name';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
 
@@ -42,9 +43,12 @@ export class MockAdminService extends AdminService {
   listUsers(): Promise<UserEntry[]> {
     return this.network.request(() => {
       this.db.requireUser('admin');
-      const { users, groups, enrollments } = this.db.tables();
+      const tables = this.db.tables();
+      const { users, groups, enrollments } = tables;
       const namesOf = (keep: (group: ClassGroup) => boolean) =>
-        groups.filter(keep).map((group) => group.name);
+        groups
+          .filter(keep)
+          .map((group) => groupName(classOfGroup(tables, group).name, group.label));
       return [...users]
         .sort((a, b) => a.name.localeCompare(b.name, 'es'))
         .map((user) => {

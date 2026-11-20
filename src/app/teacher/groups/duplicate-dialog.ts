@@ -12,34 +12,29 @@ import {
 } from '@angular/material/dialog';
 import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
-import { MatOption, MatSelect } from '@angular/material/select';
 
 import { LanguageService } from '../../core/i18n/language-service';
-import type { ManagedGroup, UserRef } from '../../data/group-service';
-import { subjectName } from '../../data/localized-text';
+import type { ManagedGroup } from '../../data/group-service';
+import type { SchoolClass } from '../../data/user';
 import { datesNote } from '../../shared/dates-note';
+import { subjectLine } from './class-list';
 import { type DuplicateFormModel, duplicateSchema, toDuplicateFormModel } from './duplicate-form';
 import { groupActionMessage } from './group-action-message';
-import { teacherChoices } from './group-form';
 
 export interface DuplicateDialogData {
-  /** The group whose menu was used. */
-  readonly source: ManagedGroup;
-  /** The groups of its class (the same name and year), the source first. */
-  readonly classGroups: readonly ManagedGroup[];
-  /** The active teachers, for an administrator to choose one; null for a teacher. */
-  readonly teachers: readonly UserRef[] | null;
-  /** A teacher's groups are their own; an administrator chooses one (undefined). */
-  readonly teacherId: string | undefined;
+  readonly source: SchoolClass;
+  /** The groups of the class the user may copy: their own, or all for an administrator. */
+  readonly groups: readonly ManagedGroup[];
   readonly today: Date;
   /** Duplicates them; the dialog stays open, with the error, if it fails. */
   readonly save: (model: DuplicateFormModel) => Promise<void>;
 }
 
 /**
- * «Duplicar» a class for the next year or a parallel group (5.2c, D-079): a new group for each
- * subject chosen, with the name, year and teacher given and, if wanted, the blocks of each (with
- * their dates moved to the new year or without them) and its students.
+ * «Duplicar» a class for the next year or a parallel one (5.2c; 5.2d, D-081): the class with the name
+ * and year given (created, or joined if it exists) gets a copy of each group chosen, with its subject,
+ * label and teacher and, if wanted, its blocks (with their dates moved to the new year or without
+ * them) and its students. The other teachers add their subjects to it later.
  */
 @Component({
   selector: 'app-duplicate-dialog',
@@ -57,18 +52,17 @@ export interface DuplicateDialogData {
     MatHint,
     MatError,
     MatInput,
-    MatSelect,
-    MatOption,
   ],
   template: `
     <h2 mat-dialog-title i18n="@@duplicateDialog.title">
-      Duplicar {{ data.source.group.name }} · {{ data.source.group.schoolYear }}
+      Duplicar {{ data.source.name }} · {{ data.source.schoolYear }}
     </h2>
     <form [formRoot]="duplicateForm">
       <mat-dialog-content>
         <div class="flex flex-col gap-2 sm:min-w-md">
           <p class="mb-2 text-body-medium text-on-surface-variant" i18n="@@duplicateDialog.intro">
-            Crea sus grupos en otro curso o en un grupo paralelo, con lo que elijas traer.
+            Copia tus asignaturas en la clase del curso que viene o en una paralela, con lo que
+            elijas traer. Si esa clase ya existe, se añaden a ella.
           </p>
           <mat-form-field>
             <mat-label i18n="@@groupDialog.name">Nombre</mat-label>
@@ -87,25 +81,12 @@ export interface DuplicateDialogData {
               <mat-error>{{ error.message }}</mat-error>
             }
           </mat-form-field>
-          @if (teachers; as teachers) {
-            <mat-form-field>
-              <mat-label i18n="@@groupDialog.teacher">Docente</mat-label>
-              <mat-select [formField]="duplicateForm.teacherId">
-                @for (teacher of teachers; track teacher.id) {
-                  <mat-option [value]="teacher.id">{{ teacher.name }}</mat-option>
-                }
-              </mat-select>
-              @if (duplicateForm.teacherId().errors()[0]; as error) {
-                <mat-error>{{ error.message }}</mat-error>
-              }
-            </mat-form-field>
-          }
 
           <fieldset class="flex flex-col">
             <legend class="mb-1 text-title-small" i18n="@@duplicateDialog.subjects">
               Asignaturas
             </legend>
-            @for (managed of data.classGroups; track managed.group.id) {
+            @for (managed of data.groups; track managed.group.id) {
               <mat-checkbox [checked]="isChosen(managed)" (change)="toggle(managed)">
                 <!-- A space Angular keeps between the two: whitespace alone between tags is dropped -->
                 <span>{{ nameOf(managed) }}</span
@@ -152,6 +133,12 @@ export interface DuplicateDialogData {
             <mat-checkbox [formField]="duplicateForm.students" i18n="@@duplicateDialog.students"
               >Su alumnado (las cuentas activas)</mat-checkbox
             >
+            <p
+              class="ms-10 text-body-small text-on-surface-variant"
+              i18n="@@duplicateDialog.students.hint"
+            >
+              Sin él, la clase nueva empieza vacía: un curso nuevo es otra clase.
+            </p>
           </fieldset>
 
           @if (failure(); as message) {
@@ -167,10 +154,10 @@ export interface DuplicateDialogData {
           @if (duplicateForm().submitting()) {
             <span i18n="@@duplicateDialog.saving">Duplicando…</span>
           } @else {
-            <span i18n="@@duplicateDialog.submit">{chosenCount(), plural,
+            <span i18n="@@duplicateDialog.submit.class">{chosenCount(), plural,
               =0 {Duplicar}
-              =1 {Crear el grupo}
-              other {Crear {{ chosenCount() }} grupos}
+              =1 {Copiar 1 asignatura}
+              other {Copiar {{ chosenCount() }} asignaturas}
             }</span>
           }
         </button>
@@ -183,19 +170,10 @@ export class DuplicateDialog {
   private readonly ref = inject<MatDialogRef<DuplicateDialog, boolean>>(MatDialogRef);
   private readonly locale = inject(LanguageService).locale;
 
-  /** For an administrator: the active teachers. */
-  protected readonly teachers = this.data.teachers && teacherChoices(this.data.teachers, null);
-
   protected readonly failure = signal<string | null>(null);
 
   private readonly model = signal(
-    toDuplicateFormModel(
-      this.data.source,
-      this.data.classGroups,
-      this.data.teachers,
-      this.data.teacherId,
-      this.data.today,
-    ),
+    toDuplicateFormModel(this.data.source, this.data.groups, this.data.today),
   );
 
   protected readonly duplicateForm = form(this.model, duplicateSchema, {
@@ -216,11 +194,11 @@ export class DuplicateDialog {
   protected readonly chosenCount = computed(() => this.model().groupIds.length);
 
   protected readonly datesNote = computed(() =>
-    datesNote(this.data.source.group.schoolYear, this.model().schoolYear.trim()),
+    datesNote(this.data.source.schoolYear, this.model().schoolYear.trim()),
   );
 
   protected nameOf(managed: ManagedGroup): string {
-    return subjectName(managed.subject, this.locale).name;
+    return subjectLine(managed, this.locale);
   }
 
   protected isChosen(managed: ManagedGroup): boolean {
@@ -234,7 +212,7 @@ export class DuplicateDialog {
     else chosen.add(managed.group.id);
     this.duplicateForm
       .groupIds()
-      .value.set(this.data.classGroups.map(({ group }) => group.id).filter((id) => chosen.has(id)));
+      .value.set(this.data.groups.map(({ group }) => group.id).filter((id) => chosen.has(id)));
     this.duplicateForm.groupIds().markAsTouched();
   }
 }

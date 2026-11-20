@@ -15,11 +15,13 @@ import { blockStats, deadlineStats } from './history-testing';
 const DAW: AssignedGroup = {
   id: 'g1',
   name: '1.º DAW A',
+  label: null,
   subject: { id: 's1', name: 'Programación básica', sourceLocale: 'es', translations: {} },
 };
 const WEB: AssignedGroup = {
   id: 'g2',
   name: '1.º DAW A',
+  label: null,
   subject: { id: 's2', name: 'Desarrollo web', sourceLocale: 'es', translations: {} },
 };
 

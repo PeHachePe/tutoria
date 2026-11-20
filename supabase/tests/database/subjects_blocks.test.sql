@@ -106,8 +106,8 @@ select throws_ok(
   'an assignment is in a block of its own group'
 );
 select throws_ok(
-  $$ insert into class_group (name, school_year, teacher_id)
-     values ('2.º DAW A', '2026/27', '10000000-0000-4000-8000-000000000002') $$,
+  $$ select add_class_group('c0000000-0000-4000-8000-000000000001', null, 'Sin asignatura',
+       '10000000-0000-4000-8000-000000000002') $$,
   '23502', null,
   'every group belongs to a subject'
 );

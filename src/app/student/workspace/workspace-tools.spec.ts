@@ -29,6 +29,7 @@ function entry(id: string, title: string): AssignedExercise {
     group: {
       id: 'g',
       name: '1.º DAM B',
+      label: null,
       subject: { id: 's', name: 'Programación básica', sourceLocale: 'es', translations: {} },
     },
     block: {

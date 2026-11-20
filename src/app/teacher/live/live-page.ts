@@ -13,6 +13,7 @@ import { AppTitleStrategy } from '../../core/app-title-strategy';
 import { LanguageService } from '../../core/i18n/language-service';
 import type { LiveExercise } from '../../data/live-service';
 import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
+import { groupTitle } from '../../data/group-name';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { formatCall } from '../../shared/format-value';
 import { LoadError } from '../../shared/load-error/load-error';
@@ -120,7 +121,7 @@ export class LivePage {
   protected readonly groupOptions = computed(() =>
     this.store.groups().map((group) => ({
       id: group.id,
-      label: `${group.name} · ${subjectName(group.subject, this.locale).name}`,
+      label: groupTitle(group.name, subjectName(group.subject, this.locale).name, group.label),
     })),
   );
 

@@ -15,11 +15,13 @@ import {
 const DAW: AssignedGroup = {
   id: 'daw',
   name: '1.º DAW A',
+  label: null,
   subject: { id: 'basic', name: 'Programación básica', sourceLocale: 'es', translations: {} },
 };
 const WEB: AssignedGroup = {
   id: 'web',
   name: '1.º DAW A',
+  label: null,
   subject: { id: 'web', name: 'Desarrollo web', sourceLocale: 'es', translations: {} },
 };
 

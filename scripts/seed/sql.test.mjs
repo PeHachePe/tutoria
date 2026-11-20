@@ -153,6 +153,8 @@ describe('buildSeedSql', () => {
       'identities',
       'app_user',
       'subject',
+      'school_class',
+      'class_member',
       'class_group',
       'enrollment',
       'class_block',

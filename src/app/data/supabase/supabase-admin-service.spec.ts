@@ -35,18 +35,29 @@ describe('SupabaseAdminService', () => {
       const alvaro = appUserRow({ id: 'alvaro', name: 'Álvaro Ruiz' });
       server.on('GET', USERS, {
         body: [
-          { ...marta, taught: [{ name: '1.º DAW A' }, { name: '1.º DAW A' }], enrollment: [] },
-          { ...alvaro, taught: [], enrollment: [{ class_group: { name: '1.º DAW A' } }] },
+          {
+            ...marta,
+            taught: [
+              { label: null, school_class: { name: '1.º DAW A' } },
+              { label: 'Desdoble inglés', school_class: { name: '1.º DAW A' } },
+            ],
+            enrollment: [],
+          },
+          {
+            ...alvaro,
+            taught: [],
+            enrollment: [{ class_group: { label: null, school_class: { name: '1.º DAW A' } } }],
+          },
         ],
       });
 
       await expect(service.listUsers()).resolves.toEqual([
         toUserEntry(toAppUser(alvaro), [], ['1.º DAW A']),
-        toUserEntry(toAppUser(marta), ['1.º DAW A', '1.º DAW A'], []),
+        toUserEntry(toAppUser(marta), ['1.º DAW A', '1.º DAW A · Desdoble inglés'], []),
       ]);
       // The groups taught by their own key: through enrollment, app_user reaches class_group too
       expect(server.sentTo('GET', USERS)[0].params.get('select')).toBe(
-        '*,taught:class_group!class_group_teacher_id_fkey(name),enrollment(class_group(name))',
+        '*,taught:class_group!class_group_teacher_id_fkey(label,school_class(name)),enrollment(class_group(label,school_class(name)))',
       );
     });
 

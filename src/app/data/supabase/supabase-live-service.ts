@@ -42,13 +42,16 @@ export class SupabaseLiveService extends LiveService {
   /** One request for the groups with their subject and blocks, and one per group for its latest block. */
   async listGroups(): Promise<LiveGroup[]> {
     const groups = unwrap(
-      await this.supabase.from('class_group').select('id, name, subject(*), class_block(*)'),
+      await this.supabase
+        .from('class_group')
+        .select('id, label, school_class(name), subject(*), class_block(*)'),
     );
     const latest = await Promise.all(groups.map((group) => this.latestBlockId(group.id)));
     return groups
       .map((group, index) => ({
         id: group.id,
-        name: group.name,
+        name: group.school_class.name,
+        label: group.label,
         subject: toSubject(group.subject),
         blocks: group.class_block.map(toClassBlock).sort((a, b) => a.position - b.position),
         latestBlockId: latest[index],

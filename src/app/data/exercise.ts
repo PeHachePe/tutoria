@@ -90,7 +90,10 @@ export interface ExerciseAssignment {
 /** The group of an assigned exercise, with its subject: the tabs of the catalog. */
 export interface AssignedGroup {
   readonly id: string;
+  /** The name of its class (5.2d). */
   readonly name: string;
+  /** What tells a split apart, or null for the group of the whole class (5.2d). */
+  readonly label: string | null;
   readonly subject: Subject;
 }
 

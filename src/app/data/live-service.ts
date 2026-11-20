@@ -10,7 +10,10 @@ export const LIVE_WINDOW_MINUTES = 60;
 /** A group the teacher follows live, with what its selectors need. */
 export interface LiveGroup {
   readonly id: string;
+  /** The name of its class (5.2d). */
   readonly name: string;
+  /** What tells a split apart, or null for the group of the whole class (5.2d). */
+  readonly label: string | null;
   readonly subject: Subject;
   /** Every block of the group in order, hidden ones included: the teacher sees them all. */
   readonly blocks: readonly ClassBlock[];

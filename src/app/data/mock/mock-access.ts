@@ -1,7 +1,7 @@
 import type { Attempt } from '../attempt';
 import { DataError } from '../data-error';
 import type { ExerciseAssignment } from '../exercise';
-import type { AppUser, ClassGroup } from '../user';
+import type { AppUser, ClassGroup, SchoolClass } from '../user';
 import type { MockTables } from './mock-tables';
 
 /**
@@ -31,6 +31,23 @@ export function enrolledGroupIds(tables: MockTables, userId: string): ReadonlySe
 /** Teachers manage their own groups; administrators, all of them. */
 export function canManageGroup(user: AppUser, group: ClassGroup): boolean {
   return user.role === 'admin' || (user.role === 'teacher' && group.teacherId === user.id);
+}
+
+/**
+ * Who looks after a class and its students (5.2d), as `manages_class`: the administrator, its
+ * teachers and the teacher who created it. For a member of the staff: its callers require one.
+ */
+export function managesClass(tables: MockTables, user: AppUser, classId: string): boolean {
+  if (user.role === 'admin') return true;
+  return (
+    tables.classes.some((row) => row.id === classId && row.createdBy === user.id) ||
+    tables.groups.some((group) => group.classId === classId && group.teacherId === user.id)
+  );
+}
+
+/** The class of a group, which gives it its name and year (5.2d). */
+export function classOfGroup(tables: MockTables, group: ClassGroup): SchoolClass {
+  return findRow(tables.classes, group.classId);
 }
 
 /**

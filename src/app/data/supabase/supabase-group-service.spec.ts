@@ -1,22 +1,45 @@
 import { TestBed } from '@angular/core/testing';
 
-import { type GroupDraft, MAX_ENROLLMENT_BATCH } from '../group-service';
+import { type DuplicateOptions, MAX_ENROLLMENT_BATCH } from '../group-service';
 import { SupabaseGroupService } from './supabase-group-service';
-import { FakeSupabaseServer, groupRow, provideFakeSupabase, subjectRow } from './supabase-testing';
-
-const DRAFT: GroupDraft = {
-  name: ' Taller ',
-  schoolYear: '2026/27',
-  teacherId: 'teacher-1',
-  subjectId: 'subject-1',
-};
+import { FakeSupabaseServer, provideFakeSupabase, subjectRow } from './supabase-testing';
+import { localTimeZone } from './time-zone';
 
 const LUCIA = { id: 'lucia', name: 'Lucía Pérez', email: 'lucia@tutoria.test' };
 const HUGO = { id: 'hugo', name: 'Hugo Sánchez', email: 'hugo@tutoria.test' };
 
-function managedRow(overrides: Parameters<typeof groupRow>[0] = {}) {
-  return { ...groupRow(overrides), subject: subjectRow(), teacher: { name: 'Marta Ibáñez' } };
+/** A row of `school_class`. */
+const DAW_ROW = {
+  id: 'daw',
+  name: '1.º DAW A',
+  school_year: '2026/27',
+  created_by: 'teacher-1',
+  created_at: '2026-09-01T08:00:00+00:00',
+};
+
+/** A row of `managed_classes`: a class with whether the user may edit it. */
+function classRow(overrides: Partial<typeof DAW_ROW & { can_edit: boolean }> = {}) {
+  return { ...DAW_ROW, can_edit: true, ...overrides };
 }
+
+/** A row of `class_overview`: a group of a class with its summary. */
+const DAW_BASIC_OVERVIEW = {
+  group_id: 'daw-basic',
+  class_id: 'daw',
+  label: null as string | null,
+  teacher_id: 'teacher-1',
+  subject_id: 'subject-1',
+  teacher_name: 'Marta Ibáñez',
+  student_count: 24,
+  is_started: true,
+  is_mine: true,
+};
+
+function overviewRow(overrides: Partial<typeof DAW_BASIC_OVERVIEW> = {}) {
+  return { ...DAW_BASIC_OVERVIEW, ...overrides };
+}
+
+const OPTIONS: DuplicateOptions = { blocks: true, dates: false, students: true };
 
 describe('SupabaseGroupService', () => {
   let server: FakeSupabaseServer;
@@ -30,325 +53,521 @@ describe('SupabaseGroupService', () => {
     service = TestBed.inject(SupabaseGroupService);
   });
 
-  it('lists the groups the RLS gives, by name and subject, with their summary', async () => {
-    server
-      .on('GET', '/rest/v1/class_group', {
-        body: [
-          managedRow(),
-          { ...managedRow({ id: 'dam', name: '1.º DAM B' }), subject: subjectRow({ name: 'Web' }) },
-          { ...managedRow({ id: 'daw-web' }), subject: subjectRow({ name: 'Desarrollo web' }) },
-        ],
-      })
-      .on('POST', '/rest/v1/rpc/group_summaries', {
-        body: [{ group_id: 'daw', student_count: 24, is_started: true }],
+  describe('listClasses', () => {
+    it('lists the classes by year and name, each with its groups by subject and label', async () => {
+      server
+        .on('POST', '/rest/v1/rpc/managed_classes', {
+          body: [
+            classRow(),
+            classRow({ id: 'next', name: '1.º DAW A', school_year: '2027/28' }),
+            classRow({ id: 'dam', name: '1.º DAM B', can_edit: false }),
+          ],
+        })
+        .on('POST', '/rest/v1/rpc/class_overview', {
+          body: [
+            overviewRow({ group_id: 'daw-english', label: 'Desdoble inglés', is_mine: false }),
+            overviewRow(),
+            overviewRow({ group_id: 'daw-web', subject_id: 'subject-2' }),
+            overviewRow({ group_id: 'dam-basic', class_id: 'dam' }),
+          ],
+        })
+        .on('GET', '/rest/v1/subject', {
+          body: [subjectRow(), subjectRow({ id: 'subject-2', name: 'Desarrollo web' })],
+        });
+
+      const classes = await service.listClasses();
+
+      expect(classes.map((row) => [row.schoolClass.id, row.canEdit])).toEqual([
+        ['next', true],
+        ['dam', false],
+        ['daw', true],
+      ]);
+      expect(classes[0].groups).toEqual([]);
+      expect(classes[1].groups.map((row) => row.group.id)).toEqual(['dam-basic']);
+      expect(classes[2].groups.map((row) => row.group.id)).toEqual([
+        'daw-web',
+        'daw-basic',
+        'daw-english',
+      ]);
+      expect(classes[2].schoolClass).toEqual({
+        id: 'daw',
+        name: '1.º DAW A',
+        schoolYear: '2026/27',
+        createdBy: 'teacher-1',
+        createdAt: '2026-09-01T08:00:00.000Z',
       });
-
-    const groups = await service.listGroups();
-
-    expect(groups.map((row) => row.group.id)).toEqual(['dam', 'daw-web', 'daw']);
-    expect(groups.filter((row) => row.group.id !== 'daw-web')).toEqual([
-      expect.objectContaining({ group: expect.objectContaining({ id: 'dam' }), studentCount: 0 }),
-      {
+      expect(classes[2].groups[2]).toEqual({
         group: {
-          id: 'daw',
-          name: '1.º DAW A',
-          schoolYear: '2026/27',
+          id: 'daw-english',
+          classId: 'daw',
+          label: 'Desdoble inglés',
           teacherId: 'teacher-1',
           subjectId: 'subject-1',
         },
-        subject: expect.objectContaining({ id: 'subject-1' }),
+        subject: expect.objectContaining({ id: 'subject-1', name: 'Programación básica' }),
         teacherName: 'Marta Ibáñez',
         studentCount: 24,
         started: true,
-      },
-    ]);
-    const [request] = server.sentTo('GET', '/rest/v1/class_group');
-    // The teacher by their own key: class_group reaches app_user through enrollment too
-    expect(request.params.get('select')).toBe(
-      '*,subject(*),teacher:app_user!class_group_teacher_id_fkey(name)',
-    );
-  });
-
-  it('creates a group, with the name trimmed and nobody in it', async () => {
-    server.on('POST', '/rest/v1/class_group', {
-      status: 201,
-      body: managedRow({ name: 'Taller' }),
+        mine: false,
+      });
     });
 
-    const saved = await service.saveGroup(DRAFT);
+    it('sorts a split after the group of the whole class whatever order they come in', async () => {
+      server
+        .on('POST', '/rest/v1/rpc/managed_classes', { body: [classRow()] })
+        .on('POST', '/rest/v1/rpc/class_overview', {
+          body: [
+            overviewRow({ group_id: 'b', label: 'B' }),
+            overviewRow({ group_id: 'whole' }),
+            overviewRow({ group_id: 'a', label: 'A' }),
+          ],
+        })
+        .on('GET', '/rest/v1/subject', { body: [subjectRow()] });
 
-    expect(saved).toMatchObject({ group: { name: 'Taller' }, studentCount: 0, started: false });
-    const [request] = server.sentTo('POST', '/rest/v1/class_group');
-    expect(request.body).toEqual({
-      name: 'Taller',
-      school_year: '2026/27',
-      teacher_id: 'teacher-1',
-      subject_id: 'subject-1',
+      const [daw] = await service.listClasses();
+
+      expect(daw.groups.map((row) => row.group.id)).toEqual(['whole', 'a', 'b']);
     });
-    expect(server.sentTo('POST', '/rest/v1/rpc/group_summaries')).toHaveLength(0);
+
+    it('fails as any of its requests does', async () => {
+      server
+        .on('POST', '/rest/v1/rpc/managed_classes', {
+          status: 403,
+          body: { message: 'No', code: '42501' },
+        })
+        .on('POST', '/rest/v1/rpc/class_overview', { body: [] })
+        .on('GET', '/rest/v1/subject', { body: [] });
+
+      await expect(service.listClasses()).rejects.toMatchObject({ kind: 'forbidden' });
+    });
   });
 
-  it('changes only name, year and teacher of a group, with its summary', async () => {
-    server
-      .on('PATCH', '/rest/v1/class_group', { body: managedRow() })
-      .on('POST', '/rest/v1/rpc/group_summaries', {
+  it('lists every class of the school by year and name', async () => {
+    server.on('GET', '/rest/v1/school_class', {
+      body: [DAW_ROW, { ...DAW_ROW, id: 'dam', name: '1.º DAM B' }],
+    });
+
+    const classes = await service.listAllClasses();
+
+    expect(classes.map((row) => row.id)).toEqual(['dam', 'daw']);
+    expect(classes[1]).toEqual({
+      id: 'daw',
+      name: '1.º DAW A',
+      schoolYear: '2026/27',
+      createdBy: 'teacher-1',
+      createdAt: '2026-09-01T08:00:00.000Z',
+    });
+  });
+
+  describe('createClass', () => {
+    it('creates or joins the class with the RPC, with the name trimmed', async () => {
+      server.on('POST', '/rest/v1/rpc/create_class', { body: 'class-1' });
+
+      await expect(
+        service.createClass({ name: ' 2.º DAW A ', schoolYear: '2027/28' }, ['s-1', 's-2'], 't-1'),
+      ).resolves.toBe('class-1');
+      expect(server.sentTo('POST', '/rest/v1/rpc/create_class')[0].body).toEqual({
+        class_name: '2.º DAW A',
+        class_school_year: '2027/28',
+        subject_ids: ['s-1', 's-2'],
+        group_teacher_id: 't-1',
+      });
+    });
+
+    it.each([
+      ['42501', 'forbidden'],
+      ['22023', 'invalid'],
+      ['23505', 'invalid'],
+    ])('translates %s into %s', async (code, kind) => {
+      server.on('POST', '/rest/v1/rpc/create_class', {
+        status: 400,
+        body: { message: 'No', code },
+      });
+
+      await expect(
+        service.createClass({ name: 'Taller', schoolYear: '2027/28' }, [], 't-1'),
+      ).rejects.toMatchObject({ kind });
+    });
+  });
+
+  describe('saveClass', () => {
+    it('renames a class, with the name trimmed', async () => {
+      server.on('PATCH', '/rest/v1/school_class', { body: [{ id: 'daw' }] });
+
+      await expect(
+        service.saveClass('daw', { name: ' DAW mañana ', schoolYear: '2027/28' }),
+      ).resolves.toBeUndefined();
+      const [request] = server.sentTo('PATCH', '/rest/v1/school_class');
+      expect(request.params.get('id')).toBe('eq.daw');
+      expect(request.body).toEqual({ name: 'DAW mañana', school_year: '2027/28' });
+    });
+
+    it('tells a class the RLS does not let change as forbidden', async () => {
+      server.on('PATCH', '/rest/v1/school_class', { body: [] });
+
+      await expect(
+        service.saveClass('dam', { name: 'Otra', schoolYear: '2026/27' }),
+      ).rejects.toMatchObject({ kind: 'forbidden' });
+    });
+
+    it('translates a name and year taken into invalid', async () => {
+      server.on('PATCH', '/rest/v1/school_class', {
+        status: 409,
+        body: { message: 'Taken', code: '23505' },
+      });
+
+      await expect(
+        service.saveClass('daw', { name: '1.º DAM B', schoolYear: '2026/27' }),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+    });
+  });
+
+  describe('removeClass', () => {
+    it('removes a class', async () => {
+      server.on('DELETE', '/rest/v1/school_class', { body: [{ id: 'daw' }] });
+
+      await expect(service.removeClass('daw')).resolves.toBeUndefined();
+      expect(server.sentTo('DELETE', '/rest/v1/school_class')[0].params.get('id')).toBe('eq.daw');
+      expect(server.sentTo('GET', '/rest/v1/school_class')).toHaveLength(0);
+    });
+
+    it('keeps a class it still sees as invalid, and one it does not see is not found', async () => {
+      server
+        .on('DELETE', '/rest/v1/school_class', { body: [] })
+        .on('GET', '/rest/v1/school_class', { body: [{ id: 'daw' }] });
+      await expect(service.removeClass('daw')).rejects.toMatchObject({ kind: 'invalid' });
+      expect(server.sentTo('GET', '/rest/v1/school_class')[0].params.get('id')).toBe('eq.daw');
+
+      server.on('GET', '/rest/v1/school_class', { body: [] });
+      await expect(service.removeClass('nope')).rejects.toMatchObject({ kind: 'not_found' });
+    });
+  });
+
+  describe('addGroup', () => {
+    it('adds a split with the RPC', async () => {
+      server.on('POST', '/rest/v1/rpc/add_class_group', { body: 'group-1' });
+
+      await expect(
+        service.addGroup('daw', { subjectId: 's-1', label: ' Desdoble ', teacherId: 't-1' }),
+      ).resolves.toBe('group-1');
+      expect(server.sentTo('POST', '/rest/v1/rpc/add_class_group')[0].body).toEqual({
+        target_class_id: 'daw',
+        target_subject_id: 's-1',
+        group_label: ' Desdoble ',
+        group_teacher_id: 't-1',
+      });
+    });
+
+    it('sends a group of the whole class with an empty label', async () => {
+      server.on('POST', '/rest/v1/rpc/add_class_group', { body: 'group-1' });
+
+      await service.addGroup('daw', { subjectId: 's-1', label: null, teacherId: 't-1' });
+
+      expect(server.sentTo('POST', '/rest/v1/rpc/add_class_group')[0].body).toMatchObject({
+        group_label: '',
+      });
+    });
+
+    it.each([
+      ['42501', 'forbidden'],
+      ['P0002', 'not_found'],
+      ['23505', 'invalid'],
+    ])('translates %s into %s', async (code, kind) => {
+      server.on('POST', '/rest/v1/rpc/add_class_group', {
+        status: 400,
+        body: { message: 'No', code },
+      });
+
+      await expect(
+        service.addGroup('daw', { subjectId: 's-1', label: null, teacherId: 't-1' }),
+      ).rejects.toMatchObject({ kind });
+    });
+  });
+
+  describe('saveGroup', () => {
+    it('changes the label, trimmed, and the teacher of a group', async () => {
+      server.on('PATCH', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
+
+      await expect(
+        service.saveGroup('daw', { label: ' Tarde ', teacherId: 't-2' }),
+      ).resolves.toBeUndefined();
+      const [request] = server.sentTo('PATCH', '/rest/v1/class_group');
+      expect(request.params.get('id')).toBe('eq.daw');
+      expect(request.body).toEqual({ label: 'Tarde', teacher_id: 't-2' });
+    });
+
+    it.each([
+      ['a blank label', '  '],
+      ['no label', null],
+    ])('sends %s as none', async (_, label) => {
+      server.on('PATCH', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
+
+      await service.saveGroup('daw', { label, teacherId: 't-1' });
+
+      expect(server.sentTo('PATCH', '/rest/v1/class_group')[0].body).toEqual({
+        label: null,
+        teacher_id: 't-1',
+      });
+    });
+
+    it('does not find a group the RLS hides', async () => {
+      server.on('PATCH', '/rest/v1/class_group', { body: [] });
+
+      await expect(
+        service.saveGroup('dam', { label: null, teacherId: 't-1' }),
+      ).rejects.toMatchObject({ kind: 'not_found' });
+    });
+
+    it.each([
+      ['42501', 'forbidden'],
+      ['23514', 'invalid'],
+    ])('translates %s into %s', async (code, kind) => {
+      server.on('PATCH', '/rest/v1/class_group', { status: 403, body: { message: 'No', code } });
+
+      await expect(
+        service.saveGroup('daw', { label: null, teacherId: 't-2' }),
+      ).rejects.toMatchObject({ kind });
+    });
+  });
+
+  describe('removeGroup', () => {
+    it('removes a group', async () => {
+      server.on('DELETE', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
+
+      await expect(service.removeGroup('daw')).resolves.toBeUndefined();
+      expect(server.sentTo('DELETE', '/rest/v1/class_group')[0].params.get('id')).toBe('eq.daw');
+      expect(server.sentTo('GET', '/rest/v1/class_group')).toHaveLength(0);
+    });
+
+    it('keeps a started group it still sees as invalid, and one it does not see is not found', async () => {
+      server
+        .on('DELETE', '/rest/v1/class_group', { body: [] })
+        .on('GET', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
+      await expect(service.removeGroup('daw')).rejects.toMatchObject({ kind: 'invalid' });
+      expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('id')).toBe('eq.daw');
+
+      server.on('GET', '/rest/v1/class_group', { body: [] });
+      await expect(service.removeGroup('dam')).rejects.toMatchObject({ kind: 'not_found' });
+    });
+  });
+
+  describe('duplicateClass', () => {
+    it('duplicates the class with the RPC, in the time zone of the browser', async () => {
+      server.on('POST', '/rest/v1/rpc/duplicate_class', { body: 'next' });
+
+      await expect(
+        service.duplicateClass(
+          'daw',
+          { name: ' 1.º DAW A ', schoolYear: '2027/28' },
+          ['daw-basic', 'daw-web'],
+          OPTIONS,
+        ),
+      ).resolves.toBe('next');
+      expect(server.sentTo('POST', '/rest/v1/rpc/duplicate_class')[0].body).toEqual({
+        source_class_id: 'daw',
+        class_name: '1.º DAW A',
+        class_school_year: '2027/28',
+        source_group_ids: ['daw-basic', 'daw-web'],
+        with_blocks: true,
+        with_dates: false,
+        with_students: true,
+        time_zone: localTimeZone(),
+      });
+    });
+
+    it.each([
+      ['P0002', 'not_found'],
+      ['22023', 'invalid'],
+    ])('translates %s into %s', async (code, kind) => {
+      server.on('POST', '/rest/v1/rpc/duplicate_class', {
+        status: 400,
+        body: { message: 'No', code },
+      });
+
+      await expect(
+        service.duplicateClass('dam', { name: 'Copia', schoolYear: '2027/28' }, ['dam'], OPTIONS),
+      ).rejects.toMatchObject({ kind });
+    });
+  });
+
+  describe('listRoster', () => {
+    it('lists the students of a class as the RPC gives them', async () => {
+      server.on('POST', '/rest/v1/rpc/class_roster', {
         body: [
-          { group_id: 'dam', student_count: 1, is_started: false },
-          { group_id: 'daw', student_count: 3, is_started: true },
+          { ...HUGO, is_active: false, is_member: false, group_ids: ['daw-english'] },
+          { ...LUCIA, is_active: true, is_member: true, group_ids: ['daw-basic', 'daw-web'] },
         ],
       });
 
-    const saved = await service.saveGroup({ ...DRAFT, id: 'daw' });
-
-    expect(saved).toMatchObject({ studentCount: 3, started: true });
-    const [request] = server.sentTo('PATCH', '/rest/v1/class_group');
-    expect(request.params.get('id')).toBe('eq.daw');
-    expect(request.body).toEqual({
-      name: 'Taller',
-      school_year: '2026/27',
-      teacher_id: 'teacher-1',
-    });
-  });
-
-  it('sums up a changed group the summaries leave out as empty', async () => {
-    server
-      .on('PATCH', '/rest/v1/class_group', { body: managedRow() })
-      .on('POST', '/rest/v1/rpc/group_summaries', { body: [] });
-
-    await expect(service.saveGroup({ ...DRAFT, id: 'daw' })).resolves.toMatchObject({
-      studentCount: 0,
-      started: false,
-    });
-  });
-
-  it.each([
-    ['42501', 'forbidden'],
-    ['23514', 'invalid'],
-  ])('translates %s on saving a group into %s', async (code, kind) => {
-    server.on('POST', '/rest/v1/class_group', { status: 403, body: { message: 'No', code } });
-
-    await expect(service.saveGroup(DRAFT)).rejects.toMatchObject({ kind });
-  });
-
-  it('removes a group', async () => {
-    server.on('DELETE', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
-
-    await expect(service.removeGroup('daw')).resolves.toBeUndefined();
-    expect(server.sentTo('DELETE', '/rest/v1/class_group')[0].params.get('id')).toBe('eq.daw');
-    expect(server.sentTo('GET', '/rest/v1/class_group')).toHaveLength(0);
-  });
-
-  it('keeps a started group it still sees as invalid, and one it does not see is not found', async () => {
-    server
-      .on('DELETE', '/rest/v1/class_group', { body: [] })
-      .on('GET', '/rest/v1/class_group', { body: [{ id: 'daw' }] });
-    await expect(service.removeGroup('daw')).rejects.toMatchObject({ kind: 'invalid' });
-    expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('id')).toBe('eq.daw');
-
-    server.on('GET', '/rest/v1/class_group', { body: [] });
-    await expect(service.removeGroup('dam')).rejects.toMatchObject({ kind: 'not_found' });
-  });
-
-  it('lists the students of a group by name', async () => {
-    server.on('GET', '/rest/v1/class_group', {
-      body: {
-        id: 'daw',
-        enrollment: [
-          { id: 'e-1', app_user: { ...LUCIA, status: 'active' } },
-          { id: 'e-2', app_user: { ...HUGO, status: 'disabled' } },
-        ],
-      },
+      await expect(service.listRoster('daw')).resolves.toEqual([
+        { student: HUGO, active: false, member: false, groupIds: ['daw-english'] },
+        { student: LUCIA, active: true, member: true, groupIds: ['daw-basic', 'daw-web'] },
+      ]);
+      expect(server.sentTo('POST', '/rest/v1/rpc/class_roster')[0].body).toEqual({
+        target_class_id: 'daw',
+      });
     });
 
-    await expect(service.listStudents('daw')).resolves.toEqual([
-      { enrollmentId: 'e-2', student: HUGO, active: false },
-      { enrollmentId: 'e-1', student: LUCIA, active: true },
-    ]);
-    const [request] = server.sentTo('GET', '/rest/v1/class_group');
-    expect(request.params.get('id')).toBe('eq.daw');
-  });
-
-  it('does not find the students of a group the RLS hides', async () => {
-    server.on('GET', '/rest/v1/class_group', {
-      status: 406,
-      body: { message: 'No rows', code: 'PGRST116' },
-    });
-
-    await expect(service.listStudents('dam')).rejects.toMatchObject({ kind: 'not_found' });
-  });
-
-  it('searches students with the RPC, and not with a short search', async () => {
-    server.on('POST', '/rest/v1/rpc/search_students', { body: [LUCIA] });
-
-    await expect(service.searchStudents('daw', ' lu ')).resolves.toEqual([LUCIA]);
-    expect(server.sentTo('POST', '/rest/v1/rpc/search_students')[0].body).toEqual({
-      search: 'lu',
-      target_group_id: 'daw',
-    });
-
-    await expect(service.searchStudents('daw', ' l ')).resolves.toEqual([]);
-    expect(server.sentTo('POST', '/rest/v1/rpc/search_students')).toHaveLength(1);
-  });
-
-  it('translates P0002 and 22023 on searching', async () => {
-    server.on('POST', '/rest/v1/rpc/search_students', {
-      status: 400,
-      body: { message: 'No such group', code: 'P0002' },
-    });
-    await expect(service.searchStudents('dam', 'lucía')).rejects.toMatchObject({
-      kind: 'not_found',
-    });
-
-    server.on('POST', '/rest/v1/rpc/search_students', {
-      status: 400,
-      body: { message: 'Short', code: '22023' },
-    });
-    await expect(service.searchStudents('daw', 'lucía')).rejects.toMatchObject({
-      kind: 'invalid',
-    });
-  });
-
-  it('enrolls several students in one request', async () => {
-    server.on('POST', '/rest/v1/rpc/enroll_students', {
-      body: [
-        { enrollment_id: 'e-1', ...LUCIA },
-        { enrollment_id: 'e-2', ...HUGO },
-      ],
-    });
-
-    await expect(service.enroll('daw', ['lucia', 'hugo'])).resolves.toEqual([
-      { enrollmentId: 'e-1', student: LUCIA, active: true },
-      { enrollmentId: 'e-2', student: HUGO, active: true },
-    ]);
-    const [request] = server.sentTo('POST', '/rest/v1/rpc/enroll_students');
-    expect(request.body).toEqual({
-      target_group_id: 'daw',
-      student_ids: ['lucia', 'hugo'],
-      also_group_ids: [],
-    });
-  });
-
-  it('enrolls in the other groups of the class too', async () => {
-    server.on('POST', '/rest/v1/rpc/enroll_students', {
-      body: [{ enrollment_id: 'e-1', ...LUCIA }],
-    });
-
-    await service.enroll('daw', ['lucia'], ['daw-web']);
-
-    const [request] = server.sentTo('POST', '/rest/v1/rpc/enroll_students');
-    expect(request.body).toMatchObject({ also_group_ids: ['daw-web'] });
-  });
-
-  it.each([
-    // Somebody already in the group
-    ['23505', 'invalid'],
-    // Not an active student (check_enrolled_student)
-    ['23514', 'invalid'],
-    // A group the user does not manage
-    ['P0002', 'not_found'],
-  ])('translates %s on enrolling into %s', async (code, kind) => {
-    server.on('POST', '/rest/v1/rpc/enroll_students', {
-      status: 400,
-      body: { message: 'No', code },
-    });
-
-    await expect(service.enroll('daw', ['lucia'])).rejects.toMatchObject({ kind });
-  });
-
-  it.each([
-    ['nobody', []],
-    ['the same student twice', ['lucia', 'lucia']],
-    ['too many at once', Array.from({ length: MAX_ENROLLMENT_BATCH + 1 }, (_, i) => `u-${i}`)],
-  ])('does not send an enrollment of %s', async (_, userIds) => {
-    await expect(service.enroll('daw', userIds)).rejects.toMatchObject({ kind: 'invalid' });
-    expect(server.requests).toHaveLength(0);
-  });
-
-  it('creates the class in several subjects in one insert, in their order', async () => {
-    server.on('POST', '/rest/v1/class_group', {
-      status: 201,
-      body: [
-        managedRow({ id: 'web', name: 'Taller', subject_id: 'subject-2' }),
-        managedRow({ id: 'basic', name: 'Taller', subject_id: 'subject-1' }),
-      ],
-    });
-
-    const created = await service.createGroups(
-      { name: ' Taller ', schoolYear: '2026/27', teacherId: 'teacher-1' },
-      ['subject-1', 'subject-2'],
-    );
-
-    expect(created.map((row) => [row.group.id, row.studentCount, row.started])).toEqual([
-      ['basic', 0, false],
-      ['web', 0, false],
-    ]);
-    const [request] = server.sentTo('POST', '/rest/v1/class_group');
-    expect(request.body).toEqual([
-      { name: 'Taller', school_year: '2026/27', teacher_id: 'teacher-1', subject_id: 'subject-1' },
-      { name: 'Taller', school_year: '2026/27', teacher_id: 'teacher-1', subject_id: 'subject-2' },
-    ]);
-  });
-
-  it('duplicates groups with the RPC, and reads them as the list shows them', async () => {
-    server
-      .on('POST', '/rest/v1/rpc/duplicate_groups', {
-        body: [groupRow({ id: 'copy-1' }), groupRow({ id: 'copy-2' })],
-      })
-      .on('GET', '/rest/v1/class_group', {
-        body: [managedRow({ id: 'copy-2' }), managedRow({ id: 'copy-1' })],
-      })
-      .on('POST', '/rest/v1/rpc/group_summaries', {
-        body: [{ group_id: 'copy-1', student_count: 24, is_started: false }],
+    it('does not find a class the user does not look after', async () => {
+      server.on('POST', '/rest/v1/rpc/class_roster', {
+        status: 400,
+        body: { message: 'No such class', code: 'P0002' },
       });
 
-    const created = await service.duplicateGroups(
-      ['daw', 'daw-web'],
-      { name: ' 1.º DAW A ', schoolYear: '2027/28', teacherId: 'teacher-1' },
-      { blocks: true, dates: false, students: true },
-    );
-
-    expect(created.map((row) => [row.group.id, row.studentCount])).toEqual([
-      ['copy-1', 24],
-      ['copy-2', 0],
-    ]);
-    const [request] = server.sentTo('POST', '/rest/v1/rpc/duplicate_groups');
-    expect(request.body).toEqual({
-      source_group_ids: ['daw', 'daw-web'],
-      group_name: '1.º DAW A',
-      group_school_year: '2027/28',
-      group_teacher_id: 'teacher-1',
-      with_blocks: true,
-      with_dates: false,
-      with_students: true,
-      time_zone: 'Europe/Madrid',
+      await expect(service.listRoster('dam')).rejects.toMatchObject({ kind: 'not_found' });
     });
-    expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('id')).toBe(
-      'in.(copy-1,copy-2)',
-    );
   });
 
-  it('translates a group of others on duplicating into not found', async () => {
-    server.on('POST', '/rest/v1/rpc/duplicate_groups', {
-      status: 400,
-      body: { message: 'No such group', code: 'P0002' },
+  describe('searchStudents', () => {
+    it('searches the students of the school not in a class', async () => {
+      server.on('POST', '/rest/v1/rpc/search_class_students', { body: [LUCIA] });
+
+      await expect(service.searchStudents({ kind: 'class', id: 'daw' }, ' lu ')).resolves.toEqual([
+        LUCIA,
+      ]);
+      expect(server.sentTo('POST', '/rest/v1/rpc/search_class_students')[0].body).toEqual({
+        search: 'lu',
+        target_class_id: 'daw',
+      });
     });
 
-    await expect(
-      service.duplicateGroups(
-        ['dam'],
-        { name: 'Copia', schoolYear: '2027/28', teacherId: 'teacher-1' },
-        { blocks: false, dates: false, students: false },
-      ),
-    ).rejects.toMatchObject({ kind: 'not_found' });
+    it('searches the students not in a group', async () => {
+      server.on('POST', '/rest/v1/rpc/search_students', { body: [HUGO] });
+
+      await expect(
+        service.searchStudents({ kind: 'group', id: 'daw-english' }, 'hugo'),
+      ).resolves.toEqual([HUGO]);
+      expect(server.sentTo('POST', '/rest/v1/rpc/search_students')[0].body).toEqual({
+        search: 'hugo',
+        target_group_id: 'daw-english',
+      });
+    });
+
+    it('does not search with a short search', async () => {
+      await expect(service.searchStudents({ kind: 'class', id: 'daw' }, ' l ')).resolves.toEqual(
+        [],
+      );
+      expect(server.requests).toHaveLength(0);
+    });
+
+    it('translates P0002 into not found', async () => {
+      server.on('POST', '/rest/v1/rpc/search_class_students', {
+        status: 400,
+        body: { message: 'No such class', code: 'P0002' },
+      });
+
+      await expect(
+        service.searchStudents({ kind: 'class', id: 'dam' }, 'lucía'),
+      ).rejects.toMatchObject({ kind: 'not_found' });
+    });
   });
 
-  it('unenrolls, and an enrollment the RLS hides is not found', async () => {
+  describe('enrollInClass', () => {
+    it('enrolls several students into the class in one request', async () => {
+      server.on('POST', '/rest/v1/rpc/enroll_class_members', { status: 204 });
+
+      await expect(service.enrollInClass('daw', ['lucia', 'hugo'])).resolves.toBeUndefined();
+      expect(server.sentTo('POST', '/rest/v1/rpc/enroll_class_members')[0].body).toEqual({
+        target_class_id: 'daw',
+        student_ids: ['lucia', 'hugo'],
+      });
+    });
+
+    it.each([
+      // Not an active student (check_enrolled_student)
+      ['23514', 'invalid'],
+      // A class the user does not look after
+      ['P0002', 'not_found'],
+    ])('translates %s into %s', async (code, kind) => {
+      server.on('POST', '/rest/v1/rpc/enroll_class_members', {
+        status: 400,
+        body: { message: 'No', code },
+      });
+
+      await expect(service.enrollInClass('daw', ['lucia'])).rejects.toMatchObject({ kind });
+    });
+
+    it.each([
+      ['nobody', []],
+      ['the same student twice', ['lucia', 'lucia']],
+      ['too many at once', Array.from({ length: MAX_ENROLLMENT_BATCH + 1 }, (_, i) => `u-${i}`)],
+    ])('does not send %s', async (_, userIds) => {
+      await expect(service.enrollInClass('daw', userIds)).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      expect(server.requests).toHaveLength(0);
+    });
+  });
+
+  describe('removeFromClass', () => {
+    it('takes a student out of the class with the RPC', async () => {
+      server.on('POST', '/rest/v1/rpc/remove_class_member', { status: 204 });
+
+      await expect(service.removeFromClass('daw', 'lucia')).resolves.toBeUndefined();
+      expect(server.sentTo('POST', '/rest/v1/rpc/remove_class_member')[0].body).toEqual({
+        target_class_id: 'daw',
+        student_id: 'lucia',
+      });
+    });
+
+    it('does not find a student not in the class', async () => {
+      server.on('POST', '/rest/v1/rpc/remove_class_member', {
+        status: 400,
+        body: { message: 'Not in the class', code: 'P0002' },
+      });
+
+      await expect(service.removeFromClass('daw', 'elena')).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+    });
+  });
+
+  describe('enroll', () => {
+    it('enrolls several students into one group in one request', async () => {
+      server.on('POST', '/rest/v1/rpc/enroll_students', { status: 204 });
+
+      await expect(service.enroll('daw-english', ['lucia', 'hugo'])).resolves.toBeUndefined();
+      expect(server.sentTo('POST', '/rest/v1/rpc/enroll_students')[0].body).toEqual({
+        target_group_id: 'daw-english',
+        student_ids: ['lucia', 'hugo'],
+      });
+    });
+
+    it.each([
+      // Somebody already in the group
+      ['23505', 'invalid'],
+      // Not an active student (check_enrolled_student)
+      ['23514', 'invalid'],
+      // A group the user does not manage
+      ['P0002', 'not_found'],
+    ])('translates %s into %s', async (code, kind) => {
+      server.on('POST', '/rest/v1/rpc/enroll_students', {
+        status: 400,
+        body: { message: 'No', code },
+      });
+
+      await expect(service.enroll('daw', ['lucia'])).rejects.toMatchObject({ kind });
+    });
+
+    it.each([
+      ['nobody', []],
+      ['the same student twice', ['lucia', 'lucia']],
+      ['too many at once', Array.from({ length: MAX_ENROLLMENT_BATCH + 1 }, (_, i) => `u-${i}`)],
+    ])('does not send %s', async (_, userIds) => {
+      await expect(service.enroll('daw', userIds)).rejects.toMatchObject({ kind: 'invalid' });
+      expect(server.requests).toHaveLength(0);
+    });
+  });
+
+  it('unenrolls a student from a group, and one the RLS hides is not found', async () => {
     server.on('DELETE', '/rest/v1/enrollment', { body: [{ id: 'e-1' }] });
-    await expect(service.unenroll('e-1')).resolves.toBeUndefined();
-    expect(server.sentTo('DELETE', '/rest/v1/enrollment')[0].params.get('id')).toBe('eq.e-1');
+    await expect(service.unenroll('daw', 'lucia')).resolves.toBeUndefined();
+    const [request] = server.sentTo('DELETE', '/rest/v1/enrollment');
+    expect(request.params.get('group_id')).toBe('eq.daw');
+    expect(request.params.get('user_id')).toBe('eq.lucia');
 
     server.on('DELETE', '/rest/v1/enrollment', { body: [] });
-    await expect(service.unenroll('e-1')).rejects.toMatchObject({ kind: 'not_found' });
+    await expect(service.unenroll('dam', 'lucia')).rejects.toMatchObject({ kind: 'not_found' });
   });
 
   it('lists the active teachers by name', async () => {
@@ -363,6 +582,7 @@ describe('SupabaseGroupService', () => {
 
     expect(teachers.map((teacher) => teacher.id)).toEqual(['javier', 'marta']);
     const [request] = server.sentTo('GET', '/rest/v1/app_user');
+    expect(request.params.get('select')).toBe('id,name,email');
     expect(request.params.get('role')).toBe('eq.teacher');
     expect(request.params.get('status')).toBe('eq.active');
   });

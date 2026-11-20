@@ -1,7 +1,7 @@
 -- Step 5.2a · Groups and enrollment (docs/PLAN.md §2.3, RF-16, D-072).
 -- Seed: Marta (...002) teaches 1.º DAW A (group ...001, started, with Lucía ...011) and group ...003;
--- Javier (...003) teaches 1.º DAM B (group ...002, with Elena ...041). Raúl (...050) is a disabled
--- student and the administrator is ...001.
+-- Javier (...003) teaches 1.º DAM B (group ...002, with Elena ...041) and a split of 1.º DAW A
+-- (...005, empty). Raúl (...050) is a disabled student and the administrator is ...001.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(34);
@@ -50,23 +50,23 @@ select is_empty(
   $$ select * from search_students('raúl', '20000000-0000-4000-8000-000000000001') $$,
   'nor a disabled student'
 );
--- With `returning`, as the app asks: the new row passes the policy to read it.
+-- A split of 1.º DAW A (5.2d): it takes nobody from the class, so the searches see the whole school.
+create temp table taller as
+select add_class_group('c0000000-0000-4000-8000-000000000001',
+  'b0000000-0000-4000-8000-000000000001', 'Taller', '10000000-0000-4000-8000-000000000002') as id;
 select results_eq(
-  $$ insert into class_group (id, name, school_year, teacher_id, subject_id) values
-       ('20000000-0000-4000-8000-000000000099', 'Taller', '2026/27',
-        '10000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001')
-     returning name $$,
+  $$ select label from class_group where id = (select id from taller) $$,
   $$ values ('Taller') $$,
   'a teacher creates a group of their own and reads it back'
 );
 select is(
-  (select count(*)::integer from search_students('tutoria', '20000000-0000-4000-8000-000000000099')),
+  (select count(*)::integer from search_students('tutoria', (select id from taller))),
   20,
   'twenty students at most'
 );
 select throws_ok(
-  $$ insert into class_group (name, school_year, teacher_id, subject_id) values
-       ('Ajeno', '2026/27', '10000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000001') $$,
+  $$ select add_class_group('c0000000-0000-4000-8000-000000000001',
+       'b0000000-0000-4000-8000-000000000002', null, '10000000-0000-4000-8000-000000000003') $$,
   '42501', null,
   'and not one of another teacher'
 );
@@ -83,35 +83,35 @@ select throws_ok(
   'a group does not change subject'
 );
 select throws_ok(
-  $$ update class_group set school_year = '2026' where id = '20000000-0000-4000-8000-000000000001' $$,
+  $$ update school_class set school_year = '2026' where id = 'c0000000-0000-4000-8000-000000000001' $$,
   '23514', null,
   'the school year is like 2026/27'
 );
 select is(
-  (select array_agg(name) from enroll_students('20000000-0000-4000-8000-000000000099', array[
+  (select array_agg(name) from enroll_students((select id from taller), array[
      '10000000-0000-4000-8000-000000000041', '10000000-0000-4000-8000-000000000011']::uuid[])),
   array['Elena Vázquez Lorenzo', 'Lucía Martín Gómez'],
   'a teacher enrolls several students at once and reads their names, in the order given'
 );
 select throws_ok(
-  $$ select enroll_students('20000000-0000-4000-8000-000000000099', array[
+  $$ select enroll_students((select id from taller), array[
        '10000000-0000-4000-8000-000000000012', '10000000-0000-4000-8000-000000000050']::uuid[]) $$,
   '23514', null,
   'all or none: a disabled student stops the batch'
 );
 select is(
-  (select count(*)::integer from enrollment where group_id = '20000000-0000-4000-8000-000000000099'),
+  (select count(*)::integer from enrollment where group_id = (select id from taller)),
   2,
   'and nobody of it is enrolled'
 );
 select throws_ok(
-  $$ select enroll_students('20000000-0000-4000-8000-000000000099', array[
+  $$ select enroll_students((select id from taller), array[
        '10000000-0000-4000-8000-000000000012', '10000000-0000-4000-8000-000000000012']::uuid[]) $$,
   '22023', null,
   'each student once'
 );
 select throws_ok(
-  $$ select enroll_students('20000000-0000-4000-8000-000000000099', array(
+  $$ select enroll_students((select id from taller), array(
        select gen_random_uuid() from generate_series(1, 51))) $$,
   '22023', null,
   'fifty at most'
@@ -167,22 +167,22 @@ select is(
   'a started group is not deleted'
 );
 select is(
-  pg_temp.changed_rows($$ delete from class_group where id = '20000000-0000-4000-8000-000000000099' $$),
+  pg_temp.changed_rows($$ delete from class_group where id = (select id from taller) $$),
   1::bigint,
   'one nobody started is'
 );
-select is(
-  (select array_agg(group_id::text || ' ' || student_count || ' ' || is_started order by group_id)
-   from group_summaries()),
-  array[
-    '20000000-0000-4000-8000-000000000001 ' ||
-      (select count(*) from enrollment where group_id = '20000000-0000-4000-8000-000000000001') ||
-      ' true',
-    '20000000-0000-4000-8000-000000000003 ' ||
-      (select count(*) from enrollment where group_id = '20000000-0000-4000-8000-000000000003') ||
-      ' ' || is_started_group('20000000-0000-4000-8000-000000000003')
-  ],
-  'a teacher sums up their groups: students and whether started'
+select results_eq(
+  $$ select group_id::text, teacher_name, student_count, is_started, is_mine
+     from class_overview() order by group_id $$,
+  $$ values
+       ('20000000-0000-4000-8000-000000000001', 'Marta Ibáñez Soler',
+        (select count(*)::integer from enrollment where group_id = '20000000-0000-4000-8000-000000000001'),
+        true, true),
+       ('20000000-0000-4000-8000-000000000003', 'Marta Ibáñez Soler',
+        (select count(*)::integer from enrollment where group_id = '20000000-0000-4000-8000-000000000003'),
+        is_started_group('20000000-0000-4000-8000-000000000003'), true),
+       ('20000000-0000-4000-8000-000000000005', 'Javier Ortega Ruiz', 0, false, false) $$,
+  'a teacher sums up every group of their classes, those of other teachers too (5.2d)'
 );
 
 reset role;
@@ -203,9 +203,9 @@ select lives_ok(
   'the administrator changes the teacher of a group'
 );
 select lives_ok(
-  $$ update class_group set name = '1.º DAM B (tarde)', teacher_id = '10000000-0000-4000-8000-000000000003'
+  $$ update class_group set label = 'Tarde', teacher_id = '10000000-0000-4000-8000-000000000003'
      where id = '20000000-0000-4000-8000-000000000004' $$,
-  'a group of a disabled teacher keeps its name editable until it is handed over'
+  'a group of a disabled teacher keeps its label editable until it is handed over'
 );
 select throws_ok(
   $$ update class_group set teacher_id = '10000000-0000-4000-8000-000000000011'
