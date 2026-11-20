@@ -4,6 +4,7 @@ import { ActivatedRoute, type ParamMap } from '@angular/router';
 
 import { TEACHER_ALL_BLOCKS, TEACHER_PARAMS } from '../../core/app-paths';
 import { type LiveGroup, LiveService, type LiveUpdate } from '../../data/live-service';
+import { schoolYearOf } from '../../data/school-year';
 import { activityByMinute, LIVE_ACTIVITY_MINUTES } from './activity-by-minute';
 import { classStrip } from './class-strip';
 import { defaultBlock } from './default-block';
@@ -65,8 +66,15 @@ export class LiveStore {
   /** The query parameters, from the root route: the store lives outside the components. */
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap);
 
+  /**
+   * Only those of the current year (5.2e): a class of another year has no session today, and its
+   * work is in the history.
+   */
   private readonly groupsResource = resource({
-    loader: () => this.live.listGroups(),
+    loader: async () => {
+      const year = schoolYearOf(new Date());
+      return (await this.live.listGroups()).filter(({ schoolYear }) => schoolYear === year);
+    },
     defaultValue: [],
   });
 

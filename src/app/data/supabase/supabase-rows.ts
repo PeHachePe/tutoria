@@ -77,6 +77,7 @@ export function toSchoolClass(row: Row<'school_class'>): SchoolClass {
     schoolYear: row.school_year,
     createdBy: row.created_by,
     createdAt: toIso(row.created_at),
+    reopened: row.reopened,
   };
 }
 

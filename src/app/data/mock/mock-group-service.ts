@@ -1,6 +1,6 @@
 import { inject, Service } from '@angular/core';
 
-import { DataError } from '../data-error';
+import { DataError, type DataErrorKind } from '../data-error';
 import {
   type ClassDraft,
   type DuplicateOptions,
@@ -22,6 +22,7 @@ import {
   type StudentMatch,
   type UserRef,
 } from '../group-service';
+import { isPastSchoolYear } from '../school-year';
 import { schoolYearShiftDays } from '../school-year-shift';
 import type { AppUser, ClassGroup, Enrollment, SchoolClass } from '../user';
 import { copyGroupBlocks } from './copy-group-blocks';
@@ -32,7 +33,8 @@ import { MockNetwork } from './mock-network';
 /**
  * Classes, groups and enrollment in MockDb, with the rules of the RLS and the functions of 5.2a and
  * 5.2d: every teacher reads every class and joins any; another teacher's groups are `not_found`; a
- * group keeps its subject and is only removed while nobody started anything in it.
+ * group keeps its subject and is only removed while nobody started anything in it. A class of a past
+ * year is read only until the administrator reopens it, as `is_open_class` (5.2e).
  */
 @Service({ autoProvided: false })
 export class MockGroupService extends GroupService {
@@ -55,6 +57,7 @@ export class MockGroupService extends GroupService {
                 (a.group.label ?? '').localeCompare(b.group.label ?? '', 'es'),
             ),
           canEdit: canEditClass(user, schoolClass),
+          open: isOpenClass(schoolClass),
         }),
       );
     });
@@ -94,6 +97,7 @@ export class MockGroupService extends GroupService {
         throw new DataError('forbidden', 'A teacher creates groups of their own');
       }
       const found = this.findClass(draft);
+      checkOpenTarget(found, draft);
       subjectIds.forEach((subjectId) =>
         this.checkNewGroup(found?.id ?? null, { subjectId, label: null, teacherId }),
       );
@@ -112,6 +116,8 @@ export class MockGroupService extends GroupService {
       if (!canEditClass(user, previous)) {
         throw new DataError('forbidden', 'Only its creator or the administration');
       }
+      checkOpen(previous);
+      checkOpenTarget(undefined, draft);
       const changed = { ...previous, ...this.checkClassDraft(draft, classId) };
       this.db.update('classes', (rows) => rows.map((row) => (row.id === classId ? changed : row)));
     });
@@ -122,6 +128,8 @@ export class MockGroupService extends GroupService {
       const user = this.db.requireUser('teacher', 'admin');
       const tables = this.db.tables();
       const schoolClass = findRow(tables.classes, classId);
+      // As the RLS, which deletes no row and says nothing: as one with groups
+      checkOpen(schoolClass, 'invalid');
       if (
         !canEditClass(user, schoolClass) ||
         tables.groups.some((group) => group.classId === classId)
@@ -133,13 +141,24 @@ export class MockGroupService extends GroupService {
     });
   }
 
+  reopenClass(classId: string, reopened: boolean): Promise<void> {
+    return this.network.request(() => {
+      const user = this.db.requireUser('teacher', 'admin');
+      if (user.role !== 'admin') {
+        throw new DataError('forbidden', 'Only the administration reopens a class');
+      }
+      const changed = { ...findRow(this.db.tables().classes, classId), reopened };
+      this.db.update('classes', (rows) => rows.map((row) => (row.id === classId ? changed : row)));
+    });
+  }
+
   addGroup(classId: string, draft: GroupDraft): Promise<string> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
       if (user.role !== 'admin' && draft.teacherId !== user.id) {
         throw new DataError('forbidden', 'A teacher creates groups of their own');
       }
-      findRow(this.db.tables().classes, classId);
+      checkOpen(findRow(this.db.tables().classes, classId));
       const label = normalLabel(draft.label);
       this.checkNewGroup(classId, { ...draft, label });
       return this.createGroup(classId, { ...draft, label }, label === null).id;
@@ -150,6 +169,8 @@ export class MockGroupService extends GroupService {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
       const previous = this.findGroup(groupId);
+      // As the RLS, which changes no row: as a group of others
+      this.checkOpenClass(previous.classId, 'not_found');
       const teacherChosen = changes.teacherId !== previous.teacherId;
       if (teacherChosen) this.checkTeacher(changes.teacherId);
       if (user.role !== 'admin' && changes.teacherId !== user.id) {
@@ -165,7 +186,8 @@ export class MockGroupService extends GroupService {
 
   removeGroup(groupId: string): Promise<void> {
     return this.network.request(() => {
-      this.findGroup(groupId);
+      // As the RLS, which deletes no row: as a group somebody started
+      this.checkOpenClass(this.findGroup(groupId).classId, 'invalid');
       if (this.isStarted(groupId)) {
         throw new DataError('invalid', 'A group somebody started keeps their attempts');
       }
@@ -201,6 +223,7 @@ export class MockGroupService extends GroupService {
       });
       const found = this.findClass(draft);
       if (found?.id === classId) throw new DataError('invalid', 'A class is copied into another');
+      checkOpenTarget(found, draft);
       groups.forEach((group) => this.checkNewGroup(found?.id ?? null, group));
       const targetId = found?.id ?? this.createClassRow(user, draft);
       if (options.students) {
@@ -318,7 +341,7 @@ export class MockGroupService extends GroupService {
   enrollInClass(classId: string, userIds: readonly string[]): Promise<void> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
-      this.findManagedClass(user, classId);
+      checkOpen(this.findManagedClass(user, classId));
       this.checkStudents(userIds, new Set());
       this.addMembers(classId, userIds);
       for (const group of this.db.tables().groups) {
@@ -332,7 +355,7 @@ export class MockGroupService extends GroupService {
   removeFromClass(classId: string, userId: string): Promise<void> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
-      this.findManagedClass(user, classId);
+      checkOpen(this.findManagedClass(user, classId));
       const tables = this.db.tables();
       const groupIds = new Set(
         tables.groups.filter((group) => group.classId === classId).map((group) => group.id),
@@ -350,7 +373,7 @@ export class MockGroupService extends GroupService {
 
   enroll(groupId: string, userIds: readonly string[]): Promise<void> {
     return this.network.request(() => {
-      this.findGroup(groupId);
+      this.checkOpenClass(this.findGroup(groupId).classId);
       this.checkStudents(userIds, this.enrolledIn(groupId));
       this.addEnrollments(groupId, userIds);
     });
@@ -358,7 +381,8 @@ export class MockGroupService extends GroupService {
 
   unenroll(groupId: string, userId: string): Promise<void> {
     return this.network.request(() => {
-      this.findGroup(groupId);
+      // As the RLS, which deletes no row: as somebody not in the group
+      this.checkOpenClass(this.findGroup(groupId).classId, 'not_found');
       if (!this.enrolledIn(groupId).has(userId)) throw new DataError('not_found');
       this.db.update('enrollments', (rows) =>
         rows.filter((row) => row.groupId !== groupId || row.userId !== userId),
@@ -412,6 +436,7 @@ export class MockGroupService extends GroupService {
       id: crypto.randomUUID(),
       createdBy: user.id,
       createdAt: new Date().toISOString(),
+      reopened: false,
     };
     this.db.update('classes', (rows) => [...rows, created]);
     return created.id;
@@ -543,6 +568,10 @@ export class MockGroupService extends GroupService {
     return user !== undefined && isActive(user, 'student');
   }
 
+  private checkOpenClass(classId: string, kind?: DataErrorKind): void {
+    checkOpen(findRow(this.db.tables().classes, classId), kind);
+  }
+
   /** A class the user looks after; any other is `not_found`, as the functions say. */
   private findManagedClass(user: AppUser, classId: string): SchoolClass {
     const tables = this.db.tables();
@@ -597,6 +626,27 @@ function isActive(user: AppUser, role: AppUser['role']): boolean {
 /** As the RLS of `school_class`: its creator, while a member of the staff, or the administrator. */
 function canEditClass(user: AppUser, schoolClass: SchoolClass): boolean {
   return user.role === 'admin' || (user.role === 'teacher' && schoolClass.createdBy === user.id);
+}
+
+/** As `is_open_class` (5.2e): of this year or a later one, or reopened. */
+function isOpenClass(schoolClass: SchoolClass): boolean {
+  return schoolClass.reopened || !isPastSchoolYear(schoolClass.schoolYear, new Date());
+}
+
+/**
+ * As `check_open_class`: a write to a closed class is `forbidden`; a direct write, which the RLS
+ * leaves without a row, fails as the Supabase service tells it.
+ */
+function checkOpen(schoolClass: SchoolClass, kind: DataErrorKind = 'forbidden'): void {
+  if (!isOpenClass(schoolClass)) throw new DataError(kind, 'The class is of a past year');
+}
+
+/** As `find_or_create_class`: the class found must be open, and a new one is not of a past year. */
+function checkOpenTarget(found: SchoolClass | undefined, draft: ClassDraft): void {
+  if (found) checkOpen(found);
+  else if (isPastSchoolYear(draft.schoolYear, new Date())) {
+    throw new DataError('forbidden', 'A class of a past year');
+  }
 }
 
 /** Trimmed, and none if blank, as `create_class_group`. */

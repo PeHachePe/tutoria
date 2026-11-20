@@ -16,7 +16,7 @@ import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
-import { MatOption, MatSelect } from '@angular/material/select';
+import { MatOption, MatSelect, MatSelectTrigger } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -55,7 +55,7 @@ import { GroupDialog, type GroupDialogData } from './group-dialog';
 import { toGroupChanges } from './group-form';
 import { SubjectsDialog, type SubjectsDialogData } from './subjects-dialog';
 import { sortSubjects } from './subjects-form';
-import { schoolYearOf } from './school-year';
+import { isPastSchoolYear, schoolYearOf } from '../../data/school-year';
 
 /** The dialogs of a class and of its subjects: their texts and lists fit, never wider than the window. */
 const CLASS_DIALOG_WIDTH = '32rem';
@@ -84,6 +84,7 @@ const SUBJECTS_DIALOG_SIZE = {
     MatLabel,
     MatSelect,
     MatOption,
+    MatSelectTrigger,
     MatMenu,
     MatMenuItem,
     MatMenuTrigger,
@@ -162,10 +163,21 @@ export class GroupsPage {
     );
   });
 
-  /** The years with classes, the most recent first: the first level of the selector. */
-  protected readonly years = computed(() => [
-    ...new Set(this.options().map(({ managed }) => managed.schoolClass.schoolYear)),
-  ]);
+  /**
+   * The years with classes, the most recent first: the first level of the selector. Those that are
+   * over have their classes closed (5.2e).
+   */
+  protected readonly years = computed(() =>
+    [...new Set(this.options().map(({ managed }) => managed.schoolClass.schoolYear))].map(
+      (value) => ({ value, past: isPastSchoolYear(value, new Date()) }),
+    ),
+  );
+
+  /** The class shown is of a year that is over: closed, or reopened by the administrator. */
+  protected readonly pastYear = computed(() => {
+    const option = this.current();
+    return !!option && isPastSchoolYear(option.managed.schoolClass.schoolYear, new Date());
+  });
 
   /** The classes of the year shown: the second level of the selector, by name alone. */
   protected readonly classesOfYear = computed(() =>
@@ -246,7 +258,7 @@ export class GroupsPage {
             // Behind the role guard: someone is signed in
             const userId = this.auth.userId()!;
             const id = await this.service.createClass(draft, [], userId);
-            created = { ...draft, id, createdBy: userId, createdAt: '' };
+            created = { ...draft, id, createdBy: userId, createdAt: '', reopened: false };
           }),
       },
       CLASS_DIALOG_WIDTH,
@@ -300,6 +312,23 @@ export class GroupsPage {
     if (!saved) return;
     this.select(classId);
     this.snackBar.open($localize`:@@groups.class.duplicated:Clase duplicada`);
+  }
+
+  /** The administrator reopens a class of a past year, or closes it again (5.2e). */
+  protected async reopen(option: ClassOption, reopened: boolean): Promise<void> {
+    try {
+      await this.service.reopenClass(option.id, reopened);
+    } catch (error) {
+      this.snackBar.open(groupActionMessage('save', error));
+      return;
+    } finally {
+      this.classes.reload();
+    }
+    this.snackBar.open(
+      reopened
+        ? $localize`:@@groups.class.reopened.done:Clase reabierta`
+        : $localize`:@@groups.class.closed.done:Clase cerrada`,
+    );
   }
 
   /** Only a class without subjects: the menu says why otherwise. */

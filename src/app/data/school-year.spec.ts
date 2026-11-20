@@ -1,5 +1,6 @@
-import { SCHOOL_YEAR_PATTERN } from '../../data/group-service';
+import { SCHOOL_YEAR_PATTERN } from './group-service';
 import {
+  isPastSchoolYear,
   isSchoolYear,
   nextSchoolYear,
   schoolYearChoices,
@@ -23,6 +24,18 @@ describe('schoolYearOf', () => {
 
   it('matches the pattern of the database', () => {
     expect(schoolYearOf(new Date(2026, 10, 19))).toMatch(SCHOOL_YEAR_PATTERN);
+  });
+});
+
+describe('isPastSchoolYear', () => {
+  it('is a year before the current one, which changes on 1 September', () => {
+    const lastDayOf2025 = new Date(2026, 7, 31);
+    const firstDayOf2026 = new Date(2026, 8, 1);
+
+    expect(isPastSchoolYear('2025/26', lastDayOf2025)).toBe(false);
+    expect(isPastSchoolYear('2025/26', firstDayOf2026)).toBe(true);
+    expect(isPastSchoolYear('2026/27', firstDayOf2026)).toBe(false);
+    expect(isPastSchoolYear('2027/28', firstDayOf2026)).toBe(false);
   });
 });
 

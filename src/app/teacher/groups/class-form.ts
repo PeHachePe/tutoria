@@ -12,7 +12,7 @@ import {
   type SchoolClassEntry,
 } from '../../data/group-service';
 import type { SchoolClass } from '../../data/user';
-import { isSchoolYear } from './school-year';
+import { isSchoolYear } from '../../data/school-year';
 
 /** Enough for «2.º DAW A · Mañanas»: the name goes in the selector of the screen. */
 export const MAX_CLASS_NAME_LENGTH = 60;

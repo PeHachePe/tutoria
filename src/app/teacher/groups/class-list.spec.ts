@@ -51,6 +51,7 @@ describe('labelClasses', () => {
       schoolClass,
       groups: [],
       canEdit: false,
+      open: true,
     }));
     expect(labelClasses(classes).map(({ id, label }) => ({ id, label }))).toEqual([
       { id: CLASSES[0].id, label: '1.º DAW A · 2026/27' },

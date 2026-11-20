@@ -1,4 +1,4 @@
-import { SCHOOL_YEAR_PATTERN } from '../../data/group-service';
+import { SCHOOL_YEAR_PATTERN } from './group-service';
 
 /** The month a school year starts in: September, as `Date.getMonth()` counts it. */
 const SCHOOL_YEAR_START_MONTH = 8;
@@ -11,6 +11,14 @@ export function schoolYearOf(date: Date): string {
   const start =
     date.getMonth() >= SCHOOL_YEAR_START_MONTH ? date.getFullYear() : date.getFullYear() - 1;
   return `${start}/${String((start + 1) % 100).padStart(2, '0')}`;
+}
+
+/**
+ * A year that is over (5.2e, D-082): its classes are closed, read only, unless the administration
+ * reopens one. As `current_school_year()`, from 1 September.
+ */
+export function isPastSchoolYear(schoolYear: string, today: Date): boolean {
+  return schoolYear < schoolYearOf(today);
 }
 
 /** Like `2026/27` and of two years in a row: `2026/99` has the shape, not the meaning. */

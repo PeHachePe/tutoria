@@ -20,6 +20,11 @@ export interface ManagedClass {
   readonly groups: readonly ManagedGroup[];
   /** Its creator or the administrator: they rename it and, while it has no groups, delete it. */
   readonly canEdit: boolean;
+  /**
+   * Of this year or a later one, or reopened (5.2e, D-082): one of a past year is read only for
+   * everybody, but it is still duplicated.
+   */
+  readonly open: boolean;
 }
 
 /** A group of a class as another teacher sees it (5.2d): its subject, its split and its teacher. */
@@ -101,6 +106,9 @@ export const SCHOOL_YEAR_PATTERN = /^\d{4}\/\d{2}$/;
  * looked after by its teachers; each group stays its teacher's. The administrator manages all.
  * Abstract class without a decorator: it is the injection token (4.2, D-005).
  *
+ * A class of a past year is closed (5.2e, D-082): every write to it, its groups or its students is
+ * `forbidden`, for the administrator too, until the administrator reopens it.
+ *
  * A group without a label is the group of the whole class: it takes the students of the class when
  * it is created and when the class is enrolled. One with a label is a split, enrolled by hand.
  */
@@ -128,6 +136,12 @@ export abstract class GroupService {
 
   /** Its creator or the administrator, while it has no groups (`invalid`). */
   abstract removeClass(classId: string): Promise<void>;
+
+  /**
+   * The administrator reopens a class of a past year, or closes it again (5.2e); `forbidden` for
+   * anybody else, `not_found` for a class that does not exist.
+   */
+  abstract reopenClass(classId: string, reopened: boolean): Promise<void>;
 
   /**
    * A group in any class, as `createClass`; `invalid` for a subject the class has with the same

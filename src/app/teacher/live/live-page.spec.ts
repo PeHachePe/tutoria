@@ -373,7 +373,7 @@ describe('LivePage', () => {
     service.groups = () => Promise.resolve([]);
     await renderPage();
 
-    expect(screen.getByText('Todavía no tienes grupos')).toBeTruthy();
+    expect(screen.getByText('No tienes grupos este curso')).toBeTruthy();
     expect(screen.queryByRole('combobox')).toBeNull();
     expect(text(screen.getByRole('heading', { level: 1 }))).toBe('Sesión en vivo');
   });

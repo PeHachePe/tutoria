@@ -490,6 +490,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           name: string;
+          reopened: boolean;
           school_year: string;
         };
         ComputedFields: never;
@@ -498,6 +499,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           name: string;
+          reopened?: boolean;
           school_year: string;
         };
         Update: {
@@ -505,6 +507,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           name?: string;
+          reopened?: boolean;
           school_year?: string;
         };
         Relationships: [
@@ -772,6 +775,7 @@ export type Database = {
       can_open_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       can_read_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
       can_record_event: { Args: { target_attempt_id: string }; Returns: boolean };
+      check_open_class: { Args: { target_class_id: string }; Returns: undefined };
       claim_staff_request: {
         Args: {
           per_day?: number;
@@ -890,6 +894,7 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Database['public']['Enums']['user_role'];
       };
+      current_school_year: { Args: Record<PropertyKey, never>; Returns: string };
       duplicate_class: {
         Args: {
           class_name: string;
@@ -970,6 +975,8 @@ export type Database = {
       is_empty_class: { Args: { target_class_id: string }; Returns: boolean };
       is_enrolled: { Args: { target_group_id: string }; Returns: boolean };
       is_open_attempt: { Args: { target_attempt_id: string }; Returns: boolean };
+      is_open_class: { Args: { target_class_id: string }; Returns: boolean };
+      is_open_group: { Args: { target_group_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_started_assignment: { Args: { target_assignment_id: string }; Returns: boolean };
       is_started_block: { Args: { target_block_id: string }; Returns: boolean };
@@ -999,7 +1006,9 @@ export type Database = {
           created_at: string;
           created_by: string;
           id: string;
+          is_open: boolean;
           name: string;
+          reopened: boolean;
           school_year: string;
         }[];
       };
@@ -1085,6 +1094,7 @@ export type Database = {
         Args: { student_id: string; target_class_id: string };
         Returns: undefined;
       };
+      reopen_class: { Args: { reopen: boolean; target_class_id: string }; Returns: undefined };
       reorder_assignments: {
         Args: { assignment_ids: string[]; target_block_id: string };
         Returns: undefined;
@@ -1151,6 +1161,7 @@ export type Database = {
           created_by: string;
           id: string;
           name: string;
+          reopened: boolean;
           school_year: string;
         }[];
       };

@@ -60,19 +60,20 @@ export class SupabaseGroupService extends GroupService {
       started: row.is_started,
       mine: row.is_mine,
     }));
-    return sortClasses(unwrap(classes).map(({ can_edit, ...row }) => ({ row, can_edit }))).map(
-      ({ schoolClass, canEdit }) => ({
-        schoolClass,
-        groups: managed
-          .filter(({ group }) => group.classId === schoolClass.id)
-          .sort(
-            (a, b) =>
-              a.subject.name.localeCompare(b.subject.name, 'es') ||
-              (a.group.label ?? '').localeCompare(b.group.label ?? '', 'es'),
-          ),
-        canEdit,
-      }),
-    );
+    return sortClasses(
+      unwrap(classes).map(({ can_edit, is_open, ...row }) => ({ row, can_edit, is_open })),
+    ).map(({ schoolClass, canEdit, open }) => ({
+      schoolClass,
+      groups: managed
+        .filter(({ group }) => group.classId === schoolClass.id)
+        .sort(
+          (a, b) =>
+            a.subject.name.localeCompare(b.subject.name, 'es') ||
+            (a.group.label ?? '').localeCompare(b.group.label ?? '', 'es'),
+        ),
+      canEdit,
+      open,
+    }));
   }
 
   /** With the RPC `school_classes`: the RLS of `class_group` hides the groups of others. */
@@ -131,6 +132,11 @@ export class SupabaseGroupService extends GroupService {
     throw seen.length > 0
       ? new DataError('invalid', 'Only its creator or the administration, while empty')
       : new DataError('not_found');
+  }
+
+  /** With the RPC `reopen_class`: only the administration, and `reopened` is not granted. */
+  async reopenClass(classId: string, reopened: boolean): Promise<void> {
+    unwrap(await this.supabase.rpc('reopen_class', { target_class_id: classId, reopen: reopened }));
   }
 
   async addGroup(classId: string, draft: GroupDraft): Promise<string> {
@@ -301,10 +307,15 @@ function sortClasses(
   rows: readonly {
     readonly row: Parameters<typeof toSchoolClass>[0];
     readonly can_edit: boolean;
+    readonly is_open: boolean;
   }[],
-): { schoolClass: SchoolClass; canEdit: boolean }[] {
+): { schoolClass: SchoolClass; canEdit: boolean; open: boolean }[] {
   return rows
-    .map(({ row, can_edit }) => ({ schoolClass: toSchoolClass(row), canEdit: can_edit }))
+    .map(({ row, can_edit, is_open }) => ({
+      schoolClass: toSchoolClass(row),
+      canEdit: can_edit,
+      open: is_open,
+    }))
     .sort(
       (a, b) =>
         b.schoolClass.schoolYear.localeCompare(a.schoolClass.schoolYear) ||

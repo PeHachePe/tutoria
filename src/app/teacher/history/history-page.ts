@@ -1,7 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, resource } from '@angular/core';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatOption, MatSelect } from '@angular/material/select';
 import { Router } from '@angular/router';
 
 import { TEACHER_PARAMS } from '../../core/app-paths';
@@ -14,6 +12,7 @@ import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
+import { GroupPicker, pickGroup } from '../group-picker/group-picker';
 import { BlockDetail } from './block-detail';
 import { HintChart } from './hint-chart';
 import { hintTrend } from './hint-trend';
@@ -33,10 +32,7 @@ const EMPTY_HISTORY: GroupHistory = { students: 0, blocks: [], deadlines: [] };
   selector: 'app-history-page',
   imports: [
     NgTemplateOutlet,
-    MatFormField,
-    MatLabel,
-    MatSelect,
-    MatOption,
+    GroupPicker,
     BlockDetail,
     EmptyState,
     HintChart,
@@ -64,11 +60,8 @@ export class HistoryPage {
   /** The groups once loaded; none while they fail, when reading the value would throw. */
   private readonly groupList = computed(() => (this.groups.hasValue() ? this.groups.value() : []));
 
-  /** The group of the URL or, without one (or an unknown one), the first. */
-  protected readonly group = computed(() => {
-    const groups = this.groupList();
-    return groups.find((group) => group.id === this.grupo()) ?? groups.at(0) ?? null;
-  });
+  /** The group of the URL or, without one (or an unknown one), the first of this year (5.2e). */
+  protected readonly group = computed(() => pickGroup(this.groupList(), this.grupo(), new Date()));
 
   protected readonly subject = computed(() => {
     const group = this.group();
@@ -77,10 +70,12 @@ export class HistoryPage {
     return { name, lang: locale === this.locale ? null : locale };
   });
 
+  /** By year in the picker (5.2e): within one, the name of the group is enough. */
   protected readonly groupOptions = computed(() =>
     this.groupList().map((group) => ({
       id: group.id,
       label: groupTitle(group.name, subjectName(group.subject, this.locale).name, group.label),
+      schoolYear: group.schoolYear,
     })),
   );
 

@@ -27,6 +27,8 @@ export interface SchoolClass {
   /** Who may rename or delete it, besides the administration; null once their account is gone. */
   readonly createdBy: string | null;
   readonly createdAt: string;
+  /** The administration reopened it although its year is over (5.2e, D-082). */
+  readonly reopened: boolean;
 }
 
 /** Table `class_member`: the students of a class, whom its groups take when created. */

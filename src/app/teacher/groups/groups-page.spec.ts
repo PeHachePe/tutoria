@@ -23,7 +23,7 @@ import { MockGroupService } from '../../data/mock/mock-group-service';
 import { MockNetwork } from '../../data/mock/mock-network';
 import { subjectLine } from './class-list';
 import { GroupsPage } from './groups-page';
-import { nextSchoolYear, schoolYearOf } from './school-year';
+import { nextSchoolYear, schoolYearOf } from '../../data/school-year';
 
 const URL = '/docente/grupos';
 const DAW = '1.º DAW A · 2026/27';
@@ -36,6 +36,7 @@ const WEB = 'Desarrollo web en entorno cliente';
 const ENGLISH = `${BASIC} · Desdoble inglés`;
 const MARTA = 'Marta Ibáñez Soler';
 const JAVIER = 'Javier Ortega Ruiz';
+const PAST_YEARS = ['2025/26', '2024/25', '2023/24', '2022/23', '2021/22'];
 
 function text(element: Element | null): string {
   return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -620,21 +621,69 @@ describe('GroupsPage', () => {
 
     expect(text(screen.getByRole('combobox', { name: 'Clase' }))).toContain(DAW_NAME);
     await userEvent.click(screen.getByRole('combobox', { name: 'Curso' }));
-    expect((await screen.findAllByRole('option')).map((option) => text(option))).toEqual([
-      '2026/27',
-      '2025/26',
-      '2024/25',
-      '2023/24',
-      '2022/23',
-      '2021/22',
-    ]);
-    await userEvent.click(screen.getByRole('option', { name: '2023/24' }));
+    // The years over are closed (5.2e): a lock at sight, the word to a screen reader
+    expect(await screen.findAllByRole('option')).toHaveLength(6);
+    for (const name of ['2026/27', ...PAST_YEARS.map((year) => `${year} (cerrado)`)]) {
+      expect(screen.getByRole('option', { name })).toBeTruthy();
+    }
+    await userEvent.click(screen.getByRole('option', { name: '2023/24 (cerrado)' }));
     await settle();
 
     expect(text(screen.getByRole('combobox', { name: 'Clase' }))).toContain('1.º DAM B');
     const label = '1.º DAM B · 2023/24';
     expect(text(studentsOf(label))).toContain('Alumnado (8)');
     expect(within(studentsOf(label)).getAllByText('(cuenta desactivada)')).toHaveLength(8);
+  });
+
+  describe('a class of a past year (5.2e)', () => {
+    const PAST = '1.º DAM B · 2023/24';
+
+    async function renderPast(role: Role = 'teacher'): Promise<void> {
+      await render(URL, { role, history: true });
+      await choose('2023/24 (cerrado)', 'Curso');
+    }
+
+    it('shows it read only, with what is left to do', async () => {
+      await renderPast();
+      const zone = studentsOf(PAST);
+
+      expect(text(zone)).toMatch(/El curso 2023\/24 ya terminó: la clase solo se consulta/);
+      expect(within(zone).queryByRole('button', { name: /Matricular en la clase/ })).toBeNull();
+      expect(within(zone).queryByRole('button', { name: /Añadir asignatura/ })).toBeNull();
+      expect(within(zone).queryAllByRole('checkbox')).toHaveLength(0);
+      expect(within(zone).queryAllByRole('button', { name: /^Acciones de [^·]+$/ })).toHaveLength(
+        0,
+      );
+      await expectMenu(PAST, ['Duplicar…']);
+      // Her own group: only its blocks are left
+      await expectMenu('1.º DAM B · Bases de datos', ['Ver sus bloques']);
+    });
+
+    it('lets the administrator reopen it and close it again', async () => {
+      await renderPast('admin');
+      await expectMenu(PAST, ['Duplicar…', 'Reabrir']);
+
+      await userEvent.click(await action(PAST, 'Reabrir'));
+      await settle();
+      expect(screen.getByText('Clase reabierta')).toBeTruthy();
+      expect(text(studentsOf(PAST))).toMatch(/la administración ha reabierto esta clase/);
+      expect(screen.getByRole('button', { name: /Matricular en la clase/ })).toBeTruthy();
+
+      await userEvent.click(await action(PAST, 'Volver a cerrar'));
+      await settle();
+      expect(screen.getByText('Clase cerrada')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Matricular en la clase/ })).toBeNull();
+    });
+
+    it('says why it could not reopen it', async () => {
+      await renderPast('admin');
+
+      TestBed.inject(MockNetwork).failNextRequest('network');
+      await userEvent.click(await action(PAST, 'Reabrir'));
+      await settle();
+      expect(screen.getByText(/Sin conexión/)).toBeTruthy();
+      expect(text(studentsOf(PAST))).toMatch(/la clase solo se consulta/);
+    });
   });
 
   it('warns of a group it could not remove', async () => {

@@ -12,16 +12,12 @@
         }
       </h1>
     </div>
-    @if (groupOptions().length > 1) {
-      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-[30rem]">
-        <mat-label i18n="@@history.group">Grupo</mat-label>
-        <mat-select [value]="group()?.id" (selectionChange)="selectGroup($event.value)">
-          @for (option of groupOptions(); track option.id) {
-            <mat-option [value]="option.id">{{ option.label }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    }
+    <app-group-picker
+      [groups]="groupOptions()"
+      [selectedId]="group()?.id"
+      [nameAlone]="false"
+      (choose)="selectGroup($event)"
+    />
   </header>
 
   @if (groups.error(); as error) {

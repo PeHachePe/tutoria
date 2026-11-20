@@ -14,6 +14,7 @@ import { EXERCISES } from '../../data/mock/fixtures/exercises';
 import type { TutorInteraction } from '../../data/tutor';
 import { liveRow, type LiveRow } from './live-row';
 import { liveState } from './live-state';
+import { schoolYearOf } from '../../data/school-year';
 
 /**
  * Test helpers of the live panel: a group with three students and two blocks, `b1` with two
@@ -185,12 +186,15 @@ const block = (id: string, position: number): ClassBlock => ({
   opensAt: null,
 });
 
+/** The live panel lists only the groups of the current year (5.2e). */
+const CURRENT_YEAR = schoolYearOf(new Date());
+
 export const GROUPS: LiveGroup[] = [
   {
     id: 'g1',
     name: '1.º DAW A',
     label: null,
-    schoolYear: '2026/27',
+    schoolYear: CURRENT_YEAR,
     subject: SUBJECTS[0],
     blocks: [block('b1', 1), block('b2', 2)],
     latestBlockId: 'b2',
@@ -199,7 +203,7 @@ export const GROUPS: LiveGroup[] = [
     id: 'g2',
     name: '1.º DAM B',
     label: null,
-    schoolYear: '2026/27',
+    schoolYear: CURRENT_YEAR,
     subject: SUBJECTS[0],
     blocks: [],
     latestBlockId: null,

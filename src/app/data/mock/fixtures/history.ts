@@ -218,6 +218,7 @@ export const HISTORY_CLASSES: readonly SchoolClass[] = HISTORY_CLASS_PLAN.map(
     schoolYear: schoolYear(year),
     createdBy: CREATORS[cycle],
     createdAt: `${year}-09-01T08:00:00.000Z`,
+    reopened: false,
   }),
 );
 

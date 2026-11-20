@@ -129,24 +129,26 @@ interface RosterRow {
           </mat-form-field>
         }
         <div class="flex items-center gap-1 sm:ml-auto">
-          <button
-            matButton="tonal"
-            type="button"
-            [disabled]="!students.hasValue()"
-            (click)="enrollInClass()"
-          >
-            <mat-icon aria-hidden="true">group_add</mat-icon>
-            <span i18n="@@classStudents.enroll">Matricular en la clase</span>
-          </button>
-          <button
-            matButton="tonal"
-            type="button"
-            [disabled]="!canAddGroup()"
-            (click)="addGroup.emit()"
-          >
-            <mat-icon aria-hidden="true">add</mat-icon>
-            <span i18n="@@groups.group.add">Añadir asignatura</span>
-          </button>
+          @if (!readOnly()) {
+            <button
+              matButton="tonal"
+              type="button"
+              [disabled]="!students.hasValue()"
+              (click)="enrollInClass()"
+            >
+              <mat-icon aria-hidden="true">group_add</mat-icon>
+              <span i18n="@@classStudents.enroll">Matricular en la clase</span>
+            </button>
+            <button
+              matButton="tonal"
+              type="button"
+              [disabled]="!canAddGroup()"
+              (click)="addGroup.emit()"
+            >
+              <mat-icon aria-hidden="true">add</mat-icon>
+              <span i18n="@@groups.group.add">Añadir asignatura</span>
+            </button>
+          }
           <button
             matIconButton
             type="button"
@@ -229,14 +231,16 @@ interface RosterRow {
                           <mat-icon aria-hidden="true">more_vert</mat-icon>
                         </button>
                         <mat-menu #groupMenu="matMenu">
-                          <button
-                            mat-menu-item
-                            type="button"
-                            (click)="editGroup.emit(column.managed)"
-                          >
-                            <mat-icon aria-hidden="true">edit</mat-icon>
-                            <span i18n="@@groups.edit">Editar</span>
-                          </button>
+                          @if (!readOnly()) {
+                            <button
+                              mat-menu-item
+                              type="button"
+                              (click)="editGroup.emit(column.managed)"
+                            >
+                              <mat-icon aria-hidden="true">edit</mat-icon>
+                              <span i18n="@@groups.edit">Editar</span>
+                            </button>
+                          }
                           <a
                             mat-menu-item
                             [routerLink]="blocksPath"
@@ -245,15 +249,18 @@ interface RosterRow {
                             <mat-icon aria-hidden="true">view_list</mat-icon>
                             <span i18n="@@groups.blocks">Ver sus bloques</span>
                           </a>
-                          <button
-                            mat-menu-item
-                            type="button"
-                            (click)="enrollInGroup(column.managed, column.title)"
-                          >
-                            <mat-icon aria-hidden="true">person_add</mat-icon>
-                            <span i18n="@@groups.group.enroll">Matricular solo aquí…</span>
-                          </button>
-                          @if (column.managed.started) {
+                          @if (!readOnly()) {
+                            <button
+                              mat-menu-item
+                              type="button"
+                              (click)="enrollInGroup(column.managed, column.title)"
+                            >
+                              <mat-icon aria-hidden="true">person_add</mat-icon>
+                              <span i18n="@@groups.group.enroll">Matricular solo aquí…</span>
+                            </button>
+                          }
+                          <!-- A closed class: only its blocks are left to see -->
+                          @if (!readOnly() && column.managed.started) {
                             <!-- Its students' work is kept (5.2a): it says why, at sight, and keeps the focus -->
                             <button mat-menu-item type="button" disabled disabledInteractive>
                               <mat-icon aria-hidden="true">delete</mat-icon>
@@ -265,7 +272,7 @@ interface RosterRow {
                                 >
                               </span>
                             </button>
-                          } @else {
+                          } @else if (!readOnly()) {
                             <button
                               mat-menu-item
                               type="button"
@@ -324,7 +331,7 @@ interface RosterRow {
                   </th>
                   @for (cell of row.cells; track cell.column.managed.group.id) {
                     <td class="px-3 text-center">
-                      @if (cell.column.managed.mine) {
+                      @if (cell.column.managed.mine && !readOnly()) {
                         <mat-checkbox
                           [checked]="cell.enrolled"
                           [disabled]="!cell.enrolled && !row.entry.active"
@@ -350,7 +357,7 @@ interface RosterRow {
                     </td>
                   }
                   <td class="pr-1 text-right">
-                    @if (row.entry.member || row.entry.active) {
+                    @if (!readOnly() && (row.entry.member || row.entry.active)) {
                       <button
                         matIconButton
                         type="button"
@@ -389,10 +396,12 @@ interface RosterRow {
                         <span class="text-title-small text-on-surface" i18n="@@classStudents.none"
                           >Esta clase aún no tiene alumnos</span
                         >
-                        <span i18n="@@classStudents.none.hint"
-                          >Matricúlalos con «Matricular en la clase»: los que no tienen clase, una
-                          lista pegada u otra clase.</span
-                        >
+                        @if (!readOnly()) {
+                          <span i18n="@@classStudents.none.hint"
+                            >Matricúlalos con «Matricular en la clase»: los que no tienen clase, una
+                            lista pegada u otra clase.</span
+                          >
+                        }
                       </span>
                     } @else {
                       <span i18n="@@groups.filter.none">Nadie coincide</span>
@@ -427,6 +436,11 @@ export class ClassStudents {
   readonly sources = input.required<readonly EnrollSource[]>();
   /** Whether a subject can be added: the page has what its dialog needs. */
   readonly canAddGroup = input(false);
+  /**
+   * A class of a past year (5.2e): its students and groups are only shown, without checkboxes nor
+   * anything that changes them; the blocks of the user's groups are still a link away.
+   */
+  readonly readOnly = input(false);
   /** The students of the class or of its groups changed: their counts too. */
   readonly changed = output();
   /** «Añadir asignatura», «Editar» and «Eliminar» of a group: the page opens their dialogs. */

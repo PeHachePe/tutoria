@@ -134,6 +134,7 @@ export const CLASSES: readonly SchoolClass[] = [
     schoolYear: '2026/27',
     createdBy: TEACHER_ID,
     createdAt: CREATED_AT,
+    reopened: false,
   },
   {
     id: DAM_CLASS_ID,
@@ -141,6 +142,7 @@ export const CLASSES: readonly SchoolClass[] = [
     schoolYear: '2026/27',
     createdBy: OTHER_TEACHER_ID,
     createdAt: CREATED_AT,
+    reopened: false,
   },
 ];
 

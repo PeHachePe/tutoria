@@ -344,6 +344,17 @@ describe('LiveStore', () => {
     expect(store.rhythm()).toBeNull();
   });
 
+  it('lists only the groups of the current year', async () => {
+    const past = { ...GROUPS[0], id: 'past', schoolYear: '2020/21' };
+    const next = { ...GROUPS[0], id: 'next', schoolYear: '2099/00' };
+    service.groups = () => Promise.resolve([next, ...GROUPS, past]);
+
+    const store = await create();
+
+    expect(store.groups().map(({ id }) => id)).toEqual(GROUPS.map(({ id }) => id));
+    expect(store.group()?.id).toBe(GROUPS[0].id);
+  });
+
   it('reloads the groups when they failed', async () => {
     service.groups = () => Promise.reject(new DataError('network'));
     const store = await create();

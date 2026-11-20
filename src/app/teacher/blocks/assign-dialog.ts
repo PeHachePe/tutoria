@@ -17,6 +17,7 @@ import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
 import { BlockService } from '../../data/block-service';
 import { blockTitle, type ContentLocale, subjectName } from '../../data/localized-text';
 import { groupTitle } from '../../data/group-name';
+import { isPastSchoolYear } from '../../data/school-year';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
@@ -160,12 +161,17 @@ export class AssignDialog {
 
   protected readonly groups = resource({ loader: () => this.service.listGroups() });
 
-  /** The groups of the subjects of the exercise first: those are where it is meant to go. */
+  /**
+   * The groups of the subjects of the exercise first: those are where it is meant to go. Only those
+   * of this year and later (5.2e): nobody assigns work to a class that is over.
+   */
   protected readonly groupOptions = computed(() => {
     if (!this.groups.hasValue()) return [];
     const subjects = new Set(this.data.subjectIds);
+    const today = new Date();
     return this.groups
       .value()
+      .filter(({ schoolYear }) => !isPastSchoolYear(schoolYear, today))
       .map((group) => ({
         id: group.id,
         label: groupTitle(

@@ -12,11 +12,9 @@ import {
 } from '@angular/core';
 import { MatButton, MatFabButton, MatIconButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
-import { MatOption, MatSelect } from '@angular/material/select';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -49,6 +47,7 @@ import {
   type AddExercisesData,
   type AddExercisesResult,
 } from './add-exercises-dialog';
+import { GroupPicker, pickGroup } from '../group-picker/group-picker';
 import { BlockDialog, type BlockDialogData } from './block-dialog';
 import { CopyBlocksDialog, type CopyBlocksDialogData } from './copy-blocks-dialog';
 import { moveItem } from './block-order';
@@ -75,10 +74,6 @@ const SKELETON_BLOCKS = [1, 2, 3];
     MatFabButton,
     MatIconButton,
     MatIcon,
-    MatFormField,
-    MatLabel,
-    MatSelect,
-    MatOption,
     MatSlideToggle,
     MatMenu,
     MatMenuItem,
@@ -91,6 +86,7 @@ const SKELETON_BLOCKS = [1, 2, 3];
     LoadError,
     LoadingSkeleton,
     Skeleton,
+    GroupPicker,
   ],
   templateUrl: './blocks-page.html',
 })
@@ -121,13 +117,13 @@ export class BlocksPage {
   /** The groups once loaded; none while they fail, when reading the value would throw. */
   private readonly groupList = computed(() => (this.groups.hasValue() ? this.groups.value() : []));
 
-  /** The group of the URL or, without one (or an unknown one), the first. */
-  protected readonly group = computed(() => {
-    const groups = this.groupList();
-    return groups.find((group) => group.id === this.grupo()) ?? groups.at(0) ?? null;
-  });
+  /** The group of the URL or, without one (or an unknown one), the first of this year (5.2e). */
+  protected readonly group = computed(() => pickGroup(this.groupList(), this.grupo(), new Date()));
 
-  /** «Name · subject», with the year when that is not enough: the same class of another year. */
+  /**
+   * «Name · subject», with the year when that is not enough: the same class of another year, as
+   * «Copiar de otro grupo» offers them all. The picker shows the year apart, and only the name.
+   */
   protected readonly groupOptions = computed(() => {
     const groups = this.groupList();
     const labels = groups.map((group) =>
@@ -142,6 +138,15 @@ export class BlocksPage {
           : labels[index],
     }));
   });
+
+  /** By year in the picker (5.2e): within one, the name of the group is enough. */
+  protected readonly pickerGroups = computed(() =>
+    this.groupList().map((group) => ({
+      id: group.id,
+      label: groupTitle(group.name, subjectName(group.subject, this.locale).name, group.label),
+      schoolYear: group.schoolYear,
+    })),
+  );
 
   /** Changed in place by every action, so the page answers at once; reloaded only after a failure. */
   protected readonly blocks = resource({

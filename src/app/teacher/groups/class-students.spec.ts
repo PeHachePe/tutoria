@@ -83,6 +83,7 @@ function prepare(db: MockDb): void {
       schoolYear: '2026/27',
       createdBy: TEACHER_ID,
       createdAt: '2026-09-01T08:00:00.000Z',
+      reopened: false,
     },
     {
       id: LAST_YEAR_CLASS_ID,
@@ -90,6 +91,7 @@ function prepare(db: MockDb): void {
       schoolYear: '2025/26',
       createdBy: TEACHER_ID,
       createdAt: '2025-09-01T08:00:00.000Z',
+      reopened: false,
     },
   ]);
   db.update('classMembers', (rows) => [
@@ -561,6 +563,21 @@ describe('ClassStudents', () => {
       'disabled',
       true,
     );
+  });
+
+  it('shows a class of a past year without anything that changes it (5.2e)', async () => {
+    await render();
+    fixture.componentRef.setInput('readOnly', true);
+    await settle();
+
+    expect(screen.queryByRole('button', { name: /Matricular en la clase/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Añadir asignatura/ })).toBeNull();
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    // Without students, it does not say how to enroll them
+    fixture.componentRef.setInput('classId', EMPTY_CLASS_ID);
+    await settle();
+    expect(screen.getAllByText('Esta clase aún no tiene alumnos')).not.toHaveLength(0);
+    expect(screen.queryByText(/Matricúlalos/)).toBeNull();
   });
 
   it('shows a skeleton while it loads, and reloads when asked', async () => {

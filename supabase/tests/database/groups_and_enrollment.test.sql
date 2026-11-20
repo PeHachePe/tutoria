@@ -85,7 +85,7 @@ select throws_ok(
   'a group does not change subject'
 );
 select throws_ok(
-  $$ update school_class set school_year = '2026' where id = 'c0000000-0000-4000-8000-000000000001' $$,
+  $$ update school_class set school_year = '2099' where id = 'c0000000-0000-4000-8000-000000000001' $$,
   '23514', null,
   'the school year is like 2026/27'
 );

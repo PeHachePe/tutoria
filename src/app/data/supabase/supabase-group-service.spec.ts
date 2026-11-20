@@ -15,11 +15,14 @@ const DAW_ROW = {
   school_year: '2026/27',
   created_by: 'teacher-1',
   created_at: '2026-09-01T08:00:00+00:00',
+  reopened: false,
 };
 
-/** A row of `managed_classes`: a class with whether the user may edit it. */
-function classRow(overrides: Partial<typeof DAW_ROW & { can_edit: boolean }> = {}) {
-  return { ...DAW_ROW, can_edit: true, ...overrides };
+/** A row of `managed_classes`: a class with whether the user may edit it and whether it is open. */
+function classRow(
+  overrides: Partial<typeof DAW_ROW & { can_edit: boolean; is_open: boolean }> = {},
+) {
+  return { ...DAW_ROW, can_edit: true, is_open: true, ...overrides };
 }
 
 /** A row of `class_overview`: a group of a class with its summary. */
@@ -61,6 +64,7 @@ describe('SupabaseGroupService', () => {
             classRow(),
             classRow({ id: 'next', name: '1.º DAW A', school_year: '2027/28' }),
             classRow({ id: 'dam', name: '1.º DAM B', can_edit: false }),
+            classRow({ id: 'old', school_year: '2020/21', is_open: false }),
           ],
         })
         .on('POST', '/rest/v1/rpc/class_overview', {
@@ -77,10 +81,11 @@ describe('SupabaseGroupService', () => {
 
       const classes = await service.listClasses();
 
-      expect(classes.map((row) => [row.schoolClass.id, row.canEdit])).toEqual([
-        ['next', true],
-        ['dam', false],
-        ['daw', true],
+      expect(classes.map((row) => [row.schoolClass.id, row.canEdit, row.open])).toEqual([
+        ['next', true, true],
+        ['dam', false, true],
+        ['daw', true, true],
+        ['old', true, false],
       ]);
       expect(classes[0].groups).toEqual([]);
       expect(classes[1].groups.map((row) => row.group.id)).toEqual(['dam-basic']);
@@ -95,6 +100,7 @@ describe('SupabaseGroupService', () => {
         schoolYear: '2026/27',
         createdBy: 'teacher-1',
         createdAt: '2026-09-01T08:00:00.000Z',
+        reopened: false,
       });
       expect(classes[2].groups[2]).toEqual({
         group: {
@@ -166,6 +172,7 @@ describe('SupabaseGroupService', () => {
         schoolYear: '2026/27',
         createdBy: 'teacher-1',
         createdAt: '2026-09-01T08:00:00.000Z',
+        reopened: false,
       },
       groups: [
         { subjectId: 's-1', label: null, teacherName: 'Marta' },
@@ -234,6 +241,31 @@ describe('SupabaseGroupService', () => {
       await expect(
         service.saveClass('daw', { name: '1.º DAM B', schoolYear: '2026/27' }),
       ).rejects.toMatchObject({ kind: 'invalid' });
+    });
+  });
+
+  describe('reopenClass', () => {
+    it('reopens a class or closes it again with the RPC', async () => {
+      server.on('POST', '/rest/v1/rpc/reopen_class', { status: 204 });
+
+      await service.reopenClass('old', true);
+      await service.reopenClass('old', false);
+      expect(server.sentTo('POST', '/rest/v1/rpc/reopen_class').map(({ body }) => body)).toEqual([
+        { target_class_id: 'old', reopen: true },
+        { target_class_id: 'old', reopen: false },
+      ]);
+    });
+
+    it.each([
+      ['42501', 'forbidden'],
+      ['P0002', 'not_found'],
+    ])('translates %s into %s', async (code, kind) => {
+      server.on('POST', '/rest/v1/rpc/reopen_class', {
+        status: 400,
+        body: { message: 'No', code },
+      });
+
+      await expect(service.reopenClass('old', true)).rejects.toMatchObject({ kind });
     });
   });
 

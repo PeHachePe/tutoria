@@ -30,6 +30,7 @@ import {
   TEACHER_ID,
 } from './fixtures/users';
 import { MockDb } from './mock-db';
+import { schoolYearOf } from '../school-year';
 import { MockGroupService } from './mock-group-service';
 import { MockNetwork } from './mock-network';
 
@@ -270,6 +271,7 @@ describe('MockGroupService', () => {
         schoolYear: '2027/28',
         createdBy: TEACHER_ID,
         createdAt: expect.any(String),
+        reopened: false,
       });
       expect(
         groupsOf(classId).map((group) => [group.subjectId, group.label, group.teacherId]),
@@ -1216,6 +1218,144 @@ describe('MockGroupService', () => {
         kind: 'not_found',
       });
       expectSeed();
+    });
+  });
+
+  describe('closed classes (5.2e)', () => {
+    const PAST_CLASS_ID = 'past-class';
+    const EMPTY_PAST_CLASS_ID = 'empty-past-class';
+    const PAST_GROUP_ID = 'past-group';
+    const PAST_YEAR = '2020/21';
+
+    /** 2.º DAW Z of a past year, by Marta, with her group and Lucía; and an empty one. */
+    beforeEach(() => {
+      const created = {
+        schoolYear: PAST_YEAR,
+        createdBy: TEACHER_ID,
+        createdAt: '',
+        reopened: false,
+      };
+      db.update('classes', (rows) => [
+        ...rows,
+        { ...created, id: PAST_CLASS_ID, name: '2.º DAW Z' },
+        { ...created, id: EMPTY_PAST_CLASS_ID, name: '2.º DAW Y' },
+      ]);
+      db.update('groups', (rows) => [
+        ...rows,
+        {
+          id: PAST_GROUP_ID,
+          classId: PAST_CLASS_ID,
+          subjectId: BASIC_PROGRAMMING_ID,
+          label: null,
+          teacherId: TEACHER_ID,
+        },
+      ]);
+      db.update('classMembers', (rows) => [...rows, { classId: PAST_CLASS_ID, userId: LUCIA_ID }]);
+      db.update('enrollments', (rows) => [
+        ...rows,
+        { id: 'past-lucia', groupId: PAST_GROUP_ID, userId: LUCIA_ID },
+      ]);
+      start = db.tables();
+    });
+
+    const openOf = async (classId: string) =>
+      (await service.listClasses()).find(({ schoolClass }) => schoolClass.id === classId)?.open;
+
+    it('lists a class of this year as open and one of a past year as closed', async () => {
+      await expect(openOf(DAW_CLASS_ID)).resolves.toBe(true);
+      await expect(openOf(PAST_CLASS_ID)).resolves.toBe(false);
+    });
+
+    it('rejects every write to a closed class, as the functions and the RLS tell it', async () => {
+      const draft = { subjectId: WEB_CLIENT_ID, label: null, teacherId: TEACHER_ID };
+      const changes = { label: 'Desdoble 1', teacherId: TEACHER_ID };
+      const options = { blocks: false, dates: false, students: false };
+      const writes: [Promise<unknown>, string][] = [
+        [
+          service.saveClass(PAST_CLASS_ID, { name: '2.º DAW X', schoolYear: PAST_YEAR }),
+          'forbidden',
+        ],
+        [service.removeClass(EMPTY_PAST_CLASS_ID), 'invalid'],
+        [service.addGroup(PAST_CLASS_ID, draft), 'forbidden'],
+        [service.saveGroup(PAST_GROUP_ID, changes), 'not_found'],
+        [service.removeGroup(PAST_GROUP_ID), 'invalid'],
+        [service.enrollInClass(PAST_CLASS_ID, [ELENA_ID]), 'forbidden'],
+        [service.removeFromClass(PAST_CLASS_ID, LUCIA_ID), 'forbidden'],
+        [service.enroll(PAST_GROUP_ID, [ELENA_ID]), 'forbidden'],
+        [service.unenroll(PAST_GROUP_ID, LUCIA_ID), 'not_found'],
+        [
+          service.createClass({ name: '3.º DAW Z', schoolYear: PAST_YEAR }, [], TEACHER_ID),
+          'forbidden',
+        ],
+        [
+          service.createClass(
+            { name: '2.º daw z', schoolYear: PAST_YEAR },
+            [WEB_CLIENT_ID],
+            TEACHER_ID,
+          ),
+          'forbidden',
+        ],
+        [
+          service.saveClass(DAW_CLASS_ID, { name: '1.º DAW A', schoolYear: PAST_YEAR }),
+          'forbidden',
+        ],
+        [
+          service.duplicateClass(
+            DAW_CLASS_ID,
+            { name: '2.º DAW Y', schoolYear: PAST_YEAR },
+            [DAW_GROUP_ID],
+            options,
+          ),
+          'forbidden',
+        ],
+        [
+          service.duplicateClass(
+            DAW_CLASS_ID,
+            { name: '9.º DAW Z', schoolYear: PAST_YEAR },
+            [DAW_GROUP_ID],
+            options,
+          ),
+          'forbidden',
+        ],
+      ];
+      for (const [write, kind] of writes) {
+        await expect(write).rejects.toMatchObject({ kind });
+      }
+      expectSeed();
+    });
+
+    it('duplicates a closed class into this year, with its students', async () => {
+      const year = schoolYearOf(new Date());
+      const classId = await service.duplicateClass(
+        PAST_CLASS_ID,
+        { name: '2.º DAW Z', schoolYear: year },
+        [PAST_GROUP_ID],
+        { blocks: false, dates: false, students: true },
+      );
+
+      expect(classById(classId)).toMatchObject({ schoolYear: year, reopened: false });
+      expect(membersOf(classId)).toEqual([LUCIA_ID]);
+    });
+
+    it('lets only the administrator reopen a class, and close it again', async () => {
+      await expect(service.reopenClass(PAST_CLASS_ID, true)).rejects.toMatchObject({
+        kind: 'forbidden',
+      });
+      db.setSession(ADMIN_ID);
+      await expect(service.reopenClass('nowhere', true)).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+
+      await service.reopenClass(PAST_CLASS_ID, true);
+      expect(classById(PAST_CLASS_ID)?.reopened).toBe(true);
+      await expect(openOf(PAST_CLASS_ID)).resolves.toBe(true);
+      db.setSession(TEACHER_ID);
+      await service.enrollInClass(PAST_CLASS_ID, [ELENA_ID]);
+      expect(membersOf(PAST_CLASS_ID)).toEqual(sorted([LUCIA_ID, ELENA_ID]));
+
+      db.setSession(ADMIN_ID);
+      await service.reopenClass(PAST_CLASS_ID, false);
+      await expect(openOf(PAST_CLASS_ID)).resolves.toBe(false);
     });
   });
 

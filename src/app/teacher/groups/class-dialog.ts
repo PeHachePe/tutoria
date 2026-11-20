@@ -19,7 +19,7 @@ import type { SchoolClassEntry } from '../../data/group-service';
 import type { SchoolClass } from '../../data/user';
 import { type ClassFormModel, classSchema, existingEntry, toClassFormModel } from './class-form';
 import { groupActionMessage } from './group-action-message';
-import { shiftSchoolYear } from './school-year';
+import { shiftSchoolYear } from '../../data/school-year';
 
 /** Suggestions under the name: enough to find a class, not the whole school. */
 const MAX_SUGGESTIONS = 8;

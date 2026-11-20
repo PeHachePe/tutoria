@@ -21,7 +21,7 @@ import { datesNote } from '../../shared/dates-note';
 import { subjectLine } from './class-list';
 import { type DuplicateFormModel, duplicateSchema, toDuplicateFormModel } from './duplicate-form';
 import { groupActionMessage } from './group-action-message';
-import { schoolYearChoices } from './school-year';
+import { schoolYearChoices } from '../../data/school-year';
 
 export interface DuplicateDialogData {
   readonly source: SchoolClass;

@@ -106,9 +106,9 @@
     <app-load-error [error]="error" (retry)="store.reload()" />
   } @else if (store.hasNoGroups()) {
     <app-empty-state
-      heading="Todavía no tienes grupos"
+      heading="No tienes grupos este curso"
       i18n-heading="@@live.empty.groups.heading"
-      text="Cuando administración te asigne un grupo, podrás seguir aquí su trabajo en directo."
+      text="Cuando tengas un grupo este curso, podrás seguir aquí su trabajo en directo. Lo de cursos anteriores está en el histórico."
       i18n-text="@@live.empty.groups.text"
     />
   } @else if (!ready()) {

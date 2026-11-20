@@ -14,6 +14,10 @@ describe('groupActionMessage', () => {
     expect(groupActionMessage('enroll', new DataError('invalid'))).toMatch(/vuelve a buscarlo/);
   });
 
+  it('says the class closed while it was shown', () => {
+    expect(groupActionMessage('enroll', new DataError('forbidden'))).toMatch(/ya terminó/);
+  });
+
   it('is generic otherwise', () => {
     expect(groupActionMessage('unenroll', new Error('boom'))).toMatch(/No se ha podido guardar/);
     expect(groupActionMessage('save', new DataError('invalid'))).toMatch(/No se ha podido guardar/);

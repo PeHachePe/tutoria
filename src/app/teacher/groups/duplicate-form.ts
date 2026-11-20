@@ -3,7 +3,7 @@ import { disabled, type SchemaPathTree, validate } from '@angular/forms/signals'
 import type { DuplicateOptions, ManagedGroup } from '../../data/group-service';
 import type { SchoolClass } from '../../data/user';
 import { classSchema } from './class-form';
-import { nextSchoolYear } from './school-year';
+import { nextSchoolYear } from '../../data/school-year';
 
 /**
  * A class as «Duplicar» copies it (5.2c, D-079; 5.2d, D-081): the class it goes to, the groups of the

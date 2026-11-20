@@ -32,8 +32,18 @@
               [value]="option.managed.schoolClass.schoolYear"
               (selectionChange)="selectYear($event.value)"
             >
-              @for (year of years(); track year) {
-                <mat-option [value]="year">{{ year }}</mat-option>
+              <!-- Only the year in the field: the panel says which are over -->
+              <mat-select-trigger>{{ option.managed.schoolClass.schoolYear }}</mat-select-trigger>
+              @for (year of years(); track year.value) {
+                <mat-option [value]="year.value">
+                  <span class="flex items-center gap-2">
+                    {{ year.value }}
+                    @if (year.past) {
+                      <mat-icon class="text-on-surface-variant" aria-hidden="true">lock</mat-icon>
+                      <span class="sr-only" i18n="@@groups.year.closed">(cerrado)</span>
+                    }
+                  </span>
+                </mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -52,8 +62,10 @@
           } @else {
             <p class="min-w-0 text-title-medium">{{ option.managed.schoolClass.name }}</p>
           }
-          <!-- Only its creator, the administration or a teacher with a subject in it has something to do -->
-          @if (option.managed.canEdit || mine().length > 0) {
+          <!-- Only its creator (while open), the administration or a teacher with a subject in it has something to do -->
+          @if (
+            (option.managed.canEdit && (option.managed.open || isAdmin())) || mine().length > 0
+          ) {
             <button
               matIconButton
               type="button"
@@ -64,7 +76,7 @@
             </button>
           }
           <mat-menu #classMenu="matMenu" xPosition="before">
-            @if (option.managed.canEdit) {
+            @if (option.managed.canEdit && option.managed.open) {
               <button mat-menu-item type="button" (click)="editClass(option)">
                 <mat-icon aria-hidden="true">edit</mat-icon>
                 <span i18n="@@groups.edit">Editar</span>
@@ -76,7 +88,20 @@
                 <span i18n="@@groups.duplicate">Duplicar…</span>
               </button>
             }
-            @if (option.managed.canEdit) {
+            @if (isAdmin() && pastYear()) {
+              @if (option.managed.open) {
+                <button mat-menu-item type="button" (click)="reopen(option, false)">
+                  <mat-icon aria-hidden="true">lock</mat-icon>
+                  <span i18n="@@groups.class.close">Volver a cerrar</span>
+                </button>
+              } @else {
+                <button mat-menu-item type="button" (click)="reopen(option, true)">
+                  <mat-icon aria-hidden="true">lock_open</mat-icon>
+                  <span i18n="@@groups.class.reopen">Reabrir</span>
+                </button>
+              }
+            }
+            @if (option.managed.canEdit && option.managed.open) {
               @if (option.managed.groups.length > 0) {
                 <!-- It says why, at sight, and keeps the focus -->
                 <button mat-menu-item type="button" disabled disabledInteractive>
@@ -120,9 +145,35 @@
     </div>
 
     <section
-      class="flex min-h-0 flex-1 flex-col rounded-2xl bg-panel p-4 sm:p-6"
+      class="flex min-h-0 flex-1 flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
       [attr.aria-label]="option.label"
     >
+      @if (pastYear()) {
+        <!-- A class of a year that is over: why nothing can be changed, and what is left to do -->
+        <p
+          class="flex items-start gap-3 rounded-xl bg-surface-container-high px-4 py-3 text-body-medium"
+        >
+          <mat-icon class="shrink-0 text-on-surface-variant" aria-hidden="true">{{
+            option.managed.open ? 'lock_open' : 'lock'
+          }}</mat-icon>
+          @if (option.managed.open) {
+            <span i18n="@@groups.class.reopened"
+              >El curso {{ option.managed.schoolClass.schoolYear }} ya terminó, pero la
+              administración ha reabierto esta clase: se puede cambiar.</span
+            >
+          } @else if (isAdmin()) {
+            <span i18n="@@groups.class.closed.admin"
+              >El curso {{ option.managed.schoolClass.schoolYear }} ya terminó: la clase solo se
+              consulta. Para preparar el curso nuevo, «Duplicar…»; para corregirla, «Reabrir».</span
+            >
+          } @else {
+            <span i18n="@@groups.class.closed"
+              >El curso {{ option.managed.schoolClass.schoolYear }} ya terminó: la clase solo se
+              consulta. Para preparar el curso nuevo, «Duplicar…» en el menú de la clase.</span
+            >
+          }
+        </p>
+      }
       <app-class-students
         #students
         [classId]="option.id"
@@ -131,6 +182,7 @@
         [groups]="classGroups()"
         [sources]="sources()"
         [canAddGroup]="ready()"
+        [readOnly]="!option.managed.open"
         (changed)="studentsChanged()"
         (addGroup)="addGroup(option)"
         (editGroup)="editGroup(option, $event)"
