@@ -2374,3 +2374,28 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Para la memoria y la presentación: la clase compartida y los desdobles son un caso real de los centros de FP que el modelo de la memoria no contemplaba.
 
 **Aprobación:** el autor eligió la clase compartida y aprobó las cinco decisiones (quién crea las clases, la matrícula copiada con excepciones, qué lee un docente de la clase, los desdobles con nombre y quitar el nombre y el curso del grupo), pidió los desdobles con un nombre editable que viniera relleno («Desdoble inglés, Desdoble alemán…») y que consten para la memoria y la presentación. En la segunda iteración pidió la tabla de matrícula con siglas («una tabla con las siglas de la asignatura y poner si está o no»), una forma de no añadir a los alumnos uno a uno y la exportación («si se pueden pegar también deberían exportarse»), y aprobó todo lo propuesto («haz todo si ves que son mejoras»). En las siguientes pidió un solo sitio para añadir asignaturas, vio coherente crear el desdoble antes que el grupo de toda la clase («sí, creo que sería coherente»), rechazó escribir el curso a mano y aprobó «Este curso / El que viene» con el selector de dos niveles («Sí, adelante»). El detalle técnico, por delegación del autor («adelante con todo»).
+
+## D-082 · Las clases de cursos pasados, cerradas; los grupos, por curso (20/11/2026)
+
+**Contexto:** con cinco cursos anteriores en los datos (D-081), se podía matricular y añadir asignaturas en una clase de 2021/22, y Bloques, Histórico y el panel en vivo mezclaban en un desplegable los grupos de todos los cursos. Ya era un pendiente del 5.2a («Archivar los grupos de cursos pasados»).
+
+**Decisión:**
+
+- **Cierre automático por fecha:** una clase de un curso anterior al actual (que empieza el 1 de septiembre, en hora de Madrid, `current_school_year()`) es de solo lectura para todos, administración incluida: ni matricular ni dar de baja, ni añadir, editar o eliminar grupos, ni renombrar o eliminar la clase. Nadie crea, se une ni duplica hacia un curso pasado. Se sigue leyendo y duplicando, que es como se prepara el curso nuevo.
+- **«Reabrir» para la administración** (`school_class.reopened`, solo con `reopen_class()`), y «Volver a cerrar». Una clase reabierta la cambian sus docentes como una del curso actual.
+- **En el servidor:** `is_open_class()` e `is_open_group()` en la RLS de las escrituras directas y en las funciones que crean grupos o matriculan (`42501`). El servicio simulado falla igual que Supabase en cada caso.
+- **En la pantalla:** el mismo selector «Curso», con candado en los cursos terminados; la clase cerrada, con un aviso que dice qué queda por hacer.
+- **Bloques e Histórico eligen en dos niveles, «Curso» y «Grupo»**, como Grupos, abiertos en el curso actual (o el siguiente, si el actual no tiene grupos). El panel en vivo solo lista los grupos del curso actual, y «Asignar a un grupo», ninguno de un curso terminado. «Copiar de otro grupo» sigue ofreciendo todos, porque sirve para reutilizar los del curso pasado.
+
+**Alternativas:**
+
+- **Cierre o archivo explícito** («Cerrar la clase» en junio): da control, pero una clase que nadie cierra sigue editable, que era el problema.
+- **Que la administración no tenga límite:** más cómodo, pero el error más probable es justo de quien lo ve todo; reabrir es un clic y queda a la vista.
+- **Un desplegable agrupado por curso:** todos los grupos a la vista, pero con cinco cursos la lista seguía siendo larga.
+
+**Consecuencias:**
+
+- Migración `20261120100000_closed_classes.sql` y 24 tests de pgTAP (`closed_classes.test.sql`). `school-year.ts` pasa a `src/app/data/`; `GroupPicker` nuevo en `src/app/teacher/`.
+- Quedan para pasos siguientes, acordados con el autor: los bloques de una clase cerrada, también de solo lectura; y el 5.2f, la evaluación final de cada alumno (Promociona, Repite, Titula, Baja), con la que los titulados y las bajas dejan de salir al matricular y la administración desactiva sus cuentas en bloque. Los docentes no desactivan cuentas (D-072), y no se crea un rol de secretaría (trabajo futuro).
+
+**Aprobación:** el autor eligió el cierre automático con «Reabrir» y los dos niveles, propuso la evaluación final con sus términos y dio el paso por bueno en el navegador («este de momento lo damos por ok»).
