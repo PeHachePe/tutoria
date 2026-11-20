@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { withoutHistory } from './fixtures/history';
 import type { ExerciseDraft } from '../exercise-service';
 import {
   assignmentId,
@@ -65,6 +66,8 @@ describe('MockExerciseService', () => {
     TestBed.configureTestingModule({ providers: [MockExerciseService] });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     db = TestBed.inject(MockDb);
+    // This year alone: the classes and students of the years before are not what these test
+    withoutHistory(db);
     service = TestBed.inject(MockExerciseService);
   });
 

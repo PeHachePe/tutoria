@@ -12,22 +12,14 @@ import {
 } from '@angular/material/dialog';
 import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
-import { MatOption, MatSelect } from '@angular/material/select';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
+import { MatOption } from '@angular/material/core';
 
-import { LanguageService } from '../../core/i18n/language-service';
-import type { UserRef } from '../../data/group-service';
-import { subjectName } from '../../data/localized-text';
-import type { Subject } from '../../data/subject';
+import type { SchoolClassEntry } from '../../data/group-service';
 import type { SchoolClass } from '../../data/user';
-import {
-  type ClassFormModel,
-  classSchema,
-  existingClass,
-  newClassSchema,
-  toClassFormModel,
-} from './class-form';
+import { type ClassFormModel, classSchema, existingEntry, toClassFormModel } from './class-form';
 import { groupActionMessage } from './group-action-message';
-import { teacherChoices } from './group-form';
+import { shiftSchoolYear } from './school-year';
 
 /** Suggestions under the name: enough to find a class, not the whole school. */
 const MAX_SUGGESTIONS = 8;
@@ -35,22 +27,19 @@ const MAX_SUGGESTIONS = 8;
 /** The class to edit, or null for a new one, and what the dialog needs to fill it. */
 export interface ClassDialogData {
   readonly schoolClass: SchoolClass | null;
-  /** Every class of the school: a new one with the name of another of its year joins it. */
-  readonly classes: readonly SchoolClass[];
-  readonly subjects: readonly Subject[];
-  /** The active teachers, for an administrator to choose one; null for a teacher. */
-  readonly teachers: readonly UserRef[] | null;
+  /** Every class of the school: a new one with the name of another of its year is joined instead. */
+  readonly classes: readonly SchoolClassEntry[];
+  /** The current school year: a new class is for it or the next; one edited keeps its own. */
   readonly schoolYear: string;
-  /** A teacher's groups are their own; an administrator chooses one (undefined). */
-  readonly teacherId: string | undefined;
-  /** Saves the class; the dialog stays open, with the error, if it fails. */
+  /** Creates or saves the class; the dialog stays open, with the error, if it fails. */
   readonly save: (model: ClassFormModel) => Promise<void>;
 }
 
 /**
- * A class of the school (5.2d, D-081): a new one with the subjects the user teaches in it, each a
- * group that takes its students, or the name and year of an existing one. A class is once per school:
- * with the name of one that exists, the user joins it with their subjects.
+ * A class of the school, by its name and year (5.2d, D-081): a new one, or one to edit. A class is
+ * once per school: with the name of one that exists, the dialog offers to join it and closes with
+ * it, for the page to choose the subjects; otherwise it saves, and closes with `true`. The subjects
+ * are always added in one place, «Añadir asignaturas».
  */
 @Component({
   selector: 'app-class-dialog',
@@ -67,7 +56,8 @@ export interface ClassDialogData {
     MatHint,
     MatError,
     MatInput,
-    MatSelect,
+    MatButtonToggleGroup,
+    MatButtonToggle,
     MatOption,
     MatAutocomplete,
     MatAutocompleteTrigger,
@@ -77,12 +67,12 @@ export interface ClassDialogData {
       @if (data.schoolClass) {
         <span i18n="@@classDialog.edit">Editar la clase</span>
       } @else {
-        <span i18n="@@classDialog.new">Nueva clase</span>
+        <span i18n="@@classDialog.add">Añadir una clase</span>
       }
     </h2>
     <form [formRoot]="classForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-2 sm:min-w-md">
+        <div class="flex flex-col gap-2">
           <!-- Dynamic: the hint of an existing class takes two lines -->
           <mat-form-field subscriptSizing="dynamic">
             <mat-label i18n="@@classDialog.name">Nombre</mat-label>
@@ -100,9 +90,13 @@ export interface ClassDialogData {
             </mat-autocomplete>
             @if (classForm.name().touched() && classForm.name().errors()[0]; as error) {
               <mat-error>{{ error.message }}</mat-error>
-            } @else if (joins()) {
-              <mat-hint i18n="@@classDialog.joins"
-                >Esta clase ya existe: tus asignaturas se añaden a ella.</mat-hint
+            } @else if (teachersOfJoined(); as teachers) {
+              <mat-hint i18n="@@classDialog.exists"
+                >Esta clase ya existe (la dan {{ teachers }}): únete con tus asignaturas.</mat-hint
+              >
+            } @else if (joined()) {
+              <mat-hint i18n="@@classDialog.existsEmpty"
+                >Esta clase ya existe, sin asignaturas: únete con las tuyas.</mat-hint
               >
             } @else if (!data.schoolClass) {
               <mat-hint i18n="@@classDialog.name.hint"
@@ -110,46 +104,30 @@ export interface ClassDialogData {
               >
             }
           </mat-form-field>
-          <mat-form-field class="mt-2">
-            <mat-label i18n="@@groupDialog.year">Curso</mat-label>
-            <input matInput [formField]="classForm.schoolYear" autocomplete="off" />
-            <!-- Only while it is not right: under a right year it read as a second value -->
-            @if (classForm.schoolYear().invalid()) {
-              <mat-hint i18n="@@groupDialog.year.hint">Como 2026/27</mat-hint>
-            }
-            @if (classForm.schoolYear().errors()[0]; as error) {
-              <mat-error>{{ error.message }}</mat-error>
-            }
-          </mat-form-field>
-          @if (!data.schoolClass) {
-            <mat-form-field>
-              <mat-label i18n="@@classDialog.subjects">Tus asignaturas en ella</mat-label>
-              <mat-select multiple [formField]="classForm.subjectIds">
-                @for (subject of data.subjects; track subject.id) {
-                  <mat-option [value]="subject.id">{{ nameOf(subject) }}</mat-option>
-                }
-              </mat-select>
-              @if (classForm.subjectIds().errors()[0]; as error) {
-                <mat-error>{{ error.message }}</mat-error>
-              } @else {
-                <mat-hint i18n="@@classDialog.subjects.hint"
-                  >Un grupo en cada una, con el alumnado de la clase.</mat-hint
+          @if (data.schoolClass; as schoolClass) {
+            <!-- A class keeps its year: its groups, blocks and dates are of it -->
+            <p class="mt-2 text-body-medium text-on-surface-variant" i18n="@@classDialog.yearFixed">
+              Curso {{ schoolClass.schoolYear }}: no cambia. Para otro curso, duplícala.
+            </p>
+          } @else {
+            <!-- Chosen, never typed: a class is made for this year or, in summer, for the next -->
+            <div class="mt-2 flex flex-col gap-2">
+              <span id="class-year" class="text-body-medium" i18n="@@groupDialog.year">Curso</span>
+              <mat-button-toggle-group
+                aria-labelledby="class-year"
+                hideSingleSelectionIndicator
+                class="self-start"
+                [value]="model().schoolYear"
+                (change)="classForm.schoolYear().value.set($event.value)"
+              >
+                <mat-button-toggle [value]="years[0]" i18n="@@classDialog.thisYear"
+                  >Este curso ({{ years[0] }})</mat-button-toggle
                 >
-              }
-            </mat-form-field>
-            @if (teachers; as teachers) {
-              <mat-form-field class="mt-2">
-                <mat-label i18n="@@groupDialog.teacher">Docente</mat-label>
-                <mat-select [formField]="classForm.teacherId">
-                  @for (teacher of teachers; track teacher.id) {
-                    <mat-option [value]="teacher.id">{{ teacher.name }}</mat-option>
-                  }
-                </mat-select>
-                @if (classForm.teacherId().errors()[0]; as error) {
-                  <mat-error>{{ error.message }}</mat-error>
-                }
-              </mat-form-field>
-            }
+                <mat-button-toggle [value]="years[1]" i18n="@@classDialog.nextYear"
+                  >El que viene ({{ years[1] }})</mat-button-toggle
+                >
+              </mat-button-toggle-group>
+            </div>
           }
           @if (failure(); as message) {
             <p class="mt-2 text-body-medium text-error" role="alert">{{ message }}</p>
@@ -165,10 +143,10 @@ export interface ClassDialogData {
             <span i18n="@@groupDialog.saving">Guardando…</span>
           } @else if (data.schoolClass) {
             <span i18n="@@groupDialog.save">Guardar</span>
-          } @else if (joins()) {
-            <span i18n="@@classDialog.join">Añadir mis asignaturas</span>
+          } @else if (joined()) {
+            <span i18n="@@classDialog.joinButton">Unirme y elegir asignaturas</span>
           } @else {
-            <span i18n="@@classDialog.create">Crear la clase</span>
+            <span i18n="@@classDialog.createButton">Crear y elegir asignaturas</span>
           }
         </button>
       </mat-dialog-actions>
@@ -177,57 +155,56 @@ export interface ClassDialogData {
 })
 export class ClassDialog {
   protected readonly data = inject<ClassDialogData>(MAT_DIALOG_DATA);
-  private readonly ref = inject<MatDialogRef<ClassDialog, boolean>>(MatDialogRef);
-  private readonly locale = inject(LanguageService).locale;
-
-  /** For an administrator: the active teachers. */
-  protected readonly teachers = this.data.teachers && teacherChoices(this.data.teachers, null);
+  private readonly ref = inject<MatDialogRef<ClassDialog, SchoolClassEntry | true>>(MatDialogRef);
 
   protected readonly failure = signal<string | null>(null);
 
-  private readonly model = signal(
-    toClassFormModel(this.data.schoolClass, {
-      schoolYear: this.data.schoolYear,
-      teacherId: this.data.teacherId,
-    }),
-  );
+  /** The current year and the next: a new class is for one of them. */
+  protected readonly years = [this.data.schoolYear, shiftSchoolYear(this.data.schoolYear, 1)];
 
-  protected readonly classForm = form(
-    this.model,
-    this.data.schoolClass ? classSchema : newClassSchema(this.data.classes),
-    {
-      submission: {
-        action: async (field) => {
-          this.failure.set(null);
-          try {
-            await this.data.save(field().value());
-            this.ref.close(true);
-          } catch (error) {
-            this.failure.set(groupActionMessage('save', error));
-          }
+  private readonly model = signal(toClassFormModel(this.data.schoolClass, this.data.schoolYear));
+
+  protected readonly classForm = form(this.model, classSchema, {
+    submission: {
+      action: async (field) => {
+        // One that exists is joined: the page asks for the subjects next
+        const joined = this.joined();
+        if (joined) {
+          this.ref.close(joined);
           return undefined;
-        },
+        }
+        this.failure.set(null);
+        try {
+          await this.data.save(field().value());
+          this.ref.close(true);
+        } catch (error) {
+          this.failure.set(groupActionMessage('save', error));
+        }
+        return undefined;
       },
     },
+  });
+
+  /** The class that exists with the name and year of a new one: the user joins it. */
+  protected readonly joined = computed(() =>
+    this.data.schoolClass ? null : existingEntry(this.data.classes, this.model()),
   );
 
-  /** A new class with the name and year of one that exists: the user joins it. */
-  protected readonly joins = computed(
-    () => !this.data.schoolClass && existingClass(this.data.classes, this.model()) !== null,
-  );
+  /** Who teaches in the class joined, once each: «Javier Ortega Ruiz, Marta Ibáñez Soler». */
+  protected readonly teachersOfJoined = computed(() => {
+    const names = [...new Set(this.joined()?.groups.map(({ teacherName }) => teacherName) ?? [])];
+    return names.length > 0 ? names.join(', ') : null;
+  });
 
   /** The classes of the year whose name has what is typed. */
   protected readonly suggestions = computed(() => {
     const { name, schoolYear } = this.model();
     const text = name.trim().toLowerCase();
     return this.data.classes
+      .map(({ schoolClass }) => schoolClass)
       .filter(
         (row) => row.schoolYear === schoolYear.trim() && row.name.toLowerCase().includes(text),
       )
       .slice(0, MAX_SUGGESTIONS);
   });
-
-  protected nameOf(subject: Subject): string {
-    return subjectName(subject, this.locale).name;
-  }
 }

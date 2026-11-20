@@ -10,8 +10,9 @@ import {
   MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
-import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
+import { MatError, MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
+import { MatOption, MatSelect } from '@angular/material/select';
 
 import { LanguageService } from '../../core/i18n/language-service';
 import type { ManagedGroup } from '../../data/group-service';
@@ -20,6 +21,7 @@ import { datesNote } from '../../shared/dates-note';
 import { subjectLine } from './class-list';
 import { type DuplicateFormModel, duplicateSchema, toDuplicateFormModel } from './duplicate-form';
 import { groupActionMessage } from './group-action-message';
+import { schoolYearChoices } from './school-year';
 
 export interface DuplicateDialogData {
   readonly source: SchoolClass;
@@ -49,9 +51,10 @@ export interface DuplicateDialogData {
     MatCheckbox,
     MatFormField,
     MatLabel,
-    MatHint,
     MatError,
     MatInput,
+    MatSelect,
+    MatOption,
   ],
   template: `
     <h2 mat-dialog-title i18n="@@duplicateDialog.title">
@@ -73,13 +76,12 @@ export interface DuplicateDialogData {
           </mat-form-field>
           <mat-form-field>
             <mat-label i18n="@@groupDialog.year">Curso</mat-label>
-            <input matInput [formField]="duplicateForm.schoolYear" autocomplete="off" />
-            @if (duplicateForm.schoolYear().invalid()) {
-              <mat-hint i18n="@@groupDialog.year.hint">Como 2026/27</mat-hint>
-            }
-            @if (duplicateForm.schoolYear().errors()[0]; as error) {
-              <mat-error>{{ error.message }}</mat-error>
-            }
+            <!-- Chosen, never typed: the one before, the one given and the one after -->
+            <mat-select [formField]="duplicateForm.schoolYear">
+              @for (year of years; track year) {
+                <mat-option [value]="year">{{ year }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <fieldset class="flex flex-col">
@@ -190,6 +192,9 @@ export class DuplicateDialog {
       },
     },
   });
+
+  /** Around the year it starts with: the next one, or the current one for an older class. */
+  protected readonly years = schoolYearChoices(this.model().schoolYear);
 
   protected readonly chosenCount = computed(() => this.model().groupIds.length);
 

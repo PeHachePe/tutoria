@@ -1,8 +1,17 @@
 import { isStuck } from '../../../shared/is-stuck';
 import { SAMPLE_CODE } from './activity';
 import { fixtureId } from './fixture-id';
-import { SEED } from './seed';
 import {
+  HISTORY_CLASS_MEMBERS,
+  HISTORY_CLASSES,
+  HISTORY_ENROLLMENTS,
+  HISTORY_GROUPS,
+  HISTORY_USERS,
+} from './history';
+import { SEED } from './seed';
+import { ADVANCED_PROGRAMMING_ID, BASIC_PROGRAMMING_ID, WEB_CLIENT_ID } from './subjects';
+import {
+  CLASSES,
   DAM_GROUP_ID,
   DAM_STUDENT_IDS,
   DAW_GROUP_ID,
@@ -10,6 +19,7 @@ import {
   DAM_ADVANCED_GROUP_ID,
   DAW_WEB_GROUP_ID,
   DISABLED_STUDENT_ID,
+  GROUPS,
 } from './users';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -30,6 +40,7 @@ describe('seed fixtures', () => {
     const tables = [
       SEED.users,
       SEED.subjects,
+      SEED.classes,
       SEED.groups,
       SEED.enrollments,
       SEED.classBlocks,
@@ -47,20 +58,20 @@ describe('seed fixtures', () => {
     }
   });
 
-  it('has one admin, two teachers, four groups and a disabled student outside them', () => {
+  it('has one admin, two teachers, this year five groups and a disabled student outside them', () => {
     const roles = SEED.users.map((user) => user.role);
     const emails = SEED.users.map((user) => user.email);
 
     expect(roles.filter((role) => role === 'admin')).toHaveLength(1);
     expect(roles.filter((role) => role === 'teacher')).toHaveLength(2);
     expect(new Set(emails).size).toBe(emails.length);
-    expect(SEED.classes.map(({ name }) => name)).toEqual(['1.º DAW A', '1.º DAM B']);
-    expect(SEED.groups.map(({ classId, label }) => [classId, label])).toEqual([
-      [SEED.classes[0].id, null],
-      [SEED.classes[1].id, null],
-      [SEED.classes[0].id, null],
-      [SEED.classes[1].id, null],
-      [SEED.classes[0].id, 'Desdoble inglés'],
+    expect(CLASSES.map(({ name }) => name)).toEqual(['1.º DAW A', '1.º DAM B']);
+    expect(GROUPS.map(({ classId, label }) => [classId, label])).toEqual([
+      [CLASSES[0].id, null],
+      [CLASSES[1].id, null],
+      [CLASSES[0].id, null],
+      [CLASSES[1].id, null],
+      [CLASSES[0].id, 'Desdoble inglés'],
     ]);
     expect(SEED.enrollments.filter((e) => e.groupId === DAW_GROUP_ID)).toHaveLength(24);
     expect(SEED.enrollments.filter((e) => e.groupId === DAW_WEB_GROUP_ID)).toHaveLength(24);
@@ -70,25 +81,29 @@ describe('seed fixtures', () => {
     expect(SEED.enrollments.some((e) => e.userId === DISABLED_STUDENT_ID)).toBe(false);
   });
 
-  it('has three subjects, each group in one, and the exercises of the bank in theirs (2.5c)', () => {
+  it('has the subjects of DAW and DAM, each group in one, and the exercises of the bank in three (2.5c)', () => {
     const subjectIds = new Set(SEED.subjects.map((subject) => subject.id));
+    const withExercises = [BASIC_PROGRAMMING_ID, ADVANCED_PROGRAMMING_ID, WEB_CLIENT_ID];
 
-    expect(SEED.subjects).toHaveLength(3);
+    expect(SEED.subjects).toHaveLength(21);
     expect(SEED.groups.every((group) => subjectIds.has(group.subjectId))).toBe(true);
-    expect(new Set(SEED.groups.map((group) => group.subjectId)).size).toBe(3);
+    expect(new Set(GROUPS.map((group) => group.subjectId))).toEqual(new Set(withExercises));
     // Every exercise serves some subject, and some serve two
     expect(new Set(SEED.exerciseSubjects.map((row) => row.exerciseId))).toEqual(
       new Set(SEED.exercises.map((exercise) => exercise.id)),
     );
     expect(SEED.exerciseSubjects.length).toBeGreaterThan(SEED.exercises.length);
     // At least 15 per subject (2.5c)
-    for (const subject of SEED.subjects) {
-      const count = SEED.exerciseSubjects.filter((row) => row.subjectId === subject.id).length;
-      expect(count, subject.name).toBeGreaterThanOrEqual(15);
+    for (const subjectId of withExercises) {
+      const count = SEED.exerciseSubjects.filter((row) => row.subjectId === subjectId).length;
+      expect(count, subjectId).toBeGreaterThanOrEqual(15);
     }
-    // Each group of a whole class has every exercise of its subject in some block; a split starts
-    // empty (5.2d)
-    for (const group of SEED.groups.filter(({ label }) => label === null)) {
+    expect(new Set(SEED.exerciseSubjects.map((row) => row.subjectId))).toEqual(
+      new Set(withExercises),
+    );
+    // This year, each group of a whole class has every exercise of its subject in some block; a
+    // split starts empty (5.2d)
+    for (const group of GROUPS.filter(({ label }) => label === null)) {
       const assigned = new Set(
         SEED.assignments.filter((a) => a.groupId === group.id).map((a) => a.exerciseId),
       );
@@ -100,6 +115,66 @@ describe('seed fixtures', () => {
         group.id,
       ).toBe(true);
     }
+  });
+
+  it('has five years before this one, each intake in first and second year and then finished (5.2d)', () => {
+    const years = [...new Set(HISTORY_CLASSES.map(({ schoolYear }) => schoolYear))];
+    expect(years).toEqual(
+      expect.arrayContaining(['2021/22', '2022/23', '2023/24', '2024/25', '2025/26', '2026/27']),
+    );
+    expect(years).toHaveLength(6);
+    // Four classes a year before this one, and this year the two of second year
+    for (const year of years.filter((year) => year !== '2026/27')) {
+      expect(
+        HISTORY_CLASSES.filter(({ schoolYear }) => schoolYear === year)
+          .map(({ name }) => name)
+          .sort(),
+      ).toEqual(['1.º DAM B', '1.º DAW A', '2.º DAM B', '2.º DAW A']);
+    }
+    expect(
+      HISTORY_CLASSES.filter(({ schoolYear }) => schoolYear === '2026/27').map(({ name }) => name),
+    ).toEqual(['2.º DAW A', '2.º DAM B']);
+
+    // Twelve intakes of eight: those that finished are disabled, the last two are not
+    expect(HISTORY_USERS).toHaveLength(96);
+    expect(HISTORY_USERS.filter(({ status }) => status === 'active')).toHaveLength(16);
+    const emails = SEED.users.map(({ email }) => email);
+    expect(new Set(emails).size).toBe(emails.length);
+
+    // A student of first year one year is in second year the next
+    const membersOf = (name: string, year: string) => {
+      const schoolClass = HISTORY_CLASSES.find(
+        (row) => row.name === name && row.schoolYear === year,
+      );
+      return HISTORY_CLASS_MEMBERS.filter(({ classId }) => classId === schoolClass?.id)
+        .map(({ userId }) => userId)
+        .sort();
+    };
+    expect(membersOf('2.º DAW A', '2024/25')).toEqual(membersOf('1.º DAW A', '2023/24'));
+    expect(membersOf('1.º DAM B', '2025/26')).toHaveLength(8);
+
+    // Every enrollment, of a member of the class of its group
+    for (const { groupId, userId } of HISTORY_ENROLLMENTS) {
+      const group = HISTORY_GROUPS.find(({ id }) => id === groupId)!;
+      expect(
+        HISTORY_CLASS_MEMBERS.some((row) => row.classId === group.classId && row.userId === userId),
+      ).toBe(true);
+    }
+    // In second year of DAW, two in the split of client web development and not in its whole group
+    const split = HISTORY_GROUPS.find(({ label }) => label === 'Desdoble inglés')!;
+    const whole = HISTORY_GROUPS.find(
+      (group) =>
+        group.classId === split.classId &&
+        group.subjectId === split.subjectId &&
+        group.label === null,
+    )!;
+    const inSplit = HISTORY_ENROLLMENTS.filter(({ groupId }) => groupId === split.id);
+    expect(inSplit).toHaveLength(2);
+    expect(
+      HISTORY_ENROLLMENTS.filter(({ groupId }) => groupId === whole.id).some(({ userId }) =>
+        inSplit.some((row) => row.userId === userId),
+      ),
+    ).toBe(false);
   });
 
   it('has 42 exercises with 3 or 4 visible tests and two hidden ones at the end', () => {

@@ -21,6 +21,7 @@ import {
   TEACHER_ID,
 } from '../../data/mock/fixtures/users';
 import { MockBlockService } from '../../data/mock/mock-block-service';
+import { withoutHistory } from '../../data/mock/fixtures/history';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockExerciseService } from '../../data/mock/mock-exercise-service';
 import { MockNetwork } from '../../data/mock/mock-network';
@@ -62,6 +63,8 @@ describe('ExerciseBankPage', () => {
     });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     TestBed.inject(MockDb).setSession(userId);
+    // This year alone: the groups of the years before are not what these test
+    withoutHistory(TestBed.inject(MockDb));
     prepare(TestBed.inject(MockDb));
     service = TestBed.inject(MockExerciseService);
     await restoreSession();

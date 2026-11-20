@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { withoutHistory } from '../../data/mock/fixtures/history';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -54,6 +55,8 @@ describe('UsersPage', () => {
     });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     TestBed.inject(MockDb).setSession(ADMIN_ID);
+    // This year alone: the classes and students of the years before are not what these test
+    withoutHistory(TestBed.inject(MockDb));
     prepare(TestBed.inject(MockDb));
     service = TestBed.inject(MockAdminService);
     await restoreSession();

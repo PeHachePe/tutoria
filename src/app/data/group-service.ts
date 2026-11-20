@@ -22,6 +22,19 @@ export interface ManagedClass {
   readonly canEdit: boolean;
 }
 
+/** A group of a class as another teacher sees it (5.2d): its subject, its split and its teacher. */
+export interface ClassSubject {
+  readonly subjectId: string;
+  readonly label: string | null;
+  readonly teacherName: string;
+}
+
+/** A class of the school as a teacher chooses one to join, with its groups. */
+export interface SchoolClassEntry {
+  readonly schoolClass: SchoolClass;
+  readonly groups: readonly ClassSubject[];
+}
+
 /** What a class is: its name and year. */
 export type ClassDraft = Pick<SchoolClass, 'name' | 'schoolYear'>;
 
@@ -59,6 +72,12 @@ export interface RosterStudent {
   readonly groupIds: readonly string[];
 }
 
+/** A line of a pasted list and the student it names (5.2d). */
+export interface StudentMatch {
+  readonly entry: string;
+  readonly student: UserRef;
+}
+
 /** Where students are enrolled: the class (and its groups of the whole class) or one group. */
 export type EnrollTarget =
   { readonly kind: 'class'; readonly id: string } | { readonly kind: 'group'; readonly id: string };
@@ -69,6 +88,8 @@ export const MAX_STUDENT_SEARCH_RESULTS = 20;
 export const MAX_ENROLLMENT_BATCH = 50;
 /** Groups made in one request (5.2c): more subjects than a class has. */
 export const MAX_GROUP_BATCH = 20;
+/** Lines of a pasted list read at once: more than any class has. */
+export const MAX_PASTED_LINES = 500;
 /** As `class_group_label_format`: «Desdoble inglés». */
 export const MAX_GROUP_LABEL_LENGTH = 30;
 /** As `school_class_school_year_format`: `2026/27`. */
@@ -87,8 +108,8 @@ export abstract class GroupService {
   /** Those the user teaches in or created, or all for an administrator. */
   abstract listClasses(): Promise<ManagedClass[]>;
 
-  /** Every class of the school, to join one with a subject. */
-  abstract listAllClasses(): Promise<SchoolClass[]>;
+  /** Every class of the school, to join one with a subject, with its groups. */
+  abstract listAllClasses(): Promise<SchoolClassEntry[]>;
 
   /**
    * A class (or the one with that name and year, whatever its capitals, which the user joins) with
@@ -135,6 +156,19 @@ export abstract class GroupService {
 
   /** By name; `not_found` for a class the user does not look after. */
   abstract listRoster(classId: string): Promise<RosterStudent[]>;
+
+  /**
+   * The active students of the school without a class in the year of this one, by name: those a
+   * new class is chosen from. `not_found` for a class the user does not look after.
+   */
+  abstract listCandidates(classId: string): Promise<UserRef[]>;
+
+  /**
+   * The active students a pasted list names, each line an email or a whole name (without accents
+   * nor capitals), with their line; a line that names nobody, or more than one, is left out.
+   * `invalid` with more than `MAX_PASTED_LINES`, `not_found` as `listCandidates`.
+   */
+  abstract matchStudents(classId: string, entries: readonly string[]): Promise<StudentMatch[]>;
 
   /** Active students not in the class (or the group); none with a search shorter than the minimum. */
   abstract searchStudents(target: EnrollTarget, search: string): Promise<UserRef[]>;

@@ -6,7 +6,7 @@
 -- (...050) is a disabled student and the administrator is ...001.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(50);
 
 create function pg_temp.sign_in(user_id uuid) returns void language plpgsql as $$
 begin
@@ -33,6 +33,15 @@ insert into class_member (class_id, user_id) values
   ('c0000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000050');
 update app_user set status = 'disabled' where id = '10000000-0000-4000-8000-000000000050';
 
+-- Nora has an account but no class yet, as a new student in September.
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('10000000-0000-4000-8000-000000000060', 'nora.nueva@tutoria.test', '{"name":"Nora Nueva Díaz"}');
+update app_user set role = 'student' where id = '10000000-0000-4000-8000-000000000060';
+
+-- Every class of the seed, this year's and those of the history, to compare with what Marta reads.
+create temp table seed_classes as select id from school_class;
+grant select on seed_classes to authenticated;
+
 -- A student ----------------------------------------------------------------------------------------
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000011');
 
@@ -51,10 +60,15 @@ select is_empty($$ select * from managed_classes() $$, 'and looks after none');
 -- Marta --------------------------------------------------------------------------------------------
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000002');
 
-select is((select count(*)::integer from school_class), 2, 'a teacher reads every class, to join one');
-select results_eq(
-  $$ select id::text from managed_classes() $$,
-  $$ values ('c0000000-0000-4000-8000-000000000001') $$,
+select set_eq(
+  $$ select id from school_class $$,
+  $$ select id from seed_classes $$,
+  'a teacher reads every class, to join one'
+);
+select set_eq(
+  $$ select id from managed_classes() $$,
+  $$ select distinct class_id from class_group
+     where teacher_id = '10000000-0000-4000-8000-000000000002' $$,
   'and looks after those where she teaches'
 );
 select is(
@@ -73,6 +87,43 @@ select throws_ok(
   $$ select * from class_roster('c0000000-0000-4000-8000-000000000002') $$,
   'P0002', null,
   'not those of a class where she does not teach'
+);
+
+-- The classes of the school, with the subjects each already has
+select results_eq(
+  $$ select name, class_groups from school_classes()
+     where name = '1.º DAW A' and school_year = '2026/27' $$,
+  $$ values ('1.º DAW A', jsonb_build_array(
+       jsonb_build_object('subject_id', 'b0000000-0000-4000-8000-000000000001', 'label', null, 'teacher_name', 'Marta Ibáñez Soler'),
+       jsonb_build_object('subject_id', 'b0000000-0000-4000-8000-000000000001', 'label', 'Desdoble inglés', 'teacher_name', 'Javier Ortega Ruiz'),
+       jsonb_build_object('subject_id', 'b0000000-0000-4000-8000-000000000003', 'label', null, 'teacher_name', 'Marta Ibáñez Soler'))) $$,
+  'a teacher reads every class with its groups, splits too, and who teaches them'
+);
+
+-- Choosing many at once
+select results_eq(
+  $$ select name from class_candidates('c0000000-0000-4000-8000-000000000001') $$,
+  $$ values ('Claudia Ferrer Ruiz'), ('Ismael Haddou'), ('Marina Vidal Soto'), ('Nora Nueva Díaz') $$,
+  'a teacher lists the active students without a class this year'
+);
+select throws_ok(
+  $$ select * from class_candidates('c0000000-0000-4000-8000-000000000002') $$,
+  'P0002', null,
+  'not for a class where she does not teach'
+);
+select results_eq(
+  $$ select entry, name from match_students('c0000000-0000-4000-8000-000000000001', array[
+       '  LUCIA.MARTIN@tutoria.test ', 'aya benali haddad', 'pepe@otro.com', 'Raúl Medina Cortés', ''
+     ]) $$,
+  $$ values ('aya benali haddad', 'Aya Benali Haddad'),
+            ('LUCIA.MARTIN@tutoria.test', 'Lucía Martín Gómez') $$,
+  'a pasted list finds active students by email or whole name, without accents nor capitals'
+);
+select throws_ok(
+  $$ select * from match_students('c0000000-0000-4000-8000-000000000001',
+       array(select 'x' || n from generate_series(1, 501) n)) $$,
+  '22023', null,
+  'five hundred lines at most'
 );
 
 -- Creating a class and joining one
@@ -138,6 +189,34 @@ select is(
     ' Desdoble alemán ', '10000000-0000-4000-8000-000000000002'))),
   0,
   'with one it is a split, whose students are chosen'
+);
+-- A split created before the group of the whole class, in a new class of Lucía, Hugo and Aya
+create temp table split_first as
+select create_class('1.º DAW S', '2026/27', '{}', null) as id;
+select enroll_class_members((select id from split_first), array[
+  '10000000-0000-4000-8000-000000000011', '10000000-0000-4000-8000-000000000012',
+  '10000000-0000-4000-8000-000000000013']::uuid[]);
+create temp table english as
+select add_class_group((select id from split_first), 'b0000000-0000-4000-8000-000000000001',
+  'Desdoble inglés', '10000000-0000-4000-8000-000000000002') as id;
+select enroll_students((select id from english),
+  array['10000000-0000-4000-8000-000000000011']::uuid[]);
+create temp table whole as
+select add_class_group((select id from split_first), 'b0000000-0000-4000-8000-000000000001',
+  null, '10000000-0000-4000-8000-000000000002') as id;
+select is(
+  (select array_agg(user_id::text order by user_id) from enrollment
+   where group_id = (select id from whole)),
+  array['10000000-0000-4000-8000-000000000012', '10000000-0000-4000-8000-000000000013'],
+  'the group of the whole class created after a split leaves its students out'
+);
+select enroll_class_members((select id from split_first),
+  array['10000000-0000-4000-8000-000000000011']::uuid[]);
+select is(
+  (select count(*)::integer from enrollment
+   where group_id = (select id from whole) and user_id = '10000000-0000-4000-8000-000000000011'),
+  0,
+  'and enrolling in the class again does not put them in it'
 );
 select throws_ok(
   $$ select add_class_group('c0000000-0000-4000-8000-000000000001',

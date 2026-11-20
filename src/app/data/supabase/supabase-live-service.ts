@@ -22,6 +22,7 @@ import {
   toTest,
   toTutorInteraction,
 } from './supabase-rows';
+import { compareGroups } from '../group-name';
 
 /**
  * The live panel in Supabase (4.1). The RLS decides what the teacher reads: their own groups and
@@ -44,7 +45,7 @@ export class SupabaseLiveService extends LiveService {
     const groups = unwrap(
       await this.supabase
         .from('class_group')
-        .select('id, label, school_class(name), subject(*), class_block(*)'),
+        .select('id, label, school_class(name, school_year), subject(*), class_block(*)'),
     );
     const latest = await Promise.all(groups.map((group) => this.latestBlockId(group.id)));
     return groups
@@ -52,14 +53,12 @@ export class SupabaseLiveService extends LiveService {
         id: group.id,
         name: group.school_class.name,
         label: group.label,
+        schoolYear: group.school_class.school_year,
         subject: toSubject(group.subject),
         blocks: group.class_block.map(toClassBlock).sort((a, b) => a.position - b.position),
         latestBlockId: latest[index],
       }))
-      .sort(
-        (a, b) =>
-          a.name.localeCompare(b.name, 'es') || a.subject.name.localeCompare(b.subject.name, 'es'),
-      );
+      .sort(compareGroups);
   }
 
   /**

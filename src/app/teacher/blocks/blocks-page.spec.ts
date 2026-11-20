@@ -1,4 +1,5 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { withoutHistory } from '../../data/mock/fixtures/history';
 import type { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -58,6 +59,8 @@ describe('BlocksPage', () => {
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     db = TestBed.inject(MockDb);
     db.setSession(TEACHER_ID);
+    // This year alone: the classes and students of the years before are not what these test
+    withoutHistory(db);
     prepare(db);
     await restoreSession();
     const harness = await RouterTestingHarness.create(url);

@@ -1,4 +1,5 @@
 import { HarnessLoader } from '@angular/cdk/testing';
+import { withoutHistory } from '../../data/mock/fixtures/history';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
@@ -37,6 +38,8 @@ describe('DevToolbar', () => {
       ],
     });
     db = TestBed.inject(MockDb);
+    // This year alone: the classes and students of the years before are not what these test
+    withoutHistory(db);
     fixture = TestBed.createComponent(DevToolbar);
     loader = TestbedHarnessEnvironment.loader(fixture);
     await fixture.whenStable();

@@ -14,6 +14,7 @@ import { SUPABASE_CLIENT } from './supabase-client';
 import { check, unwrap } from './supabase-error';
 import { toAssignment, toClassBlock, toExercise, toSubject } from './supabase-rows';
 import { localTimeZone } from './time-zone';
+import { compareGroups } from '../group-name';
 
 /**
  * Blocks and assignments in Supabase (4.3b). The RLS decides who changes them; adding and
@@ -38,12 +39,7 @@ export class SupabaseBlockService extends BlockService {
         schoolYear: row.school_class.school_year,
         subject: toSubject(row.subject),
       }))
-      .sort(
-        (a, b) =>
-          a.name.localeCompare(b.name, 'es') ||
-          a.subject.name.localeCompare(b.subject.name, 'es') ||
-          labelOrder(a.label).localeCompare(labelOrder(b.label), 'es'),
-      );
+      .sort(compareGroups);
   }
 
   /** Two requests at once: the blocks with their exercises, and who started each assignment. */
@@ -199,9 +195,4 @@ export class SupabaseBlockService extends BlockService {
     );
     return toAssignment(row);
   }
-}
-
-/** The group of the whole class (no label) before its splits. */
-function labelOrder(label: string | null): string {
-  return label ?? '';
 }

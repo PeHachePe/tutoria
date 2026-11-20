@@ -142,20 +142,35 @@ describe('SupabaseGroupService', () => {
     });
   });
 
-  it('lists every class of the school by year and name', async () => {
-    server.on('GET', '/rest/v1/school_class', {
-      body: [DAW_ROW, { ...DAW_ROW, id: 'dam', name: '1.º DAM B' }],
+  it('lists every class of the school, in the order of the RPC, with all its groups', async () => {
+    server.on('POST', '/rest/v1/rpc/school_classes', {
+      body: [
+        { ...DAW_ROW, id: 'dam', name: '1.º DAM B', class_groups: [] },
+        {
+          ...DAW_ROW,
+          class_groups: [
+            { subject_id: 's-1', label: null, teacher_name: 'Marta' },
+            { subject_id: 's-1', label: 'Desdoble inglés', teacher_name: 'Javier' },
+          ],
+        },
+      ],
     });
 
     const classes = await service.listAllClasses();
 
-    expect(classes.map((row) => row.id)).toEqual(['dam', 'daw']);
+    expect(classes.map(({ schoolClass }) => schoolClass.id)).toEqual(['dam', 'daw']);
     expect(classes[1]).toEqual({
-      id: 'daw',
-      name: '1.º DAW A',
-      schoolYear: '2026/27',
-      createdBy: 'teacher-1',
-      createdAt: '2026-09-01T08:00:00.000Z',
+      schoolClass: {
+        id: 'daw',
+        name: '1.º DAW A',
+        schoolYear: '2026/27',
+        createdBy: 'teacher-1',
+        createdAt: '2026-09-01T08:00:00.000Z',
+      },
+      groups: [
+        { subjectId: 's-1', label: null, teacherName: 'Marta' },
+        { subjectId: 's-1', label: 'Desdoble inglés', teacherName: 'Javier' },
+      ],
     });
   });
 
@@ -415,6 +430,33 @@ describe('SupabaseGroupService', () => {
       });
 
       await expect(service.listRoster('dam')).rejects.toMatchObject({ kind: 'not_found' });
+    });
+  });
+
+  describe('listCandidates', () => {
+    it('asks for the students without a class in the year of the class', async () => {
+      server.on('POST', '/rest/v1/rpc/class_candidates', { body: [LUCIA, HUGO] });
+
+      await expect(service.listCandidates('daw')).resolves.toEqual([LUCIA, HUGO]);
+      expect(server.sentTo('POST', '/rest/v1/rpc/class_candidates')[0].body).toEqual({
+        target_class_id: 'daw',
+      });
+    });
+  });
+
+  describe('matchStudents', () => {
+    it('sends the lines and keeps each student with its line', async () => {
+      server.on('POST', '/rest/v1/rpc/match_students', {
+        body: [{ entry: 'lucia@x', ...LUCIA }],
+      });
+
+      await expect(service.matchStudents('daw', ['lucia@x', 'nadie'])).resolves.toEqual([
+        { entry: 'lucia@x', student: LUCIA },
+      ]);
+      expect(server.sentTo('POST', '/rest/v1/rpc/match_students')[0].body).toEqual({
+        target_class_id: 'daw',
+        entries: ['lucia@x', 'nadie'],
+      });
     });
   });
 

@@ -16,8 +16,10 @@ $$;
 -- Marta
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000002');
 
+-- The two classes of the first year this year; the history adds more groups of hers.
 select results_eq(
-  'select id from class_group',
+  $$ select id from class_group where class_id in (
+       'c0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000002') order by id $$,
   $$ values ('20000000-0000-4000-8000-000000000001'::uuid), ('20000000-0000-4000-8000-000000000003') $$,
   'a teacher only sees their groups'
 );
@@ -36,7 +38,12 @@ select ok(
    where a.user_id = '10000000-0000-4000-8000-000000000011') > 0,
   'a teacher sees the events of their students'
 );
-select is((select count(*) from app_user), 25::bigint, 'a teacher reads themselves and their 24 students');
+select is(
+  (select count(*) from app_user),
+  (select 1 + count(distinct e.user_id) from enrollment e join class_group g on g.id = e.group_id
+   where g.teacher_id = '10000000-0000-4000-8000-000000000002'),
+  'a teacher reads themselves and their students, those of past years too'
+);
 select is((select count(*) from test where is_hidden), 84::bigint, 'a teacher reads the hidden tests');
 select is((select count(*) from exercise), 42::bigint, 'teachers share the whole exercise bank');
 select lives_ok(

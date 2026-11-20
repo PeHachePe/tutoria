@@ -173,4 +173,25 @@ describe('buildSeedSql', () => {
       /\('ai_provider', '\{"baseUrl":"https:\/\/example.test","model":"m"\}'::jsonb\)/,
     );
   });
+
+  it('enrolls the disabled users while active and disables them after their history', () => {
+    const seed = Object.fromEntries(SEED_TABLES.map(({ source }) => [source, []]));
+    seed.users = [
+      { id: 'u1', name: 'Ana', status: 'active' },
+      { id: 'u2', name: 'Bea', status: 'disabled' },
+    ];
+    seed.enrollments = [{ id: 'e1', groupId: 'g1', userId: 'u2' }];
+    seed.aiProvider = { baseUrl: 'https://example.test', model: 'm' };
+
+    const sql = buildSeedSql(seed, 'p');
+
+    // The account keeps its ban; its profile starts active
+    assert.match(sql, /\('u2', null, 'Bea', 'disabled', null, 'p'\)/);
+    assert.match(sql, /\('u2', 'Bea', 'active'\)/);
+    const enrolled = sql.indexOf('insert into enrollment');
+    const disabled = sql.indexOf(
+      "update public.app_user set status = 'disabled' where id in ('u2');",
+    );
+    assert.ok(enrolled > 0 && disabled > enrolled);
+  });
 });

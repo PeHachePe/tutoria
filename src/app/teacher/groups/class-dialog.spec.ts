@@ -4,32 +4,35 @@ import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { DataError } from '../../data/data-error';
-import {
-  ADVANCED_PROGRAMMING_ID,
-  SUBJECTS,
-  WEB_CLIENT_ID,
-} from '../../data/mock/fixtures/subjects';
-import { CLASSES, OTHER_TEACHER_ID, TEACHER_ID } from '../../data/mock/fixtures/users';
+import type { SchoolClassEntry } from '../../data/group-service';
+import { BASIC_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
+import { CLASSES } from '../../data/mock/fixtures/users';
 import { ClassDialog, type ClassDialogData } from './class-dialog';
 
-const TEACHERS = [
-  { id: TEACHER_ID, name: 'Marta', email: 'marta@tutoria.test' },
-  { id: OTHER_TEACHER_ID, name: 'Javier', email: 'javier@tutoria.test' },
-];
+/** The classes of the seed; 1.º DAW A has basic programming and its split, 1.º DAM B nothing. */
+const ENTRIES: SchoolClassEntry[] = CLASSES.map((schoolClass, index) => ({
+  schoolClass,
+  groups:
+    index === 0
+      ? [
+          { subjectId: BASIC_PROGRAMMING_ID, label: null, teacherName: 'Marta Ibáñez Soler' },
+          {
+            subjectId: BASIC_PROGRAMMING_ID,
+            label: 'Desdoble inglés',
+            teacherName: 'Javier Ortega Ruiz',
+          },
+          { subjectId: 'other', label: null, teacherName: 'Marta Ibáñez Soler' },
+        ]
+      : [],
+}));
 
 function open(data: Partial<ClassDialogData>, save = vi.fn<ClassDialogData['save']>()) {
-  const ref = TestBed.inject(MatDialog).open<ClassDialog, ClassDialogData, boolean>(ClassDialog, {
-    data: {
-      schoolClass: null,
-      classes: CLASSES,
-      subjects: SUBJECTS,
-      teachers: null,
-      schoolYear: '2026/27',
-      teacherId: TEACHER_ID,
-      save,
-      ...data,
+  const ref = TestBed.inject(MatDialog).open<ClassDialog, ClassDialogData, SchoolClassEntry | true>(
+    ClassDialog,
+    {
+      data: { schoolClass: null, classes: ENTRIES, schoolYear: '2026/27', save, ...data },
     },
-  });
+  );
   const closed = vi.fn();
   ref.afterClosed().subscribe(closed);
   return { save, closed };
@@ -42,37 +45,50 @@ async function opened(name: string): Promise<HTMLElement> {
   return dialog;
 }
 
-/** Chooses subjects in the list, which stays open until Escape. */
-async function pickSubjects(dialog: HTMLElement, ...names: string[]): Promise<void> {
-  await userEvent.click(within(dialog).getByRole('combobox', { name: 'Tus asignaturas en ella' }));
-  for (const name of names) await userEvent.click(await screen.findByRole('option', { name }));
-  await userEvent.keyboard('{Escape}');
-}
-
 describe('ClassDialog', () => {
-  it('creates a class with the subjects of the teacher, without a field for the teacher', async () => {
+  it('creates a class of this year by default, for its subjects to be chosen next', async () => {
     const { save, closed } = open({});
-    const dialog = await opened('Nueva clase');
-    expect(within(dialog).getByText(/Un grupo en cada una/)).toBeTruthy();
-    expect(within(dialog).queryByRole('combobox', { name: 'Docente' })).toBeNull();
+    const dialog = await opened('Añadir una clase');
+    expect(
+      within(dialog)
+        .getByRole('radio', { name: 'Este curso (2026/27)' })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
 
     await userEvent.type(within(dialog).getByRole('combobox', { name: 'Nombre' }), '2.º DAW A');
     expect(within(dialog).getByText(/Como 1.º DAW A. La comparten/)).toBeTruthy();
-    await pickSubjects(dialog, 'Programación avanzada', 'Desarrollo web en entorno cliente');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear la clase' }));
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Crear y elegir asignaturas' }),
+    );
 
-    expect(save).toHaveBeenCalledWith({
-      name: '2.º DAW A',
-      schoolYear: '2026/27',
-      subjectIds: [ADVANCED_PROGRAMMING_ID, WEB_CLIENT_ID],
-      teacherId: TEACHER_ID,
-    });
+    expect(save).toHaveBeenCalledWith({ name: '2.º DAW A', schoolYear: '2026/27' });
     await vi.waitFor(() => expect(closed).toHaveBeenCalledWith(true));
   });
 
-  it('suggests the classes of the year, and joins the one chosen with a subject at least', async () => {
+  it('creates a class for the next year, never typing it', async () => {
     const { save } = open({});
-    const dialog = await opened('Nueva clase');
+    const dialog = await opened('Añadir una clase');
+    await userEvent.type(within(dialog).getByRole('combobox', { name: 'Nombre' }), '2.º DAW A');
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'El que viene (2027/28)' }));
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Crear y elegir asignaturas' }),
+    );
+    expect(save).toHaveBeenCalledWith({ name: '2.º DAW A', schoolYear: '2027/28' });
+  });
+
+  it('asks for the name', async () => {
+    const { save } = open({});
+    const dialog = await opened('Añadir una clase');
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Crear y elegir asignaturas' }),
+    );
+    expect(within(dialog).getByText('Escribe el nombre de la clase')).toBeTruthy();
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('suggests the classes of the year, and joins the one chosen without saving', async () => {
+    const { save, closed } = open({});
+    const dialog = await opened('Añadir una clase');
     const name = within(dialog).getByRole('combobox', { name: 'Nombre' });
 
     await userEvent.type(name, 'daw');
@@ -80,82 +96,73 @@ describe('ClassDialog', () => {
     expect(suggestions.map((option) => option.textContent?.trim())).toEqual(['1.º DAW A']);
     await userEvent.click(suggestions[0]);
     expect(name).toHaveProperty('value', '1.º DAW A');
-    expect(within(dialog).getByText(/Esta clase ya existe/)).toBeTruthy();
+    // Each teacher once
+    expect(
+      within(dialog).getByText(
+        'Esta clase ya existe (la dan Marta Ibáñez Soler, Javier Ortega Ruiz): únete con tus asignaturas.',
+      ),
+    ).toBeTruthy();
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Añadir mis asignaturas' }));
-    expect(within(dialog).getByText('Elige las asignaturas que das en ella')).toBeTruthy();
-    expect(save).not.toHaveBeenCalled();
-
-    await pickSubjects(dialog, 'Programación avanzada');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Añadir mis asignaturas' }));
-    expect(save).toHaveBeenCalledWith(
-      expect.objectContaining({ name: '1.º DAW A', subjectIds: [ADVANCED_PROGRAMMING_ID] }),
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Unirme y elegir asignaturas' }),
     );
+    expect(save).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(closed).toHaveBeenCalledWith(ENTRIES[0]));
+  });
+
+  it('says that a class without subjects exists too', async () => {
+    open({});
+    const dialog = await opened('Añadir una clase');
+    await userEvent.type(within(dialog).getByRole('combobox', { name: 'Nombre' }), '1.º dam b');
+    await userEvent.keyboard('{Escape}');
+    expect(
+      within(dialog).getByText('Esta clase ya existe, sin asignaturas: únete con las tuyas.'),
+    ).toBeTruthy();
   });
 
   it('suggests nothing of another year', async () => {
-    open({ schoolYear: '2027/28' });
-    const dialog = await opened('Nueva clase');
+    open({});
+    const dialog = await opened('Añadir una clase');
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'El que viene (2027/28)' }));
     await userEvent.type(within(dialog).getByRole('combobox', { name: 'Nombre' }), '1.º DAW A');
     expect(screen.queryByRole('option')).toBeNull();
     expect(within(dialog).queryByText(/Esta clase ya existe/)).toBeNull();
-    expect(within(dialog).getByRole('button', { name: 'Crear la clase' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Crear y elegir asignaturas' })).toBeTruthy();
   });
 
-  it('lets an administrator choose the teacher of the subjects, and says why it failed', async () => {
+  it('says why it failed, and stays open', async () => {
     let fail!: (error: unknown) => void;
-    const { save, closed } = open(
-      { teachers: TEACHERS, teacherId: undefined },
+    const { closed } = open(
+      {},
       vi.fn<ClassDialogData['save']>(() => new Promise((_, reject) => (fail = reject))),
     );
-    const dialog = await opened('Nueva clase');
-
+    const dialog = await opened('Añadir una clase');
     await userEvent.type(within(dialog).getByRole('combobox', { name: 'Nombre' }), '2.º DAW A');
-    await pickSubjects(dialog, 'Programación avanzada');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear la clase' }));
-    expect(within(dialog).getByText('Elige el docente')).toBeTruthy();
-    expect(save).not.toHaveBeenCalled();
-
-    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Docente' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'Javier' }));
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear la clase' }));
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Crear y elegir asignaturas' }),
+    );
     expect(await within(dialog).findByText('Guardando…')).toBeTruthy();
     fail(new DataError('network'));
     expect((await within(dialog).findByRole('alert')).textContent).toContain('Sin conexión');
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ teacherId: OTHER_TEACHER_ID }));
     expect(closed).not.toHaveBeenCalled();
   });
 
-  it('edits the name and year of a class, without subjects nor suggestions', async () => {
-    const { save, closed } = open({
-      schoolClass: CLASSES[0],
-      classes: [],
-      subjects: [],
-      teacherId: undefined,
-    });
+  it('edits only the name of a class, which keeps its year', async () => {
+    const { save, closed } = open({ schoolClass: CLASSES[0], classes: [] });
     const dialog = await opened('Editar la clase');
-    expect(within(dialog).queryByRole('combobox', { name: 'Tus asignaturas en ella' })).toBeNull();
+    expect(within(dialog).queryByRole('radio')).toBeNull();
     expect(within(dialog).queryByText(/La comparten/)).toBeNull();
+    expect(within(dialog).getByText(/Curso 2026\/27: no cambia/)).toBeTruthy();
     const name = within(dialog).getByRole('textbox', { name: 'Nombre' });
     expect(name).toHaveProperty('value', '1.º DAW A');
 
     await userEvent.clear(name);
     await userEvent.tab();
     expect(within(dialog).getByText('Escribe el nombre de la clase')).toBeTruthy();
-    const year = within(dialog).getByRole('textbox', { name: 'Curso' });
-    await userEvent.clear(year);
-    expect(within(dialog).getByText('Como 2026/27')).toBeTruthy();
-    await userEvent.type(year, '2026/27');
-    expect(within(dialog).queryByText('Como 2026/27')).toBeNull();
     await userEvent.type(name, '1.º DAW Z');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }));
 
-    expect(save).toHaveBeenCalledWith({
-      name: '1.º DAW Z',
-      schoolYear: '2026/27',
-      subjectIds: [],
-      teacherId: '',
-    });
+    expect(save).toHaveBeenCalledWith({ name: '1.º DAW Z', schoolYear: '2026/27' });
     await vi.waitFor(() => expect(closed).toHaveBeenCalledWith(true));
   });
 });

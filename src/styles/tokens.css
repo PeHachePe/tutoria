@@ -41,6 +41,7 @@
   /* App tokens (src/theme.scss) */
   --color-canvas: var(--app-canvas);
   --color-panel: var(--app-panel);
+  --color-panel-column: var(--app-panel-column);
   --color-success: var(--app-success);
   --color-on-success: var(--app-on-success);
   --color-success-container: var(--app-success-container);

@@ -15,8 +15,11 @@ import {
   MAX_GROUP_LABEL_LENGTH,
   MAX_STUDENT_SEARCH_RESULTS,
   MIN_STUDENT_SEARCH_LENGTH,
+  MAX_PASTED_LINES,
   type RosterStudent,
   SCHOOL_YEAR_PATTERN,
+  type SchoolClassEntry,
+  type StudentMatch,
   type UserRef,
 } from '../group-service';
 import { schoolYearShiftDays } from '../school-year-shift';
@@ -57,10 +60,23 @@ export class MockGroupService extends GroupService {
     });
   }
 
-  listAllClasses(): Promise<SchoolClass[]> {
+  listAllClasses(): Promise<SchoolClassEntry[]> {
     return this.network.request(() => {
       this.db.requireUser('teacher', 'admin');
-      return sortClasses(this.db.tables().classes);
+      const { classes, groups, users } = this.db.tables();
+      return sortClasses(classes).map((schoolClass) => ({
+        schoolClass,
+        groups: groups
+          .filter((group) => group.classId === schoolClass.id)
+          // By subject, the group of the whole class (no label) before its splits, as the function
+          .map((group) => [`${group.subjectId} ${group.label ?? ''}`, group] as const)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([, group]) => ({
+            subjectId: group.subjectId,
+            label: group.label,
+            teacherName: findRow(users, group.teacherId).name,
+          })),
+      }));
     });
   }
 
@@ -235,6 +251,43 @@ export class MockGroupService extends GroupService {
     });
   }
 
+  listCandidates(classId: string): Promise<UserRef[]> {
+    return this.network.request(() => {
+      const user = this.db.requireUser('teacher', 'admin');
+      const { schoolYear } = this.findManagedClass(user, classId);
+      const { classes, classMembers, users } = this.db.tables();
+      const sameYear = new Set(
+        classes.filter((row) => row.schoolYear === schoolYear).map((row) => row.id),
+      );
+      const placed = new Set(
+        classMembers.filter((row) => sameYear.has(row.classId)).map((row) => row.userId),
+      );
+      return users
+        .filter((candidate) => isActive(candidate, 'student') && !placed.has(candidate.id))
+        .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+        .map(toRef);
+    });
+  }
+
+  matchStudents(classId: string, entries: readonly string[]): Promise<StudentMatch[]> {
+    return this.network.request(() => {
+      const user = this.db.requireUser('teacher', 'admin');
+      this.findManagedClass(user, classId);
+      if (entries.length > MAX_PASTED_LINES) throw new DataError('invalid', 'Too many lines');
+      const students = this.db.tables().users.filter((row) => isActive(row, 'student'));
+      const lines = [...new Set(entries.map((entry) => entry.trim()).filter(Boolean))];
+      return lines
+        .flatMap((entry) => {
+          const found = students.filter(
+            (row) =>
+              row.email.toLowerCase() === entry.toLowerCase() || fold(row.name) === fold(entry),
+          );
+          return found.length === 1 ? [{ entry, student: toRef(found[0]) }] : [];
+        })
+        .sort((a, b) => a.student.name.localeCompare(b.student.name, 'es'));
+    });
+  }
+
   searchStudents(target: EnrollTarget, search: string): Promise<UserRef[]> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
@@ -270,7 +323,7 @@ export class MockGroupService extends GroupService {
       this.addMembers(classId, userIds);
       for (const group of this.db.tables().groups) {
         if (group.classId === classId && group.label === null) {
-          this.addEnrollments(group.id, userIds);
+          this.addEnrollments(group.id, this.notInSubject(group, userIds));
         }
       }
     });
@@ -418,8 +471,32 @@ export class MockGroupService extends GroupService {
       teacherId: draft.teacherId,
     };
     this.db.update('groups', (rows) => [...rows, group]);
-    if (withClassStudents) this.addEnrollments(group.id, this.activeMembers(classId));
+    if (withClassStudents) {
+      this.addEnrollments(group.id, this.notInSubject(group, this.activeMembers(classId)));
+    }
     return group;
+  }
+
+  /**
+   * Those who do not take the subject of the group in another group of its class (a split), as
+   * `create_class_group` and `enroll_class_members`: a student takes a subject once.
+   */
+  private notInSubject(group: ClassGroup, userIds: readonly string[]): string[] {
+    const { groups, enrollments } = this.db.tables();
+    const same = new Set(
+      groups
+        .filter(
+          (other) =>
+            other.id !== group.id &&
+            other.classId === group.classId &&
+            other.subjectId === group.subjectId,
+        )
+        .map((other) => other.id),
+    );
+    const taking = new Set(
+      enrollments.filter((row) => same.has(row.groupId)).map((row) => row.userId),
+    );
+    return userIds.filter((userId) => !taking.has(userId));
   }
 
   /** Between one and the maximum, each once, active students not in `taken`. */

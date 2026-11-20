@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
+import { withoutHistory } from './fixtures/history';
+import { SUBJECTS } from './fixtures/subjects';
 import { MAX_PASSWORD_LENGTH, MAX_USER_NAME_LENGTH } from '../admin/user-rules';
 import type { NewUser } from '../admin-service';
 import {
@@ -31,6 +33,8 @@ describe('MockAdminService', () => {
     db = TestBed.inject(MockDb);
     service = TestBed.inject(MockAdminService);
     db.setSession(ADMIN_ID);
+    // This year alone: the classes and students of the years before are not what these test
+    withoutHistory(db);
   });
 
   afterEach(() => localStorage.clear());
@@ -187,11 +191,10 @@ describe('MockAdminService', () => {
     it('lists them by name', async () => {
       const names = (await service.listSubjects()).map((subject) => subject.name);
 
-      expect(names).toEqual([
-        'Desarrollo web en entorno cliente',
-        'Programación avanzada',
-        'Programación básica',
-      ]);
+      expect(names).toEqual(
+        [...SUBJECTS].map(({ name }) => name).sort((a, b) => a.localeCompare(b, 'es')),
+      );
+      expect(names.slice(0, 2)).toEqual(['Acceso a datos', 'Bases de datos']);
     });
 
     it('creates one, trimmed, and edits it', async () => {

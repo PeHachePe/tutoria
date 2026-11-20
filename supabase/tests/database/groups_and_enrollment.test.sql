@@ -46,8 +46,10 @@ select is_empty(
   $$ select * from search_students('%%', '20000000-0000-4000-8000-000000000001') $$,
   'the wildcards are searched as text'
 );
+-- The history has other students called Raúl, so the search looks for him alone.
 select is_empty(
-  $$ select * from search_students('raúl', '20000000-0000-4000-8000-000000000001') $$,
+  $$ select * from search_students('raúl', '20000000-0000-4000-8000-000000000001')
+     where id = '10000000-0000-4000-8000-000000000050' $$,
   'nor a disabled student'
 );
 -- A split of 1.º DAW A (5.2d): it takes nobody from the class, so the searches see the whole school.
@@ -173,7 +175,8 @@ select is(
 );
 select results_eq(
   $$ select group_id::text, teacher_name, student_count, is_started, is_mine
-     from class_overview() order by group_id $$,
+     from class_overview() where class_id = 'c0000000-0000-4000-8000-000000000001'
+     order by group_id $$,
   $$ values
        ('20000000-0000-4000-8000-000000000001', 'Marta Ibáñez Soler',
         (select count(*)::integer from enrollment where group_id = '20000000-0000-4000-8000-000000000001'),

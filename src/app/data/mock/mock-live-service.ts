@@ -14,6 +14,7 @@ import { canManageGroup, classOfGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
 import type { MockTables } from './mock-tables';
 import { MockNetwork } from './mock-network';
+import { compareGroups } from '../group-name';
 
 const MINUTE_MS = 60_000;
 
@@ -185,10 +186,12 @@ export function mockLiveGroups(
           (best, attempt) => (best === null || attempt.updatedAt > best.updatedAt ? attempt : best),
           null,
         );
+      const { name, schoolYear } = classOfGroup(tables, group);
       return {
         id: group.id,
-        name: classOfGroup(tables, group).name,
+        name,
         label: group.label,
+        schoolYear,
         subject,
         blocks: tables.classBlocks
           .filter((block) => block.groupId === group.id)
@@ -196,8 +199,5 @@ export function mockLiveGroups(
         latestBlockId: assignments.find((a) => a.id === latest?.assignmentId)?.blockId ?? null,
       };
     })
-    .sort(
-      (a, b) =>
-        a.name.localeCompare(b.name, 'es') || a.subject.name.localeCompare(b.subject.name, 'es'),
-    );
+    .sort(compareGroups);
 }

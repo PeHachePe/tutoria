@@ -31,7 +31,8 @@ select set_eq(
     'reorder_blocks', 'reorder_assignments', 'move_assignment', 'group_work_stats',
     'group_deadline_stats', 'search_students', 'enroll_students', 'copy_blocks', 'create_class',
     'add_class_group', 'duplicate_class', 'managed_classes', 'class_overview', 'class_roster',
-    'search_class_students', 'enroll_class_members', 'remove_class_member'
+    'search_class_students', 'enroll_class_members', 'remove_class_member', 'class_candidates',
+    'match_students', 'school_classes'
   ],
   'a signed-in user executes the helpers of the policies and the functions of the app, no other'
 );

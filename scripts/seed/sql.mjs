@@ -126,9 +126,20 @@ export function authUsersStatement(users, password) {
 
 /** The whole seed.sql for a `MockTables` object, with the passwords of authUsersStatement. */
 export function buildSeedSql(seed, password) {
+  // Everyone starts active, as in a school: only an active student is enrolled (the trigger
+  // check_enrolled_student), and those who finished are disabled once their history is in
+  const active = {
+    ...seed,
+    users: seed.users.map((user) => (user.status ? { ...user, status: 'active' } : user)),
+  };
   const statements = SEED_TABLES.map(({ table, source, jsonb, conflictKey }) =>
-    insertStatement(table, seed[source], jsonb, conflictKey),
+    insertStatement(table, active[source], jsonb, conflictKey),
   );
+  const disabled = seed.users.filter(({ status }) => status === 'disabled').map(({ id }) => id);
+  const disabling =
+    disabled.length > 0
+      ? `update public.app_user set status = 'disabled' where id in (${disabled.map((id) => sqlLiteral(id)).join(', ')});\n`
+      : '';
   const setting = insertStatement(
     'app_setting',
     [{ key: 'ai_provider', value: seed.aiProvider }],
@@ -140,6 +151,7 @@ export function buildSeedSql(seed, password) {
     '',
     authUsersStatement(seed.users, password),
     ...statements,
+    disabling,
     setting,
   ].join('\n');
 }

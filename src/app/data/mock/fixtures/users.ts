@@ -79,8 +79,16 @@ const DAM_STUDENTS: readonly (readonly [name: string, email: string])[] = [
   ['Bilal Amrani', 'bilal.amrani'],
 ];
 
+/** New this year: accounts without a class yet, as in September (5.2d). */
+const NEW_STUDENTS: readonly (readonly [name: string, email: string])[] = [
+  ['Marina Vidal Soto', 'marina.vidal'],
+  ['Ismael Haddou', 'ismael.haddou'],
+  ['Claudia Ferrer Ruiz', 'claudia.ferrer'],
+];
+
 export const DAW_STUDENT_IDS = DAW_STUDENTS.map((_, index) => fixtureId('user', 11 + index));
 export const DAM_STUDENT_IDS = DAM_STUDENTS.map((_, index) => fixtureId('user', 41 + index));
+export const NEW_STUDENT_IDS = NEW_STUDENTS.map((_, index) => fixtureId('user', 51 + index));
 
 function user(
   id: string,
@@ -111,6 +119,9 @@ export const USERS: readonly AppUser[] = [
   ),
   ...DAM_STUDENTS.map(([name, email], index) =>
     user(DAM_STUDENT_IDS[index], name, email, 'student'),
+  ),
+  ...NEW_STUDENTS.map(([name, email], index) =>
+    user(NEW_STUDENT_IDS[index], name, email, 'student'),
   ),
   // Left the course: cannot sign in and belongs to no group.
   user(DISABLED_STUDENT_ID, 'Raúl Medina Cortés', 'raul.medina', 'student', 'disabled'),

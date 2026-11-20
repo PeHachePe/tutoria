@@ -6,33 +6,26 @@ import {
   validate,
 } from '@angular/forms/signals';
 
-import { type ClassDraft, SCHOOL_YEAR_PATTERN } from '../../data/group-service';
+import {
+  type ClassDraft,
+  SCHOOL_YEAR_PATTERN,
+  type SchoolClassEntry,
+} from '../../data/group-service';
 import type { SchoolClass } from '../../data/user';
 import { isSchoolYear } from './school-year';
 
 /** Enough for «2.º DAW A · Mañanas»: the name goes in the selector of the screen. */
 export const MAX_CLASS_NAME_LENGTH = 60;
 
-/** A class as its dialog edits it, and, when it is new, the subjects the user teaches in it. */
-export interface ClassFormModel {
-  readonly name: string;
-  readonly schoolYear: string;
-  /** A group of each, of `teacherId`, when it is created; none when it is edited. */
-  readonly subjectIds: readonly string[];
-  readonly teacherId: string;
-}
+/** A class as its dialog edits it: its name and year. Its subjects are added apart (5.2d). */
+export type ClassFormModel = ClassDraft;
 
-/** A new class, with the year and teacher given, or one to edit. */
+/** A new class in the year given, or one to edit. */
 export function toClassFormModel(
   schoolClass: SchoolClass | null,
-  defaults: { readonly schoolYear: string; readonly teacherId: string | undefined },
+  schoolYear: string,
 ): ClassFormModel {
-  return {
-    name: schoolClass?.name ?? '',
-    schoolYear: schoolClass?.schoolYear ?? defaults.schoolYear,
-    subjectIds: [],
-    teacherId: defaults.teacherId ?? '',
-  };
+  return { name: schoolClass?.name ?? '', schoolYear: schoolClass?.schoolYear ?? schoolYear };
 }
 
 /** The name and the year, as the database checks them. Also the schema of duplicating a class. */
@@ -66,33 +59,21 @@ export function classSchema(path: SchemaPathTree<ClassDraft>): void {
   );
 }
 
-/**
- * As `classSchema`, and the teacher of its groups while there are subjects. Joining a class that
- * exists (one of `classes`) needs a subject at least: without one nothing would change.
- */
-export function newClassSchema(classes: readonly SchoolClass[]) {
-  return (path: SchemaPathTree<ClassFormModel>): void => {
-    classSchema(path);
-    validate(path.teacherId, ({ value, valueOf }) =>
-      valueOf(path.subjectIds).length > 0 && value() === ''
-        ? { kind: 'required', message: $localize`:@@groupForm.error.teacher:Elige el docente` }
-        : null,
-    );
-    validate(path.subjectIds, ({ value, valueOf }) =>
-      value().length === 0 &&
-      existingClass(classes, { name: valueOf(path.name), schoolYear: valueOf(path.schoolYear) })
-        ? {
-            kind: 'required',
-            message: $localize`:@@classForm.error.joinSubjects:Elige las asignaturas que das en ella`,
-          }
-        : null,
-    );
-  };
-}
-
 /** The name and the year without surrounding spaces. */
 export function toClassDraft(model: ClassDraft): ClassDraft {
   return { name: model.name.trim(), schoolYear: model.schoolYear.trim() };
+}
+
+/** The entry of the class of the school with that name and year, as `existingClass`. */
+export function existingEntry(
+  classes: readonly SchoolClassEntry[],
+  draft: ClassDraft,
+): SchoolClassEntry | null {
+  const found = existingClass(
+    classes.map(({ schoolClass }) => schoolClass),
+    draft,
+  );
+  return classes.find(({ schoolClass }) => schoolClass === found) ?? null;
 }
 
 /**

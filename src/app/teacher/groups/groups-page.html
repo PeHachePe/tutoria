@@ -1,4 +1,8 @@
-<div class="flex flex-col gap-6" [attr.aria-busy]="classes.isLoading()">
+<!-- As tall as the window (without the bar and the margins of the page): the table fills it -->
+<div
+  class="flex h-[calc(100dvh-var(--mat-toolbar-mobile-height,56px)-3rem)] min-h-[36rem] flex-col gap-6 min-[600px]:h-[calc(100dvh-var(--mat-toolbar-standard-height,64px)-3rem)]"
+  [attr.aria-busy]="classes.isLoading()"
+>
   <header class="flex flex-wrap items-end justify-between gap-4">
     <div class="flex flex-col gap-1">
       <h1 #heading tabindex="-1" class="text-headline-medium" i18n="@@groups.heading">
@@ -16,20 +20,96 @@
         }
       </p>
     </div>
-    <button matButton="filled" type="button" [disabled]="!ready()" (click)="createClass()">
-      <mat-icon aria-hidden="true">add</mat-icon>
-      <span i18n="@@groups.class.new">Nueva clase</span>
-    </button>
+    <!-- As Bloques: what is chosen goes in the row of the title, and the table gets the room -->
+    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      @if (!loadError() && !firstLoad() && current(); as option) {
+        <div class="flex min-w-0 items-center gap-2">
+          <!-- Two levels: the year, always in sight, and its classes by name -->
+          <mat-form-field subscriptSizing="dynamic" class="w-36 shrink-0">
+            <mat-label i18n="@@groups.year">Curso</mat-label>
+            <mat-select
+              [panelWidth]="null"
+              [value]="option.managed.schoolClass.schoolYear"
+              (selectionChange)="selectYear($event.value)"
+            >
+              @for (year of years(); track year) {
+                <mat-option [value]="year">{{ year }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (classesOfYear().length > 1) {
+            <mat-form-field
+              subscriptSizing="dynamic"
+              class="min-w-0 flex-1 sm:w-[20rem] sm:flex-none"
+            >
+              <mat-label i18n="@@groups.class">Clase</mat-label>
+              <mat-select [value]="option.id" (selectionChange)="select($event.value)">
+                @for (choice of classesOfYear(); track choice.id) {
+                  <mat-option [value]="choice.id">{{ choice.managed.schoolClass.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          } @else {
+            <p class="min-w-0 text-title-medium">{{ option.managed.schoolClass.name }}</p>
+          }
+          <!-- Only its creator, the administration or a teacher with a subject in it has something to do -->
+          @if (option.managed.canEdit || mine().length > 0) {
+            <button
+              matIconButton
+              type="button"
+              [matMenuTriggerFor]="classMenu"
+              [attr.aria-label]="option.actionsLabel"
+            >
+              <mat-icon aria-hidden="true">more_vert</mat-icon>
+            </button>
+          }
+          <mat-menu #classMenu="matMenu" xPosition="before">
+            @if (option.managed.canEdit) {
+              <button mat-menu-item type="button" (click)="editClass(option)">
+                <mat-icon aria-hidden="true">edit</mat-icon>
+                <span i18n="@@groups.edit">Editar</span>
+              </button>
+            }
+            @if (mine().length > 0) {
+              <button mat-menu-item type="button" (click)="duplicateClass(option)">
+                <mat-icon aria-hidden="true">content_copy</mat-icon>
+                <span i18n="@@groups.duplicate">Duplicar…</span>
+              </button>
+            }
+            @if (option.managed.canEdit) {
+              @if (option.managed.groups.length > 0) {
+                <!-- It says why, at sight, and keeps the focus -->
+                <button mat-menu-item type="button" disabled disabledInteractive>
+                  <mat-icon aria-hidden="true">delete</mat-icon>
+                  <span class="flex max-w-64 flex-col py-2">
+                    <span i18n="@@groups.remove">Eliminar</span>
+                    <span class="text-body-small" i18n="@@groups.class.remove.groups"
+                      >Solo se elimina sin asignaturas: elimínalas antes.</span
+                    >
+                  </span>
+                </button>
+              } @else {
+                <button mat-menu-item type="button" (click)="removeClass(option)">
+                  <mat-icon aria-hidden="true">delete</mat-icon>
+                  <span i18n="@@groups.remove">Eliminar</span>
+                </button>
+              }
+            }
+          </mat-menu>
+        </div>
+      }
+      <button matButton="filled" type="button" [disabled]="!ready()" (click)="createClass()">
+        <mat-icon aria-hidden="true">add</mat-icon>
+        <span i18n="@@groups.class.add">Añadir clase</span>
+      </button>
+    </div>
   </header>
 
   @if (loadError(); as error) {
     <app-load-error [error]="error" (retry)="retry()" />
   } @else if (firstLoad()) {
     <app-loading-skeleton label="Cargando las clases…" i18n-label="@@groups.class.loading">
-      <div class="flex flex-col gap-4">
-        <app-skeleton class="h-14 w-full rounded-xl sm:w-[30rem]" />
-        <app-skeleton class="h-80 w-full rounded-2xl" />
-      </div>
+      <app-skeleton class="h-80 w-full rounded-2xl" />
     </app-loading-skeleton>
   } @else if (current(); as option) {
     <!-- A reload after a change: a thin bar over what is shown, never a jump (4.8) -->
@@ -39,159 +119,24 @@
       }
     </div>
 
-    <div class="-mt-3 flex items-center gap-2">
-      @if (options().length > 1) {
-        <mat-form-field subscriptSizing="dynamic" class="min-w-0 flex-1 sm:w-[24rem] sm:flex-none">
-          <mat-label i18n="@@groups.class">Clase</mat-label>
-          <mat-select [value]="option.id" (selectionChange)="select($event.value)">
-            @for (choice of options(); track choice.id) {
-              <mat-option [value]="choice.id">{{ choice.label }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-      } @else {
-        <p class="text-title-medium">{{ option.label }}</p>
-      }
-      <!-- Only its creator, the administration or a teacher with a subject in it has something to do -->
-      @if (option.managed.canEdit || mine().length > 0) {
-        <button
-          matIconButton
-          type="button"
-          [matMenuTriggerFor]="classMenu"
-          [attr.aria-label]="option.actionsLabel"
-        >
-          <mat-icon aria-hidden="true">more_vert</mat-icon>
-        </button>
-      }
-      <mat-menu #classMenu="matMenu" xPosition="before">
-        @if (option.managed.canEdit) {
-          <button mat-menu-item type="button" (click)="editClass(option)">
-            <mat-icon aria-hidden="true">edit</mat-icon>
-            <span i18n="@@groups.edit">Editar</span>
-          </button>
-        }
-        @if (mine().length > 0) {
-          <button mat-menu-item type="button" (click)="duplicateClass(option)">
-            <mat-icon aria-hidden="true">content_copy</mat-icon>
-            <span i18n="@@groups.duplicate">Duplicar…</span>
-          </button>
-        }
-        @if (option.managed.canEdit) {
-          @if (option.managed.groups.length > 0) {
-            <!-- It says why, at sight, and keeps the focus -->
-            <button mat-menu-item type="button" disabled disabledInteractive>
-              <mat-icon aria-hidden="true">delete</mat-icon>
-              <span class="flex max-w-64 flex-col py-2">
-                <span i18n="@@groups.remove">Eliminar</span>
-                <span class="text-body-small" i18n="@@groups.class.remove.groups"
-                  >Solo se elimina sin asignaturas: elimínalas antes.</span
-                >
-              </span>
-            </button>
-          } @else {
-            <button mat-menu-item type="button" (click)="removeClass(option)">
-              <mat-icon aria-hidden="true">delete</mat-icon>
-              <span i18n="@@groups.remove">Eliminar</span>
-            </button>
-          }
-        }
-      </mat-menu>
-    </div>
-
-    <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-      <section
-        class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
-        aria-labelledby="class-subjects"
-      >
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="class-subjects" class="text-title-medium" i18n="@@groups.subjects">
-            Asignaturas
-          </h2>
-          <button matButton="tonal" type="button" [disabled]="!ready()" (click)="addGroup(option)">
-            <mat-icon aria-hidden="true">add</mat-icon>
-            <span i18n="@@groups.group.add">Añadir asignatura</span>
-          </button>
-        </div>
-        @if (groupRows().length === 0) {
-          <p class="py-4 text-body-medium text-on-surface-variant" i18n="@@groups.subjects.none">
-            Aún no tiene asignaturas. Añade las tuyas.
-          </p>
-        } @else {
-          <ul class="flex flex-col">
-            @for (row of groupRows(); track row.managed.group.id) {
-              <li
-                class="flex items-center justify-between gap-2 border-b border-outline-variant py-2 last:border-b-0"
-              >
-                <span class="flex min-w-0 flex-col">
-                  <span class="text-body-large">{{ row.line }}</span>
-                  <span class="text-body-small text-on-surface-variant">
-                    <span>{{ row.managed.teacherName }}</span>
-                    <span aria-hidden="true"> · </span>
-                    <span i18n="@@groups.students">{row.managed.studentCount, plural,
-                      =0 {Sin alumnos}
-                      =1 {1 alumno}
-                      other {{{ row.managed.studentCount }} alumnos}
-                    }</span>
-                  </span>
-                </span>
-                @if (row.managed.mine) {
-                  <button
-                    matIconButton
-                    type="button"
-                    [matMenuTriggerFor]="groupMenu"
-                    [attr.aria-label]="row.actionsLabel"
-                  >
-                    <mat-icon aria-hidden="true">more_vert</mat-icon>
-                  </button>
-                  <mat-menu #groupMenu="matMenu" xPosition="before">
-                    <button mat-menu-item type="button" (click)="editGroup(option, row)">
-                      <mat-icon aria-hidden="true">edit</mat-icon>
-                      <span i18n="@@groups.edit">Editar</span>
-                    </button>
-                    <a mat-menu-item [routerLink]="blocksPath" [queryParams]="row.blocksQuery">
-                      <mat-icon aria-hidden="true">view_list</mat-icon>
-                      <span i18n="@@groups.blocks">Ver sus bloques</span>
-                    </a>
-                    <button mat-menu-item type="button" (click)="enrollInGroup(row)">
-                      <mat-icon aria-hidden="true">person_add</mat-icon>
-                      <span i18n="@@groups.group.enroll">Matricular solo aquí…</span>
-                    </button>
-                    @if (row.managed.started) {
-                      <!-- Its students' work is kept (5.2a): it says why, at sight, and keeps the focus -->
-                      <button mat-menu-item type="button" disabled disabledInteractive>
-                        <mat-icon aria-hidden="true">delete</mat-icon>
-                        <span class="flex max-w-64 flex-col py-2">
-                          <span i18n="@@groups.remove">Eliminar</span>
-                          <span class="text-body-small" i18n="@@groups.remove.started"
-                            >No se puede eliminar: ya hay alumnos con trabajo en este grupo.</span
-                          >
-                        </span>
-                      </button>
-                    } @else {
-                      <button mat-menu-item type="button" (click)="removeGroup(row)">
-                        <mat-icon aria-hidden="true">delete</mat-icon>
-                        <span i18n="@@groups.remove">Eliminar</span>
-                      </button>
-                    }
-                  </mat-menu>
-                }
-              </li>
-            }
-          </ul>
-        }
-      </section>
-
-      <section class="rounded-2xl bg-panel p-4 sm:p-6" [attr.aria-label]="option.label">
-        <app-class-students
-          #students
-          [classId]="option.id"
-          [className]="option.label"
-          [groups]="option.managed.groups"
-          [sources]="sources()"
-          (changed)="studentsChanged()"
-        />
-      </section>
-    </div>
+    <section
+      class="flex min-h-0 flex-1 flex-col rounded-2xl bg-panel p-4 sm:p-6"
+      [attr.aria-label]="option.label"
+    >
+      <app-class-students
+        #students
+        [classId]="option.id"
+        [className]="option.label"
+        [schoolClass]="option.managed.schoolClass"
+        [groups]="classGroups()"
+        [sources]="sources()"
+        [canAddGroup]="ready()"
+        (changed)="studentsChanged()"
+        (addGroup)="addGroup(option)"
+        (editGroup)="editGroup(option, $event)"
+        (removeGroup)="removeGroup($event)"
+      />
+    </section>
   } @else {
     <app-empty-state
       [heading]="emptyHeading()"
@@ -200,7 +145,7 @@
     >
       <div class="mt-2 flex justify-center" emptyStateAction>
         <button matButton="tonal" type="button" [disabled]="!ready()" (click)="createClass()">
-          <span i18n="@@groups.class.new">Nueva clase</span>
+          <span i18n="@@groups.class.add">Añadir clase</span>
         </button>
       </div>
     </app-empty-state>

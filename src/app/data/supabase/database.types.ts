@@ -790,6 +790,14 @@ export type Database = {
         };
         Returns: number;
       };
+      class_candidates: {
+        Args: { target_class_id: string };
+        Returns: {
+          email: string;
+          id: string;
+          name: string;
+        }[];
+      };
       class_overview: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -996,6 +1004,15 @@ export type Database = {
         }[];
       };
       manages_class: { Args: { target_class_id: string }; Returns: boolean };
+      match_students: {
+        Args: { entries: string[]; target_class_id: string };
+        Returns: {
+          email: string;
+          entry: string;
+          id: string;
+          name: string;
+        }[];
+      };
       move_assignment: {
         Args: { target_assignment_id: string; target_block_id: string; target_position: number };
         Returns: {
@@ -1125,6 +1142,17 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      school_classes: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          class_groups: Json;
+          created_at: string;
+          created_by: string;
+          id: string;
+          name: string;
+          school_year: string;
+        }[];
       };
       school_year_shift_days: {
         Args: { source_year: string; target_year: string };

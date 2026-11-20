@@ -14,10 +14,18 @@ begin
 end;
 $$;
 
+-- Every subject of the seed, to compare with what a student reads
+create temp table seed_subjects as select id from subject;
+grant select on seed_subjects to authenticated;
+
 -- Lucía: `is_hidden` is what the teacher marks; the policies make it hold on the server
 select pg_temp.sign_in('10000000-0000-4000-8000-000000000011');
 
-select is((select count(*) from subject), 3::bigint, 'every signed-in user reads the subjects');
+select set_eq(
+  $$ select id from subject $$,
+  $$ select id from seed_subjects $$,
+  'every signed-in user reads the subjects'
+);
 select throws_ok(
   $$ insert into subject (name) values ('Matemáticas') $$,
   '42501', null,

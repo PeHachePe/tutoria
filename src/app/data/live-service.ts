@@ -14,6 +14,8 @@ export interface LiveGroup {
   readonly name: string;
   /** What tells a split apart, or null for the group of the whole class (5.2d). */
   readonly label: string | null;
+  /** The year of its class: this year's groups go first (5.2d). */
+  readonly schoolYear: string;
   readonly subject: Subject;
   /** Every block of the group in order, hidden ones included: the teacher sees them all. */
   readonly blocks: readonly ClassBlock[];

@@ -1,5 +1,10 @@
 import type { AppLocale } from '../../core/i18n/locale';
-import type { ManagedClass, ManagedGroup, RosterStudent } from '../../data/group-service';
+import type {
+  ClassSubject,
+  ManagedClass,
+  ManagedGroup,
+  RosterStudent,
+} from '../../data/group-service';
 import { subjectName } from '../../data/localized-text';
 
 /** A class as the selector of the screen offers it (5.2d). */
@@ -25,6 +30,15 @@ export function subjectLine(managed: ManagedGroup, locale: AppLocale): string {
   return managed.group.label ? `${subject} · ${managed.group.label}` : subject;
 }
 
+/** The groups of a class as its dialogs read them, whoever teaches them. */
+export function classSubjectsOf(groups: readonly ManagedGroup[]): ClassSubject[] {
+  return groups.map(({ group, teacherName }) => ({
+    subjectId: group.subjectId,
+    label: group.label,
+    teacherName,
+  }));
+}
+
 /** By subject in the language of the interface, the group of the whole class before its splits. */
 export function sortClassGroups(
   groups: readonly ManagedGroup[],
@@ -39,14 +53,13 @@ export function sortClassGroups(
 }
 
 /**
- * The label a new group of a subject the class already has starts with: «Desdoble 2», or the next
- * number nobody uses. Null while the class does not have the subject: it is the group of the class.
+ * The label a new split of a subject starts with: «Desdoble 1» for its first split, whether or not
+ * the class has its group of the whole class, then the next number nobody uses.
  */
-export function nextSplitLabel(groups: readonly ManagedGroup[], subjectId: string): string | null {
-  const same = groups.filter(({ group }) => group.subjectId === subjectId);
-  if (same.length === 0) return null;
-  const taken = new Set(same.map(({ group }) => group.label));
-  let number = same.length + 1;
+export function nextSplitLabel(groups: readonly ClassSubject[], subjectId: string): string {
+  const splits = groups.filter((group) => group.subjectId === subjectId && group.label !== null);
+  const taken = new Set(splits.map(({ label }) => label));
+  let number = splits.length + 1;
   while (taken.has(splitLabel(number))) number++;
   return splitLabel(number);
 }
@@ -55,29 +68,101 @@ function splitLabel(number: number): string {
   return $localize`:@@classList.split:Desdoble ${number}:number:`;
 }
 
+/** Words left out of the initials of a subject, in the languages of the interface. */
+const MINOR_WORDS = new Set([
+  'a',
+  'al',
+  'amb',
+  'and',
+  'con',
+  'de',
+  'del',
+  'e',
+  'el',
+  'els',
+  'en',
+  'i',
+  'in',
+  'la',
+  'las',
+  'les',
+  'los',
+  'of',
+  'per',
+  'para',
+  'por',
+  'the',
+  'y',
+]);
+
 /**
- * What a row of the students says besides the name: the subjects of the class a member does not
- * take, the splits they are in, or, for a student of another class, the subjects they take in this
- * one. Null for a member in every group of the whole class and no split.
+ * The initials of a subject, for the head of its column: «Programación básica» is PB and
+ * «Desarrollo web en entorno cliente», DWEC; a name of one word keeps its first three letters.
  */
-export function rosterNote(
-  row: RosterStudent,
-  groups: readonly ManagedGroup[],
-  locale: AppLocale,
-): string | null {
-  const inGroups = new Set(row.groupIds);
-  const names = (chosen: readonly ManagedGroup[]) =>
-    chosen.map((managed) => subjectLine(managed, locale)).join(', ');
-  if (!row.member) {
-    const taken = names(groups.filter(({ group }) => inGroups.has(group.id)));
-    return $localize`:@@classList.otherClass:De otra clase: ${taken}:subjects:`;
-  }
-  const notes: string[] = [];
-  const missing = groups.filter(({ group }) => group.label === null && !inGroups.has(group.id));
-  if (missing.length > 0) {
-    notes.push($localize`:@@classList.missing:No cursa: ${names(missing)}:subjects:`);
-  }
-  const splits = groups.filter(({ group }) => group.label !== null && inGroups.has(group.id));
-  if (splits.length > 0) notes.push(names(splits));
-  return notes.length > 0 ? notes.join(' · ') : null;
+export function subjectInitials(name: string): string {
+  const words = name
+    .split(/\s+/)
+    .filter((word) => word !== '' && !MINOR_WORDS.has(word.toLowerCase()));
+  const initials =
+    words.length === 1 ? words[0].slice(0, 3) : words.map((word) => word[0]).join('');
+  return initials.toLocaleUpperCase();
+}
+
+/** A column of the table of the students: a group of the class. */
+export interface RosterColumn {
+  readonly managed: ManagedGroup;
+  /** «PB». */
+  readonly initials: string;
+  /** Under the initials: the label of a split and the teacher, «Desdoble inglés · Javier». */
+  readonly detail: string;
+  /** What the column is, whole: «Programación básica · Desdoble inglés». */
+  readonly title: string;
+}
+
+/** The columns of the groups, in the order given. */
+export function rosterColumns(groups: readonly ManagedGroup[], locale: AppLocale): RosterColumn[] {
+  return groups.map((managed) => {
+    const firstName = managed.teacherName.split(' ')[0];
+    return {
+      managed,
+      initials: subjectInitials(subjectName(managed.subject, locale).name),
+      detail: managed.group.label ? `${managed.group.label} · ${firstName}` : firstName,
+      title: subjectLine(managed, locale),
+    };
+  });
+}
+
+/**
+ * The students as a spreadsheet opens them (CSV with «;», as Excel in Spanish reads it): name,
+ * email, whether they are in the class and in each group.
+ */
+export function rosterCsv(
+  rows: readonly RosterStudent[],
+  columns: readonly RosterColumn[],
+): string {
+  const yes = $localize`:@@classList.csv.yes:Sí`;
+  const no = $localize`:@@classList.csv.no:No`;
+  const head = [
+    $localize`:@@classList.csv.name:Nombre`,
+    $localize`:@@classList.csv.email:Correo`,
+    $localize`:@@classList.csv.member:En la clase`,
+    ...columns.map(({ title }) => title),
+  ];
+  const lines = rows.map((row) => [
+    row.student.name,
+    row.student.email,
+    row.member ? yes : no,
+    ...columns.map(({ managed }) => (row.groupIds.includes(managed.group.id) ? yes : no)),
+  ]);
+  return [head, ...lines].map((line) => line.map(csvField).join(';')).join('\r\n') + '\r\n';
+}
+
+/** Between quotes, doubling them, when the field has a separator, a quote or a line break. */
+function csvField(value: string): string {
+  return /[;"\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+}
+
+/** «1.º DAW A 2026-27.csv»: a slash is not allowed in the name of a file. */
+export function rosterFileName(className: string, schoolYear: string): string {
+  return `${className} ${schoolYear.replace('/', '-')}.csv`;
 }

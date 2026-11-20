@@ -54,13 +54,14 @@ set class_id = c.id
 from public.school_class c
 where lower(btrim(g.name)) = lower(c.name) and g.school_year = c.school_year;
 
--- Two groups of one subject in a class were already a split: numbered, so they stay apart.
+-- Two groups of one subject in a class were already a split: the first stays the group of the whole
+-- class and the others are numbered from «Desdoble 1», so they stay apart.
 with numbered as (
   select id, row_number() over (partition by class_id, subject_id order by id) as n
   from public.class_group
 )
 update public.class_group g
-set label = 'Desdoble ' || numbered.n
+set label = 'Desdoble ' || (numbered.n - 1)
 from numbered
 where numbered.id = g.id and numbered.n > 1;
 
@@ -218,7 +219,9 @@ end;
 $$;
 
 -- A group of the class in the subject, with the label (trimmed; none if blank) and teacher given
--- and, if `with_class_students`, the active students of the class. Without checks, as above.
+-- and, if `with_class_students`, the active students of the class who are not in a split of that
+-- subject already: a student takes a subject once, so the group of the whole class created after a
+-- split leaves its students out. Without checks, as above.
 create function public.create_class_group(
   target_class_id uuid,
   target_subject_id uuid,
@@ -241,7 +244,13 @@ begin
     select created_id, m.user_id
     from public.class_member m
     join public.app_user u on u.id = m.user_id
-    where m.class_id = target_class_id and u.role = 'student' and u.status = 'active';
+    where m.class_id = target_class_id and u.role = 'student' and u.status = 'active'
+      and not exists (
+        select 1 from public.enrollment e
+        join public.class_group g on g.id = e.group_id
+        where g.class_id = target_class_id and g.subject_id = target_subject_id
+          and e.user_id = m.user_id
+      );
   end if;
   return created_id;
 end;
@@ -646,6 +655,13 @@ begin
   from public.class_group g
   cross join unnest(student_ids) s
   where g.class_id = target_class_id and g.label is null
+    -- Not who takes the subject in a split already
+    and not exists (
+      select 1 from public.enrollment e
+      join public.class_group other on other.id = e.group_id
+      where other.class_id = target_class_id and other.subject_id = g.subject_id
+        and e.user_id = s
+    )
   on conflict (group_id, user_id) do nothing;
 end;
 $$;
@@ -717,3 +733,119 @@ grant execute on function
   public.remove_class_member(uuid, uuid),
   public.enroll_students(uuid, uuid[])
 to authenticated;
+
+-- Choosing many students at once ---------------------------------------------------------------------
+
+-- The active students of the school without a class in the year of this one, by name: in
+-- September, a class is chosen from them at once. Name and email only, as `search_students`.
+create function public.class_candidates(target_class_id uuid)
+returns table (id uuid, name text, email text)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  class_year text;
+begin
+  select c.school_year into class_year from public.school_class c where c.id = target_class_id;
+  if class_year is null or not public.manages_class(target_class_id) then
+    raise exception 'No such class' using errcode = 'P0002';
+  end if;
+  return query
+    select u.id, u.name, u.email
+    from public.app_user u
+    where u.role = 'student'
+      and u.status = 'active'
+      and not exists (
+        select 1 from public.class_member m
+        join public.school_class c on c.id = m.class_id
+        where m.user_id = u.id and c.school_year = class_year
+      )
+    order by u.name, u.id;
+end;
+$$;
+
+-- The active students of a pasted list (500 lines at most), each line an email or a whole name,
+-- without accents nor capitals: the line with the student it names. A line that names nobody, or
+-- more than one, is left out, and the screen says which.
+create function public.match_students(target_class_id uuid, entries text[])
+returns table (entry text, id uuid, name text, email text)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.manages_class(target_class_id) then
+    raise exception 'No such class' using errcode = 'P0002';
+  end if;
+  if coalesce(cardinality(entries), 0) > 500 then
+    raise exception '500 lines at most' using errcode = '22023';
+  end if;
+  return query
+    with lines as (
+      select distinct btrim(e) as entry from unnest(coalesce(entries, '{}')) e where btrim(e) <> ''
+    ),
+    matches as (
+      select l.entry, u.id, u.name, u.email, count(*) over (partition by l.entry) as found
+      from lines l
+      join public.app_user u
+        on u.role = 'student'
+        and u.status = 'active'
+        and (
+          lower(u.email) = lower(l.entry)
+          or extensions.unaccent(lower(u.name)) = extensions.unaccent(lower(l.entry))
+        )
+    )
+    select m.entry, m.id, m.name, m.email from matches m where m.found = 1 order by m.name, m.id;
+end;
+$$;
+
+revoke execute on function
+  public.class_candidates(uuid),
+  public.match_students(uuid, text[])
+from public, anon;
+grant execute on function
+  public.class_candidates(uuid),
+  public.match_students(uuid, text[])
+to authenticated;
+
+-- Every class of the school, as a teacher chooses one to join, with its groups (subject, label of a
+-- split and who teaches it): the screen adds a subject it has only as a split.
+create function public.school_classes()
+returns table (
+  id uuid,
+  name text,
+  school_year text,
+  created_by uuid,
+  created_at timestamptz,
+  class_groups jsonb
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_staff() then
+    raise exception 'Only the staff' using errcode = '42501';
+  end if;
+  return query
+    select c.id, c.name, c.school_year, c.created_by, c.created_at,
+      coalesce(
+        (select jsonb_agg(
+           jsonb_build_object('subject_id', g.subject_id, 'label', g.label, 'teacher_name', u.name)
+           order by g.subject_id, g.label nulls first)
+         from public.class_group g
+         join public.app_user u on u.id = g.teacher_id
+         where g.class_id = c.id),
+        '[]'::jsonb
+      )
+    from public.school_class c
+    order by c.school_year desc, c.name;
+end;
+$$;
+
+revoke execute on function public.school_classes() from public, anon;
+grant execute on function public.school_classes() to authenticated;

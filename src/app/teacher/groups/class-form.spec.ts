@@ -2,45 +2,28 @@ import { Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
 
-import type { ClassDraft } from '../../data/group-service';
+import type { ClassDraft, SchoolClassEntry } from '../../data/group-service';
 import { BASIC_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
-import { CLASSES, TEACHER_ID } from '../../data/mock/fixtures/users';
+import { CLASSES } from '../../data/mock/fixtures/users';
 import {
-  type ClassFormModel,
   classSchema,
   existingClass,
+  existingEntry,
   MAX_CLASS_NAME_LENGTH,
-  newClassSchema,
   toClassDraft,
   toClassFormModel,
 } from './class-form';
 
 const DAW = CLASSES[0];
 
-const VALID: ClassFormModel = {
-  name: '2.º DAW A',
-  schoolYear: '2026/27',
-  subjectIds: [BASIC_PROGRAMMING_ID],
-  teacherId: TEACHER_ID,
-};
-
-type Field = keyof ClassFormModel;
-
-function errorsOf(
-  model: ClassFormModel,
-  schema = newClassSchema(CLASSES),
-): Record<Field, string[]> {
-  const classForm = form(signal(model), schema, { injector: TestBed.inject(Injector) });
-  const keys: Field[] = ['name', 'schoolYear', 'subjectIds', 'teacherId'];
-  return Object.fromEntries(
-    keys.map((key) => [
-      key,
-      classForm[key]()
-        .errors()
-        .map((error) => error.message ?? ''),
-    ]),
-  ) as Record<Field, string[]>;
-}
+/** The classes of the seed; 1.º DAW A has basic programming for the whole class already. */
+const ENTRIES: SchoolClassEntry[] = CLASSES.map((schoolClass, index) => ({
+  schoolClass,
+  groups:
+    index === 0
+      ? [{ subjectId: BASIC_PROGRAMMING_ID, label: null, teacherName: 'Marta Ibáñez Soler' }]
+      : [],
+}));
 
 function draftErrors(draft: ClassDraft): Record<'name' | 'schoolYear', string[]> {
   const classForm = form(signal(draft), classSchema, { injector: TestBed.inject(Injector) });
@@ -57,28 +40,12 @@ function draftErrors(draft: ClassDraft): Record<'name' | 'schoolYear', string[]>
 }
 
 describe('toClassFormModel', () => {
-  const defaults = { schoolYear: '2026/27', teacherId: TEACHER_ID };
-
-  it('starts a new class with the year and teacher given', () => {
-    expect(toClassFormModel(null, defaults)).toEqual({
-      name: '',
-      schoolYear: '2026/27',
-      subjectIds: [],
-      teacherId: TEACHER_ID,
-    });
-  });
-
-  it('leaves the teacher to choose without one', () => {
-    expect(toClassFormModel(null, { ...defaults, teacherId: undefined }).teacherId).toBe('');
+  it('starts a new class with the year given', () => {
+    expect(toClassFormModel(null, '2026/27')).toEqual({ name: '', schoolYear: '2026/27' });
   });
 
   it('takes the name and year of a class', () => {
-    expect(toClassFormModel(DAW, { schoolYear: '2030/31', teacherId: undefined })).toEqual({
-      name: '1.º DAW A',
-      schoolYear: '2026/27',
-      subjectIds: [],
-      teacherId: '',
-    });
+    expect(toClassFormModel(DAW, '2030/31')).toEqual({ name: '1.º DAW A', schoolYear: '2026/27' });
   });
 });
 
@@ -114,33 +81,24 @@ describe('classSchema', () => {
   });
 });
 
-describe('newClassSchema', () => {
-  it('takes a new class with its subjects, or without any', () => {
-    expect(Object.values(errorsOf(VALID)).flat()).toEqual([]);
-    expect(Object.values(errorsOf({ ...VALID, subjectIds: [], teacherId: '' })).flat()).toEqual([]);
-  });
-
-  it('checks the name and year as a class', () => {
-    expect(errorsOf({ ...VALID, name: '' }).name).toEqual(['Escribe el nombre de la clase']);
-  });
-
-  it('requires the teacher of the groups while there are subjects', () => {
-    expect(errorsOf({ ...VALID, teacherId: '' }).teacherId).toEqual(['Elige el docente']);
-  });
-
-  it('requires a subject to join a class that exists', () => {
-    const joining = { ...VALID, name: ' 1.º daw a ', subjectIds: [] };
-    expect(errorsOf(joining).subjectIds).toEqual(['Elige las asignaturas que das en ella']);
-    expect(errorsOf(joining, newClassSchema([])).subjectIds).toEqual([]);
-  });
-});
-
 describe('toClassDraft', () => {
-  it('trims the name and the year, and leaves the rest out', () => {
-    expect(toClassDraft({ ...VALID, name: ' 2.º DAW A ', schoolYear: '2026/27 ' })).toEqual({
+  it('trims the name and the year', () => {
+    expect(toClassDraft({ name: ' 2.º DAW A ', schoolYear: '2026/27 ' })).toEqual({
       name: '2.º DAW A',
       schoolYear: '2026/27',
     });
+  });
+});
+
+describe('existingEntry', () => {
+  it('finds the entry of the class, with its groups', () => {
+    const entry = existingEntry(ENTRIES, { name: '1.º daw a', schoolYear: '2026/27' });
+    expect(entry).toBe(ENTRIES[0]);
+    expect(entry?.groups[0].teacherName).toBe('Marta Ibáñez Soler');
+  });
+
+  it('is null for a class that does not exist', () => {
+    expect(existingEntry(ENTRIES, { name: '9.º X', schoolYear: '2026/27' })).toBeNull();
   });
 });
 

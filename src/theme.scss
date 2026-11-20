@@ -90,6 +90,12 @@ html {
     var(--mat-sys-surface-container-lowest),
     var(--mat-sys-surface-container)
   );
+  // The fixed column of a table on a panel (the names of the enrollment table, 5.2d): a step
+  // apart from the panel in each mode, darker in light and lighter in dark, so it reads as fixed.
+  --app-panel-column: light-dark(
+    var(--mat-sys-surface-container-low),
+    var(--mat-sys-surface-container-high)
+  );
 
   @each $name, $palette in $status-palettes {
     --app-#{$name}: light-dark(#{map.get($palette, 40)}, #{map.get($palette, 80)});
@@ -247,6 +253,32 @@ body {
 .app-fill-tabs .mat-mdc-tab-body-wrapper {
   flex: 1;
   min-height: 0;
+}
+
+// A dialog of a fixed height (step 5.2d), as enrolling: it does not jump from one tab to another.
+// Its content takes the room between the title and the actions, and its long lists scroll inside.
+.app-fixed-dialog .mat-mdc-dialog-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  max-height: none;
+  min-height: 0;
+}
+
+// A small field beside other controls, as the filter of a list in a dialog (step 5.2d).
+.app-dense-field {
+  @include mat.form-field-density(-4);
+
+  // As wide as its place, not the 180px Material gives a field by default
+  .mat-mdc-form-field-infix {
+    width: auto;
+    min-width: 0;
+  }
+}
+
+// A small segmented choice inside a row of a list, as «Toda la clase / Desdoble» (step 5.2d).
+.app-dense-toggle {
+  @include mat.button-toggle-density(-3);
 }
 
 // A dialog over the whole screen (step 4.3e): the teacher's try of an exercise as a student is the

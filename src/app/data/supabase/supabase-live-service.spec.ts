@@ -36,14 +36,14 @@ describe('SupabaseLiveService', () => {
             {
               id: 'daw',
               label: null,
-              school_class: { name: '1.º DAW A' },
+              school_class: { name: '1.º DAW A', school_year: '2026/27' },
               subject: subjectRow(),
               class_block: [blockRow({ id: 'b2', position: 2 }), blockRow({ id: 'b1' })],
             },
             {
               id: 'web',
               label: null,
-              school_class: { name: '1.º DAW A' },
+              school_class: { name: '1.º DAW A', school_year: '2026/27' },
               subject: subjectRow({ id: 's2', name: 'Desarrollo web' }),
               class_block: [],
             },
@@ -76,14 +76,14 @@ describe('SupabaseLiveService', () => {
             {
               id: 'b',
               label: null,
-              school_class: { name: 'X' },
+              school_class: { name: 'X', school_year: '2026/27' },
               subject: subjectRow({ name: 'Zeta' }),
               class_block: [],
             },
             {
               id: 'a',
               label: null,
-              school_class: { name: 'X' },
+              school_class: { name: 'X', school_year: '2026/27' },
               subject: subjectRow({ name: 'Alfa' }),
               class_block: [],
             },

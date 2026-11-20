@@ -14,15 +14,17 @@ import {
 import { MatFormField, MatHint, MatLabel, MatPrefix } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
-import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatTab, MatTabGroup } from '@angular/material/tabs';
 
 import {
-  MAX_ENROLLMENT_BATCH,
+  MAX_PASTED_LINES,
   MIN_STUDENT_SEARCH_LENGTH,
+  type StudentMatch,
   type UserRef,
 } from '../../data/group-service';
 import { createDebouncer } from '../../shared/create-debouncer';
+import { searchable } from '../../shared/searchable';
 import { addToChoice } from './enroll-choice';
 import { groupActionMessage } from './group-action-message';
 
@@ -40,21 +42,43 @@ export interface EnrollDialogData {
   readonly targetName: string;
   /** What enrolling there does, under the title. */
   readonly intro: string;
-  /** Who is there already: not chosen again from another class. */
+  /** Who is there already: not chosen again. */
   readonly enrolledIds: ReadonlySet<string>;
   /** The other classes of the user, such as last year's. */
   readonly sources: readonly EnrollSource[];
   /** The active students of one of them. */
   readonly studentsOf: (classId: string) => Promise<UserRef[]>;
+  /**
+   * Those to choose from with one click: for a class, the active students without a class this
+   * year; for one group, those of its class who are not in it.
+   */
+  readonly candidates: EnrollCandidates;
   /** Active students who are not there yet. */
   readonly search: (text: string) => Promise<UserRef[]>;
+  /** The students a pasted list names. */
+  readonly match: (entries: readonly string[]) => Promise<StudentMatch[]>;
   /** Enrolls them; the dialog stays open, with the error, if it fails. */
   readonly enroll: (students: readonly UserRef[]) => Promise<void>;
 }
 
+/** The first tab: its name, what it says without anybody, and who it lists. */
+export interface EnrollCandidates {
+  readonly label: string;
+  readonly empty: string;
+  readonly load: () => Promise<UserRef[]>;
+}
+
+/** What a pasted list gave: how many it added and the lines that named nobody. */
+interface PastedResult {
+  readonly added: number;
+  readonly unmatched: readonly string[];
+}
+
 /**
- * Finds students by name or email and enrolls the chosen ones at once (RF-16), up to the batch the
- * server takes. The accounts are created by the administration (5.1b): here they are only found.
+ * Chooses many students at once and enrolls them (RF-16; 5.2d, D-081): those without a class this
+ * year, all with one click; a pasted list of emails or names, as secretaría gives it; the students
+ * of another class; or a search by name or email. The accounts are created by the administration
+ * (5.1b): here they are only found.
  */
 @Component({
   selector: 'app-enroll-dialog',
@@ -75,53 +99,241 @@ export interface EnrollDialogData {
     MatIcon,
     MatInput,
     MatProgressBar,
-    MatMenu,
-    MatMenuItem,
-    MatMenuTrigger,
+    MatTabGroup,
+    MatTab,
   ],
+  // A column as tall as the dialog: the tabs take what the title, the chosen and the actions leave
+  host: { class: 'flex h-full min-h-0 flex-col' },
   template: `
     <h2 mat-dialog-title i18n="@@enrollDialog.title.target">Matricular en {{ data.targetName }}</h2>
     <mat-dialog-content>
-      <div class="flex flex-col gap-3 pt-2 sm:min-w-md">
+      <div class="flex min-h-0 flex-1 flex-col gap-3">
         <p class="text-body-medium text-on-surface-variant">{{ data.intro }}</p>
-        <mat-form-field>
-          <mat-label i18n="@@enrollDialog.search">Buscar alumnos por nombre o correo</mat-label>
-          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-          <input
-            matInput
-            type="search"
-            autocomplete="off"
-            spellcheck="false"
-            (input)="onInput($event)"
-          />
-          <mat-hint i18n="@@enrollDialog.search.hint">Escribe al menos dos letras</mat-hint>
-        </mat-form-field>
-        <!-- The students of another class (last year's), at once, instead of one by one -->
-        @if (data.sources.length > 0) {
-          <div>
-            <button
-              matButton="outlined"
-              type="button"
-              [disabled]="full() || copying()"
-              [matMenuTriggerFor]="sourceMenu"
-            >
-              <mat-icon aria-hidden="true">group</mat-icon>
-              <span i18n="@@enrollDialog.copyClass">Añadir los de otra clase</span>
-            </button>
-            <mat-menu #sourceMenu="matMenu">
-              @for (source of data.sources; track source.id) {
-                <button mat-menu-item type="button" (click)="copyFrom(source)">
-                  {{ source.label }}
-                </button>
+        <mat-tab-group
+          mat-stretch-tabs="false"
+          animationDuration="0ms"
+          class="app-fill-tabs min-h-0 flex-1"
+        >
+          <mat-tab [label]="data.candidates.label">
+            <div class="flex h-full flex-col gap-2 pt-3">
+              @if (candidates.error()) {
+                <p class="text-body-medium text-error" i18n="@@enrollDialog.candidates.loadError">
+                  No se ha podido leer el alumnado. Inténtalo de nuevo.
+                </p>
+              } @else if (!candidates.hasValue()) {
+                <mat-progress-bar mode="indeterminate" class="rounded-full" />
+              } @else if (freeCandidates().length === 0) {
+                <!-- In the middle of the room the list would take, as the empty table of the class -->
+                <div class="my-auto flex flex-col items-center gap-2 text-center">
+                  <mat-icon aria-hidden="true" class="text-on-surface-variant">how_to_reg</mat-icon>
+                  <p class="text-body-medium text-on-surface-variant">
+                    {{ data.candidates.empty }}
+                  </p>
+                </div>
+              } @else {
+                <!-- One row: choosing all of those shown, and the filter that says which -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <mat-checkbox
+                    [checked]="allShownChosen()"
+                    [indeterminate]="someShownChosen()"
+                    [disabled]="shownCandidates().length === 0"
+                    (change)="toggleShown()"
+                  >
+                    <span class="text-title-small" i18n="@@enrollDialog.candidates.all"
+                      >Seleccionar todos ({{ shownCandidates().length }})</span
+                    >
+                  </mat-checkbox>
+                  <mat-form-field subscriptSizing="dynamic" class="app-dense-field w-full sm:w-64">
+                    <mat-label i18n="@@enrollDialog.candidates.filter">Filtrar</mat-label>
+                    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+                    <input
+                      matInput
+                      type="search"
+                      autocomplete="off"
+                      [value]="candidateFilter()"
+                      (input)="onCandidateFilter($event)"
+                    />
+                  </mat-form-field>
+                </div>
+                <ul
+                  class="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-outline-variant pt-1"
+                >
+                  @for (student of shownCandidates(); track student.id) {
+                    <li>
+                      <mat-checkbox [checked]="isChosen(student)" (change)="toggle(student)">
+                        <span class="flex flex-col">
+                          <span>{{ student.name }}</span>
+                          <span class="text-body-small text-on-surface-variant">{{
+                            student.email
+                          }}</span>
+                        </span>
+                      </mat-checkbox>
+                    </li>
+                  } @empty {
+                    <li
+                      class="py-2 text-body-medium text-on-surface-variant"
+                      i18n="@@groups.filter.none"
+                    >
+                      Nadie coincide
+                    </li>
+                  }
+                </ul>
               }
-            </mat-menu>
-          </div>
-        }
+            </div>
+          </mat-tab>
+          <mat-tab label="Pegar una lista" i18n-label="@@enrollDialog.tab.paste">
+            <div class="flex flex-col gap-2 pt-3">
+              <mat-form-field subscriptSizing="dynamic">
+                <mat-label i18n="@@enrollDialog.paste.label"
+                  >Correos o nombres, uno por línea</mat-label
+                >
+                <textarea
+                  matInput
+                  rows="6"
+                  spellcheck="false"
+                  [value]="pasted()"
+                  (input)="onPaste($event)"
+                ></textarea>
+                <mat-hint i18n="@@enrollDialog.paste.hint"
+                  >Como la lista de secretaría o los correos copiados de otra clase.</mat-hint
+                >
+              </mat-form-field>
+              <div>
+                <button
+                  matButton="outlined"
+                  type="button"
+                  [disabled]="pastedLines().length === 0 || matching()"
+                  (click)="matchPasted()"
+                >
+                  <mat-icon aria-hidden="true">checklist</mat-icon>
+                  <span i18n="@@enrollDialog.paste.find">Buscar en la lista</span>
+                </button>
+              </div>
+              @if (tooManyLines()) {
+                <p
+                  class="text-body-medium text-error"
+                  role="alert"
+                  i18n="@@enrollDialog.paste.tooMany"
+                >
+                  Como mucho {{ maxLines }} líneas de una vez.
+                </p>
+              }
+              @if (pastedResult(); as result) {
+                <p class="text-body-medium" role="status">
+                  <span i18n="@@enrollDialog.paste.added">{result.added, plural,
+                    =0 {Ninguno nuevo elegido}
+                    =1 {1 elegido}
+                    other {{{ result.added }} elegidos}
+                  }</span>
+                  @if (result.unmatched.length > 0) {
+                    <span aria-hidden="true"> · </span>
+                    <span i18n="@@enrollDialog.paste.unmatched"
+                      >Sin una cuenta de alumno (o con más de una):</span
+                    >
+                  }
+                </p>
+                @if (result.unmatched.length > 0) {
+                  <ul class="max-h-24 overflow-y-auto text-body-small text-on-surface-variant">
+                    @for (line of result.unmatched; track line) {
+                      <li>{{ line }}</li>
+                    }
+                  </ul>
+                }
+              }
+            </div>
+          </mat-tab>
+          @if (data.sources.length > 0) {
+            <mat-tab label="De otra clase" i18n-label="@@enrollDialog.tab.sources">
+              <ul class="flex flex-col gap-1 pt-3">
+                @for (source of data.sources; track source.id) {
+                  <li>
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="copying()"
+                      (click)="copyFrom(source)"
+                    >
+                      <mat-icon aria-hidden="true">group</mat-icon>
+                      <span i18n="@@enrollDialog.copyFrom">Añadir los de {{ source.label }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </mat-tab>
+          }
+          <mat-tab label="Buscar" i18n-label="@@enrollDialog.tab.search">
+            <div class="flex h-full flex-col gap-2 pt-3">
+              <mat-form-field>
+                <mat-label i18n="@@enrollDialog.search"
+                  >Buscar alumnos por nombre o correo</mat-label
+                >
+                <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+                <input
+                  matInput
+                  type="search"
+                  autocomplete="off"
+                  spellcheck="false"
+                  (input)="onInput($event)"
+                />
+                <mat-hint i18n="@@enrollDialog.search.hint">Escribe al menos dos letras</mat-hint>
+              </mat-form-field>
+              <div class="h-1">
+                @if (results.isLoading()) {
+                  <mat-progress-bar mode="indeterminate" class="rounded-full" />
+                }
+              </div>
+              <!-- Says how many were found, not the whole list on every search -->
+              <p class="sr-only" aria-live="polite">
+                @if (results.hasValue()) {
+                  <span i18n="@@enrollDialog.found">{results.value().length, plural,
+                    =0 {Ningún alumno coincide}
+                    =1 {1 alumno encontrado}
+                    other {{{ results.value().length }} alumnos encontrados}
+                  }</span>
+                }
+              </p>
+              <div class="min-h-0 flex-1 overflow-y-auto">
+                @if (results.error()) {
+                  <p class="text-body-medium text-error" i18n="@@enrollDialog.error">
+                    No se ha podido buscar. Inténtalo de nuevo.
+                  </p>
+                } @else if (results.hasValue() && results.value().length === 0) {
+                  <p class="text-body-medium text-on-surface-variant" i18n="@@enrollDialog.none">
+                    Ningún alumno coincide. Las cuentas las crea la administración.
+                  </p>
+                } @else if (results.hasValue()) {
+                  <ul class="flex flex-col">
+                    @for (student of results.value(); track student.id) {
+                      <li>
+                        <mat-checkbox [checked]="isChosen(student)" (change)="toggle(student)">
+                          <span class="flex flex-col">
+                            <span>{{ student.name }}</span>
+                            <span class="text-body-small text-on-surface-variant">{{
+                              student.email
+                            }}</span>
+                          </span>
+                        </mat-checkbox>
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
 
         @if (chosen().length > 0) {
-          <!-- The students of a whole group can be many: they scroll, the dialog does not grow -->
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-title-small" i18n="@@enrollDialog.chosenCount"
+              >Elegidos ({{ chosen().length }})</span
+            >
+            <button matButton type="button" (click)="clearChosen()">
+              <span i18n="@@enrollDialog.clear">Quitar todos</span>
+            </button>
+          </div>
+          <!-- A whole class can be many: they scroll, the dialog does not grow -->
           <mat-chip-set
-            class="block max-h-32 overflow-y-auto"
+            class="block max-h-28 shrink-0 overflow-y-auto"
             aria-label="Elegidos"
             i18n-aria-label="@@enrollDialog.chosen"
           >
@@ -135,57 +347,6 @@ export interface EnrollDialogData {
             }
           </mat-chip-set>
         }
-        @if (full()) {
-          <p class="text-body-medium text-on-surface-variant" i18n="@@enrollDialog.full">
-            Como mucho {{ maxBatch }} de una vez: matricula estos y busca los demás después.
-          </p>
-        }
-
-        <div class="h-1">
-          @if (results.isLoading()) {
-            <mat-progress-bar mode="indeterminate" class="rounded-full" />
-          }
-        </div>
-        <!-- Says how many were found, not the whole list on every search -->
-        <p class="sr-only" aria-live="polite">
-          @if (results.hasValue()) {
-            <span i18n="@@enrollDialog.found">{results.value().length, plural,
-              =0 {Ningún alumno coincide}
-              =1 {1 alumno encontrado}
-              other {{{ results.value().length }} alumnos encontrados}
-            }</span>
-          }
-        </p>
-        <div class="max-h-72 overflow-y-auto">
-          @if (results.error()) {
-            <p class="text-body-medium text-error" i18n="@@enrollDialog.error">
-              No se ha podido buscar. Inténtalo de nuevo.
-            </p>
-          } @else if (results.hasValue() && results.value().length === 0) {
-            <p class="text-body-medium text-on-surface-variant" i18n="@@enrollDialog.none">
-              Ningún alumno coincide. Las cuentas las crea la administración.
-            </p>
-          } @else if (results.hasValue()) {
-            <ul class="flex flex-col">
-              @for (student of results.value(); track student.id) {
-                <li>
-                  <mat-checkbox
-                    [checked]="isChosen(student)"
-                    [disabled]="full() && !isChosen(student)"
-                    (change)="toggle(student)"
-                  >
-                    <span class="flex flex-col">
-                      <span>{{ student.name }}</span>
-                      <span class="text-body-small text-on-surface-variant">{{
-                        student.email
-                      }}</span>
-                    </span>
-                  </mat-checkbox>
-                </li>
-              }
-            </ul>
-          }
-        </div>
         @if (failure(); as message) {
           <p class="text-body-medium text-error" role="alert">{{ message }}</p>
         }
@@ -213,8 +374,54 @@ export interface EnrollDialogData {
 export class EnrollDialog {
   protected readonly data = inject<EnrollDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<EnrollDialog, boolean>>(MatDialogRef);
+  private readonly announcer = inject(LiveAnnouncer);
 
-  protected readonly maxBatch = MAX_ENROLLMENT_BATCH;
+  protected readonly maxLines = MAX_PASTED_LINES;
+
+  /** In the order they were chosen. */
+  protected readonly chosen = signal<readonly UserRef[]>([]);
+  protected readonly saving = signal(false);
+  protected readonly failure = signal<string | null>(null);
+
+  /** The first tab: read once, when the dialog opens. */
+  protected readonly candidates = resource({ loader: () => this.data.candidates.load() });
+  protected readonly candidateFilter = signal('');
+  /** Those not there yet. */
+  protected readonly freeCandidates = computed(() =>
+    (this.candidates.hasValue() ? this.candidates.value() : []).filter(
+      ({ id }) => !this.data.enrolledIds.has(id),
+    ),
+  );
+  protected readonly shownCandidates = computed(() => {
+    const wanted = searchable(this.candidateFilter().trim());
+    return this.freeCandidates().filter(({ name, email }) =>
+      searchable(`${name} ${email}`).includes(wanted),
+    );
+  });
+  protected readonly allShownChosen = computed(
+    () =>
+      this.shownCandidates().length > 0 &&
+      this.shownCandidates().every((student) => this.isChosen(student)),
+  );
+  protected readonly someShownChosen = computed(
+    () =>
+      !this.allShownChosen() && this.shownCandidates().some((student) => this.isChosen(student)),
+  );
+
+  /** A pasted list, its lines and what it gave. */
+  protected readonly pasted = signal('');
+  protected readonly pastedLines = computed(() =>
+    this.pasted()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== ''),
+  );
+  protected readonly tooManyLines = computed(() => this.pastedLines().length > MAX_PASTED_LINES);
+  protected readonly matching = signal(false);
+  protected readonly pastedResult = signal<PastedResult | null>(null);
+
+  /** Reading the students of another class. */
+  protected readonly copying = signal(false);
 
   /** The text searched for, once typing stops. */
   private readonly search = signal('');
@@ -229,15 +436,6 @@ export class EnrollDialog {
     loader: ({ params }) => this.data.search(params),
   });
 
-  /** In the order they were chosen. */
-  protected readonly chosen = signal<readonly UserRef[]>([]);
-  protected readonly full = computed(() => this.chosen().length >= MAX_ENROLLMENT_BATCH);
-  protected readonly saving = signal(false);
-  /** Reading the students of another class. */
-  protected readonly copying = signal(false);
-  private readonly announcer = inject(LiveAnnouncer);
-  protected readonly failure = signal<string | null>(null);
-
   constructor() {
     inject(DestroyRef).onDestroy(() => this.debouncer.cancel());
   }
@@ -245,6 +443,15 @@ export class EnrollDialog {
   protected onInput(event: Event): void {
     const text = (event.target as HTMLInputElement).value;
     this.debouncer.schedule(() => this.search.set(text));
+  }
+
+  protected onCandidateFilter(event: Event): void {
+    this.candidateFilter.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onPaste(event: Event): void {
+    this.pasted.set((event.target as HTMLTextAreaElement).value);
+    this.pastedResult.set(null);
   }
 
   protected isChosen(student: UserRef): boolean {
@@ -259,18 +466,48 @@ export class EnrollDialog {
     );
   }
 
-  /** Chooses the students of another class who are not here, up to the batch. */
+  /** All those the filter shows, or none of them if they all were chosen. */
+  protected toggleShown(): void {
+    const shown = this.shownCandidates();
+    if (this.allShownChosen()) {
+      const ids = new Set(shown.map(({ id }) => id));
+      this.chosen.update((chosen) => chosen.filter(({ id }) => !ids.has(id)));
+    } else {
+      this.add(shown);
+    }
+  }
+
+  protected clearChosen(): void {
+    this.chosen.set([]);
+  }
+
+  /** Chooses the students the lines name; says which lines named nobody. */
+  protected async matchPasted(): Promise<void> {
+    if (this.tooManyLines()) return;
+    this.matching.set(true);
+    this.failure.set(null);
+    try {
+      const lines = this.pastedLines();
+      const matches = await this.data.match(lines);
+      const found = new Set(matches.map(({ entry }) => entry.toLowerCase()));
+      const added = this.add(matches.map(({ student }) => student));
+      this.pastedResult.set({
+        added,
+        unmatched: lines.filter((line) => !found.has(line.toLowerCase())),
+      });
+    } catch (error) {
+      this.failure.set(groupActionMessage('enroll', error));
+    } finally {
+      this.matching.set(false);
+    }
+  }
+
+  /** Chooses the students of another class who are not here. */
   protected async copyFrom(source: EnrollSource): Promise<void> {
     this.copying.set(true);
     this.failure.set(null);
     try {
-      const { chosen, added } = addToChoice(
-        this.chosen(),
-        await this.data.studentsOf(source.id),
-        this.data.enrolledIds,
-        MAX_ENROLLMENT_BATCH,
-      );
-      this.chosen.set(chosen);
+      const added = this.add(await this.data.studentsOf(source.id));
       void this.announcer.announce(
         $localize`:@@enrollDialog.copied:${added}:count: elegidos de ${source.label}:group:`,
       );
@@ -298,5 +535,12 @@ export class EnrollDialog {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  /** Adds to the choice who is neither chosen nor there yet; how many. */
+  private add(students: readonly UserRef[]): number {
+    const { chosen, added } = addToChoice(this.chosen(), students, this.data.enrolledIds);
+    this.chosen.set(chosen);
+    return added;
   }
 }

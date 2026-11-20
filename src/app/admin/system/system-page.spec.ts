@@ -69,6 +69,11 @@ describe('SystemPage', () => {
 
   afterEach(() => localStorage.clear());
 
+  /** The names given, in the order of the list: by name in Spanish. */
+  function byName(names: readonly string[]): string[] {
+    return [...names].sort((a, b) => a.localeCompare(b, 'es'));
+  }
+
   it('shows the provider of the seed and its subjects by name', async () => {
     await renderSystem();
 
@@ -77,12 +82,11 @@ describe('SystemPage', () => {
       'gemini-3.5-flash-lite',
     );
     expect(screen.getByRole('group', { name: 'Respaldo 2' })).toBeTruthy();
-    expect(subjectNames()).toEqual([
-      'Desarrollo web en entorno cliente',
-      'Programación avanzada',
-      'Programación básica',
-    ]);
-    expect(screen.getAllByText('En español, inglés, catalán')).toHaveLength(3);
+    // All of the seed, by name in Spanish
+    expect(subjectNames()).toEqual(byName(subjectNames()));
+    expect(subjectNames()).toHaveLength(21);
+    expect(subjectNames().slice(0, 2)).toEqual(['Acceso a datos', 'Bases de datos']);
+    expect(screen.getAllByText('En español, inglés, catalán')).toHaveLength(21);
   });
 
   it('loads and fails each section on its own, with its retry', async () => {
@@ -334,10 +338,15 @@ describe('SystemPage', () => {
     await userEvent.click(button('Nueva asignatura'));
     const dialog = await screen.findByRole('dialog');
     await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
-    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Nombre' }), 'Bases de datos');
+    await userEvent.type(
+      within(dialog).getByRole('textbox', { name: 'Nombre' }),
+      'Física aplicada',
+    );
     await userEvent.click(within(dialog).getByRole('button', { name: 'Crear la asignatura' }));
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(subjectNames()[0]).toBe('Bases de datos');
+    // In its place by name
+    expect(subjectNames()).toContain('Física aplicada');
+    expect(subjectNames()).toEqual(byName(subjectNames()));
     expect(snackBar).toHaveBeenCalledWith('Asignatura creada');
 
     await userEvent.click(button('Editar Programación básica'));

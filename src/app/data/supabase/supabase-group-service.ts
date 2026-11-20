@@ -13,6 +13,9 @@ import {
   MAX_ENROLLMENT_BATCH,
   MIN_STUDENT_SEARCH_LENGTH,
   type RosterStudent,
+  type SchoolClassEntry,
+  type StudentMatch,
+  type ClassSubject,
   type UserRef,
 } from '../group-service';
 import type { SchoolClass } from '../user';
@@ -72,11 +75,20 @@ export class SupabaseGroupService extends GroupService {
     );
   }
 
-  async listAllClasses(): Promise<SchoolClass[]> {
-    const rows = unwrap(await this.supabase.from('school_class').select());
-    return sortClasses(rows.map((row) => ({ row, can_edit: false }))).map(
-      ({ schoolClass }) => schoolClass,
-    );
+  /** With the RPC `school_classes`: the RLS of `class_group` hides the groups of others. */
+  async listAllClasses(): Promise<SchoolClassEntry[]> {
+    const rows = unwrap(await this.supabase.rpc('school_classes'));
+    return rows.map(({ class_groups, ...row }) => ({
+      schoolClass: toSchoolClass(row),
+      // The function builds it with this shape
+      groups: (
+        class_groups as { subject_id: string; label: string | null; teacher_name: string }[]
+      ).map(({ subject_id, label, teacher_name }): ClassSubject => ({
+        subjectId: subject_id,
+        label,
+        teacherName: teacher_name,
+      })),
+    }));
   }
 
   async createClass(
@@ -189,6 +201,20 @@ export class SupabaseGroupService extends GroupService {
       member: row.is_member,
       groupIds: row.group_ids,
     }));
+  }
+
+  async listCandidates(classId: string): Promise<UserRef[]> {
+    return unwrap(await this.supabase.rpc('class_candidates', { target_class_id: classId }));
+  }
+
+  async matchStudents(classId: string, entries: readonly string[]): Promise<StudentMatch[]> {
+    const rows = unwrap(
+      await this.supabase.rpc('match_students', {
+        target_class_id: classId,
+        entries: [...entries],
+      }),
+    );
+    return rows.map(({ entry, ...student }) => ({ entry, student }));
   }
 
   async searchStudents(target: EnrollTarget, search: string): Promise<UserRef[]> {

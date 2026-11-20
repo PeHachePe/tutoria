@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { withoutHistory } from './fixtures/history';
 import type { BlockDraft } from '../block-service';
 import {
   assignmentId,
@@ -53,6 +54,8 @@ describe('MockBlockService', () => {
     db = TestBed.inject(MockDb);
     service = TestBed.inject(MockBlockService);
     db.setSession(TEACHER_ID);
+    // This year alone: the classes and students of the years before are not what these test
+    withoutHistory(db);
   });
 
   afterEach(() => localStorage.clear());
@@ -69,7 +72,7 @@ describe('MockBlockService', () => {
 
     it('lists every group to the administrator, and none to a student', async () => {
       db.setSession(ADMIN_ID);
-      await expect(service.listGroups()).resolves.toHaveLength(SEED.groups.length);
+      await expect(service.listGroups()).resolves.toHaveLength(db.tables().groups.length);
 
       db.setSession(DAW_STUDENT_IDS[0]);
       await expect(service.listGroups()).rejects.toMatchObject({ kind: 'forbidden' });

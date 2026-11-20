@@ -15,6 +15,7 @@ import { copyGroupBlocks } from './copy-group-blocks';
 import { canManageGroup, classOfGroup, findRow } from './mock-access';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
+import { compareGroups } from '../group-name';
 
 /**
  * Blocks and assignments in MockDb, with the rules of the RLS of 4.3b: another teacher's groups are
@@ -41,12 +42,7 @@ export class MockBlockService extends BlockService {
             subject: findRow(tables.subjects, group.subjectId),
           };
         })
-        .sort(
-          (a, b) =>
-            a.name.localeCompare(b.name, 'es') ||
-            a.subject.name.localeCompare(b.subject.name, 'es') ||
-            (a.label ?? '').localeCompare(b.label ?? '', 'es'),
-        );
+        .sort(compareGroups);
     });
   }
 

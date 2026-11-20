@@ -62,8 +62,7 @@ describe('DuplicateDialog', () => {
       'value',
       '1.º DAW A',
     );
-    expect(within(dialog).getByRole('textbox', { name: 'Curso' })).toHaveProperty(
-      'value',
+    expect(within(dialog).getByRole('combobox', { name: 'Curso' }).textContent).toContain(
       '2027/28',
     );
     const subjects = within(dialog).getByRole('group', { name: 'Asignaturas' });
@@ -123,12 +122,15 @@ describe('DuplicateDialog', () => {
     const subjects = within(dialog).getByRole('group', { name: 'Asignaturas' });
     await userEvent.click(within(subjects).getAllByRole('checkbox')[2]);
 
-    const year = within(dialog).getByRole('textbox', { name: 'Curso' });
-    await userEvent.clear(year);
-    await userEvent.type(year, '2026');
-    expect(within(dialog).getByText('Como 2026/27')).toBeTruthy();
-    await userEvent.type(year, '/27');
-    expect(within(dialog).queryByText('Como 2026/27')).toBeNull();
+    // The year is chosen, never typed: the one before the next, it and the one after
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Curso' }));
+    const years = await screen.findAllByRole('option');
+    expect(years.map((option) => option.textContent?.trim())).toEqual([
+      '2026/27',
+      '2027/28',
+      '2028/29',
+    ]);
+    await userEvent.click(years[0]);
     expect(within(dialog).getByText('Las mismas fechas de apertura y entrega.')).toBeTruthy();
 
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Con sus fechas' }));

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { withoutHistory } from './fixtures/history';
 import type { Attempt } from '../attempt';
 import type { LiveUpdate } from '../live-service';
 import { assignmentId, DAW_RESIT_BLOCK } from './fixtures/exercises';
@@ -28,6 +29,8 @@ describe('MockLiveService', () => {
     TestBed.configureTestingModule({ providers: [MockLiveService] });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     db = TestBed.inject(MockDb);
+    // This year alone: the classes and students of the years before are not what these test
+    withoutHistory(db);
     service = TestBed.inject(MockLiveService);
   });
 
@@ -57,7 +60,7 @@ describe('MockLiveService', () => {
 
       const groups = await service.listGroups();
 
-      expect(groups).toHaveLength(SEED.groups.length);
+      expect(groups).toHaveLength(db.tables().groups.length);
       expect(groups.every((group) => group.latestBlockId === null)).toBe(true);
     });
 

@@ -11,45 +11,62 @@ import {
 } from '@angular/core';
 import type { ComponentType } from '@angular/cdk/portal';
 import { MatButton, MatIconButton } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, type MatDialogConfig } from '@angular/material/dialog';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
-import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
+import { TEACHER_PARAMS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
 import { ExerciseService } from '../../data/exercise-service';
-import { GroupService, type ManagedGroup } from '../../data/group-service';
+import {
+  type ClassSubject,
+  GroupService,
+  type ManagedGroup,
+  type SchoolClassEntry,
+} from '../../data/group-service';
 import type { SchoolClass } from '../../data/user';
+
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { ClassDialog, type ClassDialogData } from './class-dialog';
-import { existingClass, toClassDraft } from './class-form';
-import { type ClassOption, labelClasses, sortClassGroups, subjectLine } from './class-list';
+import { toClassDraft } from './class-form';
+import {
+  classSubjectsOf,
+  type ClassOption,
+  labelClasses,
+  sortClassGroups,
+  subjectLine,
+} from './class-list';
 import { ClassStudents } from './class-students';
 import { DuplicateDialog, type DuplicateDialogData } from './duplicate-dialog';
 import { toDuplicateOptions } from './duplicate-form';
 import { groupActionMessage } from './group-action-message';
 import { GroupDialog, type GroupDialogData } from './group-dialog';
-import { toGroupDraft } from './group-form';
+import { toGroupChanges } from './group-form';
+import { SubjectsDialog, type SubjectsDialogData } from './subjects-dialog';
+import { sortSubjects } from './subjects-form';
 import { schoolYearOf } from './school-year';
 
-/** A group of the class as its list shows it. */
-interface GroupRow {
-  readonly managed: ManagedGroup;
-  readonly line: string;
-  readonly actionsLabel: string;
-  readonly blocksQuery: Readonly<Record<string, string>>;
-}
+/** The dialogs of a class and of its subjects: their texts and lists fit, never wider than the window. */
+const CLASS_DIALOG_WIDTH = '32rem';
+const GROUP_DIALOG_WIDTH = '32rem';
+const DIALOG_MAX_WIDTH = 'calc(100vw - 2rem)';
+/** «Añadir asignaturas»: always as tall, whatever is chosen; its list scrolls inside. */
+const SUBJECTS_DIALOG_SIZE = {
+  width: '40rem',
+  height: 'min(46rem, calc(100vh - 2rem))',
+  panelClass: 'app-fixed-dialog',
+};
 
 /**
  * The classes of a teacher (those where they teach or that they created), or all of them for an
@@ -71,7 +88,6 @@ interface GroupRow {
     MatMenuItem,
     MatMenuTrigger,
     MatProgressBar,
-    RouterLink,
     EmptyState,
     LoadError,
     LoadingSkeleton,
@@ -93,7 +109,6 @@ export class GroupsPage {
   /** The class chosen, from the query parameters of the URL (withComponentInputBinding). */
   readonly clase = input<string>();
 
-  protected readonly blocksPath = APP_PATHS.teacher.blocks;
   protected readonly isAdmin = computed(() => this.auth.role() === 'admin');
 
   protected readonly classes = resource({ loader: () => this.service.listClasses() });
@@ -132,33 +147,41 @@ export class GroupsPage {
     })),
   );
 
-  /** The class of the URL or, without one (or an unknown one), the first. */
+  /**
+   * The class of the URL or, without one (or an unknown one), the first of the current year, or
+   * the first of all if that year has none.
+   */
   protected readonly current = computed(() => {
     const options = this.options();
-    return options.find(({ id }) => id === this.clase()) ?? options.at(0) ?? null;
+    const year = schoolYearOf(new Date());
+    return (
+      options.find(({ id }) => id === this.clase()) ??
+      options.find(({ managed }) => managed.schoolClass.schoolYear === year) ??
+      options.at(0) ??
+      null
+    );
   });
 
-  /** Its groups by subject, with what their menus need. */
-  protected readonly groupRows = computed((): GroupRow[] => {
-    const current = this.current();
-    if (!current) return [];
-    return sortClassGroups(current.managed.groups, this.locale).map((managed) => {
-      const line = subjectLine(managed, this.locale);
-      return {
-        managed,
-        line,
-        actionsLabel: $localize`:@@groups.actions:Acciones de ${`${current.managed.schoolClass.name} · ${line}`}:name:`,
-        blocksQuery: { [TEACHER_PARAMS.group]: managed.group.id },
-      };
-    });
-  });
+  /** The years with classes, the most recent first: the first level of the selector. */
+  protected readonly years = computed(() => [
+    ...new Set(this.options().map(({ managed }) => managed.schoolClass.schoolYear)),
+  ]);
+
+  /** The classes of the year shown: the second level of the selector, by name alone. */
+  protected readonly classesOfYear = computed(() =>
+    this.options().filter(
+      ({ managed }) =>
+        managed.schoolClass.schoolYear === this.current()?.managed.schoolClass.schoolYear,
+    ),
+  );
+
+  /** Every group of the class by subject: the columns of its students. */
+  protected readonly classGroups = computed(() =>
+    sortClassGroups(this.current()?.managed.groups ?? [], this.locale),
+  );
 
   /** The groups of the user in the class: those «Duplicar» copies. */
-  protected readonly mine = computed(() =>
-    this.groupRows()
-      .filter(({ managed }) => managed.mine)
-      .map(({ managed }) => managed),
-  );
+  protected readonly mine = computed(() => this.classGroups().filter(({ mine }) => mine));
 
   /** The other classes of the user, whose students can be taken at once. */
   protected readonly sources = computed(() =>
@@ -188,55 +211,73 @@ export class GroupsPage {
     void this.router.navigate([], { queryParams: { [TEACHER_PARAMS.class]: classId } });
   }
 
+  /** Another year: its first class. */
+  protected selectYear(schoolYear: string): void {
+    // The years offered are those of the classes: one of them is always there
+    const first = this.options().find(
+      ({ managed }) => managed.schoolClass.schoolYear === schoolYear,
+    )!;
+    this.select(first.id);
+  }
+
   /** The students changed: the counts of the groups too. */
   protected studentsChanged(): void {
     this.classes.reload();
   }
 
-  /** A new class, or the one with that name and year, which the user joins with their subjects. */
+  /**
+   * A new class, or the one with that name and year, which the user joins: in both cases, the
+   * subjects are chosen next, in the same dialog as «Añadir asignaturas».
+   */
   protected async createClass(): Promise<void> {
     // Without them nothing is suggested, and the server still joins the class that exists
-    const classes = await this.service.listAllClasses().catch((): SchoolClass[] => []);
-    let classId = '';
-    let joined = false;
-    const saved = await this.open<ClassDialog, ClassDialogData>(ClassDialog, {
-      schoolClass: null,
-      classes,
-      subjects: this.subjects.value(),
-      teachers: this.teacherOptions(),
-      // The year of a new class is the current one: it can be changed
-      schoolYear: schoolYearOf(new Date()),
-      teacherId: this.isAdmin() ? undefined : this.auth.userId(),
-      save: (model) =>
-        this.saving(async () => {
-          joined = existingClass(classes, model) !== null;
-          classId = await this.service.createClass(
-            toClassDraft(model),
-            model.subjectIds,
-            model.teacherId,
-          );
-        }),
-    });
-    if (!saved) return;
-    this.select(classId);
-    this.snackBar.open(
-      joined
-        ? $localize`:@@groups.class.joined:Asignaturas añadidas a la clase`
-        : $localize`:@@groups.class.created:Clase creada`,
+    const classes = await this.service.listAllClasses().catch((): SchoolClassEntry[] => []);
+    let created: SchoolClass | null = null;
+    const result = await this.openFor<ClassDialog, ClassDialogData, SchoolClassEntry | true>(
+      ClassDialog,
+      {
+        schoolClass: null,
+        classes,
+        // The year of a new class is the current one: it can be changed
+        schoolYear: schoolYearOf(new Date()),
+        save: (model) =>
+          this.saving(async () => {
+            const draft = toClassDraft(model);
+            // Behind the role guard: someone is signed in
+            const userId = this.auth.userId()!;
+            const id = await this.service.createClass(draft, [], userId);
+            created = { ...draft, id, createdBy: userId, createdAt: '' };
+          }),
+      },
+      CLASS_DIALOG_WIDTH,
     );
+    // Cancelled: with Escape it closes with nothing, with «Cancelar» with an empty value
+    if (!result) return;
+    if (result === true) {
+      // Created, empty: chosen, and its subjects asked for at once
+      const schoolClass = created!;
+      this.select(schoolClass.id);
+      this.snackBar.open($localize`:@@groups.class.created:Clase creada`);
+      await this.addSubjects(schoolClass, []);
+      return;
+    }
+    if (await this.addSubjects(result.schoolClass, result.groups)) {
+      this.select(result.schoolClass.id);
+    }
   }
 
   protected async editClass(option: ClassOption): Promise<void> {
-    const saved = await this.open<ClassDialog, ClassDialogData>(ClassDialog, {
-      schoolClass: option.managed.schoolClass,
-      classes: [],
-      subjects: [],
-      teachers: null,
-      schoolYear: option.managed.schoolClass.schoolYear,
-      teacherId: undefined,
-      save: (model) => this.saving(() => this.service.saveClass(option.id, toClassDraft(model))),
-    });
-    if (saved) this.snackBar.open($localize`:@@groups.saved:Cambios guardados`);
+    const saved = await this.openFor<ClassDialog, ClassDialogData, SchoolClassEntry | true>(
+      ClassDialog,
+      {
+        schoolClass: option.managed.schoolClass,
+        classes: [],
+        schoolYear: option.managed.schoolClass.schoolYear,
+        save: (model) => this.saving(() => this.service.saveClass(option.id, toClassDraft(model))),
+      },
+      CLASS_DIALOG_WIDTH,
+    );
+    if (saved === true) this.snackBar.open($localize`:@@groups.saved:Cambios guardados`);
   }
 
   /** For the next year or a parallel class, with the groups of the user and what they bring. */
@@ -287,44 +328,69 @@ export class GroupsPage {
     this.snackBar.open($localize`:@@groups.class.removed:Clase ${name}:name: eliminada`);
   }
 
-  /** A subject of the user in the class: its group, or a split of one it has. */
+  /** «Añadir asignatura» of the class shown. */
   protected async addGroup(option: ClassOption): Promise<void> {
-    const saved = await this.open<GroupDialog, GroupDialogData>(GroupDialog, {
-      className: option.label,
-      managed: null,
-      siblings: option.managed.groups,
-      subjects: this.subjects.value(),
-      teachers: this.teacherOptions(),
-      teacherId: this.isAdmin() ? undefined : this.auth.userId(),
-      save: (model) =>
-        this.saving(async () => {
-          await this.service.addGroup(option.id, toGroupDraft(model));
-        }),
-    });
-    if (!saved) return;
+    await this.addSubjects(option.managed.schoolClass, classSubjectsOf(option.managed.groups));
+  }
+
+  /**
+   * The one place where subjects are added to a class, whether it is shown, just created or joined:
+   * each one chosen is a group of the whole class or a split. Whether something was added.
+   */
+  private async addSubjects(
+    schoolClass: SchoolClass,
+    classSubjects: readonly ClassSubject[],
+  ): Promise<boolean> {
+    let added = 0;
+    await this.openFor<SubjectsDialog, SubjectsDialogData, boolean>(
+      SubjectsDialog,
+      {
+        className: `${schoolClass.name} · ${schoolClass.schoolYear}`,
+        classSubjects,
+        subjects: sortSubjects(this.subjects.value(), this.locale),
+        teachers: this.teacherOptions(),
+        teacherId: this.isAdmin() ? undefined : this.auth.userId(),
+        // Behind the role guard: someone is signed in
+        userName: () => this.auth.user()!.name,
+        add: (draft) =>
+          this.saving(async () => {
+            await this.service.addGroup(schoolClass.id, draft);
+            added++;
+          }),
+      },
+      SUBJECTS_DIALOG_SIZE,
+    );
+    // Also when it was closed after some were added and another failed
+    if (added === 0) return false;
     this.students()?.reload();
-    this.snackBar.open($localize`:@@groups.group.added:Asignatura añadida`);
+    this.snackBar.open(
+      added > 1
+        ? $localize`:@@groups.group.addedMany:Asignaturas añadidas`
+        : $localize`:@@groups.group.added:Asignatura añadida`,
+    );
+    return true;
   }
 
-  protected async editGroup(option: ClassOption, row: GroupRow): Promise<void> {
-    const saved = await this.open<GroupDialog, GroupDialogData>(GroupDialog, {
-      className: option.label,
-      managed: row.managed,
-      siblings: option.managed.groups.filter(({ group }) => group.id !== row.managed.group.id),
-      subjects: this.subjects.value(),
-      teachers: this.teacherOptions(),
-      teacherId: row.managed.group.teacherId,
-      save: (model) =>
-        this.saving(() => {
-          const { label, teacherId } = toGroupDraft(model);
-          return this.service.saveGroup(row.managed.group.id, { label, teacherId });
-        }),
-    });
-    if (saved) this.snackBar.open($localize`:@@groups.saved:Cambios guardados`);
+  protected async editGroup(option: ClassOption, managed: ManagedGroup): Promise<void> {
+    const saved = await this.openFor<GroupDialog, GroupDialogData, boolean>(
+      GroupDialog,
+      {
+        className: option.label,
+        managed,
+        classSubjects: classSubjectsOf(
+          option.managed.groups.filter(({ group }) => group.id !== managed.group.id),
+        ),
+        teachers: this.teacherOptions(),
+        save: (model) =>
+          this.saving(() => this.service.saveGroup(managed.group.id, toGroupChanges(model))),
+      },
+      GROUP_DIALOG_WIDTH,
+    );
+    if (saved === true) this.snackBar.open($localize`:@@groups.saved:Cambios guardados`);
   }
 
-  protected async removeGroup(row: GroupRow): Promise<void> {
-    const name = `${this.current()?.managed.schoolClass.name} · ${row.line}`;
+  protected async removeGroup(managed: ManagedGroup): Promise<void> {
+    const name = `${this.current()?.managed.schoolClass.name} · ${subjectLine(managed, this.locale)}`;
     const confirmed = await confirmAction(this.dialog, {
       title: $localize`:@@groups.remove.title:¿Eliminar el grupo ${name}:name:?`,
       text: $localize`:@@groups.remove.confirm:Se eliminará «${name}:name:» con sus bloques y su matrícula. No se puede deshacer.`,
@@ -332,7 +398,7 @@ export class GroupsPage {
     });
     if (!confirmed) return;
     try {
-      await this.service.removeGroup(row.managed.group.id);
+      await this.service.removeGroup(managed.group.id);
     } catch (error) {
       this.snackBar.open(groupActionMessage('remove', error));
       this.classes.reload();
@@ -345,18 +411,27 @@ export class GroupsPage {
     this.snackBar.open($localize`:@@groups.removed:Grupo ${name}:name: eliminado`);
   }
 
-  /** A student of another class in one group of the user: a subject they take here. */
-  protected enrollInGroup(row: GroupRow): void {
-    void this.students()?.enrollInGroup(row.managed, row.line);
-  }
-
   private teacherOptions() {
     return this.isAdmin() ? this.teachers.value() : null;
   }
 
   private async open<C, D>(component: ComponentType<C>, data: D): Promise<boolean> {
-    const ref = this.dialog.open<C, D, boolean>(component, { data, injector: this.injector });
-    return (await firstValueFrom(ref.afterClosed())) === true;
+    return (await this.openFor<C, D, boolean>(component, data)) === true;
+  }
+
+  /** A dialog, of the size given (never wider than the window), and what it closed with. */
+  private async openFor<C, D, R>(
+    component: ComponentType<C>,
+    data: D,
+    size?: string | MatDialogConfig,
+  ): Promise<R | undefined> {
+    const ref = this.dialog.open<C, D, R>(component, {
+      data,
+      injector: this.injector,
+      ...(size && { maxWidth: DIALOG_MAX_WIDTH }),
+      ...(typeof size === 'string' ? { width: size } : size),
+    });
+    return firstValueFrom(ref.afterClosed());
   }
 
   /** After saving, and after a failure (another session may have changed it), the list reloads. */

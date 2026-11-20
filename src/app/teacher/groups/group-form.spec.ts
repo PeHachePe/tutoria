@@ -3,17 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
 
 import { type ManagedGroup, MAX_GROUP_LABEL_LENGTH } from '../../data/group-service';
-import {
-  ADVANCED_PROGRAMMING_ID,
-  BASIC_PROGRAMMING_ID,
-  SUBJECTS,
-} from '../../data/mock/fixtures/subjects';
+import { BASIC_PROGRAMMING_ID, SUBJECTS } from '../../data/mock/fixtures/subjects';
 import { GROUPS, OTHER_TEACHER_ID, TEACHER_ID } from '../../data/mock/fixtures/users';
+import { classSubjectsOf } from './class-list';
 import {
   type GroupFormModel,
   groupSchema,
   teacherChoices,
-  toGroupDraft,
+  toGroupChanges,
   toGroupFormModel,
 } from './group-form';
 
@@ -37,53 +34,34 @@ const ENGLISH: ManagedGroup = {
   mine: false,
 };
 
-const VALID: GroupFormModel = {
-  subjectId: ADVANCED_PROGRAMMING_ID,
-  label: '',
-  teacherId: TEACHER_ID,
-};
-
-type Field = keyof GroupFormModel;
-
+/** The errors of the name and the teacher of a group of basic programming, among the others given. */
 function errorsOf(
   model: GroupFormModel,
-  siblings: readonly ManagedGroup[] = [DAW, ENGLISH],
-): Record<Field, string[]> {
-  const groupForm = form(signal(model), groupSchema(siblings), {
-    injector: TestBed.inject(Injector),
-  });
-  const keys: Field[] = ['subjectId', 'label', 'teacherId'];
-  return Object.fromEntries(
-    keys.map((key) => [
-      key,
-      groupForm[key]()
-        .errors()
-        .map((error) => error.message ?? ''),
-    ]),
-  ) as Record<Field, string[]>;
+  others: readonly ManagedGroup[],
+): Record<keyof GroupFormModel, string[]> {
+  const groupForm = form(
+    signal(model),
+    groupSchema(classSubjectsOf(others), BASIC_PROGRAMMING_ID),
+    {
+      injector: TestBed.inject(Injector),
+    },
+  );
+  return {
+    label: groupForm
+      .label()
+      .errors()
+      .map((error) => error.message ?? ''),
+    teacherId: groupForm
+      .teacherId()
+      .errors()
+      .map((error) => error.message ?? ''),
+  };
 }
 
 describe('toGroupFormModel', () => {
-  it('starts a new group of the teacher given', () => {
-    expect(toGroupFormModel(null, TEACHER_ID)).toEqual({
-      subjectId: '',
-      label: '',
-      teacherId: TEACHER_ID,
-    });
-  });
-
-  it('leaves the teacher to choose without one', () => {
-    expect(toGroupFormModel(null, undefined).teacherId).toBe('');
-  });
-
-  it('takes the subject, label and teacher of a group, not the teacher given', () => {
-    expect(toGroupFormModel(DAW, OTHER_TEACHER_ID)).toEqual({
-      subjectId: BASIC_PROGRAMMING_ID,
-      label: '',
-      teacherId: TEACHER_ID,
-    });
-    expect(toGroupFormModel(ENGLISH, undefined)).toEqual({
-      subjectId: BASIC_PROGRAMMING_ID,
+  it('takes the name and teacher of a group', () => {
+    expect(toGroupFormModel(DAW)).toEqual({ label: '', teacherId: TEACHER_ID });
+    expect(toGroupFormModel(ENGLISH)).toEqual({
       label: 'Desdoble inglés',
       teacherId: OTHER_TEACHER_ID,
     });
@@ -91,49 +69,43 @@ describe('toGroupFormModel', () => {
 });
 
 describe('groupSchema', () => {
-  it('takes a subject the class does not have, without a label or with one', () => {
-    expect(Object.values(errorsOf(VALID)).flat()).toEqual([]);
-    expect(Object.values(errorsOf({ ...VALID, label: 'Tarde' }, [])).flat()).toEqual([]);
+  it('takes a group without a name, or with one of its own', () => {
+    expect(errorsOf({ label: '', teacherId: TEACHER_ID }, [ENGLISH])).toEqual({
+      label: [],
+      teacherId: [],
+    });
+    expect(
+      errorsOf({ label: 'Desdoble tarde', teacherId: TEACHER_ID }, [DAW, ENGLISH]).label,
+    ).toEqual([]);
   });
 
-  it('requires the subject and the teacher', () => {
-    expect(errorsOf({ subjectId: '', label: '', teacherId: '' })).toEqual({
-      subjectId: ['Elige la asignatura'],
-      label: [],
+  it('requires the teacher and keeps a name short', () => {
+    expect(errorsOf({ label: 'x'.repeat(MAX_GROUP_LABEL_LENGTH + 1), teacherId: '' }, [])).toEqual({
+      label: [`Como mucho ${MAX_GROUP_LABEL_LENGTH} caracteres`],
       teacherId: ['Elige el docente'],
     });
   });
 
-  it('keeps a label short', () => {
-    expect(errorsOf({ ...VALID, label: 'x'.repeat(MAX_GROUP_LABEL_LENGTH + 1) }).label).toEqual([
-      `Como mucho ${MAX_GROUP_LABEL_LENGTH} caracteres`,
-    ]);
-  });
-
-  it('asks for the label of a split of a subject the class has', () => {
-    const split = { ...VALID, subjectId: BASIC_PROGRAMMING_ID, label: '  ' };
-    expect(errorsOf(split).label).toEqual([
+  it('keeps the name of a split while the class has the group of the whole class', () => {
+    expect(errorsOf({ label: '  ', teacherId: TEACHER_ID }, [DAW]).label).toEqual([
       'La clase ya tiene esta asignatura: ponle un nombre al desdoble',
     ]);
-    expect(errorsOf({ ...split, label: 'Desdoble 3' }).label).toEqual([]);
   });
 
-  it('refuses the label of another split of the subject', () => {
-    const taken = { ...VALID, subjectId: BASIC_PROGRAMMING_ID, label: ' Desdoble inglés ' };
-    expect(errorsOf(taken).label).toEqual(['Ya hay un desdoble de esta asignatura con ese nombre']);
-    // Without the split among its siblings, as when that split is the group edited
-    expect(errorsOf(taken, [DAW]).label).toEqual([]);
+  it('refuses the name of another split of the subject', () => {
+    expect(
+      errorsOf({ label: ' Desdoble inglés ', teacherId: TEACHER_ID }, [DAW, ENGLISH]).label,
+    ).toEqual(['Ya hay un desdoble de esta asignatura con ese nombre']);
   });
 });
 
-describe('toGroupDraft', () => {
-  it('trims the label, and leaves none when it is blank', () => {
-    expect(toGroupDraft({ ...VALID, label: ' Tarde ' })).toEqual({
-      subjectId: ADVANCED_PROGRAMMING_ID,
+describe('toGroupChanges', () => {
+  it('trims the name, and leaves none when it is blank', () => {
+    expect(toGroupChanges({ label: ' Tarde ', teacherId: TEACHER_ID })).toEqual({
       label: 'Tarde',
       teacherId: TEACHER_ID,
     });
-    expect(toGroupDraft({ ...VALID, label: '   ' }).label).toBeNull();
+    expect(toGroupChanges({ label: '   ', teacherId: TEACHER_ID }).label).toBeNull();
   });
 });
 
