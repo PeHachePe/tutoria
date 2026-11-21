@@ -2527,3 +2527,40 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Para la memoria: lo que pesa en un centro no es crear las cuentas, sino entregarlas; por eso el paso acaba en un CSV y en tiras para recortar.
 
 **Aprobación:** el autor aprobó el plan («Sí, adelante»). Al probarlo vio que el diálogo de «Nuevo usuario» cambiaba de ancho al pulsar el ojo y preguntó por qué (se explicó y se arregló en todos los diálogos con formulario), y que el PDF se guardaba como «Claude.pdf» (era el navegador interno, pero ahora se llama como el CSV). Después dio el paso por bueno («Sí, cierra el paso»). El detalle técnico, por delegación del autor.
+
+## D-086 · El dictado: el campo de siempre, que el alumno revisa y envía (21/11/2026, propuesta)
+
+**Contexto:** el 6.1b añade la segunda pieza de la voz (2.11, RF-08): dictar la pregunta al tutor. El plan del paso fijaba casi todo; al implementarlo salieron detalles que cambian lo que ve el alumno.
+
+**Decisión (cómo se usa):**
+
+- **Dónde:** «Dictar» es un micrófono junto a enviar, en el campo de la pregunta. Solo sale con la voz activada en los ajustes y en un navegador que reconoce la voz (no en Firefox), y no en la vista previa del docente. No depende de que haya voces del idioma: se puede dictar sin poder escuchar.
+- **Dictar:** al pulsarlo, el tutor se calla si estaba hablando, el botón queda marcado y bajo el campo se lee «Te escucho…» con el micrófono latiendo (sin animación si el sistema pide menos movimiento). Lo que el navegador va entendiendo aparece tras lo escrito y se sustituye hasta que se fija; lo fijado se queda. Si empieza frase (campo vacío, o tras un punto, una interrogación, una exclamación, unos puntos suspensivos o una línea nueva), con mayúscula: el navegador lo da en minúscula. Lo dictado nunca pasa de los 500 caracteres de una pregunta.
+- **Acabar:** pulsar otra vez, Esc (que no pliega el tutor flotante), escribir en el campo, enviar, ocultar la pestaña, salir de la pantalla u 8 segundos sin voz. Lo que se estaba entendiendo al parar se queda en el campo para revisarlo. Nunca se envía solo.
+- **El aviso del audio,** antes de abrir el micrófono por primera vez, solo si el navegador transcribe en su servicio: «Tu navegador envía el audio a su servicio de reconocimiento para transcribirlo. TutorIA no lo graba», con «Entendido», que lo recuerda para ese usuario y empieza a dictar.
+- **Errores,** sobre el campo, sin perder lo escrito y diciendo qué hacer: sin permiso para el micrófono, sin micrófono, servicio no disponible e idioma no admitido. No oír nada no es un error, pero si el dictado acaba en silencio sin que el navegador haya dado ningún texto, un aviso suave (`role="status"`, no de error) dice «No he entendido nada. Prueba otra vez o escribe tu pregunta». No sale si lo para el alumno. Escribir o volver a dictar quita los avisos.
+- **Ajustes:** «Dónde se transcribe tu voz» dice lo que hace este navegador: en el equipo, en su servicio (con «Reconocer la voz en este equipo» si solo falta el paquete del idioma) o que no reconoce la voz. Al acabar la descarga, el foco pasa al título de la línea y la línea nueva se anuncia. La pantalla de datos registrados dice lo mismo en su servicio de reconocimiento de voz.
+
+**Decisión (técnica):**
+
+- **`listen()` nunca rechaza:** devuelve `Listening` con `stop()` y `ended`, que dice por qué acabó (2.11). Parar usa `abort()`, no `stop()`: así no llega ningún resultado después de parar, que caería sobre lo que el alumno ya está escribiendo.
+- **`service-not-allowed` es servicio no disponible, no falta de permiso:** según MDN es el servicio rechazado (también en el equipo sin el paquete), y el mensaje de permiso mandaría al alumno a la barra de direcciones sin motivo.
+- **`install()` solo desde el botón:** necesita un clic del usuario (rechaza sin él), y `available()` dice `downloadable` hasta que se llama aunque el paquete ya esté.
+- **«Te escucho…» lo anuncia Material:** la zona de ayuda del campo ya es una región `aria-live="polite"`, así que no se añade otra (se leería dos veces).
+- **Conmutador con el mismo nombre:** «Dictar» con `aria-pressed` y el tooltip que cambia, como «Ampliar el código» y «Mostrar contraseña»; cambiar el nombre y el estado a la vez es lo que la guía ARIA desaconseja.
+- **«Dictar» solo con `TutorSpeaker`:** su presencia marca la pantalla del alumno; `StudentVoice` es de toda la aplicación y la vista previa del docente también tiene el campo.
+- **Mayúscula en una función pura** (`appendDictation`), con su test: no depende del navegador.
+- **El aviso de no haber entendido nada sale del propio dictado:** recuerda si el navegador dio algún texto y lo dice al acabar por silencio (el suyo de 8 s o el del navegador). Nació en la prueba del autor: Chrome 157 en su Mac detectaba la voz y no devolvía texto en ninguna web salvo, a ratos, la demo de Google; sin aviso, «Dictar» parecía no hacer nada.
+
+**Alternativas:**
+
+- **El texto del plan para el anuncio** (un `<p aria-live>` propio): duplicaba el de Material.
+- **Cambiar el nombre a «Dejar de dictar»:** lo pedía la ficha; se quedó en el tooltip por la guía ARIA.
+- **El indicador del micrófono también en la cabecera y la mascota plegada:** con el dictado no hace falta, porque plegar el tutor quita el campo y para el dictado. Lo hará el 6.1c para la llamada.
+
+**Consecuencias:**
+
+- El 6.2b llama a `setDrafting()` también desde lo dictado (anotado en su plan).
+- Entra en [PENDIENTES](PENDIENTES.md) la tabla de motores con un dictado real en cada navegador, y en [E2E-PENDIENTES](E2E-PENDIENTES.md) el e2e del dictado con un reconocimiento falso.
+
+**Aprobación:** el autor aprobó el plan y los cinco ajustes propuestos («Sí, adelante»). Al probarlo en su Chrome no salía nada; se diagnosticó con él (el fallo es del reconocimiento de su Chrome, no de la app) y aprobó las dos mejoras que salieron: el aviso de no haber entendido nada y un «Te escucho…» más visible. El detalle técnico, por delegación del autor.
