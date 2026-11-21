@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   tutorVoice: 'tutoria.tutor-voice',
   speechRate: 'tutoria.speech-rate',
   readAloud: 'tutoria.read-aloud',
+  audioNoticeSeen: 'tutoria.audio-notice-seen',
 } as const;
 
 export type SettingName = keyof typeof STORAGE_KEYS;
@@ -29,7 +30,8 @@ export function settingKey(setting: SettingName, userId: string): string {
  * The student's settings (4.5, ficha 05), remembered per user in this browser: how the tutor's
  * reactions show (1.8), whether the tutor may speak first (it does from step 6.2) and the mascot's
  * accessories, and the voice (2.11): whether it is on, the tutor's voice (none until the student
- * chooses one), its speed and whether new answers are read aloud. The colour mode is for the whole browser, because the login uses it too:
+ * chooses one), its speed, whether new answers are read aloud and whether the student was told where
+ * the audio of the dictation goes. The colour mode is for the whole browser, because the login uses it too:
  * ThemeService keeps it. Whether the data notice was seen is part of the user (AuthStore, RF-07).
  */
 @Service()
@@ -55,6 +57,8 @@ export class SettingsStore {
     toSpeechRate(saved),
   );
   private readonly readAloudState = this.flag('readAloud', false);
+  /** The student was told where the audio goes before dictating for the first time (2.11). */
+  private readonly audioNoticeSeenState = this.flag('audioNoticeSeen', false);
 
   readonly reactions = this.reactionsState.asReadonly();
   readonly reactionEmojis = this.reactionEmojisState.asReadonly();
@@ -66,6 +70,7 @@ export class SettingsStore {
   readonly tutorVoice = this.tutorVoiceState.asReadonly();
   readonly speechRate = this.speechRateState.asReadonly();
   readonly readAloud = this.readAloudState.asReadonly();
+  readonly audioNoticeSeen = this.audioNoticeSeenState.asReadonly();
 
   setReactions(mode: ReactionMode): void {
     this.update('reactions', this.reactionsState, mode);
@@ -105,6 +110,11 @@ export class SettingsStore {
 
   setReadAloud(on: boolean): void {
     this.update('readAloud', this.readAloudState, on);
+  }
+
+  /** «Entendido» on the notice of where the audio goes: it does not show again for this user. */
+  setAudioNoticeSeen(): void {
+    this.update('audioNoticeSeen', this.audioNoticeSeenState, true);
   }
 
   /** Read again for each user who signs in; a choice without a user lasts until the page closes. */

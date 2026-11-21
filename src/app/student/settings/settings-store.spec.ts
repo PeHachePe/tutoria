@@ -137,4 +137,17 @@ describe('SettingsStore', () => {
     expect(store.speechRate()).toBe('normal');
     expect(store.tutorVoice()).toBeNull();
   });
+
+  it('remembers per user that the notice of the audio was seen', () => {
+    expect(store.audioNoticeSeen()).toBe(false);
+
+    store.setAudioNoticeSeen();
+    expect(store.audioNoticeSeen()).toBe(true);
+    expect(localStorage.getItem(settingKey('audioNoticeSeen', 'u1'))).toBe('true');
+
+    userId.set('u2');
+    expect(store.audioNoticeSeen()).toBe(false);
+    userId.set('u1');
+    expect(store.audioNoticeSeen()).toBe(true);
+  });
 });

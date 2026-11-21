@@ -79,6 +79,14 @@ describe('ShowcasePage', () => {
     ]);
   });
 
+  it('shows the notice of where the audio goes (6.1b)', () => {
+    const notice = within(fixture.nativeElement as HTMLElement)
+      .getByRole('heading', { name: 'Aviso del audio (6.1b)' })
+      .closest('div') as HTMLElement;
+    expect(within(notice).getByRole('status').textContent).toContain('TutorIA no lo graba');
+    expect(within(notice).getByRole('button', { name: 'Entendido' })).toBeTruthy();
+  });
+
   it('shows a zone with scroll shadows that the keyboard can reach and scroll', () => {
     const element = fixture.nativeElement as HTMLElement;
     const zone = element.querySelector<HTMLElement>('.scroll-shadows');

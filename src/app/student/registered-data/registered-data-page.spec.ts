@@ -3,15 +3,21 @@ import { provideRouter } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
 
 import { AuthStore } from '../../auth/auth-store';
+import type { RecognitionPlace } from '../../core/speech/speech-service';
+import { FakeSpeechService, provideFakeSpeech } from '../../core/speech/speech-testing';
+import { settingKey } from '../settings/settings-store';
 import { RegisteredDataPage } from './registered-data-page';
 
 describe('RegisteredDataPage', () => {
   const markPrivacyNoticeSeen = vi.fn(() => Promise.resolve());
 
+  const fake = new FakeSpeechService();
+
   async function renderPage() {
     await render(RegisteredDataPage, {
       providers: [
         provideRouter([]),
+        provideFakeSpeech(fake),
         { provide: AuthStore, useValue: { userId: signal('u1'), markPrivacyNoticeSeen } },
       ],
     });
@@ -52,5 +58,26 @@ describe('RegisteredDataPage', () => {
     await renderPage();
 
     expect(markPrivacyNoticeSeen).toHaveBeenCalled();
+  });
+
+  it('says what any browser may do with the voice off', async () => {
+    await renderPage();
+
+    const services = screen.getByRole('region', { name: 'Servicios externos' });
+    expect(within(services).getByText(/puede enviar el audio a un servicio externo/)).toBeTruthy();
+  });
+
+  it.each([
+    ['device', 'la transcribe en tu equipo: el audio no sale de él'],
+    ['server', 'envía el audio a su servicio de reconocimiento'],
+    ['downloadable', 'envía el audio a su servicio de reconocimiento'],
+    ['none', 'Este navegador no reconoce la voz'],
+  ] as const)('says what this browser does with the voice on, in %s', async (place, text) => {
+    fake.place = place satisfies RecognitionPlace;
+    localStorage.setItem(settingKey('voice', 'u1'), 'true');
+    await renderPage();
+
+    const services = screen.getByRole('region', { name: 'Servicios externos' });
+    expect(await within(services).findByText(new RegExp(text))).toBeTruthy();
   });
 });

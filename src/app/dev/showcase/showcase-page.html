@@ -390,6 +390,13 @@
         <h3 class="text-title-medium">Acciones del tutor (2.5e)</h3>
         <app-tutor-actions [actions]="actionSamples" [queriedNames]="queriedSample" />
       </div>
+      <div class="flex flex-col gap-2 rounded-xl bg-panel p-4 shadow-sm md:col-span-2">
+        <h3 class="text-title-medium">Aviso del audio (6.1b)</h3>
+        <p class="text-body-small text-on-surface-variant">
+          Antes de dictar por primera vez, si el navegador transcribe en su servicio.
+        </p>
+        <app-audio-notice />
+      </div>
     </div>
   </section>
 

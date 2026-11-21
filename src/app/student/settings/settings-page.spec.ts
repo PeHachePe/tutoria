@@ -154,6 +154,9 @@ describe('SettingsPage', () => {
       expect(screen.getByText(/¿Suenan robóticas\?/)).toBeTruthy();
       expect(screen.getByRole('radio', { name: /Jorge · México/ })).toBeTruthy();
       expect(screen.getByText(/Si usas un lector de pantalla/)).toBeTruthy();
+      expect(
+        screen.getByText('Podrás escucharle y dictarle. Nunca se graba el audio.'),
+      ).toBeTruthy();
     });
 
     it('says it is looking for the voices', async () => {
@@ -243,6 +246,55 @@ describe('SettingsPage', () => {
       expect(fake.stops).toBe(stops + 1);
       expect(screen.queryByRole('radiogroup', { name: 'Voz del tutor' })).toBeNull();
       expect(settings.tutorVoice()).toBe('jorge');
+    });
+
+    it.each([
+      ['device', 'En este equipo: el audio no sale de él.'],
+      ['server', 'En el servicio de tu navegador, que recibe el audio para transcribirlo.'],
+      ['downloadable', 'En el servicio de tu navegador, que recibe el audio para transcribirlo.'],
+      ['none', 'Tu navegador no reconoce la voz: puedes escuchar al tutor y escribirle.'],
+    ] as const)('says where it transcribes the voice in %s', async (place, text) => {
+      fake.place = place;
+      const { settings } = await turnVoiceOn();
+      expect(
+        await screen.findByRole('heading', { name: 'Dónde se transcribe tu voz' }),
+      ).toBeTruthy();
+      expect(screen.getByText(text)).toBeTruthy();
+      expect(settings.voice()).toBe(true);
+      expect(!!screen.queryByRole('button', { name: /Reconocer la voz en este equipo/ })).toBe(
+        place === 'downloadable',
+      );
+    });
+
+    it('downloads the language pack to recognise on the device', async () => {
+      fake.place = 'downloadable';
+      const { user } = await turnVoiceOn();
+      let finish: (installed: boolean) => void = () => undefined;
+      vi.spyOn(fake, 'installRecognition').mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finish = (installed) => {
+              fake.place = 'device';
+              resolve(installed);
+            };
+          }),
+      );
+      await user.click(
+        await screen.findByRole('button', { name: /Reconocer la voz en este equipo/ }),
+      );
+      const downloading = screen.getByRole('button', { name: /Descargando…/ });
+      expect(downloading.getAttribute('aria-disabled')).toBe('true');
+      expect(document.activeElement).toBe(downloading);
+
+      finish(true);
+      expect(await screen.findByText('En este equipo: el audio no sale de él.')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Descargando…/ })).toBeNull();
+      // The button went: the focus is on the heading of the line, not lost
+      await vi.waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole('heading', { name: 'Dónde se transcribe tu voz' }),
+        ),
+      );
     });
 
     it('names the region of a voice only when it has one its name does not say', () => {

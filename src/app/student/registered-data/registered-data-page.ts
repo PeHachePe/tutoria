@@ -1,10 +1,12 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { MatAnchor } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
+import type { RecognitionPlace } from '../../core/speech/speech-service';
+import { StudentVoice } from '../settings/student-voice';
 
 /** An item of the lists of the page: an icon, what it is and a line of detail. */
 interface DataItem {
@@ -52,19 +54,27 @@ const RECORDED: readonly DataItem[] = [
   },
 ];
 
-/** The external services that take part, and what each one receives. */
-const SERVICES: readonly DataItem[] = [
-  {
-    icon: 'smart_toy',
-    title: $localize`:@@myData.services.ai.title:El modelo de IA del tutor`,
-    detail: $localize`:@@myData.services.ai:Las respuestas del tutor las redacta un modelo de inteligencia artificial de un proveedor externo. Recibe el enunciado, tu código, la conversación y el nivel de pista, pero no tu nombre ni tu correo.`,
-  },
-  {
-    icon: 'mic',
-    title: $localize`:@@myData.services.voice.title:El reconocimiento de voz`,
-    detail: $localize`:@@myData.services.voice:Cuando uses la voz, el reconocimiento lo hace tu navegador, que puede enviar el audio a un servicio externo para transcribirlo (Chrome, a Google). Si prefieres evitarlo, puedes escribir siempre.`,
-  },
-];
+/** The model of the tutor, the first external service that takes part. */
+const AI_SERVICE: DataItem = {
+  icon: 'smart_toy',
+  title: $localize`:@@myData.services.ai.title:El modelo de IA del tutor`,
+  detail: $localize`:@@myData.services.ai:Las respuestas del tutor las redacta un modelo de inteligencia artificial de un proveedor externo. Recibe el enunciado, tu código, la conversación y el nivel de pista, pero no tu nombre ni tu correo.`,
+};
+
+/**
+ * What the speech recognition receives, by where this browser transcribes (2.11); without knowing
+ * it (the voice off), what any browser may do. Downloadable still goes to the service until then.
+ */
+const VOICE_ON_SERVER = $localize`:@@myData.services.voice.server:Con la voz activada, este navegador envía el audio a su servicio de reconocimiento para transcribirlo. TutorIA no lo graba. Si prefieres evitarlo, puedes escribir siempre.`;
+const VOICE_DETAILS: Readonly<Record<RecognitionPlace | 'unknown', string>> = {
+  unknown: $localize`:@@myData.services.voice:Cuando uses la voz, el reconocimiento lo hace tu navegador, que puede enviar el audio a un servicio externo para transcribirlo (Chrome, a Google). Si prefieres evitarlo, puedes escribir siempre.`,
+  device: $localize`:@@myData.services.voice.device:Con la voz activada, este navegador la transcribe en tu equipo: el audio no sale de él.`,
+  server: VOICE_ON_SERVER,
+  downloadable: VOICE_ON_SERVER,
+  none: $localize`:@@myData.services.voice.none:Este navegador no reconoce la voz: al tutor se le escribe.`,
+};
+
+const VOICE_TITLE = $localize`:@@myData.services.voice.title:El reconocimiento de voz`;
 
 /**
  * What the app records, what it never records, what for and who sees it (/alumno/datos, ficha 05b,
@@ -77,7 +87,16 @@ const SERVICES: readonly DataItem[] = [
 })
 export class RegisteredDataPage {
   protected readonly recorded = RECORDED;
-  protected readonly services = SERVICES;
+  private readonly recognition = inject(StudentVoice).recognition;
+  /** The external services that take part, and what each one receives. */
+  protected readonly services = computed((): readonly DataItem[] => [
+    AI_SERVICE,
+    {
+      icon: 'mic',
+      title: VOICE_TITLE,
+      detail: VOICE_DETAILS[this.recognition() ?? 'unknown'],
+    },
+  ]);
   protected readonly catalogPath = APP_PATHS.student.catalog;
   protected readonly settingsPath = APP_PATHS.student.settings;
 

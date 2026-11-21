@@ -1,0 +1,82 @@
+<form [formRoot]="questionForm" (keydown.escape)="escape($event)">
+  @if (noticeOpen()) {
+    <app-audio-notice class="mb-2 block" (accepted)="acceptNotice()" />
+  }
+  @if (dictationError(); as error) {
+    <div
+      role="alert"
+      class="mb-2 flex items-center gap-2 rounded-lg bg-error-container p-3 text-on-error-container"
+    >
+      <mat-icon class="shrink-0" aria-hidden="true">mic_off</mat-icon>
+      <p class="min-w-0 flex-1 text-body-medium">{{ errorMessage(error) }}</p>
+    </div>
+  }
+  @if (nothingHeard()) {
+    <div
+      role="status"
+      class="mb-2 flex items-center gap-2 rounded-lg bg-surface-container-high p-3 text-on-surface"
+    >
+      <mat-icon class="shrink-0 text-primary" aria-hidden="true">hearing</mat-icon>
+      <p class="min-w-0 flex-1 text-body-medium" i18n="@@voice.nothingHeard">
+        No he entendido nada. Prueba otra vez o escribe tu pregunta.
+      </p>
+    </div>
+  }
+  <mat-form-field class="w-full">
+    <mat-label i18n="@@tutor.question">Pregunta al tutor</mat-label>
+    <textarea
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="1"
+      cdkAutosizeMaxRows="4"
+      [formField]="questionForm.message"
+      (keydown.enter)="sendOnEnter($event)"
+      (input)="typed()"
+    ></textarea>
+    <span matSuffix class="flex">
+      @if (canDictate()) {
+        <!-- A toggle button: same name, and aria-pressed says whether it is listening -->
+        <button
+          matIconButton
+          type="button"
+          aria-label="Dictar"
+          i18n-aria-label="@@tutor.dictate"
+          [attr.aria-pressed]="dictating()"
+          [matTooltip]="dictating() ? stopDictatingTooltip : dictateTooltip"
+          (click)="toggleDictation()"
+        >
+          <mat-icon [class.text-primary]="dictating()">mic</mat-icon>
+        </button>
+      }
+      <button
+        matIconButton
+        type="submit"
+        aria-label="Enviar la pregunta"
+        i18n-aria-label="@@tutor.send"
+        matTooltip="Enviar"
+        i18n-matTooltip="@@tutor.sendTooltip"
+        disabledInteractive
+        [disabled]="!canSend()"
+      >
+        <mat-icon>send</mat-icon>
+      </button>
+    </span>
+    <!-- Material's hints are a polite live region: «Te escucho…» is said once, when it opens -->
+    @if (dictating()) {
+      <mat-hint class="flex items-center gap-1 text-label-large text-primary">
+        <mat-icon
+          class="size-5! animate-pulse text-[1.25rem]! motion-reduce:animate-none"
+          aria-hidden="true"
+          >mic</mat-icon
+        >
+        <span i18n="@@tutor.dictate.listening">Te escucho…</span>
+      </mat-hint>
+    } @else {
+      <mat-hint i18n="@@tutor.enterHint">Intro para enviar; Mayús + Intro, nueva línea</mat-hint>
+    }
+    <!-- The field gets maxlength from the schema, so the count is all the student needs -->
+    @if (length() >= counterFrom) {
+      <mat-hint align="end">{{ length() }}/{{ maxLength }}</mat-hint>
+    }
+  </mat-form-field>
+</form>

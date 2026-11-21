@@ -211,7 +211,7 @@
           class="ps-14 text-body-small text-on-surface-variant"
           i18n="@@settings.tutor.voice.hint"
         >
-          Podrás escuchar sus respuestas. Nunca se graba el audio.
+          Podrás escucharle y dictarle. Nunca se graba el audio.
         </p>
       </div>
       @if (settings.voice()) {
@@ -321,6 +321,67 @@
               Las respuestas nuevas suenan solas. Si no, pulsa «Escuchar» bajo la que quieras oír.
             </p>
           </div>
+          @if (voice.recognition(); as place) {
+            <div class="flex flex-col gap-2">
+              <h3
+                #whereHeading
+                tabindex="-1"
+                class="text-title-small outline-none"
+                i18n="@@settings.voice.where"
+              >
+                Dónde se transcribe tu voz
+              </h3>
+              <!-- Polite: once the pack is downloaded, the new line is said -->
+              <div class="flex flex-col gap-2" aria-live="polite">
+                @switch (place) {
+                  @case ('device') {
+                    <p
+                      class="text-body-small text-on-surface-variant"
+                      i18n="@@settings.voice.where.device"
+                    >
+                      En este equipo: el audio no sale de él.
+                    </p>
+                  }
+                  @case ('none') {
+                    <p
+                      class="text-body-small text-on-surface-variant"
+                      i18n="@@settings.voice.where.none"
+                    >
+                      Tu navegador no reconoce la voz: puedes escuchar al tutor y escribirle.
+                    </p>
+                  }
+                  @default {
+                    <!-- Only the pack is missing: it dictates through the service until it is there -->
+                    <p
+                      class="text-body-small text-on-surface-variant"
+                      i18n="@@settings.voice.where.server"
+                    >
+                      En el servicio de tu navegador, que recibe el audio para transcribirlo.
+                    </p>
+                    @if (place === 'downloadable') {
+                      <button
+                        matButton="tonal"
+                        type="button"
+                        class="self-start"
+                        disabledInteractive
+                        [disabled]="voice.installing()"
+                        (click)="installRecognition(whereHeading)"
+                      >
+                        <mat-icon>download</mat-icon>
+                        @if (voice.installing()) {
+                          <span i18n="@@settings.voice.installing">Descargando…</span>
+                        } @else {
+                          <span i18n="@@settings.voice.install"
+                            >Reconocer la voz en este equipo</span
+                          >
+                        }
+                      </button>
+                    }
+                  }
+                }
+              </div>
+            </div>
+          }
           <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.screenReader">
             Si usas un lector de pantalla, no necesitas activar la voz: ya te lee las respuestas.
           </p>

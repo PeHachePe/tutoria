@@ -191,4 +191,99 @@ describe('StudentVoice', () => {
     expect(voice.speech()).toBeUndefined();
     expect(voice.canSpeak()).toBe(false);
   });
+
+  describe('recognition', () => {
+    async function placed() {
+      await turnOn();
+      await vi.waitFor(() => expect(voice.recognition()).toBeDefined());
+    }
+
+    it('knows nothing of it with the voice off', () => {
+      setup();
+      TestBed.tick();
+      expect(voice.recognition()).toBeUndefined();
+      expect(voice.canDictate()).toBe(false);
+      expect(voice.needsAudioNotice()).toBe(false);
+      expect(voice.listen(vi.fn())).toBeNull();
+    });
+
+    it.each([
+      ['device', true, false],
+      ['server', true, true],
+      ['downloadable', true, true],
+      ['none', false, false],
+    ] as const)(
+      'in %s, offers dictating (%s) and the notice (%s)',
+      async (place, dictate, notice) => {
+        fake.place = place;
+        setup();
+        await placed();
+        expect(voice.recognition()).toBe(place);
+        expect(voice.canDictate()).toBe(dictate);
+        expect(voice.needsAudioNotice()).toBe(notice);
+      },
+    );
+
+    it('dictates without voices of the language', async () => {
+      fake.voiceList = [alex];
+      setup();
+      await placed();
+      expect(voice.canSpeak()).toBe(false);
+      expect(voice.canDictate()).toBe(true);
+    });
+
+    it('needs no notice once seen', async () => {
+      setup();
+      settings.setAudioNoticeSeen();
+      await placed();
+      expect(voice.needsAudioNotice()).toBe(false);
+    });
+
+    it('downloads the language pack and asks again where it transcribes', async () => {
+      fake.place = 'downloadable';
+      setup();
+      await placed();
+      const installing = voice.installRecognition();
+      expect(voice.installing()).toBe(true);
+      await installing;
+      expect(voice.installing()).toBe(false);
+      expect(fake.installs).toEqual(['es']);
+      expect(voice.recognition()).toBe('device');
+      expect(voice.needsAudioNotice()).toBe(false);
+    });
+
+    it('stays where it was when the download fails', async () => {
+      fake.place = 'downloadable';
+      fake.installWorks = false;
+      setup();
+      await placed();
+      await voice.installRecognition();
+      expect(voice.recognition()).toBe('downloadable');
+    });
+
+    it('downloads nothing with the voice off', async () => {
+      setup();
+      await voice.installRecognition();
+      expect(fake.installs).toEqual([]);
+    });
+
+    it('listens in the language of the interface', async () => {
+      setup();
+      await placed();
+      const heard = vi.fn();
+      const listening = voice.listen(heard);
+      fake.hear('hola');
+      expect(fake.listens).toEqual(['es']);
+      expect(heard).toHaveBeenCalledWith({ text: 'hola', final: true });
+      listening?.stop();
+      expect(await listening?.ended).toBe('stopped');
+    });
+
+    it('takes a browser that cannot answer as one that cannot recognise', async () => {
+      vi.spyOn(fake, 'recognition').mockRejectedValue(new Error('broken'));
+      setup();
+      await placed();
+      expect(voice.recognition()).toBe('none');
+    });
+  });
 });

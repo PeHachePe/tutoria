@@ -33,6 +33,7 @@ import { Splitter } from '../../shared/splitter/splitter';
 import type { SaveStatus } from '../../student/workspace/attempt-store';
 import { RunResults } from '../../student/workspace/code-zone/run-results';
 import { SaveIndicator } from '../../student/workspace/code-zone/save-indicator';
+import { AudioNotice } from '../../student/workspace/tutor/audio-notice';
 import { TutorActions } from '../../student/workspace/tutor/tutor-actions';
 import { TutorMessage } from '../../shared/tutor-message/tutor-message';
 import type { TurnAction } from '../../student/workspace/tutor-store';
@@ -119,6 +120,7 @@ import { ShowcaseTable } from './showcase-table';
     CodeBlock,
     TutorMessage,
     TutorActions,
+    AudioNotice,
     RunResults,
     Splitter,
     LiveBar,

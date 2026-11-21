@@ -189,6 +189,15 @@ export class SettingsPage {
     else void this.voice.sample(id);
   }
 
+  /**
+   * «Reconocer la voz en este equipo». The button goes when it is done, so the focus moves to the
+   * heading of the line, which now says where it transcribes.
+   */
+  protected async installRecognition(heading: HTMLElement): Promise<void> {
+    await this.voice.installRecognition();
+    heading.focus();
+  }
+
   protected trySample(): void {
     this.sample.set({ id: crypto.randomUUID(), ...sampleReaction(this.samples++) });
   }

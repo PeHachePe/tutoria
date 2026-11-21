@@ -2,7 +2,13 @@ import { computed, effect, inject, resource, Service, type Signal, signal } from
 
 import { LanguageService } from '../../core/i18n/language-service';
 import { SpeechLoader } from '../../core/speech/speech-loader';
-import type { SpeechService, SpeechVoice } from '../../core/speech/speech-service';
+import type {
+  Listening,
+  RecognitionPlace,
+  SpeechService,
+  SpeechVoice,
+  Transcript,
+} from '../../core/speech/speech-service';
 import { SettingsStore } from './settings-store';
 
 /** What «Probar» says with each voice. */
@@ -12,8 +18,9 @@ const SAMPLE = $localize`:@@settings.voice.sample:Hola, soy tu tutor. ¿Seguimos
  * The student's voice settings joined with what the browser can do (2.11, D-071): it loads the
  * speech only with the voice on, gives the voices of the interface's language, the most natural
  * first, and the tutor's: the chosen one while it still exists, or else the most natural (D-078).
- * Not a store: it keeps no state but what is being tried. The settings, the chat and, later, the
- * dictation and the call use it.
+ * It also says where the browser would transcribe the voice and opens the microphone. Not a store:
+ * it keeps no state but what is being tried or downloaded. The settings, the chat, the dictation
+ * and, later, the call use it.
  */
 @Service()
 export class StudentVoice {
@@ -30,6 +37,10 @@ export class StudentVoice {
     params: () => this.speechResource.value(),
     loader: ({ params }) => params.voices(this.locale).catch(() => []),
     defaultValue: [],
+  });
+  private readonly recognitionResource = resource({
+    params: () => this.speechResource.value(),
+    loader: ({ params }) => this.askRecognition(params),
   });
 
   /** The speech of the browser, loaded only with the voice on; undefined until then. */
@@ -50,6 +61,25 @@ export class StudentVoice {
   readonly chosen = computed(() => this.chosenVoice() !== undefined);
   /** The voice of the tutor: the chosen one, or the most natural of the language. */
   readonly tutorVoice = computed(() => this.chosenVoice() ?? this.voices()[0]);
+
+  /** Where this browser would transcribe; undefined with the voice off or while it is asked. */
+  readonly recognition: Signal<RecognitionPlace | undefined> = computed(() =>
+    this.settings.voice() ? this.recognitionResource.value() : undefined,
+  );
+  /** The browser can recognise speech: «Dictar» and the call are offered, with voices or not. */
+  readonly canDictate = computed(() => {
+    const place = this.recognition();
+    return place !== undefined && place !== 'none';
+  });
+  /** The audio leaves the device and the student has not been told yet (2.11). */
+  readonly needsAudioNotice = computed(() => {
+    const place = this.recognition();
+    return (place === 'server' || place === 'downloadable') && !this.settings.audioNoticeSeen();
+  });
+
+  private readonly installingState = signal(false);
+  /** Downloading the language pack, from «Reconocer la voz en este equipo». */
+  readonly installing = this.installingState.asReadonly();
 
   private readonly samplingState = signal<string | null>(null);
   /** The voice being tried with «Probar», to offer stopping it; null in silence. */
@@ -96,5 +126,32 @@ export class StudentVoice {
   stop(): void {
     this.samplingState.set(null);
     this.speech()?.stopSpeaking();
+  }
+
+  /**
+   * «Reconocer la voz en este equipo»: downloads the pack of the interface's language and asks
+   * again where it transcribes, so the dictation uses the device from then on.
+   */
+  async installRecognition(): Promise<void> {
+    const speech = this.speech();
+    if (!speech) return;
+    this.installingState.set(true);
+    try {
+      await speech.installRecognition(this.locale);
+      this.recognitionResource.set(await this.askRecognition(speech));
+    } finally {
+      this.installingState.set(false);
+    }
+  }
+
+  /** Where it transcribes; a browser that cannot answer is one that cannot recognise. */
+  private askRecognition(speech: SpeechService): Promise<RecognitionPlace> {
+    return speech.recognition(this.locale).catch(() => 'none' as const);
+  }
+
+  /** Opens the microphone in the language of the interface; null with the voice off. */
+  listen(heard: (transcript: Transcript) => void): Listening | null {
+    const speech = this.speech();
+    return speech && this.settings.voice() ? speech.listen(this.locale, heard) : null;
   }
 }

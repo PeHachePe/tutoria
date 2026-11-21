@@ -82,7 +82,7 @@
     </h2>
     <!-- The same list as what is recorded; the secondary colour sets third parties apart -->
     <ul class="flex flex-col gap-4">
-      @for (service of services; track service.icon) {
+      @for (service of services(); track service.icon) {
         <li class="flex gap-3">
           <span
             class="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container"
