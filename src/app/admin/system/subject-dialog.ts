@@ -67,7 +67,7 @@ export interface SubjectDialogData {
     </h2>
     <form [formRoot]="subjectForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-2 sm:min-w-md">
+        <div class="flex flex-col gap-2 app-form-dialog">
           @let name = source();
           <mat-form-field>
             <mat-label i18n="@@subjectDialog.name">Nombre</mat-label>

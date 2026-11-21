@@ -1,6 +1,10 @@
 import { assertEquals } from '@std/assert';
 
-import { MAX_DISABLE_BATCH, type UserLinks } from '../../../src/app/data/admin/user-rules.ts';
+import {
+  MAX_CREATE_BATCH,
+  MAX_DISABLE_BATCH,
+  type UserLinks,
+} from '../../../src/app/data/admin/user-rules.ts';
 import {
   type AdminUsersStore,
   createAdminUsersHandler,
@@ -46,6 +50,8 @@ class FakeStore implements AdminUsersStore {
   readonly calls: string[] = [];
   readonly passwords = new Map<string, string>();
   failProfile = false;
+  /** Accounts created so far: the first is `NEW_ID`, the others follow it. */
+  private created = 0;
   /** As Auth with a password past 72 bytes. */
   rejectPasswords = false;
 
@@ -63,10 +69,13 @@ class FakeStore implements AdminUsersStore {
     if (this.emails.has(account.email)) return Promise.resolve(EMAIL_EXISTS);
     if (this.rejectPasswords) return Promise.reject(new PasswordRejectedError('too long'));
     this.calls.push(`create ${account.email}`);
-    this.passwords.set(NEW_ID, account.password);
+    const id = this.created === 0 ? NEW_ID : NEW_ID.replace(/99$/, String(this.created + 10));
+    this.created += 1;
+    this.emails.add(account.email);
+    this.passwords.set(id, account.password);
     // As the trigger `create_app_user`: always a student
-    this.rows.set(NEW_ID, { ...row(NEW_ID, account.name, 'student'), email: account.email });
-    return Promise.resolve(NEW_ID);
+    this.rows.set(id, { ...row(id, account.name, 'student'), email: account.email });
+    return Promise.resolve(id);
   }
   deleteAccount(userId: string) {
     this.calls.push(`delete ${userId}`);
@@ -120,6 +129,16 @@ const update = (userId: string, changes: Record<string, unknown>) => ({
 });
 
 const disable = (...userIds: string[]) => ({ action: 'disable', userIds });
+
+const student = (name: string, email = `${name.toLowerCase()}@tutoria.test`) => ({
+  name,
+  email,
+  password: PASSWORD,
+});
+const createStudents = (...students: ReturnType<typeof student>[]) => ({
+  action: 'create_students',
+  students,
+});
 
 /** Runs `fn` without the errors the function logs on purpose. */
 async function quietly<T>(fn: () => Promise<T>): Promise<T> {
@@ -266,6 +285,71 @@ Deno.test(
   },
 );
 
+Deno.test('the accounts of a list of students are created one after another', async () => {
+  const { store, handle } = setup();
+
+  const response = await handle(post(createStudents(student('Ana', ' Ana@Tutoria.test '))));
+
+  assertEquals(response.status, 200);
+  const result = await response.json();
+  assertEquals(result.existing, []);
+  assertEquals(result.failed, []);
+  assertEquals(
+    result.created.map(({ id, name, email, role }: UserRow) => ({ id, name, email, role })),
+    [{ id: NEW_ID, name: 'Ana', email: 'ana@tutoria.test', role: 'student' }],
+  );
+  // Only the account: the trigger makes the row of a student with its name
+  assertEquals(store.calls, ['create ana@tutoria.test']);
+  assertEquals(store.passwords.get(NEW_ID), PASSWORD);
+  assertEquals(JSON.stringify(result).includes(PASSWORD), false);
+});
+
+Deno.test(
+  'an email with an account, or an account that fails, is told apart and the others go on',
+  async () => {
+    const { store, handle } = setup();
+    const createAccount = store.createAccount.bind(store);
+    store.createAccount = (account) =>
+      account.email === 'rota@tutoria.test'
+        ? Promise.reject(new Error('Auth down'))
+        : createAccount(account);
+    const profileOf = store.profileOf.bind(store);
+    // The row of Bea is not there: her account goes away
+    store.profileOf = (userId) =>
+      store.rows.get(userId)?.name === 'Bea' ? Promise.resolve(null) : profileOf(userId);
+
+    const response = await quietly(() =>
+      handle(
+        post(createStudents(student('Lucia'), student('Rota'), student('Bea'), student('Eva'))),
+      ),
+    );
+
+    const result = await response.json();
+    assertEquals(result.existing, ['lucia@tutoria.test']);
+    assertEquals(result.failed, ['rota@tutoria.test', 'bea@tutoria.test']);
+    assertEquals(
+      result.created.map(({ name }: UserRow) => name),
+      ['Eva'],
+    );
+    assertEquals(store.calls, [
+      'create bea@tutoria.test',
+      `delete ${NEW_ID}`,
+      'create eva@tutoria.test',
+    ]);
+  },
+);
+
+Deno.test('an account left halfway that cannot be removed is only logged', async () => {
+  const { store, handle } = setup();
+  store.profileOf = (userId) =>
+    userId === ADMIN_ID ? Promise.resolve(row(ADMIN_ID, 'Admin', 'admin')) : Promise.resolve(null);
+  store.deleteAccount = () => Promise.reject(new Error('Auth down'));
+
+  const response = await quietly(() => handle(post(createStudents(student('Ana')))));
+
+  assertEquals(await response.json(), { created: [], existing: [], failed: ['ana@tutoria.test'] });
+});
+
 Deno.test('each change the rules forbid is a conflict that names it', async () => {
   const { store, handle } = setup();
   store.links.set(STUDENT_ID, { groups: 0, enrollments: 1 });
@@ -325,6 +409,14 @@ Deno.test('a body that is not a request is invalid', async () => {
         { length: MAX_DISABLE_BATCH + 1 },
         (_, n) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
       ),
+    ),
+    createStudents(),
+    createStudents(student('Ana', 'no es un correo')),
+    createStudents({ ...student('Ana'), password: 'corta' }),
+    createStudents(student('  ')),
+    createStudents(student('Ana', 'ana@tutoria.test'), student('Otra', 'ANA@tutoria.test')),
+    createStudents(
+      ...Array.from({ length: MAX_CREATE_BATCH + 1 }, (_, n) => student(`Alumno${n}`)),
     ),
   ];
 

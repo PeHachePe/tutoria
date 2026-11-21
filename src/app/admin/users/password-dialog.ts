@@ -48,7 +48,7 @@ function passwordSchema(path: SchemaPathTree<PasswordModel>): void {
     <h2 mat-dialog-title i18n="@@passwordDialog.title">Restablecer la contraseña</h2>
     <form [formRoot]="passwordForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-3 sm:min-w-md">
+        <div class="flex flex-col gap-3 app-form-dialog">
           <p class="text-body-medium" i18n="@@passwordDialog.text">
             La contraseña de {{ data.name }} cambia en cuanto la guardes: la anterior deja de
             servir.

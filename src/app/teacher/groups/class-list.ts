@@ -6,6 +6,7 @@ import type {
   RosterStudent,
 } from '../../data/group-service';
 import { subjectName } from '../../data/localized-text';
+import { toCsv } from '../../shared/download-text';
 
 /** A class as the selector of the screen offers it (5.2d). */
 export interface ClassOption {
@@ -154,12 +155,7 @@ export function rosterCsv(
     row.member ? yes : no,
     ...columns.map(({ managed }) => (row.groupIds.includes(managed.group.id) ? yes : no)),
   ]);
-  return [head, ...lines].map((line) => line.map(csvField).join(';')).join('\r\n') + '\r\n';
-}
-
-/** Between quotes, doubling them, when the field has a separator, a quote or a line break. */
-function csvField(value: string): string {
-  return /[;"\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+  return toCsv([head, ...lines]);
 }
 
 /** «1.º DAW A 2026-27.csv»: a slash is not allowed in the name of a file. */

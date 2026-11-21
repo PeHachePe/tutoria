@@ -1,0 +1,287 @@
+<h2 mat-dialog-title i18n="@@newStudents.title">Alta de varios alumnos</h2>
+<mat-dialog-content>
+  <div class="flex flex-col gap-4" [attr.aria-busy]="phase() === 'saving'">
+    @switch (phase()) {
+      @case ('paste') {
+        <p class="text-body-medium" i18n="@@newStudents.paste.text">
+          Pega la lista de secretaría: un alumno por línea, con su nombre y su correo. Sirve tal
+          como sale de Excel, o separada por «;» o comas. Antes de crear nada podrás revisarla.
+        </p>
+        <mat-form-field subscriptSizing="dynamic">
+          <mat-label i18n="@@newStudents.paste.label">Nombre y correo, uno por línea</mat-label>
+          <textarea
+            matInput
+            rows="8"
+            spellcheck="false"
+            [value]="text()"
+            (input)="onInput($event)"
+          ></textarea>
+          <mat-hint i18n="@@newStudents.paste.hint"
+            >Por ejemplo: García López, Ana; ana.garcia&#64;centro.es</mat-hint
+          >
+        </mat-form-field>
+        @if (tooMany()) {
+          <p class="text-body-medium text-error" role="alert" i18n="@@newStudents.paste.tooMany">
+            Como mucho {{ maxLines }} líneas de una vez.
+          </p>
+        }
+      }
+      @case ('review') {
+        <p class="text-title-medium" role="status">
+          <span i18n="@@newStudents.review.create">{toCreate().length, plural,
+            =0 {No se crea ninguna cuenta}
+            =1 {Se crea 1 cuenta de alumno}
+            other {Se crean {{ toCreate().length }} cuentas de alumno}
+          }</span>
+          @if (skipped().length > 0) {
+            <span>&nbsp;·&nbsp;</span>
+            <span i18n="@@newStudents.review.skipped">{skipped().length, plural,
+              =1 {1 línea se queda fuera}
+              other {{{ skipped().length }} líneas se quedan fuera}
+            }</span>
+          }
+        </p>
+        <p class="text-body-medium text-on-surface-variant" i18n="@@newStudents.review.text">
+          Todavía no se ha creado nada. Cada cuenta tendrá una contraseña al azar, que verás al
+          terminar para entregarla en persona.
+        </p>
+
+        @if (skipped().length > 0) {
+          <section class="flex flex-col gap-1" aria-labelledby="new-students-skipped">
+            <h3
+              id="new-students-skipped"
+              class="text-title-small"
+              i18n="@@newStudents.review.skippedHeading"
+            >
+              No se crean
+            </h3>
+            <ul
+              class="flex max-h-40 flex-col overflow-y-auto rounded-lg border border-outline-variant"
+            >
+              @for (item of skipped(); track item.row.line) {
+                <li class="flex items-start gap-3 px-3 py-2">
+                  <mat-icon class="shrink-0 text-on-surface-variant" aria-hidden="true">{{
+                    item.icon
+                  }}</mat-icon>
+                  <span class="flex min-w-0 flex-col">
+                    <span class="break-words">{{ item.text }}</span>
+                    <span class="text-body-small text-on-surface-variant">
+                      <span i18n="@@newStudents.review.line">Línea {{ item.row.line }}</span> ·
+                      {{ item.reason }}
+                    </span>
+                  </span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        @if (toCreate().length > 0) {
+          <section class="flex flex-col gap-1" aria-labelledby="new-students-created">
+            <h3
+              id="new-students-created"
+              class="text-title-small"
+              i18n="@@newStudents.review.createHeading"
+            >
+              Se crean
+            </h3>
+            <ul
+              class="flex max-h-60 flex-col overflow-y-auto rounded-lg border border-outline-variant"
+            >
+              @for (row of toCreate(); track row.line) {
+                <li class="flex items-center gap-3 px-3 py-2">
+                  <mat-icon class="shrink-0 text-primary" aria-hidden="true">person_add</mat-icon>
+                  <span class="flex min-w-0 flex-col">
+                    <span>{{ row.name }}</span>
+                    <span class="text-body-small break-all text-on-surface-variant">{{
+                      row.email
+                    }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          </section>
+
+          @if (classChoices().length > 0) {
+            <mat-form-field subscriptSizing="dynamic">
+              <mat-label i18n="@@newStudents.class">Matricular en una clase</mat-label>
+              <mat-select [value]="classId()" (selectionChange)="selectClass($event.value)">
+                <mat-option [value]="noClass" i18n="@@newStudents.class.none"
+                  >Sin matricular</mat-option
+                >
+                @for (choice of classChoices(); track choice.id) {
+                  <mat-option [value]="choice.id">{{ choice.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint i18n="@@newStudents.class.hint"
+                >Opcional: también se puede hacer después, en Grupos.</mat-hint
+              >
+            </mat-form-field>
+          }
+        }
+      }
+      @case ('saving') {
+        <p class="text-body-medium" role="status">
+          @if (left() > 0) {
+            <span i18n="@@newStudents.saving.create"
+              >Creando las cuentas: {{ done() }} de {{ total() }}…</span
+            >
+          } @else {
+            <span i18n="@@newStudents.saving.enroll"
+              >Matriculando en {{ chosenClass()?.label }}…</span
+            >
+          }
+        </p>
+        <mat-progress-bar
+          mode="determinate"
+          [value]="progress()"
+          aria-label="Progreso del alta"
+          i18n-aria-label="@@newStudents.saving.progress"
+        />
+      }
+      @case ('done') {
+        @if (credentials().length > 0) {
+          <p class="flex items-center gap-2 text-title-medium" role="status">
+            <mat-icon class="text-primary" aria-hidden="true">check_circle</mat-icon>
+            @if (enrolled() === 'yes') {
+              <span i18n="@@newStudents.done.createdEnrolled">{credentials().length, plural,
+                =1 {1 cuenta creada y matriculada en {{ chosenClass()?.label }}}
+                other {
+                  {{ credentials().length }} cuentas creadas y matriculadas en {{
+                  chosenClass()?.label }}
+                }
+              }</span>
+            } @else {
+              <span i18n="@@newStudents.done.created">{credentials().length, plural,
+                =1 {1 cuenta creada}
+                other {{{ credentials().length }} cuentas creadas}
+              }</span>
+            }
+          </p>
+        }
+        @if (enrolled() === 'failed') {
+          <div class="flex flex-wrap items-center gap-2" role="alert">
+            <p class="text-body-medium text-error" i18n="@@newStudents.done.enrollFailed">
+              Las cuentas se crearon, pero no se pudieron matricular en {{ chosenClass()?.label }}.
+            </p>
+            <button
+              matButton
+              type="button"
+              (click)="enroll()"
+              i18n="@@newStudents.done.enrollAgain"
+            >
+              Volver a matricular
+            </button>
+          </div>
+        }
+        @if (failure(); as message) {
+          <div class="flex flex-wrap items-center gap-2" role="alert">
+            <p class="text-body-medium text-error">
+              {{ message }}
+              <span i18n="@@newStudents.done.left">{left(), plural,
+                =1 {Falta 1 por crear.}
+                other {Faltan {{ left() }} por crear.}
+              }</span>
+            </p>
+            <button
+              matButton
+              type="button"
+              (click)="createPending()"
+              i18n="@@newStudents.done.retry"
+            >
+              Reintentar los que faltan
+            </button>
+          </div>
+        }
+        @if (existing().length > 0) {
+          <p class="text-body-medium" i18n="@@newStudents.done.existing">
+            Ya tenían cuenta, no se ha cambiado nada: {{ existing().join(', ') }}.
+          </p>
+        }
+        @if (failed().length > 0) {
+          <p class="text-body-medium text-error" i18n="@@newStudents.done.failed">
+            No se pudieron crear: {{ failed().join(', ') }}. Vuelve a pegarlos más tarde.
+          </p>
+        }
+
+        @if (credentials().length > 0) {
+          <div
+            class="flex items-start gap-3 rounded-xl bg-warning-container px-4 py-3 text-on-warning-container"
+          >
+            <mat-icon class="shrink-0" aria-hidden="true">key</mat-icon>
+            <p class="text-body-medium" i18n="@@newStudents.done.warning">
+              Las contraseñas solo se ven ahora. Descárgalas o imprímelas para entregar a cada
+              alumno la suya en persona: la tira de cada uno se recorta.
+            </p>
+          </div>
+          <ul
+            class="flex max-h-60 flex-col overflow-y-auto rounded-lg border border-outline-variant"
+            aria-label="Cuentas creadas"
+            i18n-aria-label="@@newStudents.done.list"
+          >
+            @for (credential of credentials(); track credential.email) {
+              <li class="flex flex-wrap items-center justify-between gap-x-4 px-3 py-2">
+                <span class="flex min-w-0 flex-col">
+                  <span>{{ credential.name }}</span>
+                  <span class="text-body-small break-all text-on-surface-variant">{{
+                    credential.email
+                  }}</span>
+                </span>
+                <code class="font-mono text-body-large">{{ credential.password }}</code>
+              </li>
+            }
+          </ul>
+        }
+      }
+    }
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions class="flex-wrap">
+  @switch (phase()) {
+    @case ('paste') {
+      <button matButton type="button" (click)="close()" i18n="@@newStudents.cancel">
+        Cancelar
+      </button>
+      <button matButton="filled" type="button" [disabled]="!canCheck()" (click)="check()">
+        <mat-icon aria-hidden="true">checklist</mat-icon>
+        <span i18n="@@newStudents.check">Comprobar la lista</span>
+      </button>
+    }
+    @case ('review') {
+      <button matButton type="button" (click)="back()" i18n="@@newStudents.back">
+        Volver a la lista
+      </button>
+      <button
+        matButton="filled"
+        type="button"
+        [disabled]="toCreate().length === 0"
+        (click)="create()"
+      >
+        <span i18n="@@newStudents.create">{toCreate().length, plural,
+          =1 {Crear 1 cuenta}
+          other {Crear {{ toCreate().length }} cuentas}
+        }</span>
+      </button>
+    }
+    @case ('saving') {
+      <button matButton="filled" type="button" disabled i18n="@@newStudents.creating">
+        Creando…
+      </button>
+    }
+    @case ('done') {
+      @if (credentials().length > 0) {
+        <button matButton="outlined" type="button" (click)="download()">
+          <mat-icon aria-hidden="true">download</mat-icon>
+          <span i18n="@@newStudents.download">Descargar CSV</span>
+        </button>
+        <button matButton="outlined" type="button" (click)="print()">
+          <mat-icon aria-hidden="true">print</mat-icon>
+          <span i18n="@@newStudents.print">Imprimir las tiras</span>
+        </button>
+      }
+      <button matButton="filled" type="button" (click)="close()" i18n="@@newStudents.close">
+        Cerrar
+      </button>
+    }
+  }
+</mat-dialog-actions>

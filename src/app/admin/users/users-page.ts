@@ -54,6 +54,7 @@ import { pageOf } from '../../shared/page-of';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { FinishedDialog, type FinishedDialogData } from './finished-dialog';
+import { NewStudentsDialog, type NewStudentsDialogData } from './new-students-dialog';
 import { PasswordDialog, type PasswordDialogData } from './password-dialog';
 import { roleLock } from './role-lock';
 import { ROLE_LABELS, ROLES } from './role-labels';
@@ -88,7 +89,6 @@ const STATUS_OPTIONS: readonly { readonly status: StatusFilter; readonly label: 
   { status: 'all', label: $localize`:@@users.status.filter.all:Todas` },
 ];
 
-/** Rows drawn while the list loads. */
 /** The situations of the students (5.2g), as the URL and the select name them. */
 const SITUATION_OPTIONS: readonly {
   readonly situation: StudentSituation;
@@ -114,7 +114,12 @@ const SITUATION_OPTIONS: readonly {
 
 const ALL_SITUATIONS = 'all';
 
+/** Rows drawn while the list loads. */
 const SKELETON_ROWS = [1, 2, 3, 4, 5, 6];
+
+/** The dialog of a list of students: room for a name and an email side by side. */
+const NEW_STUDENTS_DIALOG_WIDTH = '44rem';
+const NEW_STUDENTS_DIALOG_MAX_WIDTH = 'calc(100vw - 2rem)';
 
 /** The columns of the table; the groups only from `md` (ficha 10). */
 const COLUMNS = ['name', 'role', 'groups', 'actions'];
@@ -397,6 +402,24 @@ export class UsersPage {
         $localize`:@@users.created:Cuenta creada. Entrégale la contraseña en persona.`,
       );
     }
+  }
+
+  /**
+   * The accounts of a list from secretaría (5.2h). The list reloads after it: the new accounts and
+   * the groups of those enrolled.
+   */
+  protected async createStudents(): Promise<void> {
+    const ref = this.dialog.open<NewStudentsDialog, NewStudentsDialogData, number>(
+      NewStudentsDialog,
+      {
+        data: { users: this.entries().map(({ user }) => user) },
+        width: NEW_STUDENTS_DIALOG_WIDTH,
+        maxWidth: NEW_STUDENTS_DIALOG_MAX_WIDTH,
+        injector: this.injector,
+      },
+    );
+    // The dialog always closes with how many it created: with none, nothing changed
+    if (await firstValueFrom(ref.afterClosed())) this.users.reload();
   }
 
   protected async edit(entry: UserEntry): Promise<void> {

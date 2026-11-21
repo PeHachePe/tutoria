@@ -84,7 +84,7 @@ export interface BlockDialogData {
     </h2>
     <form [formRoot]="blockForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-2 sm:min-w-md">
+        <div class="flex flex-col gap-2 app-form-dialog">
           <!-- The title first: it is what the dialog is for, and it takes the focus. The limit of
                length reaches the inputs as maxlength, so only a missing title is an error -->
           @let title = source();

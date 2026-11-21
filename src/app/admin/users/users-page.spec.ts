@@ -18,7 +18,9 @@ import {
   USERS,
 } from '../../data/mock/fixtures/users';
 import { MockAdminService } from '../../data/mock/mock-admin-service';
+import { GroupService } from '../../data/group-service';
 import { MockDb } from '../../data/mock/mock-db';
+import { MockGroupService } from '../../data/mock/mock-group-service';
 import { MockNetwork } from '../../data/mock/mock-network';
 import { LOADING_INDICATOR_DELAY_MS } from '../../shared/skeleton/loading-skeleton';
 import { UsersPage } from './users-page';
@@ -57,6 +59,8 @@ describe('UsersPage', () => {
         provideSessionOf('admin', { id: ADMIN_ID }),
         MockAdminService,
         { provide: AdminService, useExisting: MockAdminService },
+        MockGroupService,
+        { provide: GroupService, useExisting: MockGroupService },
       ],
     });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
@@ -233,6 +237,43 @@ describe('UsersPage', () => {
     expect(text(rows()[0])).toContain('Aaron Abad');
     expect(screen.getByText(`${ACTIVE + 1} cuentas`)).toBeTruthy();
     expect(open).toHaveBeenCalledWith('Cuenta creada. Entrégale la contraseña en persona.');
+  });
+
+  it('creates the accounts of a list of students, and reloads the list after (5.2h)', async () => {
+    const harness = await renderUsers();
+    const createStudents = vi.spyOn(service, 'createStudents');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Alta de varios…' }));
+    const dialog = await openedDialog();
+    // Lucía has an account already: the dialog knows the list loaded
+    await userEvent.click(within(dialog).getByRole('textbox', { name: /Nombre y correo/ }));
+    await userEvent.paste(`Abad, Aaron;aaron@tutoria.test\nLucía;${LUCIA.email}`);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Comprobar la lista' }));
+    expect(within(dialog).getByText('Ya tiene una cuenta', { exact: false })).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Crear 1 cuenta' }));
+    await within(dialog).findByText('1 cuenta creada');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cerrar' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Cerrar sin guardarlas' }));
+    await closed();
+    await settle(harness);
+
+    expect(createStudents.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ name: 'Aaron Abad', email: 'aaron@tutoria.test' }),
+    ]);
+    expect(text(rows()[0])).toContain('Aaron Abad');
+    expect(screen.getByText(`${ACTIVE + 1} cuentas`)).toBeTruthy();
+  });
+
+  it('keeps the list as it is when no account was created', async () => {
+    await renderUsers();
+    const listUsers = vi.spyOn(service, 'listUsers');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Alta de varios…' }));
+    const dialog = await openedDialog();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await closed();
+
+    expect(listUsers).not.toHaveBeenCalled();
   });
 
   it('tells an email that already has an account before sending it', async () => {

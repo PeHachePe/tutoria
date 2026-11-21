@@ -6,10 +6,21 @@
         Las cuentas del centro: altas, roles y contraseñas.
       </p>
     </div>
-    <button matButton="filled" type="button" [disabled]="!users.hasValue()" (click)="create()">
-      <mat-icon aria-hidden="true">person_add</mat-icon>
-      <span i18n="@@users.new">Nuevo usuario</span>
-    </button>
+    <div class="flex flex-wrap gap-2">
+      <button
+        matButton="outlined"
+        type="button"
+        [disabled]="!users.hasValue()"
+        (click)="createStudents()"
+      >
+        <mat-icon aria-hidden="true">group_add</mat-icon>
+        <span i18n="@@users.newStudents">Alta de varios…</span>
+      </button>
+      <button matButton="filled" type="button" [disabled]="!users.hasValue()" (click)="create()">
+        <mat-icon aria-hidden="true">person_add</mat-icon>
+        <span i18n="@@users.new">Nuevo usuario</span>
+      </button>
+    </div>
   </header>
 
   @if (finishedCount() > 0) {

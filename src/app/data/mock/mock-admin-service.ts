@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 
 import {
+  MAX_CREATE_BATCH,
   MAX_DISABLE_BATCH,
   MAX_EMAIL_LENGTH,
   MAX_PASSWORD_LENGTH,
@@ -12,8 +13,10 @@ import {
 import { toUserEntry } from '../admin/user-entry';
 import {
   AdminService,
+  type CreateStudentsResult,
   type DisableResult,
   type FinishedStudent,
+  type NewStudent,
   type NewUser,
   type SubjectDraft,
   type UserChanges,
@@ -78,29 +81,60 @@ export class MockAdminService extends AdminService {
   createUser({ name, email, role, password }: NewUser): Promise<AppUser> {
     return this.network.request(() => {
       this.db.requireUser('admin');
-      const address = normalizeEmail(email);
-      const tables = this.db.tables();
-      if (address.length > MAX_EMAIL_LENGTH || !isValidPassword(password)) {
-        throw new DataError('invalid');
-      }
-      if (tables.users.some((user) => user.email === address)) {
+      const address = validEmail(email);
+      validName(name);
+      if (!isValidPassword(password)) throw new DataError('invalid');
+      if (this.hasAccount(address)) {
         throw new DataError('invalid', 'The email already has an account');
       }
-      const createdAt = now();
-      const user: AppUser = {
-        id: crypto.randomUUID(),
-        name: validName(name),
-        email: address,
-        role,
-        status: 'active',
-        privacyNoticeSeenAt: null,
-        createdAt,
-        updatedAt: createdAt,
-      };
-      this.db.update('users', (rows) => [...rows, user]);
-      this.db.update('passwords', (passwords) => ({ ...passwords, [user.id]: password }));
-      return user;
+      return this.addAccount(name, address, role, password);
     });
+  }
+
+  createStudents(students: readonly NewStudent[]): Promise<CreateStudentsResult> {
+    return this.network.request(() => {
+      this.db.requireUser('admin');
+      const addresses = students.map(({ email }) => validEmail(email));
+      if (
+        students.length === 0 ||
+        students.length > MAX_CREATE_BATCH ||
+        new Set(addresses).size !== addresses.length ||
+        !students.every(({ password }) => isValidPassword(password))
+      ) {
+        throw new DataError('invalid', 'Between 1 and 25 different, valid students');
+      }
+      students.forEach(({ name }) => validName(name));
+      const created: AppUser[] = [];
+      const existing: string[] = [];
+      students.forEach(({ name, password }, index) => {
+        const address = addresses[index];
+        if (this.hasAccount(address)) existing.push(address);
+        else created.push(this.addAccount(name, address, 'student', password));
+      });
+      return { created, existing, failed: [] };
+    });
+  }
+
+  private hasAccount(address: string): boolean {
+    return this.db.tables().users.some((user) => user.email === address);
+  }
+
+  /** An active account with its password, as Auth and the trigger `create_app_user` make it. */
+  private addAccount(name: string, address: string, role: AppUser['role'], password: string) {
+    const createdAt = now();
+    const user: AppUser = {
+      id: crypto.randomUUID(),
+      name: validName(name),
+      email: address,
+      role,
+      status: 'active',
+      privacyNoticeSeenAt: null,
+      createdAt,
+      updatedAt: createdAt,
+    };
+    this.db.update('users', (rows) => [...rows, user]);
+    this.db.update('passwords', (passwords) => ({ ...passwords, [user.id]: password }));
+    return user;
   }
 
   updateUser(userId: string, changes: UserChanges): Promise<AppUser> {
@@ -256,6 +290,13 @@ function validSubject(draft: Omit<Subject, 'id'>): Omit<Subject, 'id'> {
     throw new DataError('invalid', 'A subject needs a name in every language it has');
   }
   return { ...draft, name };
+}
+
+/** Normalized, as Auth keeps it; `invalid` past the length the standard allows. */
+function validEmail(email: string): string {
+  const address = normalizeEmail(email);
+  if (address.length > MAX_EMAIL_LENGTH) throw new DataError('invalid');
+  return address;
 }
 
 function isValidPassword(password: string): boolean {

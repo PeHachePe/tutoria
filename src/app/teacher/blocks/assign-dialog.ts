@@ -68,7 +68,7 @@ interface AssignModel {
     <h2 mat-dialog-title i18n="@@assign.title">Asignar a un bloque</h2>
     <form [formRoot]="assignForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-2 sm:min-w-md" [attr.aria-busy]="groups.isLoading()">
+        <div class="flex flex-col gap-2 app-form-dialog" [attr.aria-busy]="groups.isLoading()">
           <p class="mb-2 text-body-medium text-on-surface-variant" [attr.lang]="data.lang">
             {{ data.title }}
           </p>

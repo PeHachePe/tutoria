@@ -12,6 +12,19 @@ export interface NewUser {
   readonly password: string;
 }
 
+/** A student of a list from secretaría (5.2h), with the password generated for them. */
+export type NewStudent = Omit<NewUser, 'role'>;
+
+/** What `createStudents()` did with each one. */
+export interface CreateStudentsResult {
+  /** The new accounts, in the order of the list. */
+  readonly created: readonly AppUser[];
+  /** The emails, normalized, that already had an account: nothing was done with them. */
+  readonly existing: readonly string[];
+  /** The emails whose account could not be created: none is left halfway. */
+  readonly failed: readonly string[];
+}
+
 export interface UserChanges {
   readonly name?: string;
   readonly role?: Role;
@@ -67,6 +80,13 @@ export abstract class AdminService {
    * already has an account (CU-06, 3a).
    */
   abstract createUser(user: NewUser): Promise<AppUser>;
+
+  /**
+   * Creates the accounts of several students at once (5.2h), each as `createUser()` with the role of
+   * a student; an email with an account is skipped and said. `MAX_CREATE_BATCH` at most, without
+   * repeating an email and each valid, or nothing is created (`invalid`).
+   */
+  abstract createStudents(students: readonly NewStudent[]): Promise<CreateStudentsResult>;
 
   /**
    * Throws `invalid` with any `UserChangeProblem` (`admin/user-rules.ts`) and `not_found` without

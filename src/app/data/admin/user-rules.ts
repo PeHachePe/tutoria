@@ -23,6 +23,12 @@ export const MAX_PASSWORD_LENGTH = 64;
  */
 export const MAX_DISABLE_BATCH = 100;
 
+/**
+ * Accounts created in one request (5.2h): Auth creates them one by one, so the screen sends a long
+ * list in parts this size, which answer in time and tell how far it got.
+ */
+export const MAX_CREATE_BATCH = 25;
+
 export type UserChangeProblem = 'own_role' | 'own_status' | 'has_groups' | 'has_enrollments';
 
 /** What ties a user to the classes: the groups they teach and their enrollments. */

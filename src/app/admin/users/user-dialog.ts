@@ -64,7 +64,7 @@ export interface UserDialogData {
     </h2>
     <form [formRoot]="userForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-2 sm:min-w-md">
+        <div class="flex flex-col gap-2 app-form-dialog">
           <!-- The limits of length reach the inputs as maxlength, from the schema -->
           <mat-form-field>
             <mat-label i18n="@@userDialog.name">Nombre y apellidos</mat-label>

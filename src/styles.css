@@ -10,3 +10,6 @@
 /* Animations of the mascot and the reactions, next to their components (4.8) */
 @import './app/shared/mascot/mascot.css';
 @import './app/shared/reactions/reactions.css';
+
+/* The strips of the credentials to print (5.2h) */
+@import './app/admin/users/credentials-sheet.css';

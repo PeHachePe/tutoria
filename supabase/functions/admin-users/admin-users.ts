@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  MAX_CREATE_BATCH,
   MAX_DISABLE_BATCH,
   MAX_EMAIL_LENGTH,
   MAX_PASSWORD_LENGTH,
@@ -21,8 +22,11 @@ import {
   tooLarge,
 } from '../_shared/http.ts';
 
-/** A name, an email, a role and a password: a request is far smaller. */
-export const MAX_ADMIN_BODY_BYTES = 10_000;
+/**
+ * The largest request is a part of a list of students (5.2h): `MAX_CREATE_BATCH` names, emails and
+ * passwords, each a few hundred bytes at most (accents take two).
+ */
+export const MAX_ADMIN_BODY_BYTES = 40_000;
 
 export type UserRow = Database['public']['Tables']['app_user']['Row'];
 
@@ -70,6 +74,7 @@ const ROLES = ['student', 'teacher', 'admin'] as const;
 const STATUSES = ['active', 'disabled'] as const;
 
 const name = z.string().trim().min(1).max(MAX_USER_NAME_LENGTH);
+const email = z.string().trim().max(MAX_EMAIL_LENGTH).pipe(z.email());
 // Spaces are part of a password: it is never trimmed
 const password = z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH);
 
@@ -77,7 +82,7 @@ export const requestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('create'),
     name,
-    email: z.string().trim().max(MAX_EMAIL_LENGTH).pipe(z.email()),
+    email,
     role: z.enum(ROLES),
     password,
   }),
@@ -101,11 +106,24 @@ export const requestSchema = z.discriminatedUnion('action', [
       .max(MAX_DISABLE_BATCH)
       .refine((ids) => new Set(ids).size === ids.length),
   }),
+  z.object({
+    action: z.literal('create_students'),
+    students: z
+      .array(z.object({ name, email, password }))
+      .min(1)
+      .max(MAX_CREATE_BATCH)
+      .refine(
+        (students) =>
+          new Set(students.map((student) => normalizeEmail(student.email))).size ===
+          students.length,
+      ),
+  }),
 ]);
 
 type CreateRequest = Extract<z.infer<typeof requestSchema>, { action: 'create' }>;
 type UpdateRequest = Extract<z.infer<typeof requestSchema>, { action: 'update' }>;
 type DisableRequest = Extract<z.infer<typeof requestSchema>, { action: 'disable' }>;
+type CreateStudentsRequest = Extract<z.infer<typeof requestSchema>, { action: 'create_students' }>;
 
 /**
  * The Edge Function `admin-users` (5.1a, D-072): the administration creates the accounts, changes
@@ -131,7 +149,10 @@ export function createAdminUsersHandler({
       }
       const body = requestSchema.safeParse(await readJson(request, MAX_ADMIN_BODY_BYTES));
       if (!body.success) {
-        return failure(400, "Expected { action: 'create' | 'update' | 'disable', … }");
+        return failure(
+          400,
+          "Expected { action: 'create' | 'update' | 'disable' | 'create_students', … }",
+        );
       }
       switch (body.data.action) {
         case 'create':
@@ -140,6 +161,8 @@ export function createAdminUsersHandler({
           return await update(store, callerId, body.data);
         case 'disable':
           return await disable(store, callerId, body.data);
+        case 'create_students':
+          return await createStudents(store, body.data);
       }
     } catch (error) {
       if (error instanceof BodyTooLargeError) return tooLarge();
@@ -227,4 +250,52 @@ async function disable(
     }
   }
   return json(200, { disabled, failed });
+}
+
+/**
+ * The accounts of a list of students (5.2h), one after another, as Auth creates them one by one:
+ * the trigger `create_app_user` makes each row a student with its name, so nothing else is written.
+ * An email that already has an account goes to `existing`, and one whose creation fails to `failed`
+ * (its account removed, if it was made), without stopping the others. The passwords come from the
+ * screen, which hands them over in person, and are never answered.
+ */
+async function createStudents(
+  store: AdminUsersStore,
+  { students }: CreateStudentsRequest,
+): Promise<Response> {
+  const created: UserRow[] = [];
+  const existing: string[] = [];
+  const failed: string[] = [];
+  for (const student of students) {
+    const address = normalizeEmail(student.email);
+    let userId: string | null = null;
+    try {
+      userId = await store.createAccount({
+        email: address,
+        password: student.password,
+        name: student.name,
+      });
+      if (userId === EMAIL_EXISTS) {
+        existing.push(address);
+        continue;
+      }
+      const row = await store.profileOf(userId);
+      if (!row) throw new Error('The trigger made no row for the account');
+      created.push(row);
+    } catch (error) {
+      console.error(error);
+      failed.push(address);
+      if (userId && userId !== EMAIL_EXISTS) await removeQuietly(store, userId);
+    }
+  }
+  return json(200, { created, existing, failed });
+}
+
+/** An account left halfway goes away; if that fails too, it is only logged. */
+async function removeQuietly(store: AdminUsersStore, userId: string): Promise<void> {
+  try {
+    await store.deleteAccount(userId);
+  } catch (error) {
+    console.error(error);
+  }
 }

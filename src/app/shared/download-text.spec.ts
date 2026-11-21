@@ -1,4 +1,4 @@
-import { downloadCsv } from './download-text';
+import { downloadCsv, toCsv } from './download-text';
 
 describe('downloadCsv', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -25,5 +25,28 @@ describe('downloadCsv', () => {
     expect(saved?.size).toBe(3 + 'Nombre;Correo\r\n'.length);
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:roster');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('toCsv', () => {
+  it('separates the fields with «;» and ends each line in CRLF', () => {
+    expect(
+      toCsv([
+        ['Nombre', 'Correo'],
+        ['Ana', 'ana@centro.es'],
+      ]),
+    ).toBe('Nombre;Correo\r\nAna;ana@centro.es\r\n');
+  });
+
+  it('quotes a field with a separator, a quote or a line break, doubling its quotes', () => {
+    expect(toCsv([['García; Ana', 'Dice "hola"', 'dos\nlíneas']])).toBe(
+      '"García; Ana";"Dice ""hola""";"dos\nlíneas"\r\n',
+    );
+  });
+
+  it('never leaves a field that a spreadsheet would run as a formula', () => {
+    expect(toCsv([['=1+1', '+34', '-x', '@SUM(A1)', 'a=b']])).toBe(
+      "'=1+1;'+34;'-x;'@SUM(A1);a=b\r\n",
+    );
   });
 });

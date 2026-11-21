@@ -3,8 +3,10 @@ import { inject, Service } from '@angular/core';
 import { toUserEntry } from '../admin/user-entry';
 import {
   AdminService,
+  type CreateStudentsResult,
   type DisableResult,
   type FinishedStudent,
+  type NewStudent,
   type NewUser,
   type SubjectDraft,
   type UserChanges,
@@ -73,6 +75,15 @@ export class SupabaseAdminService extends AdminService {
 
   createUser(user: NewUser): Promise<AppUser> {
     return this.callFunction({ action: 'create', ...user });
+  }
+
+  async createStudents(students: readonly NewStudent[]): Promise<CreateStudentsResult> {
+    const { data, error } = await this.supabase.functions.invoke<
+      Omit<CreateStudentsResult, 'created'> & { created: Row<'app_user'>[] }
+    >(ADMIN_USERS_FUNCTION, { body: { action: 'create_students', students } });
+    if (error) throw toFunctionDataError(error);
+    if (!data) throw new DataError('unknown', 'The result came back empty');
+    return { ...data, created: data.created.map(toAppUser) };
   }
 
   updateUser(userId: string, changes: UserChanges): Promise<AppUser> {

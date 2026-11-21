@@ -2,8 +2,13 @@ import { TestBed } from '@angular/core/testing';
 
 import { withoutHistory } from './fixtures/history';
 import { SUBJECTS } from './fixtures/subjects';
-import { MAX_DISABLE_BATCH, MAX_PASSWORD_LENGTH, MAX_USER_NAME_LENGTH } from '../admin/user-rules';
-import type { NewUser } from '../admin-service';
+import {
+  MAX_CREATE_BATCH,
+  MAX_DISABLE_BATCH,
+  MAX_PASSWORD_LENGTH,
+  MAX_USER_NAME_LENGTH,
+} from '../admin/user-rules';
+import type { NewStudent, NewUser } from '../admin-service';
 import {
   ADMIN_ID,
   DAW_CLASS_ID,
@@ -122,6 +127,55 @@ describe('MockAdminService', () => {
         kind: 'invalid',
       });
       expect(db.tables().users).toHaveLength(before);
+    });
+  });
+
+  describe('createStudents (5.2h)', () => {
+    const student = (name: string, email: string): NewStudent => ({
+      name,
+      email,
+      password: 'contraseña segura',
+    });
+
+    it('creates the accounts of students, and tells apart the emails with an account', async () => {
+      const result = await service.createStudents([
+        student(' Ana Pérez ', ' Ana.Perez@Tutoria.test'),
+        student('Lucía', 'LUCIA.MARTIN@tutoria.test'),
+      ]);
+
+      expect(result.existing).toEqual(['lucia.martin@tutoria.test']);
+      expect(result.failed).toEqual([]);
+      expect(result.created).toHaveLength(1);
+      expect(result.created[0]).toMatchObject({
+        name: 'Ana Pérez',
+        email: 'ana.perez@tutoria.test',
+        role: 'student',
+        status: 'active',
+      });
+      expect(db.tables().passwords[result.created[0].id]).toBe('contraseña segura');
+    });
+
+    it.each([
+      ['nobody', []],
+      [
+        'too many',
+        Array.from({ length: MAX_CREATE_BATCH + 1 }, (_, n) => student('A', `a${n}@x.es`)),
+      ],
+      ['an email twice', [student('Ana', 'ana@x.es'), student('Otra', 'ANA@x.es')]],
+      ['an empty name', [student('  ', 'ana@x.es')]],
+      ['a short password', [{ ...student('Ana', 'ana@x.es'), password: 'corta' }]],
+    ])('turns down %s, as the function does, and creates nothing', async (_case, students) => {
+      const before = db.tables().users.length;
+
+      await expect(service.createStudents(students)).rejects.toMatchObject({ kind: 'invalid' });
+      expect(db.tables().users).toHaveLength(before);
+    });
+
+    it('is only for the administration', async () => {
+      db.setSession(TEACHER_ID);
+      await expect(service.createStudents([student('Ana', 'ana@x.es')])).rejects.toMatchObject({
+        kind: 'forbidden',
+      });
     });
   });
 

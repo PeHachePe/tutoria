@@ -70,7 +70,7 @@ interface CopyBlocksModel {
     <h2 mat-dialog-title i18n="@@copyBlocks.title">Copiar bloques en {{ data.target.label }}</h2>
     <form [formRoot]="copyForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-2 sm:min-w-md">
+        <div class="flex flex-col gap-2 app-form-dialog">
           <p class="mb-2 text-body-medium text-on-surface-variant">
             <span i18n="@@copyBlocks.intro">{data.blockCount, plural,
               =0 {Con sus ejercicios, su orden y su visibilidad, como los primeros de este grupo.}

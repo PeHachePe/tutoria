@@ -62,7 +62,7 @@ export interface DuplicateDialogData {
     </h2>
     <form [formRoot]="duplicateForm">
       <mat-dialog-content>
-        <div class="flex flex-col gap-2 sm:min-w-md">
+        <div class="flex flex-col gap-2 app-form-dialog">
           <p class="mb-2 text-body-medium text-on-surface-variant" i18n="@@duplicateDialog.intro">
             Copia tus asignaturas en la clase del curso que viene o en una paralela, con lo que
             elijas traer. Si esa clase ya existe, se añaden a ella.

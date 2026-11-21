@@ -265,6 +265,17 @@ body {
   min-height: 0;
 }
 
+// A dialog with a form (step 5.2h): always as wide as a dialog can be. Sized to its content, a hint
+// that turns into a shorter error when the field is left (or the other way) changed its width
+// under the pointer. Its content says so with `app-form-dialog`, as the pane is made by Material.
+.cdk-overlay-pane.mat-mdc-dialog-panel:has(.app-form-dialog) {
+  @include mat.dialog-overrides(
+    (
+      container-min-width: min(560px, calc(100vw - 32px)),
+    )
+  );
+}
+
 // A small field beside other controls, as the filter of a list in a dialog (step 5.2d).
 .app-dense-field {
   @include mat.form-field-density(-4);

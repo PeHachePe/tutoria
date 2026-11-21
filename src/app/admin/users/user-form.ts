@@ -19,7 +19,7 @@ import type { NewUser, UserChanges } from '../../data/admin-service';
 import type { AppUser, Role } from '../../data/user';
 
 /** Something, an at sign and a domain with a dot: the rest is for Auth to judge. */
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** An account as its dialog edits it (5.1b). The email and the password, only in a new one. */
 export interface UserFormModel {

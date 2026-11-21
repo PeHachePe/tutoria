@@ -78,6 +78,34 @@ describe('SupabaseAdminService', () => {
     });
   });
 
+  describe('createStudents (5.2h)', () => {
+    it('asks the function for the accounts, and says which it created', async () => {
+      const row = appUserRow({ id: 'ana', name: 'Ana Pérez' });
+      server.on('POST', ADMIN_USERS, {
+        body: { created: [row], existing: ['lucia@x.es'], failed: ['rota@x.es'] },
+      });
+      const students = [{ name: 'Ana Pérez', email: 'ana@x.es', password: 'contraseña segura' }];
+
+      await expect(service.createStudents(students)).resolves.toEqual({
+        created: [toAppUser(row)],
+        existing: ['lucia@x.es'],
+        failed: ['rota@x.es'],
+      });
+      expect(server.sentTo('POST', ADMIN_USERS)[0].body).toEqual({
+        action: 'create_students',
+        students,
+      });
+    });
+
+    it('turns a failure of the function into its kind, and an empty answer into unknown', async () => {
+      server.on('POST', ADMIN_USERS, { status: 400, body: { message: 'No' } });
+      await expect(service.createStudents([])).rejects.toMatchObject({ kind: 'invalid' });
+
+      server.on('POST', ADMIN_USERS, { body: null });
+      await expect(service.createStudents([])).rejects.toMatchObject({ kind: 'unknown' });
+    });
+  });
+
   describe('createUser', () => {
     it('asks the Edge Function admin-users for the account', async () => {
       const row = appUserRow({ id: 'clara', name: 'Clara Fuentes', role: 'teacher' });
