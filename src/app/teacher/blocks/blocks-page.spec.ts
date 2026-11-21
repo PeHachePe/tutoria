@@ -1288,6 +1288,32 @@ describe('BlocksPage', () => {
       );
     });
 
+    it('says when a single block was copied, and from where', async () => {
+      const harness = await renderBlocks(`/docente/bloques?grupo=${NEXT}`, (mock) => {
+        newGroups(mock);
+        mock.update('classBlocks', (rows) => [
+          ...rows,
+          { ...rows[0], id: 'workshop-1', groupId: EMPTY },
+        ]);
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      const dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      await userEvent.click(
+        await screen.findByRole('option', { name: 'Taller · Programación básica' }),
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+
+      expect(blockHeadings()).toHaveLength(1);
+      expect(snack).toHaveBeenCalledWith(
+        '1 bloque copiado de Taller · Programación básica',
+        'Deshacer',
+        { duration: 10_000 },
+      );
+    });
+
     it('is not offered with a single group, and a cancelled copy changes nothing', async () => {
       const harness = await renderBlocks(DAW, newGroups);
       await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));

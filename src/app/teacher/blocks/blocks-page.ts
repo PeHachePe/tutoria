@@ -304,7 +304,8 @@ export class BlocksPage {
             ),
           copy: async (sourceGroupId, withDates) => {
             copied = await this.service.copyBlocks(sourceGroupId, group.id, withDates);
-            sourceLabel = options.find((option) => option.id === sourceGroupId)?.label ?? '';
+            // The dialog offers only these options
+            sourceLabel = options.find((option) => option.id === sourceGroupId)!.label;
           },
         },
         injector: this.injector,

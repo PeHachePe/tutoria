@@ -171,8 +171,12 @@ describe('ClassStudents', () => {
     return header.closest('tr') as HTMLElement;
   }
 
+  /**
+   * Within the row of the student: computing the accessible name of every checkbox of the table,
+   * as `screen` does, made the tests that wait for one slow enough to time out under load.
+   */
   function box(name: string, group: string, enrolled: boolean): HTMLInputElement {
-    return screen.getByRole('checkbox', {
+    return within(row(name)).getByRole('checkbox', {
       name: `${name} ${enrolled ? 'está' : 'no está'} en ${group}`,
     });
   }
