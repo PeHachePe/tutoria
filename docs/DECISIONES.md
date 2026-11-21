@@ -2432,3 +2432,49 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Para la memoria: las fechas copiadas conservan el día de la semana (D-079).
 
 **Aprobación:** el autor aprobó el plan y la numeración («Sí, adelante»). Al probarlo pidió un aviso más claro (dos iteraciones, hasta nombrar el curso), y aprobó el aviso de repetidos, «Deshacer» y «Seleccionar» para borrar los no empezados («lo veo bien»). Pidió documentarlo todo para sacar después un manual de funcionalidades.
+
+## D-084 · La evaluación final: qué pasa con cada alumno al acabar el curso, y una clase por alumno y curso (21/11/2026, propuesta)
+
+**Contexto:** con las clases de cursos pasados cerradas (D-082), faltaba decir qué pasa con cada alumno al acabar el curso. Sin eso, quien titulaba o se iba seguía saliendo para matricular al curso siguiente y la administración no sabía qué cuentas desactivar. Lo acordó el autor al cerrar el 5.2e, con sus propios términos: Promociona, Repite, Titula y Baja. Al probarlo salieron tres preguntas más: por qué se podía matricular a una alumna de baja, quién gestiona a un alumno al que no das clase y qué pasa si alguien está en dos clases del mismo curso.
+
+**Decisión (cómo se usa):**
+
+- **Evaluar, en Grupos:** el botón «Evaluación final» de la barra de la clase enseña la columna «Evaluación», con la etiqueta de cada alumno de la clase: «Promociona», «Repite», «Titula», «Baja» o «Sin evaluar». Se cambia en su menú, al momento. Encima de la tabla, el resumen («Evaluación final: 5 de 8 · 4 promocionan · 1 repite») y dos atajos, «Promocionan los N sin evaluar» y «Titulan los N sin evaluar», que nunca pisan una evaluación puesta y traen «Deshacer». La ✕ oculta la columna, que sale ya visible en una clase cerrada o en una que alguien empezó a evaluar.
+- **Quién evalúa:** cualquier docente de la clase (también quien la creó) o la administración, y también con la clase cerrada: es lo único que cambia en ella, porque en septiembre el curso ya cerró y la evaluación puede estar por hacer. Se evalúa a los alumnos de la clase; quien solo cursa una asignatura aquí lleva «—» («Se evalúa en su clase»).
+- **«Titula» se puede poner en cualquier curso:** la app no sabe cuál es el último de un ciclo, y el docente sí.
+- **Quitar de la clase borra su evaluación**, que es de esa clase; en una clase cerrada no se quita a nadie.
+- **Al matricular, de dónde viene cada alumno:** cuenta su última clase hasta el curso de la clase donde se matricula, sea cual sea la clase de la que se copie, y su evaluación en ella.
+  - «Sin clase este curso» (o «Sin clase en 2027/28» para una clase de otro curso) agrupa a los alumnos por esa última clase, cada grupo con su casilla («Promocionan de 1.º DAW A · 2025/26», «Repiten 2.º DAM B · 2025/26», «Sin evaluar en …», «Sin clase anterior»), y no ofrece a quien tituló o causó baja.
+  - «Buscar» dice bajo cada alumno su última clase («1.º DAM B · 2026/27»). Quien tituló o causó baja sale con un aviso y se puede elegir, porque puede volver (titular en DAW y empezar DAM, o volver tras una baja): ahí el docente busca a esa persona y lo ve.
+  - «De otra clase» y «Pegar una lista» se saltan a quien tituló o causó baja y lo dicen bajo «No se añaden:», porque son las vías por las que alguien se cuela sin que nadie lo vea. Al copiar una clase antigua cuenta su última clase, no la evaluación en la copiada: quien promocionó en 2025/26 y causó baja en 2026/27 no entra.
+- **No se bloquea la matrícula por la evaluación:** si para volver a matricular a alguien hubiera que borrarle la evaluación, se falsearía el historial (aquel curso sí tituló). Lo que de verdad deja fuera a alguien es su cuenta desactivada; si vuelve, la administración la reactiva.
+- **Una clase por alumno y curso:** un alumno de otra clase del mismo curso no se matricula en esta. «Buscar» lo enseña con «Ya está en 1.º DAM B · 2026/27» y la casilla desactivada; «De otra clase» y «Pegar una lista» lo saltan; en la tabla, quien cursa una asignatura desde otra clase lleva «De 1.º DAM B» y no se le ofrece «Añadir a la clase». Para cambiar a alguien de clase, primero se le quita de la suya (su trabajo se conserva). Cursar una asignatura de otra clase sigue siendo «Matricular solo aquí…», que no lo hace alumno de la clase.
+- **En Usuarios, la administración:**
+  - un aviso, «4 alumnos titulados o de baja siguen con la cuenta activa.», con «Revisar y desactivar…»: la lista con todos marcados y su última clase («Titula · 2.º DAW A · 2025/26»), para desmarcar a alguien y desactivar el resto de una vez. Cuenta a quien tituló o causó baja en su última clase, también en la de este curso; quien volvió y está en una clase posterior no cuenta. Los docentes no desactivan cuentas (D-072);
+  - el filtro «Situación del alumnado»: «En una clase este curso», «Sin clase este curso» o «Titulados o de baja» (`?situacion=`);
+  - «Ver su trayectoria» en el menú de cada alumno: sus clases curso a curso con su evaluación, para saber si alguien ya estuvo en el centro antes de reactivarlo;
+  - si una búsqueda no encuentra nada con el estado elegido pero sí con otro, lo dice («Ninguna cuenta activa coincide, pero una desactivada sí.») con «Ver todas las cuentas».
+- **Quién da de alta a los alumnos nuevos:** la administración, en Usuarios, de uno en uno (D-072). Dar de alta a muchos de una vez queda para el 5.2h.
+
+**Decisión (técnica):**
+
+- **Migración `20261121100000_final_evaluation.sql`:** el tipo `class_outcome` y la columna `class_member.outcome`; `last_class_member(up_to_school_year)` (sin permisos para nadie), la última clase de cada alumno hasta un curso; `set_class_outcomes()` (`manages_class`, sin mirar si la clase está cerrada, 100 alumnos como mucho, `P0002` para quien no es de la clase); `class_roster` gana `outcome` y `other_class_name`; `class_candidates`, `search_class_students`, `search_students` y `match_students` devuelven la última clase y su evaluación (`class_candidates` sin quien terminó); `finished_students()`, solo para la administración (`42501`); y el disparador `class_member_one_class_a_year`, que rechaza con `23505` a un alumno en otra clase del mismo curso, por cualquier vía. 28 tests de pgTAP nuevos (425 en total); tres tests anteriores pasan a clases de otro curso o a una alumna sin clase.
+- **`admin-users` gana la acción `disable`** con hasta `MAX_DISABLE_BATCH` (100, en `user-rules.ts`, compartido con la app) cuentas distintas: cada una como un `update` de estado, una tras otra, y responde `{ disabled, failed }`, porque Auth no admite transacciones. Una que no existe, la propia o una que falla no detiene a las demás.
+- **Servicios:** `GroupService.setOutcomes()`, `listCandidates()`, `searchStudents()` y `matchStudents()` con `ClassCandidate` (`student` y `previous`), `RosterStudent.outcome` y `otherClass`; `AdminService.listFinishedStudents()`, `disableUsers()` y `UserEntry.classes`. Las dos versiones; la simulada falla igual que Supabase en cada caso. Las piezas de pantalla comunes, en `src/app/shared/class-outcome.ts`; las reglas del diálogo de matrícula, en `enroll-choice.ts` (`enrollBlocker`, `sortOutCandidates`); la situación de un alumno, en `user-filter.ts` (`studentSituation`).
+- **Datos de ejemplo:** las clases pasadas, evaluadas (primero promociona, segundo titula). En 2025/26, 1.º DAW A de Marta queda sin evaluar; en 2.º DAM B una alumna repite y otro causó baja, los dos sin clase este curso; y tres que titularon en 2.º DAW A siguen con la cuenta activa.
+
+**Alternativas:**
+
+- **Bloquear la matrícula de quien tituló o causó baja:** obligaba a borrar su evaluación para que volviera, y eso falsea el historial; y el docente de la clase nueva no podría resolverlo solo.
+- **Mirar la evaluación en la clase que se copia:** más simple, pero dejaba colar a quien se fue después.
+- **Desempatar dos clases del mismo curso por orden o por la evaluación:** cualquier regla fallaba en algún caso (alguien que se cambia de clase a mitad de curso); una clase por curso evita el problema.
+- **Un rol de secretaría con expedientes:** trabajo futuro en la memoria; la administración tiene ya la vista de centro que necesita (aviso, filtro y trayectoria).
+- **Que los docentes desactiven cuentas:** contradice D-072.
+
+**Consecuencias:**
+
+- Sale de [PENDIENTES](PENDIENTES.md) la fila del 5.2e sobre la evaluación final; entra el 5.2h, el alta de varios alumnos.
+- `docs/DESPLIEGUE.md`: `db push --remote` y volver a desplegar `admin-users`.
+- Para la memoria: el cierre de curso real de un centro de FP (promociona, repite, titula, baja) salió de la conversación con el autor, y por qué la evaluación informa pero no bloquea.
+
+**Aprobación:** el autor aprobó el plan («Sí, adelante»). Al probarlo vio que se podía matricular a una alumna de baja y preguntó si bloquearlo; aceptó la opinión de no bloquear y avisar, y pidió la vista de centro para la administración. Preguntó cómo se gestiona a un alumno al que no se da clase y quién da de alta a los nuevos (de ahí la procedencia en «Buscar» y el 5.2h), por qué no salía Andrea en la búsqueda (de ahí los mensajes de «no encontrado»), si se miraba la última clase aunque no fuera la copiada (no lo hacía: se corrigió) y qué pasaba con dos clases del mismo curso. Después dio vía libre («haz todo lo que veas mejor»). El detalle técnico, por delegación del autor.

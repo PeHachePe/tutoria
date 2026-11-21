@@ -3408,6 +3408,15 @@ Commit: `feat(groups): teachers manage their groups and enrollment (step 5.2a)`.
 
 Commit: `feat(groups): groups and enrollment screen (step 5.2b)`.
 
+**5.2c a 5.2h · Lo que salió al revisar Grupos** (planificados con el autor en cada revisión; su detalle está en su bitácora y su decisión)
+
+- **5.2c** · Preparar un curso nuevo: crear en varias asignaturas, duplicar, copiar bloques de otro grupo (D-079).
+- **5.2d** · La clase compartida por sus docentes, la matrícula como tabla y los desdobles (D-081).
+- **5.2e** · Las clases de cursos pasados, cerradas, y el selector de curso y clase (D-082).
+- **5.2f** · Los bloques de una clase cerrada, de solo lectura; copiar, deshacer y borrar varios (D-083).
+- **5.2g** · La evaluación final de cada alumno (Promociona, Repite, Titula, Baja), de dónde viene cada uno al matricular, una clase por alumno y curso, y en Usuarios las cuentas de quien terminó, la situación del alumnado y su trayectoria (D-084).
+- **5.2h (≈2 h, pendiente)** · Alta de varios alumnos en Usuarios: pegar la lista de secretaría (nombre y correo), comprobarla antes de crear nada, crear las cuentas con contraseñas aleatorias en una acción nueva de `admin-users` y descargar las credenciales para entregarlas en persona; opcional, matricularlos en una clase del curso. Su detalle, en [PENDIENTES](PENDIENTES.md).
+
 **5.3 · Sistema: proveedor de IA y asignaturas (≈2,5 h)** · ficha `12-sistema` · Figura 13 del TFM
 
 - Adaptador de IA activo (URL base y modelo), con sus alternativas y un botón para probar la conexión (RF-19, CU-07); y las asignaturas de los grupos (2.5c), que hasta ahora solo existían en el seed. Es lo primero que se recorta si falta tiempo.

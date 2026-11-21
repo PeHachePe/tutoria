@@ -18,16 +18,19 @@ Que la administración dé de alta las cuentas del centro, les cambie el rol, le
 Escritorio, tablet y móvil en una columna:
 
 - Cabecera: «Usuarios», lo que es la pantalla y el botón «Nuevo usuario».
-- Filtros, en la URL, en una fila desde `sm` (en el móvil, el buscador solo y los dos desplegables lado a lado): buscar por nombre o correo (sin tildes ni mayúsculas), el rol («Todos los roles», «Alumnado», «Profesorado», «Administración») y el estado («Activas», por defecto, «Desactivadas» o «Todas»).
+- Tras la evaluación final (5.2g, D-084), un aviso con fondo de aviso: «4 alumnos titulados o de baja siguen con la cuenta activa.» y «Revisar y desactivar…». Solo si hay alguno.
+- Filtros, en la URL, en una fila desde `sm` (en el móvil, el buscador solo y los dos desplegables lado a lado): buscar por nombre o correo (sin tildes ni mayúsculas), el rol («Todos los roles», «Alumnado», «Profesorado», «Administración»), el estado («Activas», por defecto, «Desactivadas» o «Todas») y la situación del alumnado («Todas», «En una clase este curso», «Sin clase este curso» o «Titulados o de baja», 5.2g).
 - «33 cuentas», o «5 cuentas de 33» al filtrar, anunciado con `aria-live`.
 - Una tabla (`mat-table`) que se desplaza dentro de su zona, con la cabecera fija, y se ordena por nombre (por defecto), rol o grupos:
-  - **Nombre:** el nombre, «Tú» en la cuenta propia y «Desactivada» (icono y texto) en las desactivadas; el correo debajo;
+  - **Nombre:** el nombre, «Tú» en la cuenta propia y «Desactivada» (icono y texto) en las desactivadas; el correo debajo y, en quien queda por desactivar, su última clase («Titula · 2.º DAW A · 2025/26»);
   - **Rol**;
   - **Grupos:** los que imparte o en los que está matriculada, o «—» (desde `md`);
-  - el menú de acciones: «Editar», «Restablecer la contraseña» y «Desactivar» o «Activar». En la cuenta propia, «Desactivar» aparece deshabilitado con el motivo escrito debajo.
+  - el menú de acciones: «Editar», «Restablecer la contraseña», «Ver su trayectoria» (en quien fue alumno de alguna clase, 5.2g) y «Desactivar» o «Activar». En la cuenta propia, «Desactivar» aparece deshabilitado con el motivo escrito debajo.
 - 10 por página, con el paginador solo si hay más.
 - Diálogo de la cuenta: en el alta, nombre, correo, rol y contraseña (con «Generar», mostrarla u ocultarla y «Copiar»); al editar, nombre y rol, con el correo solo para leer. El rol se deshabilita con su motivo en la cuenta propia y en quien tiene grupos o matrículas.
 - Diálogo de la contraseña: la nueva contraseña, con los mismos botones.
+- Diálogo «Cuentas de quien ya terminó» (5.2g): qué hace, la lista con todos marcados (nombre y «Titula · 2.º DAW A · 2025/26») y «Desactivar N».
+- Diálogo «Trayectoria de …» (5.2g): sus clases curso a curso, de la más reciente, con la etiqueta de su evaluación.
 
 ## Interacciones
 
@@ -37,13 +40,14 @@ Escritorio, tablet y móvil en una columna:
 - **Nuevo usuario:** el correo repetido se marca en el formulario, contra la lista cargada (el servidor lo rechaza igualmente). Al crearla, la fila aparece en su sitio y el aviso dice «Cuenta creada. Entrégale la contraseña en persona.».
 - **Editar:** cambia la fila en el sitio. Solo se envía lo que cambia.
 - **Restablecer la contraseña:** la nueva contraseña, sin enviar correos (D-072).
+- **Revisar y desactivar (5.2g):** desactiva de una vez las cuentas marcadas, como «Desactivar» una a una; el aviso dice cuántas, o cuántas no se pudieron. Los docentes no desactivan cuentas (D-072).
 - **Desactivar:** pregunta antes («… dejará de poder entrar. Su trabajo se conserva…»); la fila pasa a «Desactivada» y sale de la lista si solo se ven las activas. **Activar:** sin preguntar.
 - Cada acción se avisa con un `MatSnackBar`, que se anuncia solo. Un fallo en un diálogo se dice en él y recarga la lista; el de activar o desactivar, en el aviso.
 
 ## Estados
 
 - **Cargando:** esqueleto con la forma de los filtros y de la tabla.
-- **Vacío:** «Ningún usuario coincide» con «Quitar los filtros». Sin filtros la lista nunca está vacía: siempre está la propia cuenta.
+- **Vacío:** «Ningún usuario coincide» con «Quitar los filtros». Si coincide alguna cuenta con otro estado, «Ningún usuario coincide con este estado» y «Ninguna cuenta activa coincide, pero una desactivada sí.», con «Ver todas las cuentas» (5.2g). Sin filtros la lista nunca está vacía: siempre está la propia cuenta.
 - **Error:** `LoadError` con «Reintentar».
 - **Guardando:** «Guardando…» en el botón del diálogo, y el error junto a él (`role="alert"`) sin cerrarlo.
 
@@ -64,6 +68,7 @@ Escritorio, tablet y móvil en una columna:
 - [x] Restablecer la contraseña, generada o escrita.
 - [x] Desactivar con confirmación y activar; la cuenta propia no se desactiva (3b).
 - [x] Revisión visual del autor.
+- [x] El aviso de las cuentas de quien tituló o causó baja y desactivarlas de una vez; la situación del alumnado y su trayectoria (5.2g, D-084).
 
 ## Fuera de alcance
 
