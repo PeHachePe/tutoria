@@ -715,12 +715,12 @@ describe('GroupsPage', () => {
 
     expect(screen.getByText('Matrícula guardada')).toBeTruthy();
     expect(subjects()).toContain(`${BASIC} (Marta · 25)`);
-    // In that group only, from another class
+    // In that group only, from her class of the year (5.2g)
     const elena = within(studentsOf(DAW)).getByRole('checkbox', {
       name: `Elena Vázquez Lorenzo está en ${BASIC}`,
     });
     expect(elena).toHaveProperty('checked', true);
-    expect(text(elena.closest('tr'))).toContain('De otra clase');
+    expect(text(elena.closest('tr'))).toContain('De 1.º DAM B');
   });
 
   it('updates the counts of the subjects when the students change', async () => {

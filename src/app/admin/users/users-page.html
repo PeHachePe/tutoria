@@ -12,6 +12,25 @@
     </button>
   </header>
 
+  @if (finishedCount() > 0) {
+    <!-- After the final evaluation (5.2g): accounts that should not sign in any more -->
+    <div
+      class="flex flex-wrap items-center gap-3 rounded-xl bg-warning-container py-2 pr-2 pl-4 text-on-warning-container"
+      role="status"
+    >
+      <mat-icon aria-hidden="true">school</mat-icon>
+      <p class="mr-auto text-body-medium" i18n="@@users.finished.notice">
+        {finishedCount(), plural,
+          =1 {1 alumno titulado o de baja sigue con la cuenta activa.}
+          other {{{ finishedCount() }} alumnos titulados o de baja siguen con la cuenta activa.}
+        }
+      </p>
+      <button matButton type="button" (click)="reviewFinished()" i18n="@@users.finished.review">
+        Revisar y desactivar…
+      </button>
+    </div>
+  }
+
   @if (users.error(); as error) {
     <app-load-error [error]="error" (retry)="users.reload()" />
   } @else if (firstLoad()) {
@@ -50,6 +69,16 @@
           }
         </mat-select>
       </mat-form-field>
+      <!-- Where each student is after the final evaluation (5.2g) -->
+      <mat-form-field subscriptSizing="dynamic" class="col-span-2 min-w-0 sm:w-60">
+        <mat-label i18n="@@users.situation">Situación del alumnado</mat-label>
+        <mat-select [value]="situationValue()" (selectionChange)="selectSituation($event.value)">
+          <mat-option [value]="allSituations" i18n="@@users.situation.all">Todas</mat-option>
+          @for (option of situationOptions; track option.situation) {
+            <mat-option [value]="option.situation">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
     </search>
 
     <!-- A reload after a failure: a thin bar over what is shown, never a jump (4.8) -->
@@ -77,18 +106,41 @@
     </p>
 
     @if (matching().length === 0) {
-      <app-empty-state
-        heading="Ningún usuario coincide"
-        i18n-heading="@@users.empty"
-        text="Prueba con otras palabras, otro rol u otro estado."
-        i18n-text="@@users.empty.text"
-      >
-        <div class="mt-2 flex justify-center" emptyStateAction>
-          <button matButton="tonal" type="button" (click)="clearFilters()" i18n="@@users.clear">
-            Quitar los filtros
-          </button>
-        </div>
-      </app-empty-state>
+      @if (otherStatusCount() > 0) {
+        <!-- Not found where it was looked for, but in another status: a disabled account (5.2g) -->
+        <app-empty-state
+          heading="Ningún usuario coincide con este estado"
+          i18n-heading="@@users.empty.status"
+          [text]="otherStatusText()"
+        >
+          <div class="mt-2 flex flex-wrap justify-center gap-2" emptyStateAction>
+            <button
+              matButton="tonal"
+              type="button"
+              (click)="selectStatus('all')"
+              i18n="@@users.empty.showAll"
+            >
+              Ver todas las cuentas
+            </button>
+            <button matButton type="button" (click)="clearFilters()" i18n="@@users.clear">
+              Quitar los filtros
+            </button>
+          </div>
+        </app-empty-state>
+      } @else {
+        <app-empty-state
+          heading="Ningún usuario coincide"
+          i18n-heading="@@users.empty"
+          text="Prueba con otras palabras, otro rol u otro estado."
+          i18n-text="@@users.empty.text"
+        >
+          <div class="mt-2 flex justify-center" emptyStateAction>
+            <button matButton="tonal" type="button" (click)="clearFilters()" i18n="@@users.clear">
+              Quitar los filtros
+            </button>
+          </div>
+        </app-empty-state>
+      }
     } @else {
       <div class="flex flex-col overflow-hidden rounded-2xl bg-panel">
         <!-- The table scrolls in its own zone, under its header, and never stretches the page (5.4).
@@ -141,6 +193,13 @@
                   <span class="text-body-small wrap-anywhere text-on-surface-variant"
                     >{{ row.emailUser }}<wbr />{{ row.emailDomain }}</span
                   >
+                  @if (row.finished; as finished) {
+                    <!-- Left to disable after the final evaluation (5.2g) -->
+                    <span class="flex items-center gap-1 text-body-small text-on-warning-container">
+                      <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">school</mat-icon>
+                      {{ finished }}
+                    </span>
+                  }
                 </div>
               </td>
             </ng-container>
@@ -196,6 +255,12 @@
                     <mat-icon aria-hidden="true">key</mat-icon>
                     <span i18n="@@users.resetPassword">Restablecer la contraseña</span>
                   </button>
+                  @if (row.hasClasses) {
+                    <button mat-menu-item type="button" (click)="showTrajectory(row.entry)">
+                      <mat-icon aria-hidden="true">timeline</mat-icon>
+                      <span i18n="@@users.trajectory">Ver su trayectoria</span>
+                    </button>
+                  }
                   @if (row.disabled) {
                     <button mat-menu-item type="button" (click)="setStatus(row.entry, 'active')">
                       <mat-icon aria-hidden="true">check_circle</mat-icon>

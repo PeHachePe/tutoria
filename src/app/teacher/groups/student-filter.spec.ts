@@ -6,12 +6,16 @@ const STUDENTS: RosterStudent[] = [
     student: { id: 'a', name: 'Álvaro Gil', email: 'alvaro@tutoria.test' },
     active: true,
     member: true,
+    outcome: null,
+    otherClass: null,
     groupIds: [],
   },
   {
     student: { id: 'b', name: 'Lucía Martín', email: 'lucia@tutoria.test' },
     active: true,
     member: true,
+    outcome: null,
+    otherClass: null,
     groupIds: [],
   },
 ];

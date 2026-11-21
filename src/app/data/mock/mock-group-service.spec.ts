@@ -7,6 +7,7 @@ import {
   MAX_ENROLLMENT_BATCH,
   MAX_GROUP_BATCH,
   MAX_GROUP_LABEL_LENGTH,
+  MAX_OUTCOME_BATCH,
   MAX_PASTED_LINES,
   MAX_STUDENT_SEARCH_RESULTS,
 } from '../group-service';
@@ -30,7 +31,7 @@ import {
   TEACHER_ID,
 } from './fixtures/users';
 import { MockDb } from './mock-db';
-import { schoolYearOf } from '../school-year';
+import { schoolYearOf, shiftSchoolYear } from '../school-year';
 import { MockGroupService } from './mock-group-service';
 import { MockNetwork } from './mock-network';
 
@@ -50,6 +51,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Lucía, a student of 1.º DAW A. */
 const LUCIA_ID = DAW_STUDENT_IDS[0];
 const HUGO_ID = DAW_STUDENT_IDS[1];
+/** Two students without a class this year (5.2g: one class a year). */
+const [NEW_ID, OTHER_NEW_ID] = NEW_STUDENT_IDS;
 /** Elena and Rubén, students of 1.º DAM B who are not in 1.º DAW A. */
 const ELENA_ID = DAM_STUDENT_IDS[0];
 const RUBEN_ID = DAM_STUDENT_IDS[1];
@@ -101,7 +104,10 @@ describe('MockGroupService', () => {
 
   /** Raúl, a disabled student, as a member of the class and a student of its group. */
   function addDisabledStudent(classId: string, groupId: string): void {
-    db.update('classMembers', (rows) => [...rows, { classId, userId: DISABLED_STUDENT_ID }]);
+    db.update('classMembers', (rows) => [
+      ...rows,
+      { classId, userId: DISABLED_STUDENT_ID, outcome: null },
+    ]);
     db.update('enrollments', (rows) => [
       ...rows,
       { id: 'raul', groupId, userId: DISABLED_STUDENT_ID },
@@ -873,6 +879,18 @@ describe('MockGroupService', () => {
       expectSeed();
     });
 
+    it('copies nothing with its students into another class of the same year (5.2g)', async () => {
+      await expect(
+        service.duplicateClass(
+          DAW_CLASS_ID,
+          { name: '1.º DAW B', schoolYear: '2026/27' },
+          [DAW_GROUP_ID],
+          EVERYTHING,
+        ),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+      expectSeed();
+    });
+
     it('does not find a group of another class even for the administrator', async () => {
       db.setSession(ADMIN_ID);
 
@@ -903,8 +921,23 @@ describe('MockGroupService', () => {
         student: { id: LUCIA_ID, name: 'Lucía Martín Gómez', email: 'lucia.martin@tutoria.test' },
         active: true,
         member: true,
+        outcome: null,
+        otherClass: null,
         groupIds: sorted([DAW_GROUP_ID, DAW_WEB_GROUP_ID]),
       });
+    });
+
+    it('says the final evaluation of each student of the class (5.2g)', async () => {
+      db.setSession(OTHER_TEACHER_ID);
+      await service.enroll(DAW_ENGLISH_GROUP_ID, [ELENA_ID]);
+      await service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID], 'repeats');
+
+      const roster = await service.listRoster(DAW_CLASS_ID);
+
+      expect(roster.find((row) => row.student.id === LUCIA_ID)?.outcome).toBe('repeats');
+      expect(roster.find((row) => row.student.id === HUGO_ID)?.outcome).toBeNull();
+      // Of one group only: evaluated in their own class
+      expect(roster.find((row) => row.student.id === ELENA_ID)?.outcome).toBeNull();
     });
 
     it('lists a student of one group only, and a disabled one', async () => {
@@ -912,7 +945,7 @@ describe('MockGroupService', () => {
       await service.enroll(DAW_ENGLISH_GROUP_ID, [ELENA_ID]);
       db.update('classMembers', (rows) => [
         ...rows,
-        { classId: DAW_CLASS_ID, userId: DISABLED_STUDENT_ID },
+        { classId: DAW_CLASS_ID, userId: DISABLED_STUDENT_ID, outcome: null },
       ]);
 
       const roster = await service.listRoster(DAW_CLASS_ID);
@@ -920,6 +953,8 @@ describe('MockGroupService', () => {
       expect(roster.find((row) => row.student.id === ELENA_ID)).toMatchObject({
         active: true,
         member: false,
+        // Her class of the year (5.2g)
+        otherClass: '1.º DAM B',
         groupIds: [DAW_ENGLISH_GROUP_ID],
       });
       expect(roster.find((row) => row.student.id === DISABLED_STUDENT_ID)).toMatchObject({
@@ -941,12 +976,40 @@ describe('MockGroupService', () => {
     it('lists the active students without a class in the year of the class, by name', async () => {
       const candidates = await service.listCandidates(DAW_CLASS_ID);
 
-      expect(candidates.map(({ name }) => name)).toEqual([
+      expect(candidates.map(({ student }) => student.name)).toEqual([
         'Claudia Ferrer Ruiz',
         'Ismael Haddou',
         'Marina Vidal Soto',
       ]);
-      expect(candidates.map(({ id }) => id).sort()).toEqual([...NEW_STUDENT_IDS].sort());
+      expect(candidates.map(({ student }) => student.id).sort()).toEqual(
+        [...NEW_STUDENT_IDS].sort(),
+      );
+      // They never had a class
+      expect(candidates.every(({ previous }) => previous === null)).toBe(true);
+    });
+
+    it('says the last class of each, with its outcome, and leaves out who finished (5.2g)', async () => {
+      const next = await service.createClass(NEXT_YEAR, [], TEACHER_ID);
+      await service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID], 'repeats');
+      await service.setOutcomes(DAW_CLASS_ID, [HUGO_ID], 'graduates');
+      await service.setOutcomes(DAW_CLASS_ID, [DAW_STUDENT_IDS[2]], 'leaves');
+
+      const candidates = await service.listCandidates(next);
+      const byId = (id: string) => candidates.find(({ student }) => student.id === id);
+
+      expect(byId(LUCIA_ID)?.previous).toEqual({
+        name: '1.º DAW A',
+        schoolYear: '2026/27',
+        outcome: 'repeats',
+      });
+      expect(byId(DAW_STUDENT_IDS[3])?.previous).toEqual({
+        name: '1.º DAW A',
+        schoolYear: '2026/27',
+        outcome: null,
+      });
+      expect(byId(HUGO_ID)).toBeUndefined();
+      expect(byId(DAW_STUDENT_IDS[2])).toBeUndefined();
+      expect(byId(NEW_STUDENT_IDS[0])?.previous).toBeNull();
     });
 
     it('counts a class of another year as no class', async () => {
@@ -969,6 +1032,60 @@ describe('MockGroupService', () => {
     });
   });
 
+  describe('setOutcomes (5.2g)', () => {
+    const outcomeOf = (classId: string, userId: string) =>
+      db.tables().classMembers.find((row) => row.classId === classId && row.userId === userId)
+        ?.outcome;
+
+    it('evaluates several students of the class at once, and takes it back', async () => {
+      await service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID, HUGO_ID], 'promotes');
+
+      expect(outcomeOf(DAW_CLASS_ID, LUCIA_ID)).toBe('promotes');
+      expect(outcomeOf(DAW_CLASS_ID, HUGO_ID)).toBe('promotes');
+      expect(outcomeOf(DAW_CLASS_ID, DAW_STUDENT_IDS[2])).toBeNull();
+
+      await service.setOutcomes(DAW_CLASS_ID, [HUGO_ID], null);
+      expect(outcomeOf(DAW_CLASS_ID, HUGO_ID)).toBeNull();
+    });
+
+    it('lets any teacher of the class evaluate, and the administrator', async () => {
+      db.setSession(OTHER_TEACHER_ID);
+      await service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID], 'graduates');
+      db.setSession(ADMIN_ID);
+      await service.setOutcomes(DAW_CLASS_ID, [HUGO_ID], 'leaves');
+
+      expect(outcomeOf(DAW_CLASS_ID, LUCIA_ID)).toBe('graduates');
+      expect(outcomeOf(DAW_CLASS_ID, HUGO_ID)).toBe('leaves');
+    });
+
+    it('does not find a class the user does not look after, nor a student who is not in it', async () => {
+      await expect(service.setOutcomes(DAM_CLASS_ID, [ELENA_ID], 'promotes')).rejects.toMatchObject(
+        { kind: 'not_found' },
+      );
+      await expect(
+        service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID, ELENA_ID], 'promotes'),
+      ).rejects.toMatchObject({ kind: 'not_found' });
+      expectSeed();
+    });
+
+    it('takes neither nobody, nor the same student twice, nor too many', async () => {
+      await expect(service.setOutcomes(DAW_CLASS_ID, [], 'promotes')).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      await expect(
+        service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID, LUCIA_ID], 'promotes'),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+      await expect(
+        service.setOutcomes(
+          DAW_CLASS_ID,
+          Array.from({ length: MAX_OUTCOME_BATCH + 1 }, (_, n) => `student-${n}`),
+          'promotes',
+        ),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+      expectSeed();
+    });
+  });
+
   describe('matchStudents', () => {
     it('finds active students by email or whole name, without accents nor capitals', async () => {
       await expect(
@@ -988,11 +1105,25 @@ describe('MockGroupService', () => {
             name: 'Elena Vázquez Lorenzo',
             email: 'elena.vazquez@tutoria.test',
           },
+          // Where she is this year (5.2g)
+          previous: { name: '1.º DAM B', schoolYear: '2026/27', outcome: null },
         },
         {
           entry: 'ruben cabrera mendez',
           student: expect.objectContaining({ id: RUBEN_ID }),
+          previous: expect.objectContaining({ name: '1.º DAM B' }),
         },
+      ]);
+    });
+
+    it('says who finished the cycle or left the school, for the screen to leave them out (5.2g)', async () => {
+      const next = await service.createClass(NEXT_YEAR, [], TEACHER_ID);
+      await service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID], 'leaves');
+
+      await expect(service.matchStudents(next, ['lucia.martin@tutoria.test'])).resolves.toEqual([
+        expect.objectContaining({
+          previous: { name: '1.º DAW A', schoolYear: '2026/27', outcome: 'leaves' },
+        }),
       ]);
     });
 
@@ -1022,9 +1153,12 @@ describe('MockGroupService', () => {
   describe('searchStudents', () => {
     const DAW_CLASS = { kind: 'class', id: DAW_CLASS_ID } as const;
     const ELENA = {
-      id: ELENA_ID,
-      name: 'Elena Vázquez Lorenzo',
-      email: 'elena.vazquez@tutoria.test',
+      student: {
+        id: ELENA_ID,
+        name: 'Elena Vázquez Lorenzo',
+        email: 'elena.vazquez@tutoria.test',
+      },
+      previous: { name: '1.º DAM B', schoolYear: '2026/27', outcome: null },
     };
 
     it('finds active students not in the class, without accents or capitals', async () => {
@@ -1036,7 +1170,18 @@ describe('MockGroupService', () => {
 
     it('finds them by email too', async () => {
       await expect(service.searchStudents(DAW_CLASS, 'bilal.am')).resolves.toEqual([
-        expect.objectContaining({ id: DAM_STUDENT_IDS[5] }),
+        expect.objectContaining({ student: expect.objectContaining({ id: DAM_STUDENT_IDS[5] }) }),
+      ]);
+    });
+
+    it('finds who finished the cycle too, with the class where they did (5.2g)', async () => {
+      const next = await service.createClass(NEXT_YEAR, [], TEACHER_ID);
+      await service.setOutcomes(DAW_CLASS_ID, [LUCIA_ID], 'graduates');
+
+      await expect(service.searchStudents({ kind: 'class', id: next }, 'lucía')).resolves.toEqual([
+        expect.objectContaining({
+          previous: { name: '1.º DAW A', schoolYear: '2026/27', outcome: 'graduates' },
+        }),
       ]);
     });
 
@@ -1045,7 +1190,9 @@ describe('MockGroupService', () => {
 
       await expect(
         service.searchStudents({ kind: 'group', id: DAW_ENGLISH_GROUP_ID }, 'lucía'),
-      ).resolves.toEqual([expect.objectContaining({ id: LUCIA_ID })]);
+      ).resolves.toEqual([
+        expect.objectContaining({ student: expect.objectContaining({ id: LUCIA_ID }) }),
+      ]);
     });
 
     it('finds none with a short search, and the maximum at most by name', async () => {
@@ -1055,7 +1202,7 @@ describe('MockGroupService', () => {
       const found = await service.searchStudents({ kind: 'class', id: classId }, 'tutoria');
 
       expect(found).toHaveLength(MAX_STUDENT_SEARCH_RESULTS);
-      const names = found.map((row) => row.name);
+      const names = found.map((row) => row.student.name);
       expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'es')));
     });
 
@@ -1079,24 +1226,24 @@ describe('MockGroupService', () => {
       });
       db.setSession(TEACHER_ID);
 
-      await service.enrollInClass(DAW_CLASS_ID, [ELENA_ID, RUBEN_ID]);
+      await service.enrollInClass(DAW_CLASS_ID, [NEW_ID, OTHER_NEW_ID]);
 
-      expect(membersOf(DAW_CLASS_ID)).toEqual(sorted([...DAW_STUDENT_IDS, ELENA_ID, RUBEN_ID]));
+      expect(membersOf(DAW_CLASS_ID)).toEqual(sorted([...DAW_STUDENT_IDS, NEW_ID, OTHER_NEW_ID]));
       for (const groupId of [DAW_GROUP_ID, DAW_WEB_GROUP_ID, javiers]) {
-        expect(studentsOf(groupId)).toEqual(expect.arrayContaining([ELENA_ID, RUBEN_ID]));
+        expect(studentsOf(groupId)).toEqual(expect.arrayContaining([NEW_ID, OTHER_NEW_ID]));
       }
       expect(studentsOf(DAW_ENGLISH_GROUP_ID)).toEqual([]);
     });
 
     it('skips who is already in the class or in a group', async () => {
-      await service.enroll(DAW_WEB_GROUP_ID, [ELENA_ID]);
+      await service.enroll(DAW_WEB_GROUP_ID, [NEW_ID]);
       const before = db.tables().enrollments.length;
 
-      await service.enrollInClass(DAW_CLASS_ID, [LUCIA_ID, ELENA_ID]);
+      await service.enrollInClass(DAW_CLASS_ID, [LUCIA_ID, NEW_ID]);
 
-      expect(membersOf(DAW_CLASS_ID)).toEqual(sorted([...DAW_STUDENT_IDS, ELENA_ID]));
-      expect(studentsOf(DAW_WEB_GROUP_ID)).toEqual(sorted([...DAW_STUDENT_IDS, ELENA_ID]));
-      expect(studentsOf(DAW_GROUP_ID)).toEqual(sorted([...DAW_STUDENT_IDS, ELENA_ID]));
+      expect(membersOf(DAW_CLASS_ID)).toEqual(sorted([...DAW_STUDENT_IDS, NEW_ID]));
+      expect(studentsOf(DAW_WEB_GROUP_ID)).toEqual(sorted([...DAW_STUDENT_IDS, NEW_ID]));
+      expect(studentsOf(DAW_GROUP_ID)).toEqual(sorted([...DAW_STUDENT_IDS, NEW_ID]));
       expect(db.tables().enrollments).toHaveLength(before + 1);
     });
 
@@ -1107,11 +1254,21 @@ describe('MockGroupService', () => {
       ['a teacher', [ELENA_ID, OTHER_TEACHER_ID]],
       ['a disabled student', [ELENA_ID, DISABLED_STUDENT_ID]],
       ['somebody who does not exist', [ELENA_ID, 'nope']],
+      // One class a year (5.2g): Elena is in 1.º DAM B
+      ['a student of another class of the year', [NEW_ID, ELENA_ID]],
     ])('enrolls nobody with %s', async (_, userIds) => {
       await expect(service.enrollInClass(DAW_CLASS_ID, userIds)).rejects.toMatchObject({
         kind: 'invalid',
       });
       expectSeed();
+    });
+
+    it('enrolls a student of a class of another year (5.2g)', async () => {
+      const next = await service.createClass(NEXT_YEAR, [], TEACHER_ID);
+
+      await service.enrollInClass(next, [LUCIA_ID, ELENA_ID]);
+
+      expect(membersOf(next)).toEqual(sorted([LUCIA_ID, ELENA_ID]));
     });
 
     it('does not find a class the user does not look after', async () => {
@@ -1250,7 +1407,10 @@ describe('MockGroupService', () => {
           teacherId: TEACHER_ID,
         },
       ]);
-      db.update('classMembers', (rows) => [...rows, { classId: PAST_CLASS_ID, userId: LUCIA_ID }]);
+      db.update('classMembers', (rows) => [
+        ...rows,
+        { classId: PAST_CLASS_ID, userId: LUCIA_ID, outcome: null },
+      ]);
       db.update('enrollments', (rows) => [
         ...rows,
         { id: 'past-lucia', groupId: PAST_GROUP_ID, userId: LUCIA_ID },
@@ -1260,6 +1420,14 @@ describe('MockGroupService', () => {
 
     const openOf = async (classId: string) =>
       (await service.listClasses()).find(({ schoolClass }) => schoolClass.id === classId)?.open;
+
+    it('still takes the final evaluation of its students (5.2g)', async () => {
+      await service.setOutcomes(PAST_CLASS_ID, [LUCIA_ID], 'graduates');
+
+      expect(db.tables().classMembers.find((row) => row.classId === PAST_CLASS_ID)?.outcome).toBe(
+        'graduates',
+      );
+    });
 
     it('lists a class of this year as open and one of a past year as closed', async () => {
       await expect(openOf(DAW_CLASS_ID)).resolves.toBe(true);
@@ -1324,8 +1492,9 @@ describe('MockGroupService', () => {
       expectSeed();
     });
 
-    it('duplicates a closed class into this year, with its students', async () => {
-      const year = schoolYearOf(new Date());
+    // Into next year: Lucía is in a class of this one already (one class a year, 5.2g)
+    it('duplicates a closed class into a later year, with its students', async () => {
+      const year = shiftSchoolYear(schoolYearOf(new Date()), 1);
       const classId = await service.duplicateClass(
         PAST_CLASS_ID,
         { name: '2.º DAW Z', schoolYear: year },

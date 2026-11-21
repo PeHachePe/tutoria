@@ -1,6 +1,6 @@
 import { assertEquals } from '@std/assert';
 
-import type { UserLinks } from '../../../src/app/data/admin/user-rules.ts';
+import { MAX_DISABLE_BATCH, type UserLinks } from '../../../src/app/data/admin/user-rules.ts';
 import {
   type AdminUsersStore,
   createAdminUsersHandler,
@@ -14,6 +14,7 @@ import {
 const ADMIN_ID = '10000000-0000-4000-8000-000000000001';
 const TEACHER_ID = '10000000-0000-4000-8000-000000000002';
 const STUDENT_ID = '10000000-0000-4000-8000-000000000011';
+const OTHER_STUDENT_ID = '10000000-0000-4000-8000-000000000012';
 const NEW_ID = '10000000-0000-4000-8000-000000000099';
 const MISSING_ID = '10000000-0000-4000-8000-000000000098';
 const PASSWORD = 'contraseña segura';
@@ -37,6 +38,7 @@ class FakeStore implements AdminUsersStore {
     [ADMIN_ID, row(ADMIN_ID, 'Admin', 'admin')],
     [TEACHER_ID, row(TEACHER_ID, 'Marta', 'teacher')],
     [STUDENT_ID, row(STUDENT_ID, 'Lucia', 'student')],
+    [OTHER_STUDENT_ID, row(OTHER_STUDENT_ID, 'Diego', 'student')],
   ]);
   readonly links = new Map<string, UserLinks>([[TEACHER_ID, { groups: 2, enrollments: 0 }]]);
   readonly emails = new Set(['lucia@tutoria.test']);
@@ -116,6 +118,8 @@ const update = (userId: string, changes: Record<string, unknown>) => ({
   userId,
   changes,
 });
+
+const disable = (...userIds: string[]) => ({ action: 'disable', userIds });
 
 /** Runs `fn` without the errors the function logs on purpose. */
 async function quietly<T>(fn: () => Promise<T>): Promise<T> {
@@ -220,6 +224,48 @@ Deno.test('the same status again does not touch the ban', async () => {
   assertEquals(store.calls, ['profile {"status":"active"}']);
 });
 
+Deno.test('several accounts are disabled at once, each as one alone', async () => {
+  const { store, handle } = setup();
+
+  const response = await handle(post(disable(STUDENT_ID, OTHER_STUDENT_ID)));
+
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), { disabled: [STUDENT_ID, OTHER_STUDENT_ID], failed: [] });
+  assertEquals(store.calls, [
+    'profile {"status":"disabled"}',
+    'ban',
+    'profile {"status":"disabled"}',
+    'ban',
+  ]);
+  assertEquals(store.rows.get(OTHER_STUDENT_ID)?.status, 'disabled');
+});
+
+Deno.test(
+  'an account that cannot be disabled is left out, and the others are disabled',
+  async () => {
+    const { store, handle } = setup();
+    store.rows.set(STUDENT_ID, { ...store.rows.get(STUDENT_ID)!, status: 'disabled' });
+    let profiles = 0;
+    const updateProfile = store.updateProfile.bind(store);
+    // The second write fails: that of the teacher, after the student
+    store.updateProfile = (userId, changes) =>
+      ++profiles === 2
+        ? Promise.reject(new Error('Database down'))
+        : updateProfile(userId, changes);
+
+    const response = await quietly(() =>
+      handle(post(disable(STUDENT_ID, ADMIN_ID, MISSING_ID, OTHER_STUDENT_ID, TEACHER_ID))),
+    );
+
+    // Already disabled, it is not touched again; the administration never disables itself
+    assertEquals(await response.json(), {
+      disabled: [STUDENT_ID, OTHER_STUDENT_ID],
+      failed: [ADMIN_ID, MISSING_ID, TEACHER_ID],
+    });
+    assertEquals(store.calls, ['profile {"status":"disabled"}', 'ban']);
+  },
+);
+
 Deno.test('each change the rules forbid is a conflict that names it', async () => {
   const { store, handle } = setup();
   store.links.set(STUDENT_ID, { groups: 0, enrollments: 1 });
@@ -271,6 +317,15 @@ Deno.test('a body that is not a request is invalid', async () => {
     update('no-es-un-uuid', { name: 'Lucía' }),
     update(STUDENT_ID, {}),
     update(STUDENT_ID, { status: 'gone' }),
+    disable(),
+    disable('no-es-un-uuid'),
+    disable(STUDENT_ID, STUDENT_ID),
+    disable(
+      ...Array.from(
+        { length: MAX_DISABLE_BATCH + 1 },
+        (_, n) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+      ),
+    ),
   ];
 
   for (const body of bodies) {

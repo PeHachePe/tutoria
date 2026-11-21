@@ -17,6 +17,12 @@ export const MIN_PASSWORD_LENGTH = 8;
  */
 export const MAX_PASSWORD_LENGTH = 64;
 
+/**
+ * Accounts disabled in one request (5.2g): more than finish in a school in a year, and few enough
+ * for the bans of Auth, one by one, to answer in time.
+ */
+export const MAX_DISABLE_BATCH = 100;
+
 export type UserChangeProblem = 'own_role' | 'own_status' | 'has_groups' | 'has_enrollments';
 
 /** What ties a user to the classes: the groups they teach and their enrollments. */

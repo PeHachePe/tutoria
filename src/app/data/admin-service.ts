@@ -1,7 +1,8 @@
 import type { UserLinks } from './admin/user-rules';
 import type { AiModelCheck, AiProviderSetting } from './ai-provider-setting';
 import type { Subject } from './subject';
-import type { AppUser, Role, UserStatus } from './user';
+import type { PreviousClass, UserRef } from './group-service';
+import type { AppUser, ClassOutcome, Role, UserStatus } from './user';
 
 export interface NewUser {
   readonly name: string;
@@ -26,6 +27,28 @@ export interface UserEntry {
   readonly groupNames: readonly string[];
   /** While there are any, the role does not change (D-072). */
   readonly links: UserLinks;
+  /** The classes they were a student of, the latest first, with their evaluation (5.2g). */
+  readonly classes: readonly PreviousClass[];
+}
+
+/**
+ * An active student whose last class says that they finished the cycle or left the school (5.2g):
+ * the administration still has to disable their account.
+ */
+export interface FinishedStudent {
+  readonly student: UserRef;
+  /** One of `FINISHED_OUTCOMES`. */
+  readonly outcome: ClassOutcome;
+  /** That last class: «2.º DAW A», `2025/26`. */
+  readonly className: string;
+  readonly schoolYear: string;
+}
+
+/** What `disableUsers()` did with each account. */
+export interface DisableResult {
+  readonly disabled: readonly string[];
+  /** Those that do not exist, that the rules forbid (the administration itself) or that failed. */
+  readonly failed: readonly string[];
 }
 
 /** A new subject has no id yet; an existing one keeps it. */
@@ -50,6 +73,15 @@ export abstract class AdminService {
    * the user.
    */
   abstract updateUser(userId: string, changes: UserChanges): Promise<AppUser>;
+
+  /** By name: the accounts left to disable after the final evaluation (5.2g). */
+  abstract listFinishedStudents(): Promise<FinishedStudent[]>;
+
+  /**
+   * Disables several accounts at once, each as `updateUser()` with `status: 'disabled'`, and says
+   * which. `MAX_DISABLE_BATCH` at most and without repeating one (`invalid`).
+   */
+  abstract disableUsers(userIds: readonly string[]): Promise<DisableResult>;
 
   /** The subjects of the groups (2.5c), by name, in their source language and translated. */
   abstract listSubjects(): Promise<Subject[]>;

@@ -34,9 +34,10 @@ const LUCIA = 'Lucía Martín Gómez';
 const ELENA = 'Elena Vázquez Lorenzo';
 const AYA = 'Aya Benali Haddad';
 const RAUL = 'Raúl Medina Cortés';
+const MARINA = 'Marina Vidal Soto';
 /** An empty class of Marta's, with neither students nor subjects. */
 const EMPTY_CLASS_ID = 'empty-class';
-/** Last year's class of Marta's, with Lucía and Elena: it lends its students. */
+/** Last year's class of Marta's, with Lucía, Elena and Marina: it lends its students. */
 const LAST_YEAR_CLASS_ID = 'last-year-class';
 const LAST_YEAR = '1.º DAW A · 2025/26';
 /** A split of basic programming of Marta's in 1.º DAW A, without students. */
@@ -96,8 +97,9 @@ function prepare(db: MockDb): void {
   ]);
   db.update('classMembers', (rows) => [
     ...rows,
-    { classId: LAST_YEAR_CLASS_ID, userId: lucia },
-    { classId: LAST_YEAR_CLASS_ID, userId: DAM_STUDENT_IDS[0] },
+    { classId: LAST_YEAR_CLASS_ID, userId: lucia, outcome: null },
+    { classId: LAST_YEAR_CLASS_ID, userId: DAM_STUDENT_IDS[0], outcome: null },
+    { classId: LAST_YEAR_CLASS_ID, userId: NEW_STUDENT_IDS[0], outcome: null },
   ]);
 }
 
@@ -272,7 +274,8 @@ describe('ClassStudents', () => {
     expect(names()).toEqual([...names()].sort((a, b) => a.localeCompare(b, 'es')));
     expect(screen.getByTitle('lucia.martin@tutoria.test').textContent).toBe(LUCIA);
     expect(text(row(AYA))).toContain('(cuenta desactivada)');
-    expect(text(row(ELENA))).toContain('De otra clase');
+    // Her class of the year (5.2g)
+    expect(text(row(ELENA))).toContain('De 1.º DAM B');
     expect(text(row(RAUL))).toContain('(cuenta desactivada)');
     expect(text(row(LUCIA))).not.toMatch(/desactivada|De otra clase/);
     expect(screen.queryByText(/Aún no tiene asignaturas/)).toBeNull();
@@ -390,10 +393,11 @@ describe('ClassStudents', () => {
     await render();
 
     await expectMenu(`Acciones de ${LUCIA}`, ['Quitar de la clase']);
-    await expectMenu(`Acciones de ${ELENA}`, ['Añadir a la clase']);
     await expectMenu(`Acciones de ${AYA}`, ['Quitar de la clase']);
     // Disabled, and of no class: nothing to do
     expect(screen.queryByRole('button', { name: `Acciones de ${RAUL}` })).toBeNull();
+    // A student of another class of the year is not added to this one (5.2g)
+    expect(screen.queryByRole('button', { name: `Acciones de ${ELENA}` })).toBeNull();
   });
 
   it('enrolls with a checkbox at once, and undoes it from the notice', async () => {
@@ -484,6 +488,14 @@ describe('ClassStudents', () => {
 
   it('adds a student of another class to this one, or says why not', async () => {
     await render();
+    // Elena leaves 1.º DAM B: she only takes web here, from no class this year
+    TestBed.inject(MockDb).update('classMembers', (rows) =>
+      rows.filter((member) => member.userId !== DAM_STUDENT_IDS[0]),
+    );
+    fixture.componentInstance.reload();
+    await settle();
+    expect(text(row(ELENA))).toContain('De otra clase');
+    await expectMenu(`Acciones de ${ELENA}`, ['Añadir a la clase']);
 
     TestBed.inject(MockNetwork).failNextRequest('network');
     await act(ELENA, 'Añadir a la clase');
@@ -569,6 +581,124 @@ describe('ClassStudents', () => {
     );
   });
 
+  describe('the final evaluation (5.2g)', () => {
+    const bar = () => screen.queryByRole('toolbar', { name: 'Evaluación final' });
+    const chip = (name: string) =>
+      within(row(name)).getByRole('button', { name: /^Evaluación final de / });
+
+    async function evaluate(name: string, outcome: string): Promise<void> {
+      await userEvent.click(chip(name));
+      await userEvent.click(await screen.findByRole('menuitemradio', { name: outcome }));
+      await settle();
+    }
+
+    it('shows the column with its button, evaluates one student from its menu and hides it', async () => {
+      await render();
+      const setOutcomes = vi.spyOn(TestBed.inject(GroupService), 'setOutcomes');
+      // Nobody evaluated in a class of this year: hidden until asked
+      expect(bar()).toBeNull();
+      expect(screen.queryByRole('columnheader', { name: 'Evaluación' })).toBeNull();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Evaluación final' }));
+      expect(text(bar())).toContain('Evaluación final: 0 de 24');
+      expect(chip(LUCIA).getAttribute('aria-label')).toBe(
+        `Evaluación final de ${LUCIA}: Sin evaluar`,
+      );
+      // Of one subject only: evaluated in their own class
+      expect(within(row(ELENA)).getByRole('img', { name: 'Se evalúa en su clase' })).toBeTruthy();
+
+      await evaluate(LUCIA, 'Repite');
+      expect(setOutcomes).toHaveBeenCalledWith(DAW_CLASS_ID, [DAW_STUDENT_IDS[0]], 'repeats');
+      expect(text(bar())).toContain('Evaluación final: 1 de 24 · 1 repite');
+      expect(chip(LUCIA).getAttribute('aria-label')).toBe(`Evaluación final de ${LUCIA}: Repite`);
+      expect(changed).toHaveBeenCalled();
+
+      // The same again asks nothing; none takes it back
+      await evaluate(LUCIA, 'Repite');
+      expect(setOutcomes).toHaveBeenCalledTimes(1);
+      await evaluate(LUCIA, 'Sin evaluar');
+      expect(setOutcomes).toHaveBeenLastCalledWith(DAW_CLASS_ID, [DAW_STUDENT_IDS[0]], null);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Ocultar la evaluación final' }));
+      expect(bar()).toBeNull();
+      expect(screen.getByRole('button', { name: 'Evaluación final' })).toBeTruthy();
+    });
+
+    it('evaluates those without an evaluation at once, never over the others, and undoes it', async () => {
+      await render();
+      await userEvent.click(screen.getByRole('button', { name: 'Evaluación final' }));
+      await evaluate(LUCIA, 'Baja');
+      expect(
+        within(bar()!).getByRole('button', { name: 'Titulan los 23 sin evaluar' }),
+      ).toBeTruthy();
+
+      await userEvent.click(
+        within(bar()!).getByRole('button', { name: 'Promocionan los 23 sin evaluar' }),
+      );
+      await settle();
+      expect(await screen.findByText('23 promocionan')).toBeTruthy();
+      expect(text(bar())).toContain('Evaluación final: 24 de 24 · 23 promocionan · 1 baja');
+      // All evaluated: no shortcut left
+      expect(within(bar()!).queryByRole('button', { name: /sin evaluar/ })).toBeNull();
+
+      await undo();
+      // Once the notice has gone
+      await vi.waitFor(() => expect(text(bar())).toContain('Evaluación final: 1 de 24 · 1 baja'));
+      expect(chip(LUCIA).getAttribute('aria-label')).toBe(`Evaluación final de ${LUCIA}: Baja`);
+    });
+
+    it('graduates the rest, and says why an evaluation failed', async () => {
+      await render();
+      await userEvent.click(screen.getByRole('button', { name: 'Evaluación final' }));
+
+      TestBed.inject(MockNetwork).failNextRequest('network');
+      await evaluate(LUCIA, 'Titula');
+      expect(await screen.findByText(/Sin conexión/)).toBeTruthy();
+      expect(chip(LUCIA).getAttribute('aria-label')).toBe(
+        `Evaluación final de ${LUCIA}: Sin evaluar`,
+      );
+
+      TestBed.inject(MockNetwork).failNextRequest('network');
+      await userEvent.click(
+        within(bar()!).getByRole('button', { name: 'Titulan los 24 sin evaluar' }),
+      );
+      await settle();
+      expect(text(bar())).toContain('Evaluación final: 0 de 24');
+
+      await userEvent.click(
+        within(bar()!).getByRole('button', { name: 'Titulan los 24 sin evaluar' }),
+      );
+      await settle();
+      expect(await screen.findByText('24 titulan')).toBeTruthy();
+      expect(text(bar())).toContain('24 titulan');
+    });
+
+    it('shows the column at once in a class somebody began to evaluate', async () => {
+      await render();
+      await userEvent.click(screen.getByRole('button', { name: 'Evaluación final' }));
+      await evaluate(LUCIA, 'Promociona');
+      // Another class and back: as it is evaluated, it opens with the column
+      fixture.componentRef.setInput('classId', EMPTY_CLASS_ID);
+      await settle();
+      fixture.componentRef.setInput('classId', DAW_CLASS_ID);
+      await settle();
+
+      expect(text(bar())).toContain('1 promociona');
+    });
+
+    it('names the year of a class of another one in its first tab', async () => {
+      await render();
+      fixture.componentRef.setInput('schoolClass', { name: '1.º DAW A', schoolYear: '2027/28' });
+      await settle();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Matricular en la clase' }));
+      const dialog = await opened(`Matricular en ${CLASS_NAME}`);
+      expect(within(dialog).getByRole('tab', { name: 'Sin clase en 2027/28' })).toBeTruthy();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+      await closed();
+    });
+  });
+
   it('shows a class of a past year without anything that changes it (5.2e)', async () => {
     await render();
     fixture.componentRef.setInput('readOnly', true);
@@ -577,6 +707,8 @@ describe('ClassStudents', () => {
     expect(screen.queryByRole('button', { name: /Matricular en la clase/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Añadir asignatura/ })).toBeNull();
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    // But its final evaluation, at sight (5.2g)
+    expect(screen.getByRole('toolbar', { name: 'Evaluación final' })).toBeTruthy();
     // Without students, it does not say how to enroll them
     fixture.componentRef.setInput('classId', EMPTY_CLASS_ID);
     await settle();
@@ -621,7 +753,11 @@ describe('ClassStudents', () => {
     // A search among those who are not in the class
     await tab(dialog, 'Buscar');
     await userEvent.type(within(dialog).getByRole('searchbox'), 'elena');
-    expect(await within(dialog).findByRole('checkbox', { name: /Elena Vázquez/ })).toBeTruthy();
+    // In 1.º DAM B this year: one class a year (5.2g)
+    expect(await within(dialog).findByRole('checkbox', { name: /Elena Vázquez/ })).toHaveProperty(
+      'disabled',
+      true,
+    );
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     await closed();
     expect(screen.queryByText('Matrícula guardada')).toBeNull();
@@ -632,16 +768,28 @@ describe('ClassStudents', () => {
       'ariaSelected',
       'true',
     );
-    await userEvent.click(
-      await within(dialog).findByRole('checkbox', { name: 'Seleccionar todos (3)' }),
-    );
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (3)' }));
+    // By where they come from (5.2g): Carla repeats 2.º DAM B, Marina was in last year's class
+    expect(
+      await within(dialog).findByRole('checkbox', { name: 'Repiten 2.º DAM B · 2025/26 (1)' }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole('checkbox', { name: 'Sin evaluar en 1.º DAW A · 2025/26 (1)' }),
+    ).toBeTruthy();
+    expect(within(dialog).getByRole('checkbox', { name: 'Sin clase anterior (2)' })).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Seleccionar todos (4)' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Matricular (4)' }));
     await closed();
 
     expect(await screen.findByText('Matrícula guardada')).toBeTruthy();
-    // By name: Claudia, Ismael, Marina
-    expect(enrollInClass).toHaveBeenCalledWith(DAW_CLASS_ID, [...NEW_STUDENT_IDS].reverse());
-    expect(text(heading())).toBe('Alumnado (27)');
+    // By name: Carla, Claudia, Ismael, Marina
+    const carla = TestBed.inject(MockDb)
+      .tables()
+      .users.find(({ name }) => name === 'Carla Castro Lozano')!.id;
+    expect(enrollInClass).toHaveBeenCalledWith(DAW_CLASS_ID, [
+      carla,
+      ...[...NEW_STUDENT_IDS].reverse(),
+    ]);
+    expect(text(heading())).toBe('Alumnado (28)');
     // In the groups of the whole class, not in the splits
     expect(box('Marina Vidal Soto', BASIC, true).checked).toBe(true);
     expect(box('Marina Vidal Soto', AFTERNOON, false).checked).toBe(false);
@@ -677,10 +825,29 @@ describe('ClassStudents', () => {
       within(dialog).getByRole('button', { name: `Añadir los de ${LAST_YEAR}` }),
     );
 
-    // Lucía is in this class already
+    // Lucía is in this class already, and Elena in 1.º DAM B this year (5.2g)
     expect(await within(dialog).findByRole('button', { name: 'Matricular (1)' })).toBeTruthy();
-    expect(within(dialog).getByRole('button', { name: `Quitar a ${ELENA}` })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: `Quitar a ${MARINA}` })).toBeTruthy();
+    expect(within(dialog).getByText(`${ELENA} · Ya está en 1.º DAM B · 2026/27`)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await closed();
+
+    // A class without students lends nobody, and asks nothing to tell where they come from
+    fixture.componentRef.setInput('sources', [
+      { id: EMPTY_CLASS_ID, label: '2.º DAW A · 2026/27' },
+    ]);
+    const matchStudents = vi.spyOn(TestBed.inject(GroupService), 'matchStudents');
+    await userEvent.click(screen.getByRole('button', { name: 'Matricular en la clase' }));
+    const again = await opened(`Matricular en ${CLASS_NAME}`);
+    await tab(again, 'De otra clase');
+    await userEvent.click(
+      within(again).getByRole('button', { name: 'Añadir los de 2.º DAW A · 2026/27' }),
+    );
+    expect((await within(again).findByRole('status')).textContent?.trim()).toBe(
+      'Ninguno nuevo de 2.º DAW A · 2026/27',
+    );
+    expect(matchStudents).not.toHaveBeenCalled();
+    await userEvent.click(within(again).getByRole('button', { name: 'Cancelar' }));
     await closed();
   });
 

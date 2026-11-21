@@ -42,22 +42,32 @@ describe('SupabaseAdminService', () => {
               { label: 'Desdoble inglés', school_class: { name: '1.º DAW A' } },
             ],
             enrollment: [],
+            class_member: [],
           },
           {
             ...alvaro,
             taught: [],
             enrollment: [{ class_group: { label: null, school_class: { name: '1.º DAW A' } } }],
+            class_member: [
+              { outcome: 'promotes', school_class: { name: '1.º DAW A', school_year: '2025/26' } },
+            ],
           },
         ],
       });
 
       await expect(service.listUsers()).resolves.toEqual([
-        toUserEntry(toAppUser(alvaro), [], ['1.º DAW A']),
+        toUserEntry(
+          toAppUser(alvaro),
+          [],
+          ['1.º DAW A'],
+          [{ name: '1.º DAW A', schoolYear: '2025/26', outcome: 'promotes' }],
+        ),
         toUserEntry(toAppUser(marta), ['1.º DAW A', '1.º DAW A · Desdoble inglés'], []),
       ]);
-      // The groups taught by their own key: through enrollment, app_user reaches class_group too
+      // The groups taught by their own key: through enrollment, app_user reaches class_group too;
+      // and the classes of a student with their evaluation (5.2g)
       expect(server.sentTo('GET', USERS)[0].params.get('select')).toBe(
-        '*,taught:class_group!class_group_teacher_id_fkey(label,school_class(name)),enrollment(class_group(label,school_class(name)))',
+        '*,taught:class_group!class_group_teacher_id_fkey(label,school_class(name)),enrollment(class_group(label,school_class(name))),class_member(outcome,school_class(name,school_year))',
       );
     });
 
@@ -125,6 +135,67 @@ describe('SupabaseAdminService', () => {
       await expect(service.updateUser('lucia', { name: 'Lucía' })).rejects.toMatchObject({
         kind: 'unknown',
       });
+    });
+  });
+
+  describe('the accounts left after the final evaluation (5.2g)', () => {
+    it('lists the finished students the RPC gives, by name', async () => {
+      server.on('POST', '/rest/v1/rpc/finished_students', {
+        body: [
+          {
+            id: 'lucia',
+            name: 'Lucía',
+            email: 'lucia@x',
+            outcome: 'graduates',
+            class_name: '2.º DAW A',
+            school_year: '2025/26',
+          },
+          {
+            id: 'ana',
+            name: 'Ana',
+            email: 'ana@x',
+            outcome: 'leaves',
+            class_name: '1.º DAM B',
+            school_year: '2025/26',
+          },
+        ],
+      });
+
+      await expect(service.listFinishedStudents()).resolves.toEqual([
+        {
+          student: { id: 'ana', name: 'Ana', email: 'ana@x' },
+          outcome: 'leaves',
+          className: '1.º DAM B',
+          schoolYear: '2025/26',
+        },
+        {
+          student: { id: 'lucia', name: 'Lucía', email: 'lucia@x' },
+          outcome: 'graduates',
+          className: '2.º DAW A',
+          schoolYear: '2025/26',
+        },
+      ]);
+    });
+
+    it('disables several accounts with the function, and says which it could not', async () => {
+      server.on('POST', ADMIN_USERS, { body: { disabled: ['lucia'], failed: ['ana'] } });
+
+      await expect(service.disableUsers(['lucia', 'ana'])).resolves.toEqual({
+        disabled: ['lucia'],
+        failed: ['ana'],
+      });
+      expect(server.sentTo('POST', ADMIN_USERS)[0].body).toEqual({
+        action: 'disable',
+        userIds: ['lucia', 'ana'],
+      });
+    });
+
+    it('turns a failure of the function into its kind, and an empty answer into unknown', async () => {
+      server.on('POST', ADMIN_USERS, { status: 403, body: { message: 'No' } });
+      await expect(service.disableUsers(['lucia'])).rejects.toMatchObject({ kind: 'forbidden' });
+
+      server.on('POST', ADMIN_USERS, { body: null });
+      await expect(service.disableUsers(['lucia'])).rejects.toMatchObject({ kind: 'unknown' });
     });
   });
 

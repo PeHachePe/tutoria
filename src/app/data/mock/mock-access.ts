@@ -1,7 +1,7 @@
 import type { Attempt } from '../attempt';
 import { DataError } from '../data-error';
 import type { ExerciseAssignment } from '../exercise';
-import type { AppUser, ClassGroup, SchoolClass } from '../user';
+import type { AppUser, ClassGroup, ClassOutcome, SchoolClass } from '../user';
 import type { MockTables } from './mock-tables';
 
 /**
@@ -19,6 +19,33 @@ export function findRow<Row extends { readonly id: string }>(
     throw new DataError('not_found');
   }
   return row;
+}
+
+/**
+ * The last class of a student up to a school year, or ever without one, with their outcome in it,
+ * as `last_class_member` (5.2g): of two of that year, which should not happen, that of the first
+ * name.
+ */
+export function lastClassOf(
+  tables: Pick<MockTables, 'classes' | 'classMembers'>,
+  userId: string,
+  upToSchoolYear?: string,
+): { readonly schoolClass: SchoolClass; readonly outcome: ClassOutcome | null } | null {
+  const [last] = tables.classMembers
+    .filter((member) => member.userId === userId)
+    .map((member) => ({
+      schoolClass: findRow(tables.classes, member.classId),
+      outcome: member.outcome,
+    }))
+    .filter(
+      ({ schoolClass }) => upToSchoolYear === undefined || schoolClass.schoolYear <= upToSchoolYear,
+    )
+    .sort(
+      (a, b) =>
+        b.schoolClass.schoolYear.localeCompare(a.schoolClass.schoolYear) ||
+        a.schoolClass.name.localeCompare(b.schoolClass.name),
+    );
+  return last ?? null;
 }
 
 /** Ids of the groups the user is enrolled in. */

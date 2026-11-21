@@ -1,7 +1,8 @@
 import { DataError } from '../../data/data-error';
 
 /** What the screen of the groups asks the server (5.2b). */
-export type GroupAction = 'save' | 'remove' | 'enroll' | 'unenroll';
+/** `evaluate`: the final evaluation of a student (5.2g). */
+export type GroupAction = 'save' | 'remove' | 'enroll' | 'unenroll' | 'evaluate';
 
 /**
  * The message of an action that failed. `invalid` is what the server refused (5.2a): removing a
@@ -21,7 +22,8 @@ export function groupActionMessage(action: GroupAction, error: unknown): string 
     return $localize`:@@groups.remove.started:No se puede eliminar: ya hay alumnos con trabajo en este grupo.`;
   }
   if (kind === 'invalid' && action === 'enroll') {
-    return $localize`:@@groups.error.enroll:Alguno ya no se puede matricular: vuelve a buscarlo.`;
+    // A disabled account, or one class a year (5.2g): another teacher put them in theirs meanwhile
+    return $localize`:@@groups.error.enroll:Alguno ya no se puede matricular: puede que tenga ya otra clase este curso o que su cuenta esté desactivada. Vuelve a buscarlo.`;
   }
   return $localize`:@@groups.error.generic:No se ha podido guardar. Inténtalo de nuevo.`;
 }

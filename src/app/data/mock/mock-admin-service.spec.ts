@@ -2,10 +2,11 @@ import { TestBed } from '@angular/core/testing';
 
 import { withoutHistory } from './fixtures/history';
 import { SUBJECTS } from './fixtures/subjects';
-import { MAX_PASSWORD_LENGTH, MAX_USER_NAME_LENGTH } from '../admin/user-rules';
+import { MAX_DISABLE_BATCH, MAX_PASSWORD_LENGTH, MAX_USER_NAME_LENGTH } from '../admin/user-rules';
 import type { NewUser } from '../admin-service';
 import {
   ADMIN_ID,
+  DAW_CLASS_ID,
   DAW_STUDENT_IDS,
   DISABLED_STUDENT_ID,
   OTHER_TEACHER_ID,
@@ -178,6 +179,87 @@ describe('MockAdminService', () => {
       await expect(service.updateUser('nadie', { name: 'Nadie' })).rejects.toMatchObject({
         kind: 'not_found',
       });
+    });
+  });
+
+  describe('the accounts left after the final evaluation (5.2g)', () => {
+    const [LUCIA_ID, HUGO_ID, THIRD_ID] = DAW_STUDENT_IDS;
+
+    /** As the teachers of 1.º DAW A would: Lucía finishes, Hugo leaves, the third repeats. */
+    function evaluate(): void {
+      const outcomes = new Map([
+        [LUCIA_ID, 'graduates'],
+        [HUGO_ID, 'leaves'],
+        [THIRD_ID, 'repeats'],
+      ] as const);
+      db.update('classMembers', (rows) =>
+        rows.map((row) =>
+          row.classId === DAW_CLASS_ID
+            ? { ...row, outcome: outcomes.get(row.userId) ?? null }
+            : row,
+        ),
+      );
+    }
+
+    it('lists the active students whose last class says they finished or left', async () => {
+      evaluate();
+
+      await expect(service.listFinishedStudents()).resolves.toEqual([
+        {
+          student: { id: HUGO_ID, name: 'Hugo Sánchez Ferrer', email: 'hugo.sanchez@tutoria.test' },
+          outcome: 'leaves',
+          className: '1.º DAW A',
+          schoolYear: '2026/27',
+        },
+        {
+          student: {
+            id: LUCIA_ID,
+            name: 'Lucía Martín Gómez',
+            email: 'lucia.martin@tutoria.test',
+          },
+          outcome: 'graduates',
+          className: '1.º DAW A',
+          schoolYear: '2026/27',
+        },
+      ]);
+    });
+
+    it('leaves out a disabled account and who came back in a later class', async () => {
+      evaluate();
+      await service.updateUser(HUGO_ID, { status: 'disabled' });
+      db.update('classes', (rows) => [...rows, { ...rows[0], id: 'next', schoolYear: '2027/28' }]);
+      db.update('classMembers', (rows) => [
+        ...rows,
+        { classId: 'next', userId: LUCIA_ID, outcome: null },
+      ]);
+
+      await expect(service.listFinishedStudents()).resolves.toEqual([]);
+    });
+
+    it('disables several accounts at once, and says which it could not', async () => {
+      const result = await service.disableUsers([LUCIA_ID, ADMIN_ID, 'nadie', HUGO_ID]);
+
+      expect(result).toEqual({ disabled: [LUCIA_ID, HUGO_ID], failed: [ADMIN_ID, 'nadie'] });
+      const status = (id: string) => db.tables().users.find((user) => user.id === id)?.status;
+      expect(status(LUCIA_ID)).toBe('disabled');
+      expect(status(HUGO_ID)).toBe('disabled');
+      expect(status(ADMIN_ID)).toBe('active');
+    });
+
+    it('takes neither nobody, nor the same account twice, nor too many', async () => {
+      await expect(service.disableUsers([])).rejects.toMatchObject({ kind: 'invalid' });
+      await expect(service.disableUsers([LUCIA_ID, LUCIA_ID])).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      await expect(
+        service.disableUsers(Array.from({ length: MAX_DISABLE_BATCH + 1 }, (_, n) => `u-${n}`)),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+    });
+
+    it('is only for the administration', async () => {
+      db.setSession(TEACHER_ID);
+      await expect(service.listFinishedStudents()).rejects.toMatchObject({ kind: 'forbidden' });
+      await expect(service.disableUsers([LUCIA_ID])).rejects.toMatchObject({ kind: 'forbidden' });
     });
   });
 

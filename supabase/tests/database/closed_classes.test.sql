@@ -125,11 +125,14 @@ select throws_ok(
   '42501', null,
   'nor joins a closed one'
 );
+-- Into next year: Lucía is in a class of this one already (one class a year, 5.2g)
 select isnt(
-  duplicate_class('c0000000-0000-4000-8000-0000000000f1', '2.º DAW Z', current_school_year(),
+  duplicate_class('c0000000-0000-4000-8000-0000000000f1', '2.º DAW Z',
+    (select y + 1 || '/' || lpad(((y + 2) % 100)::text, 2, '0')
+     from (select left(current_school_year(), 4)::integer as y) start),
     array['20000000-0000-4000-8000-0000000000f1']::uuid[], false, false, true),
   null,
-  'a closed class is duplicated into this year, with its students'
+  'a closed class is duplicated into a later year, with its students'
 );
 select throws_ok(
   $$ select duplicate_class('c0000000-0000-4000-8000-000000000001', '2.º DAW Y', '2020/21',

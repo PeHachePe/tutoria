@@ -64,6 +64,12 @@ export const SCREENS: readonly Screen[] = [
     path: '/docente/grupos?grupo=20000000-0000-4000-8000-000000000001',
     user: 'teacher',
   },
+  // 1.º DAW A a year before, closed: its final evaluation still to do, at sight (5.2g)
+  {
+    code: '11-grupos-evaluacion',
+    path: '/docente/grupos?clase=c0000000-0000-4000-8000-000000000118',
+    user: 'teacher',
+  },
   // The AI provider of the seed, Gemini with two fallbacks, and the three subjects (5.3b)
   { code: '12-sistema', path: '/admin/sistema', user: 'admin' },
 ];

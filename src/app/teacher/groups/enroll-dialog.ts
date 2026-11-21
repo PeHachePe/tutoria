@@ -1,4 +1,5 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, DestroyRef, inject, resource, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
@@ -18,6 +19,7 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatTab, MatTabGroup } from '@angular/material/tabs';
 
 import {
+  type ClassCandidate,
   MAX_PASTED_LINES,
   MIN_STUDENT_SEARCH_LENGTH,
   type StudentMatch,
@@ -25,7 +27,8 @@ import {
 } from '../../data/group-service';
 import { createDebouncer } from '../../shared/create-debouncer';
 import { searchable } from '../../shared/searchable';
-import { addToChoice } from './enroll-choice';
+import { type CandidateSection, candidateSections } from '../../shared/class-outcome';
+import { addToChoice, blockerLine, enrollBlocker, sortOutCandidates } from './enroll-choice';
 import { groupActionMessage } from './group-action-message';
 
 /** How long the search waits after the last key before asking the server. */
@@ -44,34 +47,44 @@ export interface EnrollDialogData {
   readonly intro: string;
   /** Who is there already: not chosen again. */
   readonly enrolledIds: ReadonlySet<string>;
+  /**
+   * The year of the class, where a student of another class of that year is not enrolled (5.2g);
+   * null for one group, which a student of any class may take.
+   */
+  readonly schoolYear: string | null;
   /** The other classes of the user, such as last year's. */
   readonly sources: readonly EnrollSource[];
-  /** The active students of one of them. */
-  readonly studentsOf: (classId: string) => Promise<UserRef[]>;
+  /** The active students of one of them, with their last class up to the year of this one (5.2g). */
+  readonly studentsOf: (classId: string) => Promise<readonly ClassCandidate[]>;
   /**
    * Those to choose from with one click: for a class, the active students without a class this
    * year; for one group, those of its class who are not in it.
    */
   readonly candidates: EnrollCandidates;
-  /** Active students who are not there yet. */
-  readonly search: (text: string) => Promise<UserRef[]>;
+  /** Active students who are not there yet, with where they come from (5.2g). */
+  readonly search: (text: string) => Promise<readonly ClassCandidate[]>;
   /** The students a pasted list names. */
   readonly match: (entries: readonly string[]) => Promise<StudentMatch[]>;
   /** Enrolls them; the dialog stays open, with the error, if it fails. */
   readonly enroll: (students: readonly UserRef[]) => Promise<void>;
 }
 
-/** The first tab: its name, what it says without anybody, and who it lists. */
+/**
+ * The first tab: its name, what it says without anybody, and who it lists, with where each comes
+ * from (5.2g): when any comes from a class, they are listed by it, each class with its checkbox.
+ */
 export interface EnrollCandidates {
   readonly label: string;
   readonly empty: string;
-  readonly load: () => Promise<UserRef[]>;
+  readonly load: () => Promise<readonly ClassCandidate[]>;
 }
 
 /** What a pasted list gave: how many it added and the lines that named nobody. */
 interface PastedResult {
   readonly added: number;
   readonly unmatched: readonly string[];
+  /** «Andrea Peña Iglesias · Baja · 2.º DAM B · 2026/27»: who finished, left out (5.2g). */
+  readonly skipped: readonly string[];
 }
 
 /**
@@ -101,6 +114,7 @@ interface PastedResult {
     MatProgressBar,
     MatTabGroup,
     MatTab,
+    NgTemplateOutlet,
   ],
   // A column as tall as the dialog: the tabs take what the title, the chosen and the actions leave
   host: { class: 'flex h-full min-h-0 flex-col' },
@@ -158,18 +172,42 @@ interface PastedResult {
                 <ul
                   class="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-outline-variant pt-1"
                 >
-                  @for (student of shownCandidates(); track student.id) {
-                    <li>
-                      <mat-checkbox [checked]="isChosen(student)" (change)="toggle(student)">
-                        <span class="flex flex-col">
-                          <span>{{ student.name }}</span>
-                          <span class="text-body-small text-on-surface-variant">{{
-                            student.email
-                          }}</span>
-                        </span>
-                      </mat-checkbox>
-                    </li>
-                  } @empty {
+                  @if (byOrigin()) {
+                    <!-- By the class they come from (5.2g): a class is chosen with one click -->
+                    @for (section of sections(); track section.label) {
+                      <li class="mt-2 first:mt-0">
+                        <mat-checkbox
+                          [checked]="isSectionChosen(section)"
+                          [indeterminate]="isSectionPartly(section)"
+                          (change)="toggleSection(section)"
+                        >
+                          <span class="text-title-small"
+                            >{{ section.label }} ({{ section.candidates.length }})</span
+                          >
+                        </mat-checkbox>
+                        <ul class="ps-8">
+                          @for (candidate of section.candidates; track candidate.student.id) {
+                            <li>
+                              <ng-container
+                                [ngTemplateOutlet]="candidateBox"
+                                [ngTemplateOutletContext]="{ $implicit: candidate.student }"
+                              />
+                            </li>
+                          }
+                        </ul>
+                      </li>
+                    }
+                  } @else {
+                    @for (candidate of shownCandidates(); track candidate.student.id) {
+                      <li>
+                        <ng-container
+                          [ngTemplateOutlet]="candidateBox"
+                          [ngTemplateOutletContext]="{ $implicit: candidate.student }"
+                        />
+                      </li>
+                    }
+                  }
+                  @if (shownCandidates().length === 0) {
                     <li
                       class="py-2 text-body-medium text-on-surface-variant"
                       i18n="@@groups.filter.none"
@@ -239,26 +277,48 @@ interface PastedResult {
                     }
                   </ul>
                 }
+                <ng-container
+                  [ngTemplateOutlet]="skippedList"
+                  [ngTemplateOutletContext]="{ $implicit: result.skipped }"
+                />
               }
             </div>
           </mat-tab>
           @if (data.sources.length > 0) {
             <mat-tab label="De otra clase" i18n-label="@@enrollDialog.tab.sources">
-              <ul class="flex flex-col gap-1 pt-3">
-                @for (source of data.sources; track source.id) {
-                  <li>
-                    <button
-                      matButton
-                      type="button"
-                      [disabled]="copying()"
-                      (click)="copyFrom(source)"
-                    >
-                      <mat-icon aria-hidden="true">group</mat-icon>
-                      <span i18n="@@enrollDialog.copyFrom">Añadir los de {{ source.label }}</span>
-                    </button>
-                  </li>
+              <div class="flex h-full flex-col">
+                <!-- Above the classes, which can be many: what came of the last one, at sight -->
+                @if (copiedResult(); as result) {
+                  <div class="flex flex-col gap-1 pt-3">
+                    <p class="text-body-medium" role="status">
+                      <span i18n="@@enrollDialog.copied.visible">{result.added, plural,
+                        =0 {Ninguno nuevo de {{ result.source }}}
+                        =1 {1 elegido de {{ result.source }}}
+                        other {{{ result.added }} elegidos de {{ result.source }}}
+                      }</span>
+                    </p>
+                    <ng-container
+                      [ngTemplateOutlet]="skippedList"
+                      [ngTemplateOutletContext]="{ $implicit: result.skipped }"
+                    />
+                  </div>
                 }
-              </ul>
+                <ul class="flex min-h-0 flex-col gap-1 overflow-y-auto pt-3">
+                  @for (source of data.sources; track source.id) {
+                    <li>
+                      <button
+                        matButton
+                        type="button"
+                        [disabled]="copying()"
+                        (click)="copyFrom(source)"
+                      >
+                        <mat-icon aria-hidden="true">group</mat-icon>
+                        <span i18n="@@enrollDialog.copyFrom">Añadir los de {{ source.label }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              </div>
             </mat-tab>
           }
           <mat-tab label="Buscar" i18n-label="@@enrollDialog.tab.search">
@@ -299,18 +359,40 @@ interface PastedResult {
                   </p>
                 } @else if (results.hasValue() && results.value().length === 0) {
                   <p class="text-body-medium text-on-surface-variant" i18n="@@enrollDialog.none">
-                    Ningún alumno coincide. Las cuentas las crea la administración.
+                    Ningún alumno activo coincide. Las cuentas las crea y las vuelve a activar la
+                    administración.
                   </p>
                 } @else if (results.hasValue()) {
                   <ul class="flex flex-col">
-                    @for (student of results.value(); track student.id) {
+                    @for (found of foundStudents(); track found.candidate.student.id) {
                       <li>
-                        <mat-checkbox [checked]="isChosen(student)" (change)="toggle(student)">
+                        <!-- In another class of the year: not chosen, and it says where (5.2g) -->
+                        <mat-checkbox
+                          [checked]="isChosen(found.candidate.student)"
+                          [disabled]="found.blocker === 'other_class'"
+                          (change)="toggle(found.candidate.student)"
+                        >
                           <span class="flex flex-col">
-                            <span>{{ student.name }}</span>
+                            <span>{{ found.candidate.student.name }}</span>
                             <span class="text-body-small text-on-surface-variant">{{
-                              student.email
+                              found.candidate.student.email
                             }}</span>
+                            <!-- Where they come from (5.2g): who finished, at sight before choosing -->
+                            @if (found.origin; as origin) {
+                              <span
+                                class="flex items-center gap-1 text-body-small"
+                                [class]="
+                                  found.blocker
+                                    ? 'text-on-warning-container'
+                                    : 'text-on-surface-variant'
+                                "
+                              >
+                                <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">{{
+                                  found.blocker ? 'warning' : 'history'
+                                }}</mat-icon>
+                                {{ origin }}
+                              </span>
+                            }
                           </span>
                         </mat-checkbox>
                       </li>
@@ -369,6 +451,35 @@ interface PastedResult {
         }
       </button>
     </mat-dialog-actions>
+    <!-- Shared by the tabs -->
+    <ng-template #skippedList let-skipped>
+      @if (skipped.length > 0) {
+        <p
+          class="flex items-center gap-1 text-body-medium text-on-warning-container"
+          i18n="@@enrollDialog.skipped"
+        >
+          <mat-icon class="size-5! text-[1.25rem]!" aria-hidden="true">warning</mat-icon>
+          No se añaden:
+        </p>
+        <ul class="max-h-24 overflow-y-auto text-body-small text-on-surface-variant">
+          @for (line of skipped; track line) {
+            <li>{{ line }}</li>
+          }
+        </ul>
+        <p class="text-body-small text-on-surface-variant" i18n="@@enrollDialog.skipped.hint">
+          A quien tituló o causó baja se le busca uno a uno si vuelve. Para cambiar a alguien de
+          clase, primero se le quita de la suya.
+        </p>
+      }
+    </ng-template>
+    <ng-template #candidateBox let-student>
+      <mat-checkbox [checked]="isChosen(student)" (change)="toggle(student)">
+        <span class="flex flex-col">
+          <span>{{ student.name }}</span>
+          <span class="text-body-small text-on-surface-variant">{{ student.email }}</span>
+        </span>
+      </mat-checkbox>
+    </ng-template>
   `,
 })
 export class EnrollDialog {
@@ -389,23 +500,23 @@ export class EnrollDialog {
   /** Those not there yet. */
   protected readonly freeCandidates = computed(() =>
     (this.candidates.hasValue() ? this.candidates.value() : []).filter(
-      ({ id }) => !this.data.enrolledIds.has(id),
+      ({ student }) => !this.data.enrolledIds.has(student.id),
     ),
   );
   protected readonly shownCandidates = computed(() => {
     const wanted = searchable(this.candidateFilter().trim());
-    return this.freeCandidates().filter(({ name, email }) =>
+    return this.freeCandidates().filter(({ student: { name, email } }) =>
       searchable(`${name} ${email}`).includes(wanted),
     );
   });
-  protected readonly allShownChosen = computed(
-    () =>
-      this.shownCandidates().length > 0 &&
-      this.shownCandidates().every((student) => this.isChosen(student)),
+  /** Somebody comes from a class: the list goes by class (5.2g). */
+  protected readonly byOrigin = computed(() =>
+    this.freeCandidates().some(({ previous }) => previous !== null),
   );
+  protected readonly sections = computed(() => candidateSections(this.shownCandidates()));
+  protected readonly allShownChosen = computed(() => this.allChosen(this.shownCandidates()));
   protected readonly someShownChosen = computed(
-    () =>
-      !this.allShownChosen() && this.shownCandidates().some((student) => this.isChosen(student)),
+    () => !this.allShownChosen() && this.someChosen(this.shownCandidates()),
   );
 
   /** A pasted list, its lines and what it gave. */
@@ -420,8 +531,13 @@ export class EnrollDialog {
   protected readonly matching = signal(false);
   protected readonly pastedResult = signal<PastedResult | null>(null);
 
-  /** Reading the students of another class. */
+  /** Reading the students of another class, and what came of it. */
   protected readonly copying = signal(false);
+  protected readonly copiedResult = signal<{
+    readonly source: string;
+    readonly added: number;
+    readonly skipped: readonly string[];
+  } | null>(null);
 
   /** The text searched for, once typing stops. */
   private readonly search = signal('');
@@ -435,6 +551,21 @@ export class EnrollDialog {
     },
     loader: ({ params }) => this.data.search(params),
   });
+
+  /**
+   * The results with where each comes from (5.2g), and whether something stands in the way: who
+   * finished can still be chosen, as they may come back; who is in another class of the year, not.
+   */
+  protected readonly foundStudents = computed(() =>
+    (this.results.hasValue() ? this.results.value() : []).map((candidate) => {
+      const blocker = enrollBlocker(candidate, this.data.schoolYear);
+      return {
+        candidate,
+        blocker,
+        origin: candidate.previous && blockerLine(candidate.previous, blocker),
+      };
+    }),
+  );
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.debouncer.cancel());
@@ -468,13 +599,20 @@ export class EnrollDialog {
 
   /** All those the filter shows, or none of them if they all were chosen. */
   protected toggleShown(): void {
-    const shown = this.shownCandidates();
-    if (this.allShownChosen()) {
-      const ids = new Set(shown.map(({ id }) => id));
-      this.chosen.update((chosen) => chosen.filter(({ id }) => !ids.has(id)));
-    } else {
-      this.add(shown);
-    }
+    this.toggleAll(this.shownCandidates());
+  }
+
+  protected isSectionChosen(section: CandidateSection<ClassCandidate>): boolean {
+    return this.allChosen(section.candidates);
+  }
+
+  protected isSectionPartly(section: CandidateSection<ClassCandidate>): boolean {
+    return !this.allChosen(section.candidates) && this.someChosen(section.candidates);
+  }
+
+  /** Those of a class, as «Seleccionar todos» does with all. */
+  protected toggleSection(section: CandidateSection<ClassCandidate>): void {
+    this.toggleAll(section.candidates);
   }
 
   protected clearChosen(): void {
@@ -490,10 +628,16 @@ export class EnrollDialog {
       const lines = this.pastedLines();
       const matches = await this.data.match(lines);
       const found = new Set(matches.map(({ entry }) => entry.toLowerCase()));
-      const added = this.add(matches.map(({ student }) => student));
+      // Who finished or is in another class of the year is not taken in a list (5.2g)
+      const { kept, skipped } = sortOutCandidates(
+        matches,
+        this.data.enrolledIds,
+        this.data.schoolYear,
+      );
       this.pastedResult.set({
-        added,
+        added: this.add(kept),
         unmatched: lines.filter((line) => !found.has(line.toLowerCase())),
+        skipped,
       });
     } catch (error) {
       this.failure.set(groupActionMessage('enroll', error));
@@ -506,8 +650,16 @@ export class EnrollDialog {
   protected async copyFrom(source: EnrollSource): Promise<void> {
     this.copying.set(true);
     this.failure.set(null);
+    this.copiedResult.set(null);
     try {
-      const added = this.add(await this.data.studentsOf(source.id));
+      // By their last class, not their evaluation in that one, which may be old (5.2g)
+      const { kept, skipped } = sortOutCandidates(
+        await this.data.studentsOf(source.id),
+        this.data.enrolledIds,
+        this.data.schoolYear,
+      );
+      const added = this.add(kept);
+      this.copiedResult.set({ source: source.label, added, skipped });
       void this.announcer.announce(
         $localize`:@@enrollDialog.copied:${added}:count: elegidos de ${source.label}:group:`,
       );
@@ -534,6 +686,24 @@ export class EnrollDialog {
       this.failure.set(groupActionMessage('enroll', error));
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  private allChosen(candidates: readonly ClassCandidate[]): boolean {
+    return candidates.length > 0 && candidates.every(({ student }) => this.isChosen(student));
+  }
+
+  private someChosen(candidates: readonly ClassCandidate[]): boolean {
+    return candidates.some(({ student }) => this.isChosen(student));
+  }
+
+  /** All of them, or none if they all were chosen. */
+  private toggleAll(candidates: readonly ClassCandidate[]): void {
+    if (this.allChosen(candidates)) {
+      const ids = new Set(candidates.map(({ student }) => student.id));
+      this.chosen.update((chosen) => chosen.filter(({ id }) => !ids.has(id)));
+    } else {
+      this.add(candidates.map(({ student }) => student));
     }
   }
 

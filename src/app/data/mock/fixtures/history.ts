@@ -1,6 +1,13 @@
 import type { ClassBlock, ExerciseAssignment } from '../../exercise';
 import { schoolYearShiftDays } from '../../school-year-shift';
-import type { AppUser, ClassGroup, ClassMember, Enrollment, SchoolClass } from '../../user';
+import type {
+  AppUser,
+  ClassGroup,
+  ClassMember,
+  ClassOutcome,
+  Enrollment,
+  SchoolClass,
+} from '../../user';
 import type { MockDb } from '../mock-db';
 import { ASSIGNMENTS, CLASS_BLOCKS } from './exercises';
 import { fixtureId } from './fixture-id';
@@ -15,6 +22,11 @@ import { OTHER_TEACHER_ID, TEACHER_ID } from './users';
  * now. No attempts: the history of the teachers stays that of this year. Only last year's basic
  * programming of 1.º DAW A has blocks (5.2f): the four topics of this year, as Marta copied them,
  * to look at in a closed class and to copy again.
+ *
+ * Each class has its final evaluation (5.2g): first year promotes, second year graduates. Last year
+ * is the exception, for the demo: 1.º DAW A, Marta's, is left to evaluate; in 2.º DAM B one student
+ * repeats and one left the school, both without a class this year; and three who finished 2.º DAW A
+ * still have their account active. The administration finds those four to disable.
  */
 
 /** The first past year (2021/22) and the current one (2026/27), by the year they start. */
@@ -23,6 +35,12 @@ const CURRENT_YEAR = 2026;
 
 /** Students of each intake of a cycle. */
 const INTAKE_SIZE = 8;
+
+/** Of the intake that finished 2.º DAW A last June, those whose account is still active (5.2g). */
+const STILL_ACTIVE = 3;
+/** Of that of 2.º DAM B, the one who repeats it and the one who left the school, by position. */
+const REPEATS_AT = 6;
+const LEAVES_AT = 7;
 
 /** Where the ids of this history start, apart from those of this year. */
 const USER_FROM = 100;
@@ -180,33 +198,49 @@ const INTAKES = Array.from(
     ...intake,
     // Finished in June of their second year: all but the intake in second year now
     finished: intake.start + 1 < CURRENT_YEAR,
+    // Finished last June: their final evaluation still has loose ends
+    last: intake.start + 2 === CURRENT_YEAR,
     studentIds: Array.from({ length: INTAKE_SIZE }, (_, n) =>
       fixtureId('user', USER_FROM + index * INTAKE_SIZE + n),
     ),
   }));
 
-export const HISTORY_USERS: readonly AppUser[] = INTAKES.flatMap(
-  ({ start, finished, studentIds }, intake) =>
-    studentIds.map((id, n) => {
-      // A name of three parts that no other student has: the third tells apart those of each round
-      const i = intake * INTAKE_SIZE + n;
-      const first = FIRST_NAMES[i % FIRST_NAMES.length];
-      const surname = SURNAMES[(i * 7) % SURNAMES.length];
-      const second =
-        SURNAMES[(i * 13 + Math.floor(i / FIRST_NAMES.length) * 3 + 5) % SURNAMES.length];
-      const createdAt = `${start}-09-01T08:00:00.000Z`;
-      return {
-        id,
-        name: `${first} ${surname} ${second}`,
-        email: `${plain(first)}.${plain(surname)}.${plain(second)}@tutoria.test`,
-        role: 'student' as const,
-        status: finished ? ('disabled' as const) : ('active' as const),
-        privacyNoticeSeenAt: null,
-        createdAt,
-        updatedAt: createdAt,
-      };
-    }),
-);
+/** The final evaluation of a student of an intake in the second year of its cycle. */
+function secondYearOutcome(intake: (typeof INTAKES)[number], n: number): ClassOutcome {
+  if (!intake.last || intake.cycle !== 'DAM') return 'graduates';
+  if (n === REPEATS_AT) return 'repeats';
+  return n === LEAVES_AT ? 'leaves' : 'graduates';
+}
+
+/** Whether the account is still active: those of the last intake who did not finish are. */
+function isStillActive(intake: (typeof INTAKES)[number], n: number): boolean {
+  if (!intake.finished) return true;
+  if (!intake.last) return false;
+  return intake.cycle === 'DAW' ? n < STILL_ACTIVE : n === REPEATS_AT || n === LEAVES_AT;
+}
+
+export const HISTORY_USERS: readonly AppUser[] = INTAKES.flatMap((intakePlan, intake) => {
+  const { start, studentIds } = intakePlan;
+  return studentIds.map((id, n) => {
+    // A name of three parts that no other student has: the third tells apart those of each round
+    const i = intake * INTAKE_SIZE + n;
+    const first = FIRST_NAMES[i % FIRST_NAMES.length];
+    const surname = SURNAMES[(i * 7) % SURNAMES.length];
+    const second =
+      SURNAMES[(i * 13 + Math.floor(i / FIRST_NAMES.length) * 3 + 5) % SURNAMES.length];
+    const createdAt = `${start}-09-01T08:00:00.000Z`;
+    return {
+      id,
+      name: `${first} ${surname} ${second}`,
+      email: `${plain(first)}.${plain(surname)}.${plain(second)}@tutoria.test`,
+      role: 'student' as const,
+      status: isStillActive(intakePlan, n) ? ('active' as const) : ('disabled' as const),
+      privacyNoticeSeenAt: null,
+      createdAt,
+      updatedAt: createdAt,
+    };
+  });
+});
 
 /** Each class of the history: its year, cycle and course, and the intake that fills it. */
 const HISTORY_CLASS_PLAN = INTAKES.flatMap((intake) =>
@@ -227,9 +261,20 @@ export const HISTORY_CLASSES: readonly SchoolClass[] = HISTORY_CLASS_PLAN.map(
   }),
 );
 
-export const HISTORY_CLASS_MEMBERS: readonly ClassMember[] = HISTORY_CLASS_PLAN.flatMap(
-  ({ classId, studentIds }) => studentIds.map((userId) => ({ classId, userId })),
+export const HISTORY_CLASS_MEMBERS: readonly ClassMember[] = HISTORY_CLASS_PLAN.flatMap((plan) =>
+  plan.studentIds.map((userId, n) => ({
+    classId: plan.classId,
+    userId,
+    outcome: outcomeIn(plan, n),
+  })),
 );
+
+/** Of a class of the history: none this year, nor in last year's 1.º DAW A, left to evaluate. */
+function outcomeIn(plan: (typeof HISTORY_CLASS_PLAN)[number], n: number): ClassOutcome | null {
+  if (plan.year === CURRENT_YEAR) return null;
+  if (plan.course === 1) return secondYearOutcome(plan, n);
+  return plan.year + 1 === CURRENT_YEAR && plan.cycle === 'DAW' ? null : 'promotes';
+}
 
 const HISTORY_GROUP_PLAN = HISTORY_CLASS_PLAN.flatMap((plan) =>
   PLANS[plan.cycle][plan.course].map(([subject, teacherId, label]) => ({

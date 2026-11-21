@@ -10,7 +10,13 @@ import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
 import { provideLocalizedPaginator } from '../../core/i18n/localized-paginator-intl';
 import { AdminService } from '../../data/admin-service';
 import { DataError } from '../../data/data-error';
-import { ADMIN_ID, DISABLED_STUDENT_ID, USERS } from '../../data/mock/fixtures/users';
+import {
+  ADMIN_ID,
+  DAW_CLASS_ID,
+  DAW_STUDENT_IDS,
+  DISABLED_STUDENT_ID,
+  USERS,
+} from '../../data/mock/fixtures/users';
 import { MockAdminService } from '../../data/mock/mock-admin-service';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockNetwork } from '../../data/mock/mock-network';
@@ -169,7 +175,11 @@ describe('UsersPage', () => {
   it('reads the filters from the URL, and shows the accounts of each status', async () => {
     const harness = await renderUsers('/admin/usuarios?rol=student&buscar=medina');
 
-    expect(screen.getByText('Ningún usuario coincide')).toBeTruthy();
+    // A disabled account matches: it says so, not that it does not exist (5.2g)
+    expect(screen.getByText('Ningún usuario coincide con este estado')).toBeTruthy();
+    expect(
+      screen.getByText('Ninguna cuenta activa coincide, pero una desactivada sí.'),
+    ).toBeTruthy();
     expect(screen.getByText(`Ninguna cuenta de ${ACTIVE}`)).toBeTruthy();
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Estado' }));
@@ -419,6 +429,183 @@ describe('UsersPage', () => {
       expect(open).toHaveBeenCalledWith('Sin conexión: comprueba la red e inténtalo de nuevo.');
       expect(listUsers).toHaveBeenCalledTimes(1);
       expect(text(rowOf(LUCIA.name))).not.toContain('Desactivada');
+    });
+  });
+
+  describe('after the final evaluation (5.2g)', () => {
+    const [LUCIA_ID, HUGO_ID] = DAW_STUDENT_IDS;
+    const HUGO = 'Hugo Sánchez Ferrer';
+
+    /** Lucía finished 1.º DAW A and Hugo left it: both accounts are still active. */
+    function evaluate(db: MockDb): void {
+      const outcomes = new Map([
+        [LUCIA_ID, 'graduates'],
+        [HUGO_ID, 'leaves'],
+      ] as const);
+      db.update('classMembers', (members) =>
+        members.map((member) =>
+          member.classId === DAW_CLASS_ID
+            ? { ...member, outcome: outcomes.get(member.userId) ?? null }
+            : member,
+        ),
+      );
+    }
+
+    it('warns of the accounts left to disable, and disables those chosen', async () => {
+      const harness = await renderUsers('/admin/usuarios', evaluate);
+      expect(
+        screen.getByText('2 alumnos titulados o de baja siguen con la cuenta activa.'),
+      ).toBeTruthy();
+      await userEvent.type(screen.getByRole('searchbox'), 'lucia');
+      await settle(harness);
+      expect(text(rowOf(LUCIA.name))).toContain('Titula · 1.º DAW A · 2026/27');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Revisar y desactivar…' }));
+      const dialog = await openedDialog();
+      expect(within(dialog).getByText('Baja · 1.º DAW A · 2026/27')).toBeTruthy();
+      await userEvent.click(within(dialog).getByRole('checkbox', { name: new RegExp(HUGO) }));
+      await userEvent.click(within(dialog).getByRole('checkbox', { name: new RegExp(HUGO) }));
+      await userEvent.click(within(dialog).getByRole('checkbox', { name: new RegExp(HUGO) }));
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Desactivar 1' }));
+      await closed();
+      await settle(harness);
+
+      expect(await screen.findByText('1 cuenta desactivada')).toBeTruthy();
+      expect(
+        screen.getByText('1 alumno titulado o de baja sigue con la cuenta activa.'),
+      ).toBeTruthy();
+      expect(screen.queryByRole('table')).toBeNull();
+    });
+
+    it('says what it could not disable, and keeps the dialog open when it fails', async () => {
+      const harness = await renderUsers('/admin/usuarios', evaluate);
+      let answer!: (result: { disabled: string[]; failed: string[] }) => void;
+      const disable = vi
+        .spyOn(service, 'disableUsers')
+        .mockRejectedValueOnce(new DataError('network'))
+        .mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        .mockResolvedValueOnce({ disabled: [LUCIA_ID, HUGO_ID], failed: [] });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Revisar y desactivar…' }));
+      const dialog = await openedDialog();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Desactivar 2' }));
+      expect((await within(dialog).findByRole('alert')).textContent).toContain('Sin conexión');
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Desactivar 2' }));
+      expect(await within(dialog).findByText('Desactivando…')).toBeTruthy();
+      answer({ disabled: [LUCIA_ID], failed: [HUGO_ID] });
+      await closed();
+      await settle(harness);
+      expect(disable).toHaveBeenLastCalledWith([HUGO_ID, LUCIA_ID]);
+      expect(
+        await screen.findByText('Desactivadas: 1. Sin desactivar: 1; vuelve a intentarlo.'),
+      ).toBeTruthy();
+
+      // Cancelled: nothing changes
+      await userEvent.click(screen.getByRole('button', { name: 'Revisar y desactivar…' }));
+      await userEvent.click(within(await openedDialog()).getByRole('button', { name: 'Cancelar' }));
+      await closed();
+      expect(disable).toHaveBeenCalledTimes(2);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Revisar y desactivar…' }));
+      await userEvent.click(
+        within(await openedDialog()).getByRole('button', { name: 'Desactivar 2' }),
+      );
+      await closed();
+      expect(await screen.findByText('2 cuentas desactivadas')).toBeTruthy();
+    });
+
+    it('filters the students by their situation in the URL', async () => {
+      const harness = await renderUsers('/admin/usuarios', evaluate);
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Situación del alumnado' }));
+      await userEvent.click(await screen.findByRole('option', { name: 'Titulados o de baja' }));
+      await settle(harness);
+      expect(TestBed.inject(Router).url).toBe('/admin/usuarios?situacion=terminados');
+      expect(rows().map((row) => text(row).split(' · ')[0])).toEqual([
+        expect.stringContaining(HUGO),
+        expect.stringContaining(LUCIA.name),
+      ]);
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Situación del alumnado' }));
+      await userEvent.click(await screen.findByRole('option', { name: 'Sin clase este curso' }));
+      await settle(harness);
+      expect(TestBed.inject(Router).url).toBe('/admin/usuarios?situacion=sin-clase');
+      expect(screen.getByText(`3 cuentas de ${ACTIVE}`)).toBeTruthy();
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Situación del alumnado' }));
+      await userEvent.click(await screen.findByRole('option', { name: 'Todas' }));
+      await settle(harness);
+      expect(TestBed.inject(Router).url).toBe('/admin/usuarios');
+    });
+
+    it('shows the classes of a student year by year, with their evaluation', async () => {
+      await renderUsers(LUCIA_URL, evaluate);
+
+      await openAction(LUCIA.name, 'Ver su trayectoria');
+      const dialog = await openedDialog();
+      expect(
+        within(dialog).getByRole('heading', { name: `Trayectoria de ${LUCIA.name}` }),
+      ).toBeTruthy();
+      const item = within(dialog).getByRole('listitem');
+      expect(within(item).getByText('1.º DAW A')).toBeTruthy();
+      expect(within(item).getByText('2026/27')).toBeTruthy();
+      expect(text(item)).toContain('Titula');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cerrar' }));
+      await closed();
+    });
+
+    it('offers no trajectory to who was never a student, nor a notice without anybody', async () => {
+      await renderUsers('/admin/usuarios?buscar=ibanez');
+
+      await userEvent.click(screen.getByRole('button', { name: /Acciones de Marta/ }));
+      expect(await screen.findByRole('menuitem', { name: /Editar/ })).toBeTruthy();
+      expect(screen.queryByRole('menuitem', { name: /trayectoria/ })).toBeNull();
+      expect(screen.queryByText(/siguen con la cuenta activa/)).toBeNull();
+    });
+
+    it('says how many match in the other status, and nothing more with all of them', async () => {
+      await renderUsers('/admin/usuarios?situacion=terminados', (db) => {
+        evaluate(db);
+        db.update('users', (users) =>
+          users.map((user) =>
+            user.id === LUCIA_ID || user.id === HUGO_ID ? { ...user, status: 'disabled' } : user,
+          ),
+        );
+      });
+      expect(
+        screen.getByText('Ninguna cuenta activa coincide, pero 2 desactivadas sí.'),
+      ).toBeTruthy();
+      TestBed.resetTestingModule();
+
+      await renderUsers('/admin/usuarios?estado=desactivadas&rol=teacher');
+      expect(
+        screen.getByText('Ninguna cuenta desactivada coincide, pero 2 activas sí.'),
+      ).toBeTruthy();
+      TestBed.resetTestingModule();
+
+      await renderUsers('/admin/usuarios?estado=todas&buscar=nadie');
+      expect(screen.getByText('Ningún usuario coincide')).toBeTruthy();
+    });
+
+    it('says an active account matches when the disabled are shown', async () => {
+      await renderUsers('/admin/usuarios?estado=desactivadas&buscar=lucia');
+
+      expect(
+        screen.getByText('Ninguna cuenta desactivada coincide, pero una activa sí.'),
+      ).toBeTruthy();
+      await userEvent.click(screen.getByRole('button', { name: 'Ver todas las cuentas' }));
+      await vi.waitFor(() => expect(TestBed.inject(Router).url).toContain('estado=todas'));
+    });
+
+    it('lists the users without the notice if the accounts to disable cannot be read', async () => {
+      vi.spyOn(MockAdminService.prototype, 'listFinishedStudents').mockRejectedValueOnce(
+        new DataError('network'),
+      );
+      await renderUsers('/admin/usuarios', evaluate);
+
+      expect(screen.getByText(`${ACTIVE} cuentas`)).toBeTruthy();
+      expect(screen.queryByText(/siguen con la cuenta activa/)).toBeNull();
     });
   });
 

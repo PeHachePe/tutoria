@@ -6,6 +6,7 @@ import {
   type DuplicateOptions,
   type EnrollTarget,
   type GroupChanges,
+  type ClassCandidate,
   type GroupDraft,
   GroupService,
   type ManagedClass,
@@ -13,6 +14,7 @@ import {
   MAX_ENROLLMENT_BATCH,
   MAX_GROUP_BATCH,
   MAX_GROUP_LABEL_LENGTH,
+  MAX_OUTCOME_BATCH,
   MAX_STUDENT_SEARCH_RESULTS,
   MIN_STUDENT_SEARCH_LENGTH,
   MAX_PASTED_LINES,
@@ -24,10 +26,18 @@ import {
 } from '../group-service';
 import { isOpenClass, isPastSchoolYear } from '../school-year';
 import { schoolYearShiftDays } from '../school-year-shift';
-import type { AppUser, ClassGroup, Enrollment, SchoolClass } from '../user';
+import {
+  type AppUser,
+  type ClassGroup,
+  type ClassOutcome,
+  type Enrollment,
+  FINISHED_OUTCOMES,
+  type SchoolClass,
+} from '../user';
 import { copyGroupBlocks } from './copy-group-blocks';
-import { canManageGroup, findRow, managesClass } from './mock-access';
+import { canManageGroup, findRow, lastClassOf, managesClass } from './mock-access';
 import { MockDb } from './mock-db';
+import type { MockTables } from './mock-tables';
 import { MockNetwork } from './mock-network';
 
 /**
@@ -225,6 +235,9 @@ export class MockGroupService extends GroupService {
       if (found?.id === classId) throw new DataError('invalid', 'A class is copied into another');
       checkOpenTarget(found, draft);
       groups.forEach((group) => this.checkNewGroup(found?.id ?? null, group));
+      if (options.students) {
+        this.checkOneClassAYear(found?.id ?? null, draft.schoolYear, this.activeMembers(classId));
+      }
       const targetId = found?.id ?? this.createClassRow(user, draft);
       if (options.students) {
         this.addMembers(targetId, this.activeMembers(classId));
@@ -247,16 +260,18 @@ export class MockGroupService extends GroupService {
   listRoster(classId: string): Promise<RosterStudent[]> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
-      this.findManagedClass(user, classId);
+      const { schoolYear } = this.findManagedClass(user, classId);
       const tables = this.db.tables();
       const groupIds = new Set(
         tables.groups.filter((group) => group.classId === classId).map((group) => group.id),
       );
-      const members = new Set(
-        tables.classMembers.filter((row) => row.classId === classId).map((row) => row.userId),
+      const members = new Map(
+        tables.classMembers
+          .filter((row) => row.classId === classId)
+          .map((row) => [row.userId, row.outcome]),
       );
       const people = new Set([
-        ...members,
+        ...members.keys(),
         ...tables.enrollments.filter((row) => groupIds.has(row.groupId)).map((row) => row.userId),
       ]);
       return [...people]
@@ -266,6 +281,10 @@ export class MockGroupService extends GroupService {
           student: toRef(student),
           active: student.status === 'active',
           member: members.has(student.id),
+          outcome: members.get(student.id) ?? null,
+          otherClass: members.has(student.id)
+            ? null
+            : this.otherClassOf(student.id, classId, schoolYear),
           groupIds: tables.enrollments
             .filter((row) => row.userId === student.id && groupIds.has(row.groupId))
             .map((row) => row.groupId)
@@ -274,30 +293,65 @@ export class MockGroupService extends GroupService {
     });
   }
 
-  listCandidates(classId: string): Promise<UserRef[]> {
+  listCandidates(classId: string): Promise<ClassCandidate[]> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
       const { schoolYear } = this.findManagedClass(user, classId);
-      const { classes, classMembers, users } = this.db.tables();
+      const tables = this.db.tables();
       const sameYear = new Set(
-        classes.filter((row) => row.schoolYear === schoolYear).map((row) => row.id),
+        tables.classes.filter((row) => row.schoolYear === schoolYear).map((row) => row.id),
       );
       const placed = new Set(
-        classMembers.filter((row) => sameYear.has(row.classId)).map((row) => row.userId),
+        tables.classMembers.filter((row) => sameYear.has(row.classId)).map((row) => row.userId),
       );
-      return users
-        .filter((candidate) => isActive(candidate, 'student') && !placed.has(candidate.id))
-        .sort((a, b) => a.name.localeCompare(b.name, 'es'))
-        .map(toRef);
+      return (
+        tables.users
+          .filter((candidate) => isActive(candidate, 'student') && !placed.has(candidate.id))
+          .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+          // They have no class in the year: their last one is of a year before
+          .map((candidate) => toCandidate(tables, candidate, schoolYear))
+          // Who finished the cycle or left the school is not chosen again
+          .filter(({ previous }) => !isFinished(previous?.outcome ?? null))
+      );
+    });
+  }
+
+  setOutcomes(
+    classId: string,
+    userIds: readonly string[],
+    outcome: ClassOutcome | null,
+  ): Promise<void> {
+    return this.network.request(() => {
+      const user = this.db.requireUser('teacher', 'admin');
+      // Also in a closed class: the year often closes before the evaluation is done
+      this.findManagedClass(user, classId);
+      if (
+        userIds.length === 0 ||
+        userIds.length > MAX_OUTCOME_BATCH ||
+        new Set(userIds).size !== userIds.length
+      ) {
+        throw new DataError('invalid', 'Between 1 and 100 different students');
+      }
+      const members = new Set(this.membersOf(classId));
+      if (!userIds.every((userId) => members.has(userId))) {
+        throw new DataError('not_found', 'Not a student of the class');
+      }
+      const chosen = new Set(userIds);
+      this.db.update('classMembers', (rows) =>
+        rows.map((row) =>
+          row.classId === classId && chosen.has(row.userId) ? { ...row, outcome } : row,
+        ),
+      );
     });
   }
 
   matchStudents(classId: string, entries: readonly string[]): Promise<StudentMatch[]> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
-      this.findManagedClass(user, classId);
+      const { schoolYear } = this.findManagedClass(user, classId);
       if (entries.length > MAX_PASTED_LINES) throw new DataError('invalid', 'Too many lines');
-      const students = this.db.tables().users.filter((row) => isActive(row, 'student'));
+      const tables = this.db.tables();
+      const students = tables.users.filter((row) => isActive(row, 'student'));
       const lines = [...new Set(entries.map((entry) => entry.trim()).filter(Boolean))];
       return lines
         .flatMap((entry) => {
@@ -305,21 +359,25 @@ export class MockGroupService extends GroupService {
             (row) =>
               row.email.toLowerCase() === entry.toLowerCase() || fold(row.name) === fold(entry),
           );
-          return found.length === 1 ? [{ entry, student: toRef(found[0]) }] : [];
+          return found.length === 1
+            ? [{ entry, ...toCandidate(tables, found[0], schoolYear) }]
+            : [];
         })
         .sort((a, b) => a.student.name.localeCompare(b.student.name, 'es'));
     });
   }
 
-  searchStudents(target: EnrollTarget, search: string): Promise<UserRef[]> {
+  searchStudents(target: EnrollTarget, search: string): Promise<ClassCandidate[]> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
+      const tables = this.db.tables();
       let taken: ReadonlySet<string>;
+      let schoolYear: string;
       if (target.kind === 'class') {
-        this.findManagedClass(user, target.id);
+        ({ schoolYear } = this.findManagedClass(user, target.id));
         taken = new Set(this.membersOf(target.id));
       } else {
-        this.findGroup(target.id);
+        ({ schoolYear } = findRow(tables.classes, this.findGroup(target.id).classId));
         taken = this.enrolledIn(target.id);
       }
       const text = fold(search.trim());
@@ -334,15 +392,17 @@ export class MockGroupService extends GroupService {
         )
         .sort((a, b) => a.name.localeCompare(b.name, 'es'))
         .slice(0, MAX_STUDENT_SEARCH_RESULTS)
-        .map(toRef);
+        .map((candidate) => toCandidate(tables, candidate, schoolYear));
     });
   }
 
   enrollInClass(classId: string, userIds: readonly string[]): Promise<void> {
     return this.network.request(() => {
       const user = this.db.requireUser('teacher', 'admin');
-      checkOpen(this.findManagedClass(user, classId));
+      const target = this.findManagedClass(user, classId);
+      checkOpen(target);
       this.checkStudents(userIds, new Set());
+      this.checkOneClassAYear(classId, target.schoolYear, userIds);
       this.addMembers(classId, userIds);
       for (const group of this.db.tables().groups) {
         if (group.classId === classId && group.label === null) {
@@ -534,12 +594,45 @@ export class MockGroupService extends GroupService {
     if (!valid) throw new DataError('invalid', 'Only active students not there yet');
   }
 
+  /** The name of another class of the year the student is in, as `class_roster` (5.2g). */
+  private otherClassOf(userId: string, classId: string, schoolYear: string): string | null {
+    const { classes, classMembers } = this.db.tables();
+    const [other] = classMembers
+      .filter((row) => row.userId === userId && row.classId !== classId)
+      .map((row) => findRow(classes, row.classId))
+      .filter((row) => row.schoolYear === schoolYear)
+      .map((row) => row.name)
+      .sort();
+    return other ?? null;
+  }
+
+  /**
+   * One class a year for each student (5.2g), as `check_one_class_a_year`: `invalid` for one in
+   * another class of that year, before anything changes.
+   */
+  private checkOneClassAYear(
+    classId: string | null,
+    schoolYear: string,
+    userIds: readonly string[],
+  ): void {
+    const { classes, classMembers } = this.db.tables();
+    const sameYear = new Set(
+      classes
+        .filter((row) => row.schoolYear === schoolYear && row.id !== classId)
+        .map((row) => row.id),
+    );
+    const chosen = new Set(userIds);
+    if (classMembers.some((row) => chosen.has(row.userId) && sameYear.has(row.classId))) {
+      throw new DataError('invalid', 'A student is in another class of that year');
+    }
+  }
+
   /** Into the class; who is there already is skipped. */
   private addMembers(classId: string, userIds: readonly string[]): void {
     const there = new Set(this.membersOf(classId));
     const rows = userIds
       .filter((userId) => !there.has(userId))
-      .map((userId) => ({ classId, userId }));
+      .map((userId) => ({ classId, userId, outcome: null }));
     this.db.update('classMembers', (current) => [...current, ...rows]);
   }
 
@@ -667,4 +760,22 @@ function fold(text: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '');
+}
+
+/** They finished the cycle or left the school (5.2g). */
+function isFinished(outcome: ClassOutcome | null): boolean {
+  return outcome !== null && FINISHED_OUTCOMES.includes(outcome);
+}
+
+/** A student with their last class up to a year, as the functions give them (5.2g). */
+function toCandidate(tables: MockTables, user: AppUser, schoolYear: string): ClassCandidate {
+  const last = lastClassOf(tables, user.id, schoolYear);
+  return {
+    student: toRef(user),
+    previous: last && {
+      name: last.schoolClass.name,
+      schoolYear: last.schoolClass.schoolYear,
+      outcome: last.outcome,
+    },
+  };
 }

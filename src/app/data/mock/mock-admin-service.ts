@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 
 import {
+  MAX_DISABLE_BATCH,
   MAX_EMAIL_LENGTH,
   MAX_PASSWORD_LENGTH,
   MAX_USER_NAME_LENGTH,
@@ -11,6 +12,8 @@ import {
 import { toUserEntry } from '../admin/user-entry';
 import {
   AdminService,
+  type DisableResult,
+  type FinishedStudent,
   type NewUser,
   type SubjectDraft,
   type UserChanges,
@@ -23,8 +26,8 @@ import {
 } from '../ai-provider-setting';
 import { DataError } from '../data-error';
 import type { Subject } from '../subject';
-import type { AppUser, ClassGroup } from '../user';
-import { classOfGroup, findRow, now } from './mock-access';
+import { type AppUser, type ClassGroup, FINISHED_OUTCOMES } from '../user';
+import { classOfGroup, findRow, lastClassOf, now } from './mock-access';
 import { groupName } from '../group-name';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
@@ -61,6 +64,12 @@ export class MockAdminService extends AdminService {
             user,
             namesOf((group) => group.teacherId === user.id),
             namesOf((group) => enrolled.has(group.id)),
+            tables.classMembers
+              .filter((member) => member.userId === user.id)
+              .map((member) => {
+                const { name, schoolYear } = findRow(tables.classes, member.classId);
+                return { name, schoolYear, outcome: member.outcome };
+              }),
           );
         });
     });
@@ -95,30 +104,56 @@ export class MockAdminService extends AdminService {
   }
 
   updateUser(userId: string, changes: UserChanges): Promise<AppUser> {
+    return this.network.request(() =>
+      this.applyChanges(this.db.requireUser('admin'), userId, changes),
+    );
+  }
+
+  listFinishedStudents(): Promise<FinishedStudent[]> {
+    return this.network.request(() => {
+      this.db.requireUser('admin');
+      const tables = this.db.tables();
+      return tables.users
+        .filter(({ role, status }) => role === 'student' && status === 'active')
+        .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+        .flatMap(({ id, name, email }) => {
+          const last = lastClassOf(tables, id);
+          return last?.outcome && FINISHED_OUTCOMES.includes(last.outcome)
+            ? [
+                {
+                  student: { id, name, email },
+                  outcome: last.outcome,
+                  className: last.schoolClass.name,
+                  schoolYear: last.schoolClass.schoolYear,
+                },
+              ]
+            : [];
+        });
+    });
+  }
+
+  /** One by one, as the function: those that cannot be disabled are left out. */
+  disableUsers(userIds: readonly string[]): Promise<DisableResult> {
     return this.network.request(() => {
       const caller = this.db.requireUser('admin');
-      const tables = this.db.tables();
-      const target = findRow(tables.users, userId);
-      const { password, ...profile } = changes;
-      if (password !== undefined && !isValidPassword(password)) throw new DataError('invalid');
-      const links = {
-        groups: tables.groups.filter((group) => group.teacherId === userId).length,
-        enrollments: tables.enrollments.filter((enrollment) => enrollment.userId === userId).length,
-      };
-      const problem = userChangeProblem(caller.id, target, profile, links);
-      if (problem) throw new DataError('invalid', `The change is not allowed: ${problem}`);
-
-      const updated: AppUser = {
-        ...target,
-        ...profile,
-        name: profile.name === undefined ? target.name : validName(profile.name),
-        updatedAt: now(),
-      };
-      this.db.update('users', (rows) => rows.map((row) => (row.id === userId ? updated : row)));
-      if (password !== undefined) {
-        this.db.update('passwords', (passwords) => ({ ...passwords, [userId]: password }));
+      if (
+        userIds.length === 0 ||
+        userIds.length > MAX_DISABLE_BATCH ||
+        new Set(userIds).size !== userIds.length
+      ) {
+        throw new DataError('invalid', 'Between 1 and 100 different accounts');
       }
-      return updated;
+      const disabled: string[] = [];
+      const failed: string[] = [];
+      for (const userId of userIds) {
+        try {
+          this.applyChanges(caller, userId, { status: 'disabled' });
+          disabled.push(userId);
+        } catch {
+          failed.push(userId);
+        }
+      }
+      return { disabled, failed };
     });
   }
 
@@ -175,6 +210,32 @@ export class MockAdminService extends AdminService {
           : { model, ms: MOCK_CHECK_MS };
       });
     });
+  }
+
+  /** What `updateUser()` does, in the request of its caller. */
+  private applyChanges(caller: AppUser, userId: string, changes: UserChanges): AppUser {
+    const tables = this.db.tables();
+    const target = findRow(tables.users, userId);
+    const { password, ...profile } = changes;
+    if (password !== undefined && !isValidPassword(password)) throw new DataError('invalid');
+    const links = {
+      groups: tables.groups.filter((group) => group.teacherId === userId).length,
+      enrollments: tables.enrollments.filter((enrollment) => enrollment.userId === userId).length,
+    };
+    const problem = userChangeProblem(caller.id, target, profile, links);
+    if (problem) throw new DataError('invalid', `The change is not allowed: ${problem}`);
+
+    const updated: AppUser = {
+      ...target,
+      ...profile,
+      name: profile.name === undefined ? target.name : validName(profile.name),
+      updatedAt: now(),
+    };
+    this.db.update('users', (rows) => rows.map((row) => (row.id === userId ? updated : row)));
+    if (password !== undefined) {
+      this.db.update('passwords', (passwords) => ({ ...passwords, [userId]: password }));
+    }
+    return updated;
   }
 }
 

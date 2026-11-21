@@ -103,8 +103,9 @@ select results_eq(
 -- Choosing many at once
 select results_eq(
   $$ select name from class_candidates('c0000000-0000-4000-8000-000000000001') $$,
-  $$ values ('Claudia Ferrer Ruiz'), ('Ismael Haddou'), ('Marina Vidal Soto'), ('Nora Nueva Díaz') $$,
-  'a teacher lists the active students without a class this year'
+  $$ values ('Carla Castro Lozano'), ('Claudia Ferrer Ruiz'), ('Ismael Haddou'), ('Marina Vidal Soto'),
+            ('Nora Nueva Díaz') $$,
+  'a teacher lists the active students without a class this year (one repeats 2.º DAM B, 5.2g)'
 );
 select throws_ok(
   $$ select * from class_candidates('c0000000-0000-4000-8000-000000000002') $$,
@@ -190,9 +191,10 @@ select is(
   0,
   'with one it is a split, whose students are chosen'
 );
--- A split created before the group of the whole class, in a new class of Lucía, Hugo and Aya
+-- A split created before the group of the whole class, in a new class of Lucía, Hugo and Aya; of
+-- a later year, as they are in a class of this one and duplicated into the next (5.2g)
 create temp table split_first as
-select create_class('1.º DAW S', '2026/27', '{}', null) as id;
+select create_class('1.º DAW S', '2028/29', '{}', null) as id;
 select enroll_class_members((select id from split_first), array[
   '10000000-0000-4000-8000-000000000011', '10000000-0000-4000-8000-000000000012',
   '10000000-0000-4000-8000-000000000013']::uuid[]);
@@ -241,16 +243,17 @@ select is_empty(
   $$ select * from search_class_students('lucía', 'c0000000-0000-4000-8000-000000000001') $$,
   'but not those already in the class'
 );
+-- Marina, who has no class this year: Elena of 1.º DAM B would be in two (one class a year, 5.2g)
 select lives_ok(
   $$ select enroll_class_members('c0000000-0000-4000-8000-000000000001',
-       array['10000000-0000-4000-8000-000000000041']::uuid[]) $$,
+       array['10000000-0000-4000-8000-000000000051']::uuid[]) $$,
   'a teacher enrolls a student in her class'
 );
 select results_eq(
   $$ select array_agg(e.group_id order by e.group_id) from enrollment e
      join class_group g on g.id = e.group_id
      where g.class_id = 'c0000000-0000-4000-8000-000000000001'
-       and e.user_id = '10000000-0000-4000-8000-000000000041' $$,
+       and e.user_id = '10000000-0000-4000-8000-000000000051' $$,
   $$ select array_agg(id order by id) from class_group
      where class_id = 'c0000000-0000-4000-8000-000000000001' and label is null $$,
   'who joins every group of the whole class, those of other teachers too, and no split'
@@ -269,17 +272,17 @@ select throws_ok(
 );
 select lives_ok(
   $$ select remove_class_member('c0000000-0000-4000-8000-000000000001',
-       '10000000-0000-4000-8000-000000000041') $$,
+       '10000000-0000-4000-8000-000000000051') $$,
   'a teacher takes a student out of her class'
 );
 select is_empty(
   $$ select * from class_roster('c0000000-0000-4000-8000-000000000001')
-     where id = '10000000-0000-4000-8000-000000000041' $$,
+     where id = '10000000-0000-4000-8000-000000000051' $$,
   'and out of all its groups'
 );
 select throws_ok(
   $$ select remove_class_member('c0000000-0000-4000-8000-000000000001',
-       '10000000-0000-4000-8000-000000000041') $$,
+       '10000000-0000-4000-8000-000000000051') $$,
   'P0002', null,
   'who is no longer there'
 );

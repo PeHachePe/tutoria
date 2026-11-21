@@ -3,6 +3,8 @@ import { inject, Service } from '@angular/core';
 import { toUserEntry } from '../admin/user-entry';
 import {
   AdminService,
+  type DisableResult,
+  type FinishedStudent,
   type NewUser,
   type SubjectDraft,
   type UserChanges,
@@ -48,17 +50,22 @@ export class SupabaseAdminService extends AdminService {
       await this.supabase
         .from('app_user')
         .select(
-          '*, taught:class_group!class_group_teacher_id_fkey(label, school_class(name)), enrollment(class_group(label, school_class(name)))',
+          '*, taught:class_group!class_group_teacher_id_fkey(label, school_class(name)), enrollment(class_group(label, school_class(name))), class_member(outcome, school_class(name, school_year))',
         ),
     );
     return rows
-      .map(({ taught, enrollment, ...user }) =>
+      .map(({ taught, enrollment, class_member, ...user }) =>
         toUserEntry(
           toAppUser(user),
           taught.map((group) => groupName(group.school_class.name, group.label)),
           enrollment.map((row) =>
             groupName(row.class_group.school_class.name, row.class_group.label),
           ),
+          class_member.map(({ outcome, school_class }) => ({
+            name: school_class.name,
+            schoolYear: school_class.school_year,
+            outcome,
+          })),
         ),
       )
       .sort((a, b) => a.user.name.localeCompare(b.user.name, 'es'));
@@ -70,6 +77,28 @@ export class SupabaseAdminService extends AdminService {
 
   updateUser(userId: string, changes: UserChanges): Promise<AppUser> {
     return this.callFunction({ action: 'update', userId, changes });
+  }
+
+  /** Sorted here as the mock data does: the collation of the database may not be Spanish. */
+  async listFinishedStudents(): Promise<FinishedStudent[]> {
+    return unwrap(await this.supabase.rpc('finished_students'))
+      .map(({ id, name, email, outcome, class_name, school_year }) => ({
+        student: { id, name, email },
+        outcome,
+        className: class_name,
+        schoolYear: school_year,
+      }))
+      .sort((a, b) => a.student.name.localeCompare(b.student.name, 'es'));
+  }
+
+  async disableUsers(userIds: readonly string[]): Promise<DisableResult> {
+    const { data, error } = await this.supabase.functions.invoke<DisableResult>(
+      ADMIN_USERS_FUNCTION,
+      { body: { action: 'disable', userIds } },
+    );
+    if (error) throw toFunctionDataError(error);
+    if (!data) throw new DataError('unknown', 'The result came back empty');
+    return data;
   }
 
   /** Sorted here as the mock data does: the collation of the database may not be Spanish. */

@@ -36,7 +36,16 @@ import { firstValueFrom } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
 import { ADMIN_PARAMS } from '../../core/app-paths';
-import { AdminService, type UserChanges, type UserEntry } from '../../data/admin-service';
+import {
+  AdminService,
+  type DisableResult,
+  type FinishedStudent,
+  type UserChanges,
+  type UserEntry,
+} from '../../data/admin-service';
+import { toUserEntry } from '../../data/admin/user-entry';
+import { previousClassLine } from '../../shared/class-outcome';
+import { schoolYearOf } from '../../data/school-year';
 import type { UserStatus } from '../../data/user';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../shared/empty-state/empty-state';
@@ -44,12 +53,20 @@ import { LoadError } from '../../shared/load-error/load-error';
 import { pageOf } from '../../shared/page-of';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
+import { FinishedDialog, type FinishedDialogData } from './finished-dialog';
 import { PasswordDialog, type PasswordDialogData } from './password-dialog';
 import { roleLock } from './role-lock';
 import { ROLE_LABELS, ROLES } from './role-labels';
 import { userActionMessage } from './user-action-message';
 import { UserDialog, type UserDialogData } from './user-dialog';
-import { filterUsers, NO_USER_FILTERS, USERS_PAGE_SIZE, type UserFilters } from './user-filter';
+import { TrajectoryDialog, type TrajectoryDialogData } from './trajectory-dialog';
+import {
+  filterUsers,
+  NO_USER_FILTERS,
+  type StudentSituation,
+  USERS_PAGE_SIZE,
+  type UserFilters,
+} from './user-filter';
 import { toNewUser, toUserChanges } from './user-form';
 import { byName, sortUsers } from './user-sort';
 
@@ -72,6 +89,31 @@ const STATUS_OPTIONS: readonly { readonly status: StatusFilter; readonly label: 
 ];
 
 /** Rows drawn while the list loads. */
+/** The situations of the students (5.2g), as the URL and the select name them. */
+const SITUATION_OPTIONS: readonly {
+  readonly situation: StudentSituation;
+  readonly param: string;
+  readonly label: string;
+}[] = [
+  {
+    situation: 'in_class',
+    param: 'en-clase',
+    label: $localize`:@@users.situation.inClass:En una clase este curso`,
+  },
+  {
+    situation: 'no_class',
+    param: 'sin-clase',
+    label: $localize`:@@users.situation.noClass:Sin clase este curso`,
+  },
+  {
+    situation: 'finished',
+    param: 'terminados',
+    label: $localize`:@@users.situation.finished:Titulados o de baja`,
+  },
+];
+
+const ALL_SITUATIONS = 'all';
+
 const SKELETON_ROWS = [1, 2, 3, 4, 5, 6];
 
 /** The columns of the table; the groups only from `md` (ficha 10). */
@@ -131,6 +173,7 @@ export class UsersPage {
   readonly buscar = input<string>();
   readonly rol = input<string>();
   readonly estado = input<string>();
+  readonly situacion = input<string>();
   /** The page, from 1. */
   readonly pagina = input<string>();
 
@@ -142,6 +185,19 @@ export class UsersPage {
   protected readonly pageSize = USERS_PAGE_SIZE;
 
   protected readonly users = resource({ loader: () => this.admin.listUsers() });
+
+  /**
+   * The accounts left to disable after the final evaluation (5.2g). A failure only hides the notice:
+   * the list of users is what this page is for.
+   */
+  protected readonly finished = resource({ loader: () => this.admin.listFinishedStudents() });
+  private readonly finishedStudents = computed(() =>
+    this.finished.hasValue() ? this.finished.value() : [],
+  );
+  private readonly finishedById = computed(
+    () => new Map(this.finishedStudents().map((row) => [row.student.id, row])),
+  );
+  protected readonly finishedCount = computed(() => this.finishedById().size);
 
   /**
    * The accounts, changed in place after each action until the next load. In an error state
@@ -163,7 +219,15 @@ export class UsersPage {
       STATUS_OPTIONS.map(({ status }) => status).find(
         (status) => STATUS_PARAMS[status] === this.estado(),
       ) ?? 'active',
+    situation: SITUATION_OPTIONS.find(({ param }) => param === this.situacion())?.situation ?? null,
   }));
+
+  /** The value of the situation select (5.2g): every account has no parameter. */
+  protected readonly situationValue = computed(() => this.filters().situation ?? ALL_SITUATIONS);
+  protected readonly situationOptions = SITUATION_OPTIONS;
+  protected readonly allSituations = ALL_SITUATIONS;
+  /** The year a class must be of for a student to be in one now. */
+  private readonly schoolYear = schoolYearOf(new Date());
 
   /** The value of the status select: the active accounts have no parameter. */
   protected readonly statusValue = computed(() => this.filters().status);
@@ -174,20 +238,49 @@ export class UsersPage {
   protected readonly allRoles = ALL_ROLES;
 
   protected readonly hasFilters = computed(
-    () => this.filters().search.trim() !== '' || this.filters().role !== null,
+    () =>
+      this.filters().search.trim() !== '' ||
+      this.filters().role !== null ||
+      this.filters().situation !== null,
   );
 
   /** The accounts of the status chosen, before searching or choosing a role. */
   protected readonly total = computed(
-    () => filterUsers(this.entries(), { ...NO_USER_FILTERS, status: this.filters().status }).length,
+    () =>
+      filterUsers(
+        this.entries(),
+        { ...NO_USER_FILTERS, status: this.filters().status },
+        this.schoolYear,
+      ).length,
   );
 
   /** The order of the headers of the table: by name until another is chosen. */
   protected readonly sort = signal<Sort>({ active: 'name', direction: 'asc' });
 
   protected readonly matching = computed(() =>
-    filterUsers(sortUsers(this.entries(), this.sort()), this.filters()),
+    filterUsers(sortUsers(this.entries(), this.sort()), this.filters(), this.schoolYear),
   );
+
+  /**
+   * With nothing found, how many would be with any status (5.2g): an account looked for that is
+   * disabled, or active while the disabled are shown, is not taken for one that does not exist.
+   */
+  protected readonly otherStatusCount = computed(() =>
+    this.filters().status === 'all' || this.matching().length > 0
+      ? 0
+      : filterUsers(this.entries(), { ...this.filters(), status: 'all' }, this.schoolYear).length,
+  );
+  protected readonly otherStatusText = computed(() => {
+    const count = this.otherStatusCount();
+    if (this.filters().status === 'active') {
+      return count === 1
+        ? $localize`:@@users.empty.disabledMatch.one:Ninguna cuenta activa coincide, pero una desactivada sí.`
+        : $localize`:@@users.empty.disabledMatch:Ninguna cuenta activa coincide, pero ${count}:count: desactivadas sí.`;
+    }
+    return count === 1
+      ? $localize`:@@users.empty.activeMatch.one:Ninguna cuenta desactivada coincide, pero una activa sí.`
+      : $localize`:@@users.empty.activeMatch:Ninguna cuenta desactivada coincide, pero ${count}:count: activas sí.`;
+  });
 
   protected readonly page = computed(() =>
     pageOf(this.matching(), Number(this.pagina() ?? 1) - 1, USERS_PAGE_SIZE),
@@ -206,6 +299,8 @@ export class UsersPage {
       mine: entry.user.id === me,
       disabled: entry.user.status === 'disabled',
       groups: entry.groupNames.join(', '),
+      finished: this.finishedLine(this.finishedById().get(entry.user.id)),
+      hasClasses: entry.classes.length > 0,
       // An interpolated i18n attribute is not set on a Material button: the label goes in code
       actionsLabel: $localize`:@@users.actions:Acciones de ${entry.user.name}:name:`,
     }));
@@ -231,6 +326,21 @@ export class UsersPage {
     this.setFilter(ADMIN_PARAMS.status, STATUS_PARAMS[status]);
   }
 
+  protected selectSituation(value: string): void {
+    this.setFilter(
+      ADMIN_PARAMS.situation,
+      SITUATION_OPTIONS.find(({ situation }) => situation === value)?.param ?? null,
+    );
+  }
+
+  /** The classes of a student year by year, with their evaluation (5.2g). */
+  protected showTrajectory(entry: UserEntry): void {
+    this.dialog.open<TrajectoryDialog, TrajectoryDialogData>(TrajectoryDialog, {
+      data: { name: entry.user.name, classes: entry.classes },
+      injector: this.injector,
+    });
+  }
+
   /** A new filter starts again at the first page: the one shown may not exist with it. */
   protected setFilter(param: string, value: string | null): void {
     void this.router.navigate([], {
@@ -247,6 +357,7 @@ export class UsersPage {
         [ADMIN_PARAMS.search]: null,
         [ADMIN_PARAMS.role]: null,
         [ADMIN_PARAMS.status]: null,
+        [ADMIN_PARAMS.situation]: null,
         [ADMIN_PARAMS.page]: null,
       },
       queryParamsHandling: 'merge',
@@ -278,11 +389,7 @@ export class UsersPage {
       save: (model) =>
         this.saving(async () => {
           const user = await this.admin.createUser(toNewUser(model));
-          this.entries.update((entries) =>
-            [...entries, { user, groupNames: [], links: { groups: 0, enrollments: 0 } }].sort(
-              byName,
-            ),
-          );
+          this.entries.update((entries) => [...entries, toUserEntry(user, [], [])].sort(byName));
         }),
     });
     if (created) {
@@ -323,6 +430,35 @@ export class UsersPage {
     }
   }
 
+  /** The dialog of those who finished: all chosen; it says what was done and reloads both lists. */
+  protected async reviewFinished(): Promise<void> {
+    const students = this.finishedStudents();
+    const ref = this.dialog.open<FinishedDialog, FinishedDialogData, DisableResult>(
+      FinishedDialog,
+      {
+        data: { students, disable: (ids) => this.admin.disableUsers(ids) },
+        injector: this.injector,
+      },
+    );
+    const result = await firstValueFrom(ref.afterClosed());
+    if (!result) return;
+    this.users.reload();
+    this.finished.reload();
+    const done = result.disabled.length;
+    const failed = result.failed.length;
+    if (failed > 0) {
+      this.snackBar.open(
+        $localize`:@@users.finished.partly:Desactivadas: ${done}:count:. Sin desactivar: ${failed}:failed:; vuelve a intentarlo.`,
+      );
+    } else {
+      this.snackBar.open(
+        done === 1
+          ? $localize`:@@users.finished.disabled.one:1 cuenta desactivada`
+          : $localize`:@@users.finished.disabled:${done}:count: cuentas desactivadas`,
+      );
+    }
+  }
+
   /** Disabling asks first: the account stops signing in at once (D-072). Enabling does not. */
   protected async setStatus(entry: UserEntry, status: UserStatus): Promise<void> {
     const { name } = entry.user;
@@ -345,6 +481,13 @@ export class UsersPage {
         ? $localize`:@@users.disabled:Cuenta de ${name}:name: desactivada`
         : $localize`:@@users.enabled:Cuenta de ${name}:name: activada`,
     );
+  }
+
+  /** «Titula · 2.º DAW A · 2025/26», under the name of an account left to disable. */
+  private finishedLine(finished: FinishedStudent | undefined): string | null {
+    if (!finished) return null;
+    const { outcome, className: name, schoolYear } = finished;
+    return previousClassLine({ name, schoolYear, outcome });
   }
 
   private async openUserDialog(data: UserDialogData): Promise<boolean> {

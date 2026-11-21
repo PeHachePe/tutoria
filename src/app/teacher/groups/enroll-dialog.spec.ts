@@ -5,7 +5,13 @@ import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { DataError } from '../../data/data-error';
-import { MAX_PASTED_LINES, type StudentMatch, type UserRef } from '../../data/group-service';
+import {
+  type ClassCandidate,
+  MAX_PASTED_LINES,
+  type PreviousClass,
+  type StudentMatch,
+  type UserRef,
+} from '../../data/group-service';
 import { EnrollDialog, type EnrollDialogData } from './enroll-dialog';
 
 const TARGET = 'Matricular en 1.º DAW A · 2026/27';
@@ -20,12 +26,23 @@ const CANDIDATES: UserRef[] = [
   { id: 'c', name: 'Carla Núñez', email: 'carla@tutoria.test' },
 ];
 
+/** A student and where they come from (5.2g): nowhere, unless it is said. */
+function fresh(student: UserRef, previous: PreviousClass | null = null): ClassCandidate {
+  return { student, previous };
+}
+
+const FOUND = STUDENTS.map((student) => fresh(student));
+
 const NO_CLASS = 'Sin clase este curso';
 const ALL_HAVE_CLASS = 'Todo el alumnado activo tiene ya una clase este curso.';
 
 /** Those without a class this year, as for a class. */
-function candidates(load: () => Promise<UserRef[]>): EnrollDialogData['candidates'] {
-  return { label: NO_CLASS, empty: ALL_HAVE_CLASS, load };
+function candidates(load: () => Promise<readonly UserRef[]>): EnrollDialogData['candidates'] {
+  return {
+    label: NO_CLASS,
+    empty: ALL_HAVE_CLASS,
+    load: async () => (await load()).map((student) => fresh(student)),
+  };
 }
 
 function open(overrides: Partial<EnrollDialogData> = {}) {
@@ -33,10 +50,11 @@ function open(overrides: Partial<EnrollDialogData> = {}) {
     targetName: '1.º DAW A · 2026/27',
     intro: 'Entran en todas sus asignaturas.',
     enrolledIds: new Set(),
+    schoolYear: '2026/27',
     sources: [],
     studentsOf: () => Promise.resolve([]),
     candidates: candidates(() => Promise.resolve([])),
-    search: vi.fn(() => Promise.resolve(STUDENTS)),
+    search: vi.fn(() => Promise.resolve(FOUND)),
     match: vi.fn(() => Promise.resolve<StudentMatch[]>([])),
     enroll: vi.fn(() => Promise.resolve()),
     ...overrides,
@@ -86,6 +104,9 @@ describe('EnrollDialog', () => {
     const data = open();
     const dialog = await typeSearch('a');
     expect(within(dialog).getByText('Entran en todas sus asignaturas.')).toBeTruthy();
+    // Defensive: the template reads the results only once they arrive
+    const instance = TestBed.inject(MatDialog).openDialogs[0].componentInstance as EnrollDialog;
+    expect(instance['foundStudents']()).toEqual([]);
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(data.search).not.toHaveBeenCalled();
     expect(within(dialog).getByText('Escribe al menos dos letras')).toBeTruthy();
@@ -138,7 +159,7 @@ describe('EnrollDialog', () => {
     expect(data.enroll).toHaveBeenCalledWith([STUDENTS[0], STUDENTS[1]]);
     expect(await within(dialog).findByText('Matriculando…')).toBeTruthy();
     fail(new DataError('invalid'));
-    expect((await within(dialog).findByRole('alert')).textContent).toContain('vuelve a buscarlo');
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('Vuelve a buscarlo');
   });
 
   it('takes all the chosen out at once', async () => {
@@ -165,7 +186,7 @@ describe('EnrollDialog', () => {
     // The visible text, not the count announced to screen readers, which starts the same
     expect(
       await within(dialog).findByText(
-        'Ningún alumno coincide. Las cuentas las crea la administración.',
+        'Ningún alumno activo coincide. Las cuentas las crea y las vuelve a activar la administración.',
       ),
     ).toBeTruthy();
     await userEvent.type(within(dialog).getByRole('searchbox'), 'z');
@@ -224,10 +245,12 @@ describe('EnrollDialog', () => {
     });
 
     it('waits for them, and says when all have a class or they could not be read', async () => {
-      let arrive!: (students: UserRef[]) => void;
+      let arrive!: (students: readonly UserRef[]) => void;
       open({
         enrolledIds: new Set(['a', 'b']),
-        candidates: candidates(() => new Promise<UserRef[]>((resolve) => (arrive = resolve))),
+        candidates: candidates(
+          () => new Promise<readonly UserRef[]>((resolve) => (arrive = resolve)),
+        ),
       });
       const dialog = await opened();
       expect(within(dialog).getByRole('progressbar')).toBeTruthy();
@@ -253,8 +276,8 @@ describe('EnrollDialog', () => {
         enrolledIds: new Set(['b']),
         match: vi.fn(() =>
           Promise.resolve([
-            { entry: 'ana@tutoria.test', student: STUDENTS[0] },
-            { entry: 'bruno sanz', student: STUDENTS[1] },
+            { entry: 'ana@tutoria.test', ...fresh(STUDENTS[0]) },
+            { entry: 'bruno sanz', ...fresh(STUDENTS[1]) },
           ]),
         ),
       });
@@ -282,7 +305,7 @@ describe('EnrollDialog', () => {
     it('says how many it chose, none new among them', async () => {
       const data = open({
         match: (entries) =>
-          Promise.resolve(entries.map((entry, index) => ({ entry, student: CANDIDATES[index] }))),
+          Promise.resolve(entries.map((entry, index) => ({ entry, ...fresh(CANDIDATES[index]) }))),
       });
       const dialog = await opened();
 
@@ -330,7 +353,7 @@ describe('EnrollDialog', () => {
       enrolledIds: new Set(['a']),
       sources: [{ id: 'dam', label: '1.º DAM B · 2026/27' }],
       studentsOf: () =>
-        calls++ === 0 ? Promise.resolve(STUDENTS) : Promise.reject(new Error('boom')),
+        calls++ === 0 ? Promise.resolve(FOUND) : Promise.reject(new Error('boom')),
     });
     const announce = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce');
     const dialog = await opened();
@@ -344,11 +367,140 @@ describe('EnrollDialog', () => {
     expect(await within(dialog).findByRole('button', { name: 'Matricular (1)' })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: 'Quitar a Bruno Sanz' })).toBeTruthy();
     expect(announce).toHaveBeenCalledWith('1 elegidos de 1.º DAM B · 2026/27');
+    expect(within(dialog).getByRole('status').textContent?.trim()).toBe(
+      '1 elegido de 1.º DAM B · 2026/27',
+    );
 
     await copy();
     expect((await within(dialog).findByRole('alert')).textContent).toContain(
       'No se ha podido leer esa clase',
     );
+  });
+
+  describe('where each comes from (5.2g)', () => {
+    const LAST_YEAR = (outcome: PreviousClass['outcome']): PreviousClass => ({
+      name: '1.º DAW A',
+      schoolYear: '2025/26',
+      outcome,
+    });
+    const THIS_YEAR: PreviousClass = { name: '1.º DAM B', schoolYear: '2026/27', outcome: null };
+    const DANI = { id: 'd', name: 'Dani Gil', email: 'dani@tutoria.test' };
+    const ELSA = { id: 'e', name: 'Elsa Mora', email: 'elsa@tutoria.test' };
+
+    it('lists those without a class by the class they come from, each with its box', async () => {
+      open({
+        candidates: {
+          label: NO_CLASS,
+          empty: ALL_HAVE_CLASS,
+          load: () =>
+            Promise.resolve([
+              fresh(STUDENTS[0], LAST_YEAR('promotes')),
+              fresh(STUDENTS[1], LAST_YEAR('promotes')),
+              fresh(CANDIDATES[2]),
+            ]),
+        },
+      });
+      const dialog = await opened();
+      const promoted = await within(dialog).findByRole('checkbox', {
+        name: 'Promocionan de 1.º DAW A · 2025/26 (2)',
+      });
+      expect(within(dialog).getByRole('checkbox', { name: 'Sin clase anterior (1)' })).toBeTruthy();
+
+      await userEvent.click(within(dialog).getByRole('checkbox', { name: /Ana Ruiz/ }));
+      expect(promoted).toHaveProperty('indeterminate', true);
+      await userEvent.click(promoted);
+      expect(promoted).toHaveProperty('checked', true);
+      expect(chosen(dialog)).toEqual(['Ana Ruiz', 'Bruno Sanz']);
+      await userEvent.click(promoted);
+      expect(chosen(dialog)).toEqual([]);
+    });
+
+    it('says in a search where each is, and does not choose who is in another class of the year', async () => {
+      open({
+        search: () =>
+          Promise.resolve([
+            fresh(STUDENTS[0], LAST_YEAR('leaves')),
+            fresh(STUDENTS[1], THIS_YEAR),
+            fresh(DANI, LAST_YEAR(null)),
+          ]),
+      });
+      const dialog = await typeSearch('ru');
+
+      // Who left can come back: chosen, with the warning at sight
+      const ana = await within(dialog).findByRole('checkbox', { name: /Ana Ruiz/ });
+      expect(within(dialog).getByText(/Baja · 1\.º DAW A · 2025\/26/)).toBeTruthy();
+      expect(ana).toHaveProperty('disabled', false);
+      expect(within(dialog).getByRole('checkbox', { name: /Bruno Sanz/ })).toHaveProperty(
+        'disabled',
+        true,
+      );
+      expect(within(dialog).getByText(/Ya está en 1\.º DAM B · 2026\/27/)).toBeTruthy();
+      expect(within(dialog).getByText(/^\s*1\.º DAW A · 2025\/26\s*$/)).toBeTruthy();
+    });
+
+    it('lets a group take a student of any class', async () => {
+      open({ schoolYear: null, search: () => Promise.resolve([fresh(STUDENTS[1], THIS_YEAR)]) });
+      const dialog = await typeSearch('br');
+
+      expect(await within(dialog).findByRole('checkbox', { name: /Bruno Sanz/ })).toHaveProperty(
+        'disabled',
+        false,
+      );
+      expect(within(dialog).getByText(/^\s*1\.º DAM B · 2026\/27\s*$/)).toBeTruthy();
+    });
+
+    it('leaves out of a pasted list who finished or has a class, and says why', async () => {
+      open({
+        enrolledIds: new Set(['e']),
+        match: () =>
+          Promise.resolve([
+            { entry: 'ana', ...fresh(STUDENTS[0], LAST_YEAR('graduates')) },
+            { entry: 'bruno', ...fresh(STUDENTS[1], THIS_YEAR) },
+            { entry: 'dani', ...fresh(DANI, LAST_YEAR('repeats')) },
+            // In this class already: neither chosen nor said to be in another
+            { entry: 'elsa', ...fresh(ELSA, { ...THIS_YEAR, name: '1.º DAW A' }) },
+          ]),
+      });
+      const dialog = await opened();
+      await paste(dialog, 'ana\nbruno\ndani\nelsa');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Buscar en la lista' }));
+
+      expect((await within(dialog).findByRole('status')).textContent).toContain('1 elegido');
+      expect(chosen(dialog)).toEqual(['Dani Gil']);
+      expect(within(dialog).getByText(/No se añaden/)).toBeTruthy();
+      expect(
+        within(dialog)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent?.trim()),
+      ).toEqual([
+        'Ana Ruiz · Titula · 1.º DAW A · 2025/26',
+        'Bruno Sanz · Ya está en 1.º DAM B · 2026/27',
+      ]);
+    });
+
+    it('leaves out of another class who finished in their last class', async () => {
+      open({
+        schoolYear: '2027/28',
+        sources: [{ id: 'old', label: '1.º DAW A · 2024/25' }],
+        studentsOf: () =>
+          Promise.resolve([
+            // Promoted in the class copied, and left the school the year after
+            fresh(STUDENTS[0], { name: '2.º DAW A', schoolYear: '2025/26', outcome: 'leaves' }),
+            fresh(STUDENTS[1], LAST_YEAR('promotes')),
+          ]),
+      });
+      const dialog = await opened();
+      await tab(dialog, 'De otra clase');
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: 'Añadir los de 1.º DAW A · 2024/25' }),
+      );
+
+      expect((await within(dialog).findByRole('status')).textContent?.trim()).toBe(
+        '1 elegido de 1.º DAW A · 2024/25',
+      );
+      expect(chosen(dialog)).toEqual(['Bruno Sanz']);
+      expect(within(dialog).getByText('Ana Ruiz · Baja · 2.º DAW A · 2025/26')).toBeTruthy();
+    });
   });
 
   it('closes once they are enrolled', async () => {

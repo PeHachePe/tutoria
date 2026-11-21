@@ -42,7 +42,14 @@ function student(
   name = 'Ana',
   email = 'ana@tutoria.test',
 ): RosterStudent {
-  return { student: { id: name, name, email }, active: true, member, groupIds };
+  return {
+    student: { id: name, name, email },
+    active: true,
+    member,
+    outcome: null,
+    otherClass: null,
+    groupIds,
+  };
 }
 
 describe('labelClasses', () => {

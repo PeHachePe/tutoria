@@ -102,6 +102,8 @@ export const ADMIN_PARAMS = {
   role: 'rol',
   /** The accounts by status: `desactivadas` or `todas`; without it, the active ones. */
   status: 'estado',
+  /** The students by situation (5.2g): `en-clase`, `sin-clase` or `terminados`. */
+  situation: 'situacion',
   /** The page of the list, from 1. */
   page: 'pagina',
 } as const;

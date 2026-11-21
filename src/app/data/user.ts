@@ -31,10 +31,21 @@ export interface SchoolClass {
   readonly reopened: boolean;
 }
 
+/**
+ * The final evaluation of a student in a class (5.2g, D-084): they go on to the next year, repeat
+ * it, finish the cycle or leave the school.
+ */
+export type ClassOutcome = 'promotes' | 'repeats' | 'graduates' | 'leaves';
+
+/** Those of a student who does not come back: they are not chosen again, and their account goes. */
+export const FINISHED_OUTCOMES: readonly ClassOutcome[] = ['graduates', 'leaves'];
+
 /** Table `class_member`: the students of a class, whom its groups take when created. */
 export interface ClassMember {
   readonly classId: string;
   readonly userId: string;
+  /** Null until the teachers of the class evaluate the student. */
+  readonly outcome: ClassOutcome | null;
 }
 
 /** Table `class_group`: a subject of a class, taught by one teacher. */

@@ -233,15 +233,18 @@ export type Database = {
       class_member: {
         Row: {
           class_id: string;
+          outcome: Database['public']['Enums']['class_outcome'] | null;
           user_id: string;
         };
         ComputedFields: never;
         Insert: {
           class_id: string;
+          outcome?: Database['public']['Enums']['class_outcome'] | null;
           user_id: string;
         };
         Update: {
           class_id?: string;
+          outcome?: Database['public']['Enums']['class_outcome'] | null;
           user_id?: string;
         };
         Relationships: [
@@ -799,6 +802,9 @@ export type Database = {
         Returns: {
           email: string;
           id: string;
+          last_class_name: string;
+          last_outcome: Database['public']['Enums']['class_outcome'];
+          last_school_year: string;
           name: string;
         }[];
       };
@@ -825,6 +831,8 @@ export type Database = {
           is_active: boolean;
           is_member: boolean;
           name: string;
+          other_class_name: string;
+          outcome: Database['public']['Enums']['class_outcome'];
         }[];
       };
       copy_blocks: {
@@ -932,6 +940,17 @@ export type Database = {
         Args: { class_name: string; class_school_year: string };
         Returns: string;
       };
+      finished_students: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          class_name: string;
+          email: string;
+          id: string;
+          name: string;
+          outcome: Database['public']['Enums']['class_outcome'];
+          school_year: string;
+        }[];
+      };
       group_deadline_stats: {
         Args: { target_group_id: string };
         Returns: {
@@ -999,6 +1018,16 @@ export type Database = {
         Args: { asked_calls: Json; target_request_id: string; target_user_id: string };
         Returns: undefined;
       };
+      last_class_member: {
+        Args: { up_to_school_year: string };
+        Returns: {
+          class_id: string;
+          name: string;
+          outcome: Database['public']['Enums']['class_outcome'];
+          school_year: string;
+          user_id: string;
+        }[];
+      };
       managed_classes: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1019,6 +1048,9 @@ export type Database = {
           email: string;
           entry: string;
           id: string;
+          last_class_name: string;
+          last_outcome: Database['public']['Enums']['class_outcome'];
+          last_school_year: string;
           name: string;
         }[];
       };
@@ -1174,6 +1206,9 @@ export type Database = {
         Returns: {
           email: string;
           id: string;
+          last_class_name: string;
+          last_outcome: Database['public']['Enums']['class_outcome'];
+          last_school_year: string;
           name: string;
         }[];
       };
@@ -1182,8 +1217,19 @@ export type Database = {
         Returns: {
           email: string;
           id: string;
+          last_class_name: string;
+          last_outcome: Database['public']['Enums']['class_outcome'];
+          last_school_year: string;
           name: string;
         }[];
+      };
+      set_class_outcomes: {
+        Args: {
+          new_outcome: Database['public']['Enums']['class_outcome'];
+          student_ids: string[];
+          target_class_id: string;
+        };
+        Returns: number;
       };
       studies_in_class: { Args: { target_class_id: string }; Returns: boolean };
       submit_attempt: {
@@ -1220,6 +1266,7 @@ export type Database = {
     Enums: {
       app_locale: 'es' | 'en' | 'ca';
       attempt_status: 'in_progress' | 'tests_failed' | 'passed' | 'submitted';
+      class_outcome: 'promotes' | 'repeats' | 'graduates' | 'leaves';
       difficulty: 'initial' | 'medium' | 'advanced' | 'extension';
       emotion: 'joy' | 'surprise' | 'encouragement' | 'celebration';
       exercise_kind: 'code';
@@ -1353,6 +1400,7 @@ export const Constants = {
     Enums: {
       app_locale: ['es', 'en', 'ca'],
       attempt_status: ['in_progress', 'tests_failed', 'passed', 'submitted'],
+      class_outcome: ['promotes', 'repeats', 'graduates', 'leaves'],
       difficulty: ['initial', 'medium', 'advanced', 'extension'],
       emotion: ['joy', 'surprise', 'encouragement', 'celebration'],
       exercise_kind: ['code'],

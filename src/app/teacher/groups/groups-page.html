@@ -149,7 +149,7 @@
       [attr.aria-label]="option.label"
     >
       @if (pastYear()) {
-        <!-- A class of a year that is over: why nothing can be changed, and what is left to do -->
+        <!-- A class of a year that is over: why nothing but its final evaluation changes (5.2g), and what is left to do -->
         <p
           class="flex items-start gap-3 rounded-xl bg-surface-container-high px-4 py-3 text-body-medium"
         >
@@ -164,12 +164,14 @@
           } @else if (isAdmin()) {
             <span i18n="@@groups.class.closed.admin"
               >El curso {{ option.managed.schoolClass.schoolYear }} ya terminó: la clase solo se
-              consulta. Para preparar el curso nuevo, «Duplicar…»; para corregirla, «Reabrir».</span
+              consulta, salvo su evaluación final. Para preparar el curso nuevo, «Duplicar…»; para
+              corregirla, «Reabrir».</span
             >
           } @else {
             <span i18n="@@groups.class.closed"
               >El curso {{ option.managed.schoolClass.schoolYear }} ya terminó: la clase solo se
-              consulta. Para preparar el curso nuevo, «Duplicar…» en el menú de la clase.</span
+              consulta, salvo su evaluación final. Para preparar el curso nuevo, «Duplicar…» en el
+              menú de la clase.</span
             >
           }
         </p>

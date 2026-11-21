@@ -2,6 +2,7 @@ import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
 import {
+  type ClassCandidate,
   type ClassDraft,
   type DuplicateOptions,
   type EnrollTarget,
@@ -18,7 +19,7 @@ import {
   type ClassSubject,
   type UserRef,
 } from '../group-service';
-import type { SchoolClass } from '../user';
+import type { ClassOutcome, SchoolClass } from '../user';
 import { SUPABASE_CLIENT } from './supabase-client';
 import { unwrap } from './supabase-error';
 import { toSchoolClass, toSubject } from './supabase-rows';
@@ -205,12 +206,30 @@ export class SupabaseGroupService extends GroupService {
       student: { id: row.id, name: row.name, email: row.email },
       active: row.is_active,
       member: row.is_member,
+      outcome: row.outcome,
+      otherClass: row.other_class_name,
       groupIds: row.group_ids,
     }));
   }
 
-  async listCandidates(classId: string): Promise<UserRef[]> {
-    return unwrap(await this.supabase.rpc('class_candidates', { target_class_id: classId }));
+  async listCandidates(classId: string): Promise<ClassCandidate[]> {
+    const rows = unwrap(await this.supabase.rpc('class_candidates', { target_class_id: classId }));
+    return rows.map(toCandidate);
+  }
+
+  async setOutcomes(
+    classId: string,
+    userIds: readonly string[],
+    outcome: ClassOutcome | null,
+  ): Promise<void> {
+    unwrap(
+      await this.supabase.rpc('set_class_outcomes', {
+        target_class_id: classId,
+        student_ids: [...userIds],
+        // Null takes the evaluation back; the generated types only know the outcomes
+        new_outcome: outcome as ClassOutcome,
+      }),
+    );
   }
 
   async matchStudents(classId: string, entries: readonly string[]): Promise<StudentMatch[]> {
@@ -220,10 +239,10 @@ export class SupabaseGroupService extends GroupService {
         entries: [...entries],
       }),
     );
-    return rows.map(({ entry, ...student }) => ({ entry, student }));
+    return rows.map(({ entry, ...row }) => ({ entry, ...toCandidate(row) }));
   }
 
-  async searchStudents(target: EnrollTarget, search: string): Promise<UserRef[]> {
+  async searchStudents(target: EnrollTarget, search: string): Promise<ClassCandidate[]> {
     const text = search.trim();
     if (text.length < MIN_STUDENT_SEARCH_LENGTH) return [];
     return unwrap(
@@ -233,7 +252,7 @@ export class SupabaseGroupService extends GroupService {
             target_class_id: target.id,
           })
         : await this.supabase.rpc('search_students', { search: text, target_group_id: target.id }),
-    );
+    ).map(toCandidate);
   }
 
   /** The limits are checked here too, so a batch the server would reject is not sent. */
@@ -321,4 +340,32 @@ function sortClasses(
         b.schoolClass.schoolYear.localeCompare(a.schoolClass.schoolYear) ||
         a.schoolClass.name.localeCompare(b.schoolClass.name, 'es'),
     );
+}
+
+/** A row of the functions that find students: the student and their last class (5.2g). */
+interface CandidateRow {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+  readonly last_class_name: string | null;
+  readonly last_school_year: string | null;
+  readonly last_outcome: ClassOutcome | null;
+}
+
+/** The three of the last class come together, or are null together; the generated types say never. */
+function toCandidate({
+  id,
+  name,
+  email,
+  last_class_name,
+  last_school_year,
+  last_outcome,
+}: CandidateRow): ClassCandidate {
+  return {
+    student: { id, name, email },
+    previous:
+      last_class_name === null || last_school_year === null
+        ? null
+        : { name: last_class_name, schoolYear: last_school_year, outcome: last_outcome },
+  };
 }

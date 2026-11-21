@@ -11,7 +11,7 @@ describe('groupActionMessage', () => {
   });
 
   it('says somebody cannot be enrolled', () => {
-    expect(groupActionMessage('enroll', new DataError('invalid'))).toMatch(/vuelve a buscarlo/);
+    expect(groupActionMessage('enroll', new DataError('invalid'))).toMatch(/Vuelve a buscarlo/);
   });
 
   it('says the class closed while it was shown', () => {

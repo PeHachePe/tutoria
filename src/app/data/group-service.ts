@@ -1,5 +1,5 @@
 import type { Subject } from './subject';
-import type { ClassGroup, SchoolClass } from './user';
+import type { ClassGroup, ClassOutcome, SchoolClass } from './user';
 
 /** A group as the screen of its class shows it. */
 export interface ManagedGroup {
@@ -73,14 +73,37 @@ export interface RosterStudent {
   readonly active: boolean;
   /** In the class: groups of the whole class take them. */
   readonly member: boolean;
+  /** Their final evaluation in the class (5.2g); null without one, or out of the class. */
+  readonly outcome: ClassOutcome | null;
+  /**
+   * Out of the class, the class of its year they are a student of (5.2g): they take a subject from
+   * it, and are not added to this one, as a student has one class a year. Null for the others.
+   */
+  readonly otherClass: string | null;
   /** The groups of the class they are in. */
   readonly groupIds: readonly string[];
 }
 
-/** A line of a pasted list and the student it names (5.2d). */
-export interface StudentMatch {
-  readonly entry: string;
+/**
+ * The last class of a student up to the year of the class they are chosen for, and their outcome in
+ * it (5.2g): where they come from, or where they are this year.
+ */
+export interface PreviousClass {
+  readonly name: string;
+  readonly schoolYear: string;
+  readonly outcome: ClassOutcome | null;
+}
+
+/** A student to enroll, and where they come from (5.2g). */
+export interface ClassCandidate {
   readonly student: UserRef;
+  /** Null for a student who never had a class. */
+  readonly previous: PreviousClass | null;
+}
+
+/** A line of a pasted list and the student it names (5.2d), with where they come from (5.2g). */
+export interface StudentMatch extends ClassCandidate {
+  readonly entry: string;
 }
 
 /** Where students are enrolled: the class (and its groups of the whole class) or one group. */
@@ -93,6 +116,8 @@ export const MAX_STUDENT_SEARCH_RESULTS = 20;
 export const MAX_ENROLLMENT_BATCH = 50;
 /** Groups made in one request (5.2c): more subjects than a class has. */
 export const MAX_GROUP_BATCH = 20;
+/** Students evaluated in one request (5.2g), as `set_class_outcomes`: more than a class has. */
+export const MAX_OUTCOME_BATCH = 100;
 /** Lines of a pasted list read at once: more than any class has. */
 export const MAX_PASTED_LINES = 500;
 /** As `class_group_label_format`: «Desdoble inglés». */
@@ -107,7 +132,8 @@ export const SCHOOL_YEAR_PATTERN = /^\d{4}\/\d{2}$/;
  * Abstract class without a decorator: it is the injection token (4.2, D-005).
  *
  * A class of a past year is closed (5.2e, D-082): every write to it, its groups or its students is
- * `forbidden`, for the administrator too, until the administrator reopens it.
+ * `forbidden`, for the administrator too, until the administrator reopens it. The final evaluation
+ * of its students is the exception (5.2g).
  *
  * A group without a label is the group of the whole class: it takes the students of the class when
  * it is created and when the class is enrolled. One with a label is a split, enrolled by hand.
@@ -172,20 +198,38 @@ export abstract class GroupService {
   abstract listRoster(classId: string): Promise<RosterStudent[]>;
 
   /**
-   * The active students of the school without a class in the year of this one, by name: those a
-   * new class is chosen from. `not_found` for a class the user does not look after.
+   * The active students of the school without a class in the year of this one, by name, with their
+   * last class before that year: those a new class is chosen from. Who finished the cycle or left
+   * the school in that last class is left out (5.2g). `not_found` for a class the user does not look
+   * after.
    */
-  abstract listCandidates(classId: string): Promise<UserRef[]>;
+  abstract listCandidates(classId: string): Promise<ClassCandidate[]>;
+
+  /**
+   * The final evaluation of some students of the class, or null to take it back (5.2g, D-084): any
+   * teacher of the class or the administration, also in a closed class. `MAX_OUTCOME_BATCH` at most
+   * and without repeating one (`invalid`); `not_found` for a class the user does not look after or a
+   * student who is not in it.
+   */
+  abstract setOutcomes(
+    classId: string,
+    userIds: readonly string[],
+    outcome: ClassOutcome | null,
+  ): Promise<void>;
 
   /**
    * The active students a pasted list names, each line an email or a whole name (without accents
-   * nor capitals), with their line; a line that names nobody, or more than one, is left out.
+   * nor capitals), with their line and their last class up to the year of the class (5.2g); a line
+   * that names nobody, or more than one, is left out.
    * `invalid` with more than `MAX_PASTED_LINES`, `not_found` as `listCandidates`.
    */
   abstract matchStudents(classId: string, entries: readonly string[]): Promise<StudentMatch[]>;
 
-  /** Active students not in the class (or the group); none with a search shorter than the minimum. */
-  abstract searchStudents(target: EnrollTarget, search: string): Promise<UserRef[]>;
+  /**
+   * Active students not in the class (or the group), with their last class up to its year (5.2g);
+   * none with a search shorter than the minimum.
+   */
+  abstract searchStudents(target: EnrollTarget, search: string): Promise<ClassCandidate[]>;
 
   /**
    * Into the class and its groups of the whole class, those of other teachers too, all or none:

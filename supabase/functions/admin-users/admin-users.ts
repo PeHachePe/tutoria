@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  MAX_DISABLE_BATCH,
   MAX_EMAIL_LENGTH,
   MAX_PASSWORD_LENGTH,
   MAX_USER_NAME_LENGTH,
@@ -92,15 +93,25 @@ export const requestSchema = z.discriminatedUnion('action', [
       })
       .refine((changes) => Object.values(changes).some((value) => value !== undefined)),
   }),
+  z.object({
+    action: z.literal('disable'),
+    userIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(MAX_DISABLE_BATCH)
+      .refine((ids) => new Set(ids).size === ids.length),
+  }),
 ]);
 
 type CreateRequest = Extract<z.infer<typeof requestSchema>, { action: 'create' }>;
 type UpdateRequest = Extract<z.infer<typeof requestSchema>, { action: 'update' }>;
+type DisableRequest = Extract<z.infer<typeof requestSchema>, { action: 'disable' }>;
 
 /**
  * The Edge Function `admin-users` (5.1a, D-072): the administration creates the accounts, changes
- * their name, role and status and resets their password, with the API of administration of Supabase
- * Auth. Public sign-up is closed and the app sends no email: the password is handed over in person.
+ * their name, role and status, resets their password and disables several at once (5.2g), with the
+ * API of administration of Supabase Auth. Public sign-up is closed and the app sends no email: the
+ * password is handed over in person.
  * Without a limit per minute, as it calls no model and only the administration uses it. The password
  * is never logged nor answered.
  */
@@ -120,11 +131,16 @@ export function createAdminUsersHandler({
       }
       const body = requestSchema.safeParse(await readJson(request, MAX_ADMIN_BODY_BYTES));
       if (!body.success) {
-        return failure(400, "Expected { action: 'create', … } or { action: 'update', … }");
+        return failure(400, "Expected { action: 'create' | 'update' | 'disable', … }");
       }
-      return body.data.action === 'create'
-        ? await create(store, body.data)
-        : await update(store, callerId, body.data);
+      switch (body.data.action) {
+        case 'create':
+          return await create(store, body.data);
+        case 'update':
+          return await update(store, callerId, body.data);
+        case 'disable':
+          return await disable(store, callerId, body.data);
+      }
     } catch (error) {
       if (error instanceof BodyTooLargeError) return tooLarge();
       if (error instanceof PasswordRejectedError) return failure(400, 'The password is not valid');
@@ -177,4 +193,38 @@ async function update(
   if (Object.keys(profile).length > 0) row = await store.updateProfile(userId, profile);
   if (disables) await store.setBan(userId, true);
   return json(200, row);
+}
+
+/**
+ * Several accounts disabled at once (5.2g): those of the students who finished. Each as an update
+ * alone, one after another, as Auth bans them one by one: one that does not exist, that the rules
+ * forbid (the administration itself) or whose change fails is left in `failed`, and the others go
+ * on. One already disabled is not touched again.
+ */
+async function disable(
+  store: AdminUsersStore,
+  callerId: string,
+  { userIds }: DisableRequest,
+): Promise<Response> {
+  const disabled: string[] = [];
+  const failed: string[] = [];
+  const changes: ProfileChanges = { status: 'disabled' };
+  for (const userId of userIds) {
+    try {
+      const target = await store.profileOf(userId);
+      if (!target || userChangeProblem(callerId, target, changes, await store.linksOf(userId))) {
+        failed.push(userId);
+        continue;
+      }
+      if (target.status !== 'disabled') {
+        await store.updateProfile(userId, changes);
+        await store.setBan(userId, true);
+      }
+      disabled.push(userId);
+    } catch (error) {
+      console.error(error);
+      failed.push(userId);
+    }
+  }
+  return json(200, { disabled, failed });
 }

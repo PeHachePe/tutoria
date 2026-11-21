@@ -147,8 +147,8 @@ export const CLASSES: readonly SchoolClass[] = [
 ];
 
 export const CLASS_MEMBERS: readonly ClassMember[] = [
-  ...DAW_STUDENT_IDS.map((userId) => ({ classId: DAW_CLASS_ID, userId })),
-  ...DAM_STUDENT_IDS.map((userId) => ({ classId: DAM_CLASS_ID, userId })),
+  ...DAW_STUDENT_IDS.map((userId) => ({ classId: DAW_CLASS_ID, userId, outcome: null })),
+  ...DAM_STUDENT_IDS.map((userId) => ({ classId: DAM_CLASS_ID, userId, outcome: null })),
 ];
 
 export const GROUPS: readonly ClassGroup[] = [

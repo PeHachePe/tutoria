@@ -11,6 +11,7 @@ import {
   linkedSignal,
   output,
   resource,
+  signal,
   viewChild,
 } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
@@ -27,21 +28,31 @@ import { firstValueFrom } from 'rxjs';
 import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
 import { LanguageService } from '../../core/i18n/language-service';
 import {
+  type ClassCandidate,
   GroupService,
   type ManagedGroup,
   MAX_ENROLLMENT_BATCH,
+  MAX_OUTCOME_BATCH,
   type RosterStudent,
   type UserRef,
 } from '../../data/group-service';
+import { schoolYearOf } from '../../data/school-year';
+import type { ClassOutcome } from '../../data/user';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { downloadCsv } from '../../shared/download-text';
 import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { type RosterColumn, rosterColumns, rosterCsv, rosterFileName } from './class-list';
+import {
+  CLASS_OUTCOMES,
+  outcomeCount,
+  outcomeLook,
+  outcomeSummary,
+} from '../../shared/class-outcome';
 import { inBatches } from './enroll-choice';
 import { EnrollDialog, type EnrollDialogData, type EnrollSource } from './enroll-dialog';
-import { groupActionMessage } from './group-action-message';
+import { type GroupAction, groupActionMessage } from './group-action-message';
 import { filterStudents, STUDENT_FILTER_THRESHOLD } from './student-filter';
 
 const SKELETON_ROWS = [1, 2, 3, 4];
@@ -73,7 +84,16 @@ interface RosterRow {
   readonly entry: RosterStudent;
   readonly cells: readonly RosterCell[];
   readonly actionsLabel: string;
+  /** How their final evaluation shows (5.2g), and what its menu says to a screen reader. */
+  readonly outcome: ReturnType<typeof outcomeLook>;
+  readonly outcomeLabel: string;
 }
+
+/** The options of the menu of an evaluation: each outcome, and none to take it back. */
+const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
+  value,
+  look: outcomeLook(value),
+}));
 
 /**
  * The students of the class chosen as a table of enrollment (5.2d, D-081): a row per student and a
@@ -128,7 +148,19 @@ interface RosterRow {
             />
           </mat-form-field>
         }
-        <div class="flex items-center gap-1 sm:ml-auto">
+        <div class="flex flex-wrap items-center gap-1 sm:ml-auto">
+          @if (!showOutcomes()) {
+            <!-- Also in a closed class: the year often closes before the evaluation is done -->
+            <button
+              matButton="tonal"
+              type="button"
+              [disabled]="members() === 0"
+              (click)="outcomesShown.set(true)"
+            >
+              <mat-icon aria-hidden="true">fact_check</mat-icon>
+              <span i18n="@@classStudents.outcomes">Evaluación final</span>
+            </button>
+          }
           @if (!readOnly()) {
             <button
               matButton="tonal"
@@ -177,6 +209,55 @@ interface RosterRow {
           Aún no tiene asignaturas. Añade las tuyas.
         </p>
       }
+      @if (showOutcomes() && members() > 0) {
+        <!-- The final evaluation (5.2g): how far it went and the shortcuts for the rest. The summary and
+             its × stay on one line; on a narrow screen the shortcuts go under them -->
+        <div
+          class="flex flex-wrap items-center gap-x-2 rounded-xl bg-surface-container-high py-1 pr-1 pl-4"
+          role="toolbar"
+          aria-label="Evaluación final"
+          i18n-aria-label="@@classStudents.outcomes"
+        >
+          <div
+            class="order-1 flex min-w-0 basis-[calc(100%-3rem)] items-center gap-2 sm:flex-1 sm:basis-auto"
+          >
+            <mat-icon aria-hidden="true" class="shrink-0 text-on-surface-variant"
+              >fact_check</mat-icon
+            >
+            <p class="min-w-0 flex-1 text-body-medium" aria-live="polite">{{ summary() }}</p>
+          </div>
+          <div class="order-3 flex w-full flex-wrap gap-x-1 sm:order-2 sm:w-auto">
+            @if (unevaluated().length > 0) {
+              <button
+                matButton
+                type="button"
+                [disabled]="evaluating()"
+                (click)="evaluateRest('promotes')"
+              >
+                {{ restLabel('promotes') }}
+              </button>
+              <button
+                matButton
+                type="button"
+                [disabled]="evaluating()"
+                (click)="evaluateRest('graduates')"
+              >
+                {{ restLabel('graduates') }}
+              </button>
+            }
+          </div>
+          <button
+            class="order-2 sm:order-3"
+            matIconButton
+            type="button"
+            aria-label="Ocultar la evaluación final"
+            i18n-aria-label="@@classStudents.outcomes.hide"
+            (click)="outcomesShown.set(false)"
+          >
+            <mat-icon aria-hidden="true">close</mat-icon>
+          </button>
+        </div>
+      }
       @if (students.error(); as error) {
         <app-load-error [error]="error" (retry)="students.reload()" />
       } @else if (firstLoad()) {
@@ -212,6 +293,11 @@ interface RosterRow {
                 >
                   <span i18n="@@classStudents.student">Alumno</span>
                 </th>
+                @if (showOutcomes()) {
+                  <th scope="col" class="px-3 py-2 text-left text-title-small whitespace-nowrap">
+                    <span i18n="@@classStudents.outcome">Evaluación</span>
+                  </th>
+                }
                 @for (column of columns(); track column.managed.group.id) {
                   <th
                     scope="col"
@@ -321,6 +407,13 @@ interface RosterRow {
                         i18n="@@classStudents.disabled"
                         >(cuenta desactivada)</span
                       >
+                    } @else if (row.entry.otherClass; as otherClass) {
+                      <!-- Its class of the year (5.2g): one class a year, so not added to this one -->
+                      <span
+                        class="block text-body-small text-on-surface-variant"
+                        i18n="@@classStudents.otherClass.named"
+                        >De {{ otherClass }}</span
+                      >
                     } @else if (!row.entry.member) {
                       <span
                         class="block text-body-small text-on-surface-variant"
@@ -329,6 +422,51 @@ interface RosterRow {
                       >
                     }
                   </th>
+                  @if (showOutcomes()) {
+                    <td class="px-3 whitespace-nowrap">
+                      @if (row.entry.member) {
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-1 rounded-full py-1 ps-2 pe-1 text-label-large outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+                          [class]="row.outcome.chip"
+                          [matMenuTriggerFor]="outcomeMenu"
+                          [attr.aria-label]="row.outcomeLabel"
+                        >
+                          <mat-icon aria-hidden="true" class="size-5! text-[1.25rem]!">{{
+                            row.outcome.icon
+                          }}</mat-icon>
+                          <span>{{ row.outcome.label }}</span>
+                          <mat-icon aria-hidden="true" class="size-5! text-[1.25rem]!"
+                            >arrow_drop_down</mat-icon
+                          >
+                        </button>
+                        <mat-menu #outcomeMenu="matMenu">
+                          @for (option of outcomeOptions; track option.value) {
+                            <button
+                              mat-menu-item
+                              type="button"
+                              role="menuitemradio"
+                              [attr.aria-checked]="row.entry.outcome === option.value"
+                              (click)="evaluate(row, option.value)"
+                            >
+                              <mat-icon aria-hidden="true">{{ option.look.icon }}</mat-icon>
+                              <span>{{ option.look.label }}</span>
+                            </button>
+                          }
+                        </mat-menu>
+                      } @else {
+                        <!-- Of one subject only: evaluated in their own class -->
+                        <span
+                          class="text-on-surface-variant"
+                          role="img"
+                          aria-label="Se evalúa en su clase"
+                          i18n-aria-label="@@classStudents.outcome.otherClass"
+                          [title]="otherClassTitle"
+                          >—</span
+                        >
+                      }
+                    </td>
+                  }
                   @for (cell of row.cells; track cell.column.managed.group.id) {
                     <td class="px-3 text-center">
                       @if (cell.column.managed.mine && !readOnly()) {
@@ -357,7 +495,11 @@ interface RosterRow {
                     </td>
                   }
                   <td class="pr-1 text-right">
-                    @if (!readOnly() && (row.entry.member || row.entry.active)) {
+                    <!-- Nothing to add who is a student of another class of the year (5.2g) -->
+                    @if (
+                      !readOnly() &&
+                      (row.entry.member || (row.entry.active && row.entry.otherClass === null))
+                    ) {
                       <button
                         matIconButton
                         type="button"
@@ -386,7 +528,7 @@ interface RosterRow {
               } @empty {
                 <tr>
                   <td
-                    [attr.colspan]="columns().length + 2"
+                    [attr.colspan]="columns().length + (showOutcomes() ? 3 : 2)"
                     class="py-4 text-center text-body-medium text-on-surface-variant"
                   >
                     @if (rows().length === 0) {
@@ -479,6 +621,8 @@ export class ClassStudents {
       .map((entry): RosterRow => ({
         entry,
         actionsLabel: $localize`:@@classStudents.actions:Acciones de ${entry.student.name}:name:`,
+        outcome: outcomeLook(entry.outcome),
+        outcomeLabel: $localize`:@@classStudents.outcome.label:Evaluación final de ${entry.student.name}:name:: ${outcomeLook(entry.outcome).label}:outcome:`,
         cells: columns.map((column) => {
           const enrolled = entry.groupIds.includes(column.managed.group.id);
           const name = entry.student.name;
@@ -496,6 +640,36 @@ export class ClassStudents {
 
   /** Those of the class, not of one subject only. */
   protected readonly members = computed(() => this.entries().filter(({ member }) => member).length);
+
+  protected readonly outcomeOptions = OUTCOME_OPTIONS;
+  protected readonly otherClassTitle = $localize`:@@classStudents.outcome.otherClass:Se evalúa en su clase`;
+
+  /**
+   * Whether the column of the final evaluation shows (5.2g): as the user left it in this class or,
+   * before they touch it, in a closed class and in one somebody began to evaluate.
+   */
+  protected readonly outcomesShown = linkedSignal<string, boolean | null>({
+    source: this.classId,
+    computation: () => null,
+  });
+  protected readonly showOutcomes = computed(
+    () =>
+      this.outcomesShown() ??
+      (this.readOnly() || this.entries().some(({ outcome }) => outcome !== null)),
+  );
+  /** A shortcut is on its way: not twice. */
+  protected readonly evaluating = signal(false);
+  /** The students of the class without an evaluation yet: those the shortcuts reach. */
+  protected readonly unevaluated = computed(() =>
+    this.entries().filter(({ member, outcome }) => member && outcome === null),
+  );
+  protected readonly summary = computed(() =>
+    outcomeSummary(
+      this.entries()
+        .filter(({ member }) => member)
+        .map(({ outcome }) => outcome),
+    ),
+  );
 
   /** Nothing to show yet, as when another class is chosen: a skeleton. A reload keeps the list. */
   protected readonly firstLoad = computed(
@@ -534,6 +708,8 @@ export class ClassStudents {
     await this.openEnroll({
       targetName: `${this.className()} · ${line}`,
       intro: $localize`:@@classStudents.enrollGroup.intro:Solo en esta asignatura: para un desdoble o para quien la cursa desde otra clase.`,
+      // Any student may take one subject, whatever their class
+      schoolYear: null,
       enrolledIds: new Set(
         this.entries()
           .filter(({ groupIds }) => groupIds.includes(groupId))
@@ -548,7 +724,7 @@ export class ClassStudents {
             .filter(
               ({ active, member, groupIds }) => active && member && !groupIds.includes(groupId),
             )
-            .map(({ student }) => student),
+            .map(({ student }) => ({ student, previous: null })),
       },
       search: (text) => this.service.searchStudents({ kind: 'group', id: groupId }, text),
       enroll: (chosen) => this.inBatches(chosen, (ids) => this.service.enroll(groupId, ids)),
@@ -561,22 +737,38 @@ export class ClassStudents {
 
   protected async enrollInClass(): Promise<void> {
     const classId = this.classId();
+    const classYear = this.schoolClass().schoolYear;
     await this.openEnroll({
       targetName: this.className(),
       intro: $localize`:@@classStudents.enroll.intro:Entran en todas sus asignaturas, también las de otros docentes, salvo en los desdobles.`,
+      // One class a year (5.2g)
+      schoolYear: classYear,
       enrolledIds: new Set(
         this.entries()
           .filter(({ member }) => member)
           .map(({ student }) => student.id),
       ),
       candidates: {
-        label: $localize`:@@enrollDialog.tab.candidates:Sin clase este curso`,
-        empty: $localize`:@@enrollDialog.candidates.none:Todo el alumnado activo tiene ya una clase este curso.`,
+        ...this.candidatesTexts(),
         load: () => this.service.listCandidates(classId),
       },
       search: (text) => this.service.searchStudents({ kind: 'class', id: classId }, text),
       enroll: (chosen) => this.inBatches(chosen, (ids) => this.service.enrollInClass(classId, ids)),
     });
+  }
+
+  /** «Sin clase este curso», or the year of a class of another one: «Sin clase en 2027/28» (5.2g). */
+  private candidatesTexts(): { readonly label: string; readonly empty: string } {
+    const year = this.schoolClass().schoolYear;
+    return year === schoolYearOf(new Date())
+      ? {
+          label: $localize`:@@enrollDialog.tab.candidates:Sin clase este curso`,
+          empty: $localize`:@@enrollDialog.candidates.none:Todo el alumnado activo tiene ya una clase este curso.`,
+        }
+      : {
+          label: $localize`:@@enrollDialog.tab.candidates.year:Sin clase en ${year}:year:`,
+          empty: $localize`:@@enrollDialog.candidates.none.year:Todo el alumnado activo tiene ya una clase en ${year}:year:.`,
+        };
   }
 
   /**
@@ -644,6 +836,47 @@ export class ClassStudents {
       this.snackBar.open($localize`:@@classStudents.added:${name}:name: ya está en la clase`);
   }
 
+  /** «Promocionan los 3 sin evaluar»: a shortcut of the bar. */
+  protected restLabel(outcome: 'promotes' | 'graduates'): string {
+    const count = this.unevaluated().length;
+    return outcome === 'promotes'
+      ? $localize`:@@classStudents.outcomes.promoteRest:Promocionan los ${count}:count: sin evaluar`
+      : $localize`:@@classStudents.outcomes.graduateRest:Titulan los ${count}:count: sin evaluar`;
+  }
+
+  /** The final evaluation of one student, at once; a failure says so and the list reloads. */
+  protected async evaluate(row: RosterRow, outcome: ClassOutcome | null): Promise<void> {
+    if (row.entry.outcome === outcome) return;
+    await this.act(
+      () => this.service.setOutcomes(this.classId(), [row.entry.student.id], outcome),
+      'evaluate',
+    );
+  }
+
+  /**
+   * Those without an evaluation, at once: never over somebody already evaluated. The notice says
+   * how many and offers to undo it.
+   */
+  protected async evaluateRest(outcome: 'promotes' | 'graduates'): Promise<void> {
+    const ids = this.unevaluated().map(({ student }) => student.id);
+    this.evaluating.set(true);
+    const set = (value: ClassOutcome | null) => () =>
+      this.inBatches(
+        ids.map((id) => ({ id, name: '', email: '' })),
+        (batch) => this.service.setOutcomes(this.classId(), batch, value),
+        MAX_OUTCOME_BATCH,
+      );
+    const done = await this.act(set(outcome), 'evaluate');
+    this.evaluating.set(false);
+    if (!done) return;
+    const notice = this.snackBar.open(
+      outcomeCount(outcome, ids.length),
+      $localize`:@@classStudents.undo:Deshacer`,
+    );
+    const { dismissedByAction } = await firstValueFrom(notice.afterDismissed());
+    if (dismissedByAction) await this.act(set(null), 'evaluate');
+  }
+
   /** The list as a CSV file: name, email, the class and each group. */
   protected downloadList(): void {
     const { name, schoolYear } = this.schoolClass();
@@ -679,10 +912,7 @@ export class ClassStudents {
         ...data,
         sources: this.sources(),
         // A disabled account stays in its class, but the server would turn the whole batch down
-        studentsOf: async (classId) =>
-          (await this.service.listRoster(classId))
-            .filter(({ active, member }) => active && member)
-            .map(({ student }) => student),
+        studentsOf: (classId) => this.studentsOf(classId),
         match: (entries) => this.service.matchStudents(this.classId(), entries),
         enroll: async (chosen) => {
           try {
@@ -699,17 +929,36 @@ export class ClassStudents {
     }
   }
 
+  /**
+   * The active students of another class, with their last class up to the year of this one (5.2g):
+   * not their evaluation in that class, which may be old. Who promoted in 2025/26 and left the
+   * school in 2026/27 is not taken. A pasted list of their emails says it, as it does for any list.
+   */
+  private async studentsOf(classId: string): Promise<ClassCandidate[]> {
+    const roster = (await this.service.listRoster(classId)).filter(
+      ({ active, member }) => active && member,
+    );
+    if (roster.length === 0) return [];
+    const matches = await this.service.matchStudents(
+      this.classId(),
+      roster.map(({ student }) => student.email),
+    );
+    // Every one of them, as they are active students: an email names one account
+    return matches.map(({ student, previous }) => ({ student, previous }));
+  }
+
   /** In requests of the size the server takes, one after another. */
   private async inBatches(
     students: readonly UserRef[],
-    enroll: (ids: readonly string[]) => Promise<void>,
+    send: (ids: readonly string[]) => Promise<void>,
+    size = MAX_ENROLLMENT_BATCH,
   ): Promise<void> {
     const ids = students.map(({ id }) => id);
-    for (const batch of inBatches(ids, MAX_ENROLLMENT_BATCH)) await enroll(batch);
+    for (const batch of inBatches(ids, size)) await send(batch);
   }
 
   /** Runs an action, says so if it fails and reloads; whether it went well. */
-  private async act(action: () => Promise<void>, kind: 'enroll' | 'unenroll'): Promise<boolean> {
+  private async act(action: () => Promise<void>, kind: GroupAction): Promise<boolean> {
     try {
       await action();
       return true;

@@ -135,9 +135,10 @@ describe('seed fixtures', () => {
       HISTORY_CLASSES.filter(({ schoolYear }) => schoolYear === '2026/27').map(({ name }) => name),
     ).toEqual(['2.º DAW A', '2.º DAM B']);
 
-    // Twelve intakes of eight: those that finished are disabled, the last two are not
+    // Twelve intakes of eight: those that finished are disabled, the last two are not, and of those
+    // who finished last June, five still are (5.2g)
     expect(HISTORY_USERS).toHaveLength(96);
-    expect(HISTORY_USERS.filter(({ status }) => status === 'active')).toHaveLength(16);
+    expect(HISTORY_USERS.filter(({ status }) => status === 'active')).toHaveLength(16 + 5);
     const emails = SEED.users.map(({ email }) => email);
     expect(new Set(emails).size).toBe(emails.length);
 
@@ -160,6 +161,25 @@ describe('seed fixtures', () => {
         HISTORY_CLASS_MEMBERS.some((row) => row.classId === group.classId && row.userId === userId),
       ).toBe(true);
     }
+    // The final evaluation (5.2g): this year and last year's 1.º DAW A, still to do
+    const outcomesOf = (name: string, year: string) => {
+      const schoolClass = HISTORY_CLASSES.find(
+        (row) => row.name === name && row.schoolYear === year,
+      );
+      return HISTORY_CLASS_MEMBERS.filter(({ classId }) => classId === schoolClass?.id).map(
+        ({ outcome }) => outcome,
+      );
+    };
+    expect(new Set(outcomesOf('2.º DAW A', '2026/27'))).toEqual(new Set([null]));
+    expect(new Set(outcomesOf('1.º DAW A', '2025/26'))).toEqual(new Set([null]));
+    expect(new Set(outcomesOf('1.º DAM B', '2025/26'))).toEqual(new Set(['promotes']));
+    expect(new Set(outcomesOf('2.º DAW A', '2024/25'))).toEqual(new Set(['graduates']));
+    expect(outcomesOf('2.º DAM B', '2025/26').sort()).toEqual([
+      ...Array<string>(6).fill('graduates'),
+      'leaves',
+      'repeats',
+    ]);
+
     // In second year of DAW, two in the split of client web development and not in its whole group
     const split = HISTORY_GROUPS.find(({ label }) => label === 'Desdoble inglés')!;
     const whole = HISTORY_GROUPS.find(

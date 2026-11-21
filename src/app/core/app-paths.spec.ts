@@ -29,6 +29,7 @@ describe('APP_PATHS', () => {
       search: 'buscar',
       role: 'rol',
       status: 'estado',
+      situation: 'situacion',
       page: 'pagina',
     });
   });
