@@ -17,7 +17,7 @@ Que la administración dé de alta las cuentas del centro, les cambie el rol, le
 
 Escritorio, tablet y móvil en una columna:
 
-- Cabecera: «Usuarios», lo que es la pantalla y el botón «Nuevo usuario».
+- Cabecera: «Usuarios», lo que es la pantalla y los botones «Alta de varios…» (5.2h) y «Nuevo usuario», en una fila también en el móvil.
 - Tras la evaluación final (5.2g, D-084), un aviso con fondo de aviso: «4 alumnos titulados o de baja siguen con la cuenta activa.» y «Revisar y desactivar…». Solo si hay alguno.
 - Filtros, en la URL, en una fila desde `sm` (en el móvil, el buscador solo y los dos desplegables lado a lado): buscar por nombre o correo (sin tildes ni mayúsculas), el rol («Todos los roles», «Alumnado», «Profesorado», «Administración»), el estado («Activas», por defecto, «Desactivadas» o «Todas») y la situación del alumnado («Todas», «En una clase este curso», «Sin clase este curso» o «Titulados o de baja», 5.2g).
 - «33 cuentas», o «5 cuentas de 33» al filtrar, anunciado con `aria-live`.
@@ -31,6 +31,8 @@ Escritorio, tablet y móvil en una columna:
 - Diálogo de la contraseña: la nueva contraseña, con los mismos botones.
 - Diálogo «Cuentas de quien ya terminó» (5.2g): qué hace, la lista con todos marcados (nombre y «Titula · 2.º DAW A · 2025/26») y «Desactivar N».
 - Diálogo «Trayectoria de …» (5.2g): sus clases curso a curso, de la más reciente, con la etiqueta de su evaluación.
+- Diálogo «Alta de varios alumnos» (5.2h, D-085), ancho, en tres fases: pegar la lista; revisarla («Se crean» y «No se crean», cada línea con su número y su motivo) con «Matricular en una clase» opcional; y el resultado, con el aviso de que las contraseñas solo se ven ahora, la lista de cuentas con su contraseña, «Descargar CSV» e «Imprimir las tiras».
+- Los diálogos con formulario tienen siempre el mismo ancho, con ayuda o con error (5.2h).
 
 ## Interacciones
 
@@ -40,6 +42,7 @@ Escritorio, tablet y móvil en una columna:
 - **Nuevo usuario:** el correo repetido se marca en el formulario, contra la lista cargada (el servidor lo rechaza igualmente). Al crearla, la fila aparece en su sitio y el aviso dice «Cuenta creada. Entrégale la contraseña en persona.».
 - **Editar:** cambia la fila en el sitio. Solo se envía lo que cambia.
 - **Restablecer la contraseña:** la nueva contraseña, sin enviar correos (D-072).
+- **Alta de varios alumnos (5.2h, D-085):** la lista de secretaría, como sale de Excel o separada por «;» o comas, con el nombre y el correo en cualquier orden. «Apellidos, Nombre» y los nombres en mayúsculas se escriben como en las cuentas. Nada se crea hasta pulsar «Crear N cuentas»; se crean en tandas de 25 con barra de progreso, cada una con una contraseña al azar, y se matriculan en la clase elegida. Un corte de red deja lo creado y ofrece «Reintentar los que faltan». El CSV y el PDF de las tiras se llaman «Credenciales 1.º DAW A 2026-27» (o con la fecha). Cerrar sin descargar ni imprimir pregunta antes; al cerrar, la lista se recarga.
 - **Revisar y desactivar (5.2g):** desactiva de una vez las cuentas marcadas, como «Desactivar» una a una; el aviso dice cuántas, o cuántas no se pudieron. Los docentes no desactivan cuentas (D-072).
 - **Desactivar:** pregunta antes («… dejará de poder entrar. Su trabajo se conserva…»); la fila pasa a «Desactivada» y sale de la lista si solo se ven las activas. **Activar:** sin preguntar.
 - Cada acción se avisa con un `MatSnackBar`, que se anuncia solo. Un fallo en un diálogo se dice en él y recarga la lista; el de activar o desactivar, en el aviso.
@@ -57,6 +60,7 @@ Escritorio, tablet y móvil en una columna:
 - El estado se dice con texto e icono, no solo con color.
 - Lo deshabilitado (el rol, «Desactivar» en la cuenta propia) sigue siendo enfocable (`disabledInteractive`) y su motivo está escrito, a la vista, enlazado con `aria-describedby` en el diálogo.
 - Los botones de la contraseña tienen nombre («Mostrar la contraseña», «Copiar la contraseña») y su resultado se anuncia.
+- En el alta de varios (5.2h), el resumen de la revisión y el resultado se anuncian (`role="status"`), los errores con `role="alert"`, las dos listas son regiones con su título y la hoja de tiras, que solo existe al imprimir, va con `aria-hidden`.
 - Al cambiar de página, el foco va a la tabla.
 
 ## Criterios de aceptación
@@ -69,10 +73,12 @@ Escritorio, tablet y móvil en una columna:
 - [x] Desactivar con confirmación y activar; la cuenta propia no se desactiva (3b).
 - [x] Revisión visual del autor.
 - [x] El aviso de las cuentas de quien tituló o causó baja y desactivarlas de una vez; la situación del alumnado y su trayectoria (5.2g, D-084).
+- [x] El alta de varios alumnos con la lista de secretaría, revisada antes de crear nada, con matrícula opcional y las contraseñas en CSV o en tiras para imprimir (5.2h, D-085).
 
 ## Fuera de alcance
 
 - Cambiar el correo de una cuenta (es su identidad en Auth, D-072) y que cada usuario cambie su contraseña ([PENDIENTES](../PENDIENTES.md)).
+- Matricular desde el alta de varios a quien ya tenía cuenta: se hace en Grupos con «Pegar una lista» ([PENDIENTES](../PENDIENTES.md)).
 - Más de 1000 usuarios, con la lista paginada en el servidor ([PENDIENTES](../PENDIENTES.md)).
 - Reasignar los grupos de un docente o dar de baja a un alumno de sus grupos: es la pantalla de grupos (5.2b).
 

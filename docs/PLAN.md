@@ -3415,7 +3415,7 @@ Commit: `feat(groups): groups and enrollment screen (step 5.2b)`.
 - **5.2e** · Las clases de cursos pasados, cerradas, y el selector de curso y clase (D-082).
 - **5.2f** · Los bloques de una clase cerrada, de solo lectura; copiar, deshacer y borrar varios (D-083).
 - **5.2g** · La evaluación final de cada alumno (Promociona, Repite, Titula, Baja), de dónde viene cada uno al matricular, una clase por alumno y curso, y en Usuarios las cuentas de quien terminó, la situación del alumnado y su trayectoria (D-084).
-- **5.2h (≈2 h, pendiente)** · Alta de varios alumnos en Usuarios: pegar la lista de secretaría (nombre y correo), comprobarla antes de crear nada, crear las cuentas con contraseñas aleatorias en una acción nueva de `admin-users` y descargar las credenciales para entregarlas en persona; opcional, matricularlos en una clase del curso. Su detalle, en [PENDIENTES](PENDIENTES.md).
+- **5.2h** · Alta de varios alumnos en Usuarios: pegar la lista de secretaría, revisarla antes de crear nada, crear las cuentas con contraseñas al azar (`admin-users`, `create_students`), matricularlas si se quiere en una clase y entregar las contraseñas en CSV o en tiras para imprimir; y el ancho fijo de los diálogos con formulario (D-085).
 
 **5.3 · Sistema: proveedor de IA y asignaturas (≈2,5 h)** · ficha `12-sistema` · Figura 13 del TFM
 

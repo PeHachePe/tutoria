@@ -2478,3 +2478,52 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Para la memoria: el cierre de curso real de un centro de FP (promociona, repite, titula, baja) salió de la conversación con el autor, y por qué la evaluación informa pero no bloquea.
 
 **Aprobación:** el autor aprobó el plan («Sí, adelante»). Al probarlo vio que se podía matricular a una alumna de baja y preguntó si bloquearlo; aceptó la opinión de no bloquear y avisar, y pidió la vista de centro para la administración. Preguntó cómo se gestiona a un alumno al que no se da clase y quién da de alta a los nuevos (de ahí la procedencia en «Buscar» y el 5.2h), por qué no salía Andrea en la búsqueda (de ahí los mensajes de «no encontrado»), si se miraba la última clase aunque no fuera la copiada (no lo hacía: se corrigió) y qué pasaba con dos clases del mismo curso. Después dio vía libre («haz todo lo que veas mejor»). El detalle técnico, por delegación del autor.
+
+## D-085 · El alta de varios alumnos con la lista de secretaría, y el ancho fijo de los diálogos con formulario (21/11/2026, propuesta)
+
+**Contexto:** al empezar el curso, secretaría pasa la lista de alumnos nuevos y la administración tenía que crear sus cuentas de una en una (D-072). Se acordó al cerrar el 5.2g (D-084). Al probarlo, el autor vio además que el diálogo de «Nuevo usuario» cambiaba de ancho al pulsar el ojo de la contraseña.
+
+**Decisión (cómo se usa):**
+
+- **Dónde:** en Usuarios, el botón «Alta de varios…», junto a «Nuevo usuario». Solo la administración da de alta cuentas; los docentes no (D-072).
+- **Pegar la lista:** un alumno por línea, con su nombre y su correo en cualquier orden, tal como sale de Excel (tabuladores) o separados por «;» o comas. Hasta 500 líneas de una vez.
+  - «García López, Ana» pasa a «Ana García López», como están las cuentas.
+  - Un nombre en mayúsculas se escribe como nombre: «DE LA FUENTE DEL RÍO, MARÍA JOSÉ» queda «María José de la Fuente del Río».
+  - Si el nombre va en varias columnas (nombre y apellidos), se juntan; «Ana <ana@centro.es>» también vale.
+- **Revisar antes de crear nada:** «Se crean N cuentas de alumno · M líneas se quedan fuera», y dos listas:
+  - «Se crean»: el nombre y el correo, tal como quedarán;
+  - «No se crean»: cada línea con su número y el motivo: «Ya tiene una cuenta», «Tiene una cuenta desactivada: actívala en la lista», «Repetido en la lista», «Sin un correo válido», «Sin nombre», «Nombre demasiado largo» o «Correo demasiado largo». Una fila de cabecera («Nombre;Correo») sale aquí como «Sin un correo válido»: no se ignora sola, porque cualquier regla para reconocerla podría saltarse a un alumno.
+  - «Volver a la lista» devuelve al texto para corregirlo.
+- **Matricular (opcional):** «Matricular en una clase», con las clases abiertas de este curso o de uno posterior («1.º DAW A · 2026/27»). Si no se puede leer la lista de clases, no se ofrece y el alta sigue. Quien ya tenía cuenta no se matricula desde aquí: se hace en Grupos con «Pegar una lista», que aplica las reglas de la evaluación final (D-084).
+- **Crear:** cada cuenta recibe una contraseña al azar de 12 caracteres sin los que se confunden en papel (el generador de «Nuevo usuario»). «Creando las cuentas: 25 de 60…», con una barra de progreso. Si se corta la red, lo creado se queda y el diálogo dice cuántas faltan, con «Reintentar los que faltan». Si una cuenta se creó mientras tanto en otra sesión, se dice («Ya tenían cuenta, no se ha cambiado nada: …»), y si una falla, también («No se pudieron crear: …»).
+- **Entregar las contraseñas:** «N cuentas creadas y matriculadas en 1.º DAW A · 2026/27», el aviso «Las contraseñas solo se ven ahora…» y la lista con el nombre, el correo y la contraseña de cada uno.
+  - «Descargar CSV»: nombre, correo y contraseña, con «;» y las tildes bien en Excel.
+  - «Imprimir las tiras»: una tira por alumno, dos por fila, con línea discontinua para recortar: «Tu cuenta de TutorIA», el nombre, el correo, la contraseña en letra de código y la dirección de entrada.
+  - El CSV y el PDF se llaman igual: «Credenciales 1.º DAW A 2026-27», o con la fecha si no se matriculó en ninguna clase.
+  - Cerrar sin descargar ni imprimir (con el botón, Esc o fuera del diálogo) pregunta antes («¿Cerrar sin guardar las contraseñas?»), porque no se vuelven a ver; mientras se crean, el diálogo no se cierra. Al cerrar, la lista de Usuarios se recarga con las cuentas nuevas y sus grupos.
+- **Los diálogos con formulario tienen un ancho fijo:** el de un diálogo (560 px, o la pantalla menos 32 px en el móvil), con ayuda o con error. Antes, al salir de un campo vacío, la ayuda larga se cambiaba por un error más corto y el diálogo se estrechaba bajo el puntero. Se aplica a los de usuario, contraseña, asignatura, bloque, asignar, copiar bloques y duplicar.
+
+**Decisión (técnica):**
+
+- **`admin-users` gana `create_students`:** hasta `MAX_CREATE_BATCH` (25, en `user-rules.ts`, compartido con la app) alumnos distintos y válidos, o nada (`400`). Cada cuenta se crea con la API de Auth una tras otra; el disparador `create_app_user` hace su fila de alumno con su nombre, así que no se escribe nada más. Responde `{ created, existing, failed }`: un correo con cuenta va a `existing`, y una cuenta que falla (también si no aparece su fila) va a `failed` y se borra si llegó a crearse. Las contraseñas las genera la pantalla y la función nunca las devuelve. El cuerpo admite ahora 40 kB (25 alumnos con tildes).
+- **La pantalla manda la lista en tandas de 25:** cada una responde a tiempo con Auth creando las cuentas de una en una, y la barra dice por dónde va. La matrícula usa `enrollInClass()` en tandas de `MAX_ENROLLMENT_BATCH`.
+- **Servicios:** `AdminService.createStudents()` con `NewStudent` y `CreateStudentsResult`, en las dos versiones; la simulada rechaza igual que la función. Las funciones puras, en `admin/users/student-list.ts` (`readStudentList`, `reviewStudentList`, `credentialsCsv`, `credentialsTitle`).
+- **CSV seguro:** `toCsv()` en `shared/download-text.ts`, compartido con la lista de la clase de Grupos, pone una comilla delante de un campo que empieza por `=`, `+`, `-` o `@`, para que un nombre pegado no se ejecute como fórmula al abrir el fichero.
+- **Las tiras se imprimen en la propia página, no en un iframe:** la política de seguridad de Vercel no admite marcos (`frame-src 'none'`). `credentials-sheet.ts` monta la hoja al final del `body`, con `aria-hidden`, pone una clase en la raíz para que `@media print` solo imprima la hoja (`credentials-sheet.css`), cambia el título de la página por el nombre de los ficheros y lo deshace todo con `afterprint`. Lleva colores fijos, no tokens: el papel es blanco aunque la app esté en oscuro (como la mascota, D-022).
+- **El ancho de los diálogos:** una regla en `theme.scss` (`dialog-overrides` con `container-min-width: min(560px, calc(100vw - 32px))`) sobre el panel que contiene `.app-form-dialog`, porque el panel lo crea Material y Tailwind no llega a él.
+
+**Alternativas:**
+
+- **Que la función genere las contraseñas:** las devolvería en la respuesta; generándolas la pantalla con el mismo generador de «Nuevo usuario», la función nunca las contesta.
+- **Una petición con toda la lista:** con Auth creando cuentas de una en una, una lista larga podía pasar del tiempo de la función sin decir por dónde iba.
+- **Imprimir en un iframe o una ventana nueva:** lo impide la política de seguridad, y una ventana nueva la bloquean los navegadores.
+- **Ignorar sola la primera línea sin correo:** podría saltarse a un alumno cuyo correo está mal; se ve y se entiende en «No se crean».
+- **Matricular también a quien ya tenía cuenta:** obligaría a repetir aquí las reglas de la evaluación final; para eso está «Pegar una lista» en Grupos.
+
+**Consecuencias:**
+
+- Sale de [PENDIENTES](PENDIENTES.md) la fila del 5.2h; entran tres: matricular aquí a quien ya tenía cuenta, la fila de cabecera y que el primer acceso pida cambiar la contraseña cuando exista esa opción.
+- `docs/DESPLIEGUE.md`: volver a desplegar `admin-users`.
+- Para la memoria: lo que pesa en un centro no es crear las cuentas, sino entregarlas; por eso el paso acaba en un CSV y en tiras para recortar.
+
+**Aprobación:** el autor aprobó el plan («Sí, adelante»). Al probarlo vio que el diálogo de «Nuevo usuario» cambiaba de ancho al pulsar el ojo y preguntó por qué (se explicó y se arregló en todos los diálogos con formulario), y que el PDF se guardaba como «Claude.pdf» (era el navegador interno, pero ahora se llama como el CSV). Después dio el paso por bueno («Sí, cierra el paso»). El detalle técnico, por delegación del autor.
