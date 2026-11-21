@@ -1,4 +1,5 @@
 import { SCHOOL_YEAR_PATTERN } from './group-service';
+import type { SchoolClass } from './user';
 
 /** The month a school year starts in: September, as `Date.getMonth()` counts it. */
 const SCHOOL_YEAR_START_MONTH = 8;
@@ -19,6 +20,14 @@ export function schoolYearOf(date: Date): string {
  */
 export function isPastSchoolYear(schoolYear: string, today: Date): boolean {
   return schoolYear < schoolYearOf(today);
+}
+
+/** As `is_open_class` (5.2e): of this year or a later one, or reopened by the administration. */
+export function isOpenClass(
+  schoolClass: Pick<SchoolClass, 'schoolYear' | 'reopened'>,
+  today: Date,
+): boolean {
+  return schoolClass.reopened || !isPastSchoolYear(schoolClass.schoolYear, today);
 }
 
 /** Like `2026/27` and of two years in a row: `2026/99` has the shape, not the meaning. */

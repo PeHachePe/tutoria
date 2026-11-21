@@ -22,7 +22,7 @@ import {
   type StudentMatch,
   type UserRef,
 } from '../group-service';
-import { isPastSchoolYear } from '../school-year';
+import { isOpenClass, isPastSchoolYear } from '../school-year';
 import { schoolYearShiftDays } from '../school-year-shift';
 import type { AppUser, ClassGroup, Enrollment, SchoolClass } from '../user';
 import { copyGroupBlocks } from './copy-group-blocks';
@@ -57,7 +57,7 @@ export class MockGroupService extends GroupService {
                 (a.group.label ?? '').localeCompare(b.group.label ?? '', 'es'),
             ),
           canEdit: canEditClass(user, schoolClass),
-          open: isOpenClass(schoolClass),
+          open: isOpenClass(schoolClass, new Date()),
         }),
       );
     });
@@ -628,17 +628,13 @@ function canEditClass(user: AppUser, schoolClass: SchoolClass): boolean {
   return user.role === 'admin' || (user.role === 'teacher' && schoolClass.createdBy === user.id);
 }
 
-/** As `is_open_class` (5.2e): of this year or a later one, or reopened. */
-function isOpenClass(schoolClass: SchoolClass): boolean {
-  return schoolClass.reopened || !isPastSchoolYear(schoolClass.schoolYear, new Date());
-}
-
 /**
  * As `check_open_class`: a write to a closed class is `forbidden`; a direct write, which the RLS
  * leaves without a row, fails as the Supabase service tells it.
  */
 function checkOpen(schoolClass: SchoolClass, kind: DataErrorKind = 'forbidden'): void {
-  if (!isOpenClass(schoolClass)) throw new DataError(kind, 'The class is of a past year');
+  if (!isOpenClass(schoolClass, new Date()))
+    throw new DataError(kind, 'The class is of a past year');
 }
 
 /** As `find_or_create_class`: the class found must be open, and a new one is not of a past year. */

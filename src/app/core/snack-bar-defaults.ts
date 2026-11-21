@@ -5,6 +5,12 @@ import { MAT_SNACK_BAR_DEFAULT_OPTIONS, MatSnackBar } from '@angular/material/sn
 export const SNACK_BAR_DURATION_MS = 6000;
 
 /**
+ * A notice whose result is not all in sight, such as blocks copied at the end of a long list
+ * (5.2f): time to look at it before «Deshacer» goes.
+ */
+export const LONG_SNACK_BAR_DURATION_MS = 10_000;
+
+/**
  * The notices of the staff screens (4.3): what an action did when nothing else on the screen shows
  * it, such as a deleted exercise. Provided by each area, like the form fields (D-021).
  *

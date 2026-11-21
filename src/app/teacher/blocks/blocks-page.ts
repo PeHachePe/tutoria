@@ -8,9 +8,11 @@ import {
   inject,
   Injector,
   input,
+  linkedSignal,
   resource,
 } from '@angular/core';
 import { MatButton, MatFabButton, MatIconButton } from '@angular/material/button';
+import { MatCheckbox } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
@@ -24,6 +26,8 @@ import { firstValueFrom } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS, TEACHER_PARAMS } from '../../core/app-paths';
+import { LONG_SNACK_BAR_DURATION_MS } from '../../core/snack-bar-defaults';
+import { prefersReducedMotion } from '../../shared/reduced-motion';
 import { LanguageService } from '../../core/i18n/language-service';
 import {
   type AssignmentChanges,
@@ -35,6 +39,7 @@ import {
 import type { AssignedGroup, ClassBlock } from '../../data/exercise';
 import { blockTitle, exerciseText, subjectName } from '../../data/localized-text';
 import { groupTitle } from '../../data/group-name';
+import { isPastSchoolYear, schoolYearOf } from '../../data/school-year';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { DueLabel } from '../../shared/due-label/due-label';
@@ -55,12 +60,17 @@ import { DueDateDialog, type DueDateDialogData, type DueDateDialogResult } from 
 
 const SKELETON_BLOCKS = [1, 2, 3];
 
+/** No block marked: one constant, as the selection is replaced, never changed. */
+const EMPTY_SELECTION: ReadonlySet<string> = new Set();
+
 /**
  * The blocks of a group (/docente/bloques?grupo=, ficha 08, D-046, 4.3b): create, title, translate,
  * reorder, hide, schedule (D-060) and delete them; and in each one, the exercises of the bank
  * assigned there, in their order, with an optional due date (D-054), which move to another block
  * even once started (4.3d). Only what nobody started can be deleted: their attempts keep it, and
- * hiding is the way to take it out of sight.
+ * hiding is the way to take it out of sight. The blocks of a closed class are read only (5.2f): what
+ * its students had that year, to look at and to copy into another group. «Seleccionar» deletes
+ * several blocks nobody started at once, and a copy is undone (5.2f).
  */
 @Component({
   selector: 'app-blocks-page',
@@ -71,6 +81,7 @@ const SKELETON_BLOCKS = [1, 2, 3];
     CdkDrag,
     CdkDragHandle,
     MatButton,
+    MatCheckbox,
     MatFabButton,
     MatIconButton,
     MatIcon,
@@ -120,6 +131,17 @@ export class BlocksPage {
   /** The group of the URL or, without one (or an unknown one), the first of this year (5.2e). */
   protected readonly group = computed(() => pickGroup(this.groupList(), this.grupo(), new Date()));
 
+  protected readonly isAdmin = computed(() => this.auth.role() === 'admin');
+
+  /** The year the blocks of a closed class are copied into, as the notice says (5.2f). */
+  protected readonly currentYear = schoolYearOf(new Date());
+
+  /** Its year is over (5.2f): the page says why its blocks are read only, or that it was reopened. */
+  protected readonly pastYear = computed(() => {
+    const group = this.group();
+    return group !== null && isPastSchoolYear(group.schoolYear, new Date());
+  });
+
   /**
    * «Name · subject», with the year when that is not enough: the same class of another year, as
    * «Copiar de otro grupo» offers them all. The picker shows the year apart, and only the name.
@@ -147,6 +169,20 @@ export class BlocksPage {
       schoolYear: group.schoolYear,
     })),
   );
+
+  /** Choosing blocks to delete at once (5.2f); another group starts without. */
+  protected readonly selecting = linkedSignal({
+    source: () => this.group()?.id,
+    computation: () => false,
+  });
+
+  /** The ids of the blocks marked while choosing. */
+  protected readonly selected = linkedSignal<string | undefined, ReadonlySet<string>>({
+    source: () => this.group()?.id,
+    computation: () => EMPTY_SELECTION,
+  });
+
+  protected readonly emptySelection = EMPTY_SELECTION;
 
   /** Changed in place by every action, so the page answers at once; reloaded only after a failure. */
   protected readonly blocks = resource({
@@ -188,12 +224,19 @@ export class BlocksPage {
         last: index === blocks.length - 1,
         started: planned.assignments.some((entry) => entry.studentCount > 0),
         actionsLabel: $localize`:@@blocks.actions:Acciones del bloque «${title.title}:title:»`,
+        selectLabel: $localize`:@@blocks.select.one:Marcar «${title.title}:title:» para borrarlo`,
         dragLabel: $localize`:@@blocks.drag:Arrastrar el bloque «${title.title}:title:»`,
         assignments: planned.assignments.map((entry, position) =>
           this.assignmentRow(entry, position, planned.assignments.length),
         ),
       };
     });
+  });
+
+  /** Every block nobody started is marked: the bar offers to unmark them instead. */
+  protected readonly allUnstartedSelected = computed(() => {
+    const unstarted = this.rows().filter((row) => !row.started);
+    return unstarted.length > 0 && unstarted.every((row) => this.selected().has(row.id));
   });
 
   /** Every list of exercises, so one is dragged from a block to another. */
@@ -222,10 +265,8 @@ export class BlocksPage {
     });
     if (!created) return;
     this.snackBar.open($localize`:@@blocks.created:Bloque creado`);
-    // The new block is the last one, often out of sight: it takes the focus, and the page scrolls to it
-    afterNextRender(() => this.document.getElementById(`block-${createdId}`)?.focus(), {
-      injector: this.injector,
-    });
+    // The new block is the last one, often out of sight
+    this.revealBlock(createdId);
   }
 
   /**
@@ -236,13 +277,22 @@ export class BlocksPage {
     const options = this.groupOptions();
     // The page offers it only for the group it shows, which is one of the list
     const [target] = options.filter((option) => option.id === group.id);
+    const before = this.blocks.value();
+    // The copies go after the last block: those are what «Deshacer» deletes
+    const lastPosition = Math.max(0, ...before.map((entry) => entry.block.position));
     let copied = 0;
+    let sourceLabel = '';
     const ref = this.dialog.open<CopyBlocksDialog, CopyBlocksDialogData, boolean>(
       CopyBlocksDialog,
       {
         data: {
           target,
-          blockCount: this.blocks.value().length,
+          blockCount: before.length,
+          targetTitles: before.map((entry) => blockTitle(entry.block, this.locale).title),
+          titlesOf: async (groupId) =>
+            (await this.service.listBlocks(groupId)).map(
+              (entry) => blockTitle(entry.block, this.locale).title,
+            ),
           // Those of the same subject first, the most recent year first
           sources: options
             .filter((option) => option.id !== group.id)
@@ -254,18 +304,125 @@ export class BlocksPage {
             ),
           copy: async (sourceGroupId, withDates) => {
             copied = await this.service.copyBlocks(sourceGroupId, group.id, withDates);
+            sourceLabel = options.find((option) => option.id === sourceGroupId)?.label ?? '';
           },
         },
         injector: this.injector,
       },
     );
     if ((await firstValueFrom(ref.afterClosed())) !== true) return;
+    if (copied === 0) {
+      this.snackBar.open(
+        $localize`:@@blocks.copied.none:Ese grupo no tiene bloques: no se ha copiado nada`,
+      );
+      return;
+    }
+    this.snackBar
+      .open(
+        copied === 1
+          ? $localize`:@@blocks.copied.one:1 bloque copiado de ${sourceLabel}:group:`
+          : $localize`:@@blocks.copied:${copied}:count: bloques copiados de ${sourceLabel}:group:`,
+        $localize`:@@blocks.undo:Deshacer`,
+        // The copies are at the end of the list: time to look at them before «Deshacer» goes
+        { duration: LONG_SNACK_BAR_DURATION_MS },
+      )
+      .onAction()
+      .subscribe(() => void this.undoCopy(group.id, lastPosition));
+    await this.showCopies(group.id, lastPosition);
+  }
+
+  /**
+   * The server gave the copies their ids: the blocks again, and the page goes to the first copy, so
+   * what arrived is in sight while «Deshacer» is still there (5.2f).
+   */
+  private async showCopies(groupId: string, lastPosition: number): Promise<void> {
+    try {
+      const blocks = await this.service.listBlocks(groupId);
+      this.blocks.set(blocks);
+      this.revealBlock(blocks.find((entry) => entry.block.position > lastPosition)?.block.id);
+    } catch {
+      this.blocks.reload();
+    }
+  }
+
+  /**
+   * «Deshacer» of a copy (5.2f): the blocks after those the group had, which the server numbered;
+   * nobody has had time to start them, but whatever somebody did start stays.
+   */
+  private async undoCopy(groupId: string, lastPosition: number): Promise<void> {
+    try {
+      const copies = (await this.service.listBlocks(groupId)).filter(
+        (entry) => entry.block.position > lastPosition,
+      );
+      const removed = await this.service.removeBlocks(copies.map((entry) => entry.block.id));
+      this.snackBar.open(
+        removed === copies.length
+          ? $localize`:@@blocks.copy.undone:Copia deshecha`
+          : $localize`:@@blocks.copy.undone.partly:Copia deshecha, salvo los bloques que alguien ya ha empezado`,
+      );
+    } catch {
+      this.failed();
+    }
     this.blocks.reload();
-    this.snackBar.open(
-      copied === 0
-        ? $localize`:@@blocks.copied.none:Ese grupo no tiene bloques: no se ha copiado nada`
-        : $localize`:@@blocks.copied:Bloques copiados: ${copied}:count:`,
+  }
+
+  // Deleting several -----------------------------------------------------------------------------
+
+  protected toggleSelected(blockId: string, selected: boolean): void {
+    this.selected.update((ids) => {
+      const next = new Set(ids);
+      if (selected) next.add(blockId);
+      else next.delete(blockId);
+      return next;
+    });
+  }
+
+  /** Every block nobody started: those are the ones that can go. */
+  protected selectUnstarted(): void {
+    this.selected.set(
+      new Set(
+        this.rows()
+          .filter((row) => !row.started)
+          .map((row) => row.id),
+      ),
     );
+  }
+
+  protected stopSelecting(): void {
+    this.selecting.set(false);
+    this.selected.set(EMPTY_SELECTION);
+  }
+
+  /** Asks first, as deleting one: their exercises go with them, and it cannot be undone. */
+  protected async removeSelected(): Promise<void> {
+    const ids = [...this.selected()];
+    const confirmed = await confirmAction(this.dialog, {
+      title:
+        ids.length === 1
+          ? $localize`:@@blocks.deleteMany.one:¿Borrar 1 bloque?`
+          : $localize`:@@blocks.deleteMany.title:¿Borrar ${ids.length}:count: bloques?`,
+      text: $localize`:@@blocks.deleteMany.text:Se quitan también sus ejercicios, que siguen en el banco. Nadie los ha empezado. No se puede deshacer.`,
+      confirm: $localize`:@@blocks.delete.confirm:Borrar`,
+    });
+    if (!confirmed) return;
+    try {
+      const removed = await this.service.removeBlocks(ids);
+      this.stopSelecting();
+      if (removed === ids.length) {
+        this.blocks.value.update((blocks) =>
+          blocks.filter((entry) => !ids.includes(entry.block.id)),
+        );
+        this.snackBar.open($localize`:@@blocks.deletedMany:Bloques borrados: ${removed}:count:`);
+      } else {
+        this.snackBar.open(
+          $localize`:@@blocks.deletedMany.partly:Bloques borrados: ${removed}:count:. Los demás ya tienen intentos.`,
+        );
+        this.blocks.reload();
+      }
+    } catch {
+      this.failed();
+      this.blocks.reload();
+    }
   }
 
   protected async editBlock(planned: PlannedBlock): Promise<void> {
@@ -618,6 +775,24 @@ export class BlocksPage {
         ? $localize`:@@blocks.exercise.show:Mostrar «${text.title}:title:» a los alumnos`
         : $localize`:@@blocks.exercise.hide:Ocultar «${text.title}:title:» a los alumnos`,
     };
+  }
+
+  /**
+   * Brings a block to the top of the page with a smooth scroll, at once for whoever asks for less
+   * motion, and gives its title the focus without a second jump (5.2f).
+   */
+  private revealBlock(blockId: string | null | undefined): void {
+    afterNextRender(
+      () => {
+        const heading = this.document.getElementById(`block-${blockId}`);
+        heading?.focus({ preventScroll: true });
+        heading?.closest('li')?.scrollIntoView({
+          behavior: prefersReducedMotion(this.document.defaultView) ? 'auto' : 'smooth',
+          block: 'start',
+        });
+      },
+      { injector: this.injector },
+    );
   }
 
   private async openBlockDialog(

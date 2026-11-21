@@ -96,7 +96,8 @@ select is(
   'its author archives an exercise with attempts'
 );
 select is(
-  (select count(*) from exercise_assignment where exercise_id = '40000000-0000-4000-8000-000000000001'),
+  (select count(*) from exercise_assignment where exercise_id = '40000000-0000-4000-8000-000000000001'
+     and group_id = '20000000-0000-4000-8000-000000000001'),
   1::bigint,
   'and its assignment in the group stays'
 );

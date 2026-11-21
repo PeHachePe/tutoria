@@ -22,6 +22,7 @@ import {
 import { MockBlockService } from './mock-block-service';
 import { MockDb } from './mock-db';
 import { MockNetwork } from './mock-network';
+import type { MockTables } from './mock-tables';
 
 const DRAFT: BlockDraft = {
   title: 'Examen del primer trimestre',
@@ -46,6 +47,8 @@ function blockIdsOf(groupId: string): string[] {
 describe('MockBlockService', () => {
   let service: MockBlockService;
   let db: MockDb;
+  /** The tables as each test starts, to tell a write that changed nothing. */
+  let before: MockTables;
 
   beforeEach(() => {
     localStorage.clear();
@@ -56,6 +59,7 @@ describe('MockBlockService', () => {
     db.setSession(TEACHER_ID);
     // This year alone: the classes and students of the years before are not what these test
     withoutHistory(db);
+    before = db.tables();
   });
 
   afterEach(() => localStorage.clear());
@@ -64,9 +68,11 @@ describe('MockBlockService', () => {
     it('lists the groups of the teacher with their subject, by name and subject', async () => {
       const groups = await service.listGroups();
 
-      expect(groups.map((group) => [group.name, group.schoolYear, group.subject.name])).toEqual([
-        ['1.º DAW A', '2026/27', 'Desarrollo web en entorno cliente'],
-        ['1.º DAW A', '2026/27', 'Programación básica'],
+      expect(
+        groups.map((group) => [group.name, group.schoolYear, group.subject.name, group.open]),
+      ).toEqual([
+        ['1.º DAW A', '2026/27', 'Desarrollo web en entorno cliente', true],
+        ['1.º DAW A', '2026/27', 'Programación básica', true],
       ]);
     });
 
@@ -149,6 +155,20 @@ describe('MockBlockService', () => {
 
     it('keeps a block somebody started', async () => {
       await expect(service.removeBlock(STARTED_BLOCK)).rejects.toMatchObject({ kind: 'invalid' });
+    });
+
+    it('removes several blocks nobody started at once, and keeps those somebody did', async () => {
+      await expect(service.removeBlocks([STARTED_BLOCK, FREE_BLOCK])).resolves.toBe(1);
+
+      expect(blockIdsOf(DAW_GROUP_ID).filter((id) => !hasBlock(db, id))).toEqual([FREE_BLOCK]);
+      expect(db.tables().assignments.some((row) => row.blockId === FREE_BLOCK)).toBe(false);
+    });
+
+    it('removes none of the blocks of another teacher', async () => {
+      const others = blockIdsOf(DAM_GROUP_ID);
+
+      await expect(service.removeBlocks(others)).resolves.toBe(0);
+      expect(others.every((id) => hasBlock(db, id))).toBe(true);
     });
 
     it('reorders the blocks of the group', async () => {
@@ -330,6 +350,86 @@ describe('MockBlockService', () => {
     });
   });
 
+  describe('a closed class (5.2f)', () => {
+    /** Its year is over: 1.º DAW A of this year, moved to a past one. */
+    function closeDawClass(reopened = false): void {
+      const classId = db.tables().groups.find((group) => group.id === DAW_GROUP_ID)!.classId;
+      db.update('classes', (rows) =>
+        rows.map((row) => (row.id === classId ? { ...row, schoolYear: '2020/21', reopened } : row)),
+      );
+    }
+
+    const exercise = { title: 'Otro', sourceLocale: 'es', translations: {}, isHidden: false };
+
+    beforeEach(() => closeDawClass());
+
+    it('lists its groups as closed', async () => {
+      const groups = await service.listGroups();
+
+      expect(groups.map((group) => group.open)).toEqual([false, false]);
+    });
+
+    it('reads its blocks, and fails each write as Supabase does', async () => {
+      const [first, second] = blockIdsOf(DAW_GROUP_ID);
+      const assignment = assignmentId(DAW_GROUP_ID, 1);
+      const free = blockAssignmentId(DAW_HIDDEN_BLOCK, 5);
+
+      await expect(service.listBlocks(DAW_GROUP_ID)).resolves.not.toHaveLength(0);
+      await expect(
+        service.createBlock(DAW_GROUP_ID, { ...exercise, opensAt: null } as BlockDraft),
+      ).rejects.toMatchObject({ kind: 'forbidden' });
+      await expect(service.updateBlock(first, DRAFT)).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+      await expect(service.removeBlock(FREE_BLOCK)).rejects.toMatchObject({ kind: 'invalid' });
+      await expect(service.removeBlocks([FREE_BLOCK])).resolves.toBe(0);
+      await expect(
+        service.reorderBlocks(DAW_GROUP_ID, blockIdsOf(DAW_GROUP_ID).reverse()),
+      ).rejects.toMatchObject({ kind: 'forbidden' });
+      await expect(service.assign(FREE_BLOCK, [exerciseId(1)])).rejects.toMatchObject({
+        kind: 'forbidden',
+      });
+      await expect(service.updateAssignment(assignment, { isHidden: true })).rejects.toMatchObject({
+        kind: 'not_found',
+      });
+      await expect(service.unassign(free)).rejects.toMatchObject({ kind: 'invalid' });
+      await expect(
+        service.reorderAssignments(FREE_BLOCK, [free, blockAssignmentId(DAW_HIDDEN_BLOCK, 8)]),
+      ).rejects.toMatchObject({ kind: 'forbidden' });
+      await expect(service.moveAssignment(assignment, second, 1)).rejects.toMatchObject({
+        kind: 'forbidden',
+      });
+      expect(db.tables().classBlocks).toEqual(before.classBlocks);
+      expect(db.tables().assignments).toEqual(before.assignments);
+    });
+
+    it('still tells a move to an impossible place, as `move_assignment` checks it first', async () => {
+      const [, second] = blockIdsOf(DAW_GROUP_ID);
+
+      await expect(
+        service.moveAssignment(assignmentId(DAW_GROUP_ID, 1), second, 99),
+      ).rejects.toMatchObject({ kind: 'invalid' });
+    });
+
+    it('is copied from, not into', async () => {
+      db.setSession(ADMIN_ID);
+
+      await expect(service.copyBlocks(DAM_GROUP_ID, DAW_GROUP_ID, true)).rejects.toMatchObject({
+        kind: 'forbidden',
+      });
+      await expect(service.copyBlocks(DAW_GROUP_ID, DAM_GROUP_ID, true)).resolves.toBe(
+        blockIdsOf(DAW_GROUP_ID).length,
+      );
+    });
+
+    it('is changed again once the administration reopens it', async () => {
+      closeDawClass(true);
+
+      await expect(service.listGroups()).resolves.toMatchObject([{ open: true }, { open: true }]);
+      await expect(service.removeBlocks([FREE_BLOCK])).resolves.toBe(1);
+    });
+  });
+
   describe('copyBlocks', () => {
     it('copies the blocks of a group after those of another, with their exercises and dates', async () => {
       const before = blockIdsOf(DAW_WEB_GROUP_ID);
@@ -378,7 +478,11 @@ describe('MockBlockService', () => {
       await expect(service.copyBlocks(DAW_GROUP_ID, DAW_GROUP_ID, true)).rejects.toMatchObject({
         kind: 'invalid',
       });
-      expect(db.tables().classBlocks).toEqual(SEED.classBlocks);
+      expect(db.tables().classBlocks).toEqual(before.classBlocks);
     });
   });
 });
+
+function hasBlock(db: MockDb, blockId: string): boolean {
+  return db.tables().classBlocks.some((block) => block.id === blockId);
+}

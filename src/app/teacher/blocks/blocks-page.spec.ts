@@ -19,12 +19,19 @@ import {
 import { fixtureId } from '../../data/mock/fixtures/fixture-id';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { BASIC_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
-import { DAW_GROUP_ID, DAW_WEB_GROUP_ID, TEACHER_ID } from '../../data/mock/fixtures/users';
+import {
+  ADMIN_ID,
+  DAW_GROUP_ID,
+  DAW_STUDENT_IDS,
+  DAW_WEB_GROUP_ID,
+  TEACHER_ID,
+} from '../../data/mock/fixtures/users';
 import { MockBlockService } from '../../data/mock/mock-block-service';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockExerciseService } from '../../data/mock/mock-exercise-service';
 import { MockNetwork } from '../../data/mock/mock-network';
 import { BlocksPage } from './blocks-page';
+import { DataError } from '../../data/data-error';
 
 const NOW = '2026-11-15T09:00:00.000Z';
 const DAW = `/docente/bloques?grupo=${DAW_GROUP_ID}`;
@@ -36,11 +43,14 @@ function text(element: Element | null): string {
 describe('BlocksPage', () => {
   let db: MockDb;
   let snack: ReturnType<typeof vi.spyOn>;
+  let scrollIntoView: ReturnType<typeof vi.fn>;
 
   async function renderBlocks(
     url = '/docente/bloques',
     prepare: (db: MockDb) => void = () => undefined,
+    role: 'teacher' | 'admin' = 'teacher',
   ) {
+    const userId = role === 'admin' ? ADMIN_ID : TEACHER_ID;
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
@@ -51,14 +61,14 @@ describe('BlocksPage', () => {
           ],
           withComponentInputBinding(),
         ),
-        provideSessionOf('teacher', { id: TEACHER_ID }),
+        provideSessionOf(role, { id: userId }),
         { provide: BlockService, useClass: MockBlockService },
         { provide: ExerciseService, useClass: MockExerciseService },
       ],
     });
     TestBed.inject(MockNetwork).setLatency({ min: 0, max: 0 });
     db = TestBed.inject(MockDb);
-    db.setSession(TEACHER_ID);
+    db.setSession(userId);
     // This year alone: the classes and students of the years before are not what these test
     withoutHistory(db);
     prepare(db);
@@ -165,11 +175,18 @@ describe('BlocksPage', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
     snack = vi.spyOn(MatSnackBar.prototype, 'open');
+    // jsdom does not scroll
+    scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      value: scrollIntoView,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
     localStorage.clear();
     vi.useRealTimers();
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
   });
 
   describe('reading', () => {
@@ -328,6 +345,8 @@ describe('BlocksPage', () => {
       expect(text(headings.at(-1) ?? null)).toBe('Examen');
       await vi.waitFor(() => expect(document.activeElement).toBe(headings.at(-1)));
       expect(snack).toHaveBeenCalledWith('Bloque creado');
+      // At the top of the page, with a smooth scroll (5.2f)
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
     });
 
     it('keeps the page as it was when the new block is cancelled', async () => {
@@ -1111,7 +1130,13 @@ describe('BlocksPage', () => {
 
       const sources = SEED.classBlocks.filter((row) => row.groupId === DAW_GROUP_ID);
       expect(blockHeadings()).toHaveLength(sources.length);
-      expect(snack).toHaveBeenCalledWith(`Bloques copiados: ${sources.length}`);
+      expect(snack).toHaveBeenCalledWith(
+        `${sources.length} bloques copiados de 1.º DAW A · Programación básica · 2026/27`,
+        'Deshacer',
+        { duration: 10_000 },
+      );
+      // The first copy, at the top of the page with the focus
+      await vi.waitFor(() => expect(document.activeElement).toBe(blockHeadings()[0]));
       const copiedDates = db
         .tables()
         .assignments.filter((row) => row.groupId === NEXT && row.dueAt !== null);
@@ -1157,6 +1182,112 @@ describe('BlocksPage', () => {
       expect(blockHeadings()).toHaveLength(before + web.length);
     });
 
+    it('warns of the titles the group has, and undoes the copy with «Deshacer» (5.2f)', async () => {
+      const undo = undoable();
+      const harness = await renderBlocks(`/docente/bloques?grupo=${NEXT}`, (mock) => {
+        newGroups(mock);
+        mock.update('classBlocks', (rows) => [
+          ...rows,
+          { ...rows[0], id: 'next-1', groupId: NEXT },
+        ]);
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      const dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      await userEvent.click(
+        await screen.findByRole('option', { name: '1.º DAW A · Programación básica · 2026/27' }),
+      );
+      await vi.waitFor(() =>
+        expect(text(within(dialog).getByRole('status'))).toContain(
+          'Este grupo ya tiene «Tema 1: Bucles y condicionales»: se añadirán otra vez',
+        ),
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+      const sources = SEED.classBlocks.filter((row) => row.groupId === DAW_GROUP_ID);
+      expect(blockHeadings()).toHaveLength(1 + sources.length);
+      await vi.waitFor(() => expect(document.activeElement).toBe(blockHeadings()[1]));
+
+      undo();
+      await settle(harness);
+
+      expect(blockHeadings()).toHaveLength(1);
+      expect(snack).toHaveBeenCalledWith('Copia deshecha');
+    });
+
+    it('keeps on «Deshacer» a copy somebody started, and says when undoing fails', async () => {
+      const undo = undoable();
+      const harness = await renderBlocks(`/docente/bloques?grupo=${NEXT}`, newGroups);
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      const dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      await userEvent.click(
+        await screen.findByRole('option', { name: '1.º DAW A · Programación básica · 2026/27' }),
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+      const [copied] = db.tables().assignments.filter((row) => row.groupId === NEXT);
+      startAssignment(db, copied.id);
+
+      undo();
+      await settle(harness);
+      expect(blockHeadings()).toHaveLength(1);
+      expect(snack).toHaveBeenCalledWith(
+        'Copia deshecha, salvo los bloques que alguien ya ha empezado',
+      );
+
+      TestBed.inject(MockNetwork).failNextRequest('network');
+      undo();
+      await settle(harness);
+      expect(snack).toHaveBeenCalledWith('No se ha podido guardar. Inténtalo de nuevo.');
+      expect(blockHeadings()).toHaveLength(1);
+    });
+
+    it('reloads the blocks when the copies cannot be read, and goes at once with less motion', async () => {
+      Object.defineProperty(window, 'matchMedia', {
+        value: () => ({ matches: true }),
+        configurable: true,
+      });
+      const harness = await renderBlocks(`/docente/bloques?grupo=${NEXT}`, newGroups);
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      let dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      await userEvent.click(
+        await screen.findByRole('option', {
+          name: '1.º DAW A · Desarrollo web en entorno cliente',
+        }),
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+      delete (window as Partial<Window>).matchMedia;
+      const web = SEED.classBlocks.filter((row) => row.groupId === DAW_WEB_GROUP_ID).length;
+
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
+      dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Copiar de' }));
+      await userEvent.click(
+        await screen.findByRole('option', {
+          name: '1.º DAW A · Desarrollo web en entorno cliente',
+        }),
+      );
+      // The titles of the source arrive first; then the copy, and the blocks cannot be read
+      await vi.waitFor(() => expect(text(within(dialog).getByRole('status'))).not.toBe(''));
+      vi.spyOn(TestBed.inject(BlockService), 'listBlocks').mockRejectedValueOnce(
+        new DataError('network'),
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Copiar los bloques' }));
+      await closed(harness);
+
+      expect(blockHeadings()).toHaveLength(2 * web);
+      expect(snack).toHaveBeenCalledWith(
+        `${web} bloques copiados de 1.º DAW A · Desarrollo web en entorno cliente`,
+        'Deshacer',
+        { duration: 10_000 },
+      );
+    });
+
     it('is not offered with a single group, and a cancelled copy changes nothing', async () => {
       const harness = await renderBlocks(DAW, newGroups);
       await userEvent.click(screen.getByRole('button', { name: 'Copiar de otro grupo' }));
@@ -1172,4 +1303,168 @@ describe('BlocksPage', () => {
       expect(screen.queryByRole('button', { name: 'Copiar de otro grupo' })).toBeNull();
     });
   });
+
+  describe('a closed class (5.2f)', () => {
+    /** 1.º DAW A, moved to a year that is over, and maybe reopened by the administration. */
+    function closeDaw(mock: MockDb, reopened = false): void {
+      const classId = mock.tables().groups.find((group) => group.id === DAW_GROUP_ID)!.classId;
+      mock.update('classes', (rows) =>
+        rows.map((row) => (row.id === classId ? { ...row, schoolYear: '2025/26', reopened } : row)),
+      );
+    }
+
+    it('shows its blocks to read, with why nothing changes and how to use them again', async () => {
+      await renderBlocks(DAW, (mock) => closeDaw(mock));
+
+      expect(text(screen.getByText(/^El curso/))).toBe(
+        'El curso 2025/26 ya terminó: estos bloques se pueden ver, pero no cambiar. Para ' +
+          'reutilizarlos, abre tu grupo de 2026/27 y pulsa «Copiar de otro grupo».',
+      );
+      expect(blockHeadings().length).toBeGreaterThan(0);
+      expect(exercisesOf('Tema 1: Bucles y condicionales')).toHaveLength(2);
+      for (const name of ['Nuevo bloque', 'Copiar de otro grupo', 'Seleccionar']) {
+        expect(screen.queryByRole('button', { name })).toBeNull();
+      }
+      expect(screen.queryAllByRole('switch')).toHaveLength(0);
+      expect(
+        screen.queryAllByRole('button', { name: /Acciones|Arrastrar|Ocultar|Mostrar/ }),
+      ).toEqual([]);
+      expect(
+        screen.queryAllByRole('button', { name: /Añadir ejercicios|Fecha de entrega/ }),
+      ).toEqual([]);
+      // The due dates, as text
+      expect(text(block('Tema 4: Cadenas y formato'))).toContain(
+        'Fecha de entrega de «Contar vocales en una cadena»:',
+      );
+      expect(text(block('Tema 1: Bucles y condicionales'))).toContain('Sin fecha de entrega');
+    });
+
+    it('tells the administration it can reopen it, and that an empty group had no blocks', async () => {
+      await renderBlocks(
+        `/docente/bloques?grupo=${DAW_WEB_GROUP_ID}`,
+        (mock) => {
+          closeDaw(mock);
+          mock.update('classBlocks', (rows) =>
+            rows.filter((row) => row.groupId !== DAW_WEB_GROUP_ID),
+          );
+        },
+        'admin',
+      );
+
+      expect(text(screen.getByText(/^El curso/))).toContain(
+        'abre el grupo de 2026/27 y pulsa «Copiar de otro grupo». Para corregirlos, reabre la clase en Grupos.',
+      );
+      expect(screen.getByText('Este grupo no tuvo bloques')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Nuevo bloque' })).toBeNull();
+    });
+
+    it('is changed again once the administration reopens it', async () => {
+      await renderBlocks(DAW, (mock) => closeDaw(mock, true));
+
+      expect(text(screen.getByText(/^El curso/))).toContain(
+        'la administración ha reabierto esta clase: estos bloques se pueden cambiar.',
+      );
+      expect(screen.getAllByRole('button', { name: 'Nuevo bloque' }).length).toBeGreaterThan(0);
+      expect(screen.getByRole('button', { name: 'Seleccionar' })).toBeTruthy();
+    });
+  });
+
+  describe('deleting several blocks (5.2f)', () => {
+    function box(title: string): HTMLInputElement {
+      return screen.getByRole('checkbox', { name: `Marcar «${title}» para borrarlo` });
+    }
+
+    function marked(): string {
+      return text(
+        screen.getByRole('toolbar', { name: 'Borrar varios bloques' }).querySelector('span'),
+      );
+    }
+
+    it('marks only what nobody started, and deletes it after asking', async () => {
+      const harness = await renderBlocks(DAW);
+      await userEvent.click(screen.getByRole('button', { name: 'Seleccionar' }));
+
+      expect(screen.queryByRole('button', { name: 'Nuevo bloque' })).toBeNull();
+      expect(marked()).toBe('Marca los bloques que quieras borrar');
+      expect(screen.getByRole('button', { name: 'Borrar' }).hasAttribute('disabled')).toBe(true);
+      expect(box('Tema 1: Bucles y condicionales').disabled).toBe(true);
+      const free = screen
+        .getAllByRole('checkbox')
+        .filter((input) => !(input as HTMLInputElement).disabled);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Marcar los no empezados' }));
+      expect(marked()).toBe(`${free.length} bloques marcados`);
+      await userEvent.click(screen.getByRole('button', { name: 'Desmarcar todos' }));
+      expect(marked()).toBe('Marca los bloques que quieras borrar');
+
+      await userEvent.click(box('Repaso final'));
+      await userEvent.click(free.find((input) => input !== box('Repaso final'))!);
+      expect(marked()).toBe('2 bloques marcados');
+      await userEvent.click(free.find((input) => input !== box('Repaso final'))!);
+      expect(marked()).toBe('1 bloque marcado');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Borrar 1' }));
+      const dialog = await openDialog();
+      expect(text(within(dialog).getByRole('heading'))).toBe('¿Borrar 1 bloque?');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
+      await closed(harness);
+
+      expect(screen.queryByRole('heading', { level: 2, name: 'Repaso final' })).toBeNull();
+      expect(snack).toHaveBeenCalledWith('Bloques borrados: 1');
+      expect(screen.getByRole('button', { name: 'Seleccionar' })).toBeTruthy();
+      expect(screen.getAllByRole('button', { name: 'Nuevo bloque' }).length).toBeGreaterThan(0);
+    });
+
+    it('asks for several, keeps what somebody started meanwhile, and says when it fails', async () => {
+      const harness = await renderBlocks(DAW);
+      await userEvent.click(screen.getByRole('button', { name: 'Seleccionar' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Marcar los no empezados' }));
+      const count = Number(marked().split(' ')[0]);
+
+      await userEvent.click(screen.getByRole('button', { name: `Borrar ${count}` }));
+      let dialog = await openDialog();
+      expect(text(within(dialog).getByRole('heading'))).toBe(`¿Borrar ${count} bloques?`);
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+      await closed(harness);
+      expect(marked()).toBe(`${count} bloques marcados`);
+
+      startAssignment(db, blockAssignmentId(DAW_HIDDEN_BLOCK, 5));
+      await userEvent.click(screen.getByRole('button', { name: `Borrar ${count}` }));
+      dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
+      await closed(harness);
+      expect(snack).toHaveBeenCalledWith(
+        `Bloques borrados: ${count - 1}. Los demás ya tienen intentos.`,
+      );
+      expect(screen.getByRole('heading', { level: 2, name: 'Repaso final' })).toBeTruthy();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Seleccionar' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Marcar los no empezados' }));
+      expect(marked()).toBe('Marca los bloques que quieras borrar');
+      await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(screen.getByRole('button', { name: 'Seleccionar' })).toBeTruthy();
+    });
+
+    it('keeps the blocks when deleting them fails', async () => {
+      const harness = await renderBlocks(DAW);
+      await userEvent.click(screen.getByRole('button', { name: 'Seleccionar' }));
+      await userEvent.click(box('Repaso final'));
+      await userEvent.click(screen.getByRole('button', { name: 'Borrar 1' }));
+      const dialog = await openDialog();
+      TestBed.inject(MockNetwork).failNextRequest('network');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
+      await closed(harness);
+
+      expect(snack).toHaveBeenCalledWith('No se ha podido guardar. Inténtalo de nuevo.');
+      expect(screen.getByRole('heading', { level: 2, name: 'Repaso final' })).toBeTruthy();
+    });
+  });
 });
+
+/** A student of 1.º DAW A opens the assignment: then their attempt keeps it. */
+function startAssignment(db: MockDb, assignmentId: string): void {
+  db.update('attempts', (rows) => [
+    ...rows,
+    { ...rows[0], id: `started-${assignmentId}`, userId: DAW_STUDENT_IDS[0], assignmentId },
+  ]);
+}

@@ -1,5 +1,8 @@
+import type { ClassBlock, ExerciseAssignment } from '../../exercise';
+import { schoolYearShiftDays } from '../../school-year-shift';
 import type { AppUser, ClassGroup, ClassMember, Enrollment, SchoolClass } from '../../user';
 import type { MockDb } from '../mock-db';
+import { ASSIGNMENTS, CLASS_BLOCKS } from './exercises';
 import { fixtureId } from './fixture-id';
 import { SUBJECTS } from './subjects';
 import { OTHER_TEACHER_ID, TEACHER_ID } from './users';
@@ -9,7 +12,9 @@ import { OTHER_TEACHER_ID, TEACHER_ID } from './users';
  * second year, so the demo has classes to look back at and students who finished. Each intake of
  * eight starts first year, goes on to second the next and then finishes: those who finished have
  * their account disabled, as the administration does in June; the last intake is in second year
- * now. No blocks nor attempts: the history of the teachers stays that of this year.
+ * now. No attempts: the history of the teachers stays that of this year. Only last year's basic
+ * programming of 1.º DAW A has blocks (5.2f): the four topics of this year, as Marta copied them,
+ * to look at in a closed class and to copy again.
  */
 
 /** The first past year (2021/22) and the current one (2026/27), by the year they start. */
@@ -272,6 +277,55 @@ export const HISTORY_ENROLLMENTS: readonly Enrollment[] = HISTORY_GROUP_PLAN.fla
   ...enrollment,
 }));
 
+/** Where the ids of the blocks and assignments of the history start, apart from those of this year. */
+const BLOCK_FROM = 100;
+const ASSIGNMENT_FROM = 100_000;
+
+/** The topics of this year that last year had too: the first four blocks of 1.º DAW A. */
+const PAST_TOPICS = 4;
+
+/** Last year's basic programming of 1.º DAW A, Marta's, which has the blocks of the history. */
+const PAST_BLOCKS_GROUP = HISTORY_GROUP_PLAN.find(
+  ({ plan, subjectId: subject }) =>
+    plan.cycle === 'DAW' &&
+    plan.course === 0 &&
+    plan.year === CURRENT_YEAR - 1 &&
+    subject === subjectId('Programación básica'),
+)!;
+
+/** The days from this year to the last in whole weeks, so a date keeps its weekday. */
+const YEAR_BACK_DAYS = schoolYearShiftDays(schoolYear(CURRENT_YEAR), schoolYear(CURRENT_YEAR - 1));
+const DAY_MS = 86_400_000;
+
+/** In UTC, so the seed is the same on every machine. */
+function yearBack(iso: string | null): string | null {
+  return iso === null ? null : new Date(Date.parse(iso) + YEAR_BACK_DAYS * DAY_MS).toISOString();
+}
+
+const PAST_SOURCE_BLOCKS = CLASS_BLOCKS.slice(0, PAST_TOPICS);
+
+export const HISTORY_CLASS_BLOCKS: readonly ClassBlock[] = PAST_SOURCE_BLOCKS.map(
+  (block, index) => ({
+    ...block,
+    id: fixtureId('block', BLOCK_FROM + index + 1),
+    groupId: PAST_BLOCKS_GROUP.id,
+    opensAt: yearBack(block.opensAt),
+  }),
+);
+
+export const HISTORY_ASSIGNMENTS: readonly ExerciseAssignment[] = PAST_SOURCE_BLOCKS.flatMap(
+  (block, index) =>
+    ASSIGNMENTS.filter(({ blockId }) => blockId === block.id).map((assignment) => ({
+      ...assignment,
+      groupId: PAST_BLOCKS_GROUP.id,
+      blockId: HISTORY_CLASS_BLOCKS[index].id,
+      dueAt: yearBack(assignment.dueAt),
+    })),
+).map((assignment, index) => ({
+  ...assignment,
+  id: fixtureId('assignment', ASSIGNMENT_FROM + index + 1),
+}));
+
 /**
  * Takes the history out of the mock data: for the tests about this year, which the classes, groups
  * and students of other years would only crowd.
@@ -281,6 +335,8 @@ export function withoutHistory(db: Pick<MockDb, 'update'>): void {
   const classes = new Set(HISTORY_CLASSES.map(({ id }) => id));
   const groups = new Set(HISTORY_GROUPS.map(({ id }) => id));
   db.update('enrollments', (rows) => rows.filter(({ groupId }) => !groups.has(groupId)));
+  db.update('assignments', (rows) => rows.filter(({ groupId }) => !groups.has(groupId)));
+  db.update('classBlocks', (rows) => rows.filter(({ groupId }) => !groups.has(groupId)));
   db.update('groups', (rows) => rows.filter(({ id }) => !groups.has(id)));
   db.update('classMembers', (rows) => rows.filter(({ classId }) => !classes.has(classId)));
   db.update('classes', (rows) => rows.filter(({ id }) => !classes.has(id)));

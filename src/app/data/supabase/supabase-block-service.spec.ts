@@ -33,14 +33,14 @@ describe('SupabaseBlockService', () => {
 
   it('lists the groups the RLS gives, with their class, by name, subject and label', async () => {
     const web = subjectRow({ id: 'web', name: 'Desarrollo web' });
-    const daw = { name: '1.º DAW A', school_year: '2026/27' };
+    const daw = { name: '1.º DAW A', school_year: '2026/27', reopened: false };
     server.on('GET', '/rest/v1/class_group', {
       body: [
         { id: 'daw', label: null, school_class: daw, subject: subjectRow() },
         {
           id: 'dam',
           label: null,
-          school_class: { name: '1.º DAM B', school_year: '2026/27' },
+          school_class: { name: '1.º DAM B', school_year: '2026/27', reopened: false },
           subject: subjectRow(),
         },
         { id: 'daw-en', label: 'Desdoble inglés', school_class: daw, subject: subjectRow() },
@@ -56,12 +56,39 @@ describe('SupabaseBlockService', () => {
       name: '1.º DAW A',
       label: null,
       schoolYear: '2026/27',
+      open: true,
       subject: { id: 'web', name: 'Desarrollo web' },
     });
     expect(groups[4].label).toBe('Desdoble inglés');
     expect(server.sentTo('GET', '/rest/v1/class_group')[0].params.get('select')).toBe(
-      'id,label,school_class(name,school_year),subject(*)',
+      'id,label,school_class(name,school_year,reopened),subject(*)',
     );
+  });
+
+  it('tells a group of a closed class, unless the administration reopened it (5.2f)', async () => {
+    server.on('GET', '/rest/v1/class_group', {
+      body: [
+        {
+          id: 'closed',
+          label: null,
+          school_class: { name: '1.º DAW A', school_year: '2020/21', reopened: false },
+          subject: subjectRow(),
+        },
+        {
+          id: 'reopened',
+          label: null,
+          school_class: { name: '1.º DAM B', school_year: '2020/21', reopened: true },
+          subject: subjectRow(),
+        },
+      ],
+    });
+
+    const groups = await service.listGroups();
+
+    expect(groups.map(({ id, open }) => [id, open])).toEqual([
+      ['reopened', true],
+      ['closed', false],
+    ]);
   });
 
   it('lists the blocks of a group in order, with their exercises and who started them', async () => {
@@ -178,6 +205,13 @@ describe('SupabaseBlockService', () => {
 
     server.on('DELETE', '/rest/v1/class_block', { body: [] });
     await expect(service.removeBlock('block-1')).rejects.toMatchObject({ kind: 'invalid' });
+  });
+
+  it('removes several blocks in one request, and says how many the RLS let go (5.2f)', async () => {
+    server.on('DELETE', '/rest/v1/class_block', { body: [{ id: 'block-2' }] });
+
+    await expect(service.removeBlocks(['block-1', 'block-2'])).resolves.toBe(1);
+    expect(server.requests[0].params.get('id')).toBe('in.(block-1,block-2)');
   });
 
   it('reorders the blocks of a group', async () => {

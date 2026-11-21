@@ -44,6 +44,12 @@ export const SCREENS: readonly Screen[] = [
     path: '/docente/bloques?grupo=20000000-0000-4000-8000-000000000001',
     user: 'teacher',
   },
+  // The same group a year before, closed: its blocks read only, with the notice (5.2f)
+  {
+    code: '08c-bloques-cerrado',
+    path: '/docente/bloques?grupo=20000000-0000-4000-8000-000000000177',
+    user: 'teacher',
+  },
   // The history of 1.º DAW A in basic programming: five blocks, the resit in grey, due dates (4.4)
   {
     code: '09-historico',

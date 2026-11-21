@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
@@ -11,6 +11,7 @@ import {
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { MatError, MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
 import { MatOption, MatSelect } from '@angular/material/select';
 
 import type { PlannedGroup } from '../../data/block-service';
@@ -26,8 +27,12 @@ export interface CopyBlocksDialogData {
   /** The group the blocks go into, and how many it has: the copies go after them. */
   readonly target: CopySource;
   readonly blockCount: number;
+  /** The titles of its blocks, as the page shows them: a copy may repeat them (5.2f). */
+  readonly targetTitles: readonly string[];
   /** The other groups of the user, those of the same subject first. */
   readonly sources: readonly CopySource[];
+  /** The titles of the blocks of another group, as the page shows them. */
+  readonly titlesOf: (groupId: string) => Promise<readonly string[]>;
   /** Copies them; the dialog stays open, with the error, if it fails. */
   readonly copy: (sourceGroupId: string, withDates: boolean) => Promise<void>;
 }
@@ -40,7 +45,8 @@ interface CopyBlocksModel {
 /**
  * «Copiar de otro grupo» (5.2c, D-079): the blocks of another group of the user after those of this
  * one, with their exercises, order and visibility and, if wanted, their dates moved to the year of
- * this group. For the same class of last year or a parallel group.
+ * this group. For the same class of last year or a parallel group. Nothing stops copying a block
+ * again, as a resit starts as a copy, but the dialog says which titles the group has already (5.2f).
  */
 @Component({
   selector: 'app-copy-blocks-dialog',
@@ -58,6 +64,7 @@ interface CopyBlocksModel {
     MatError,
     MatSelect,
     MatOption,
+    MatIcon,
   ],
   template: `
     <h2 mat-dialog-title i18n="@@copyBlocks.title">Copiar bloques en {{ data.target.label }}</h2>
@@ -102,6 +109,23 @@ interface CopyBlocksModel {
               <span i18n="@@copyBlocks.dates.choose">Elige el grupo para ver dónde caen.</span>
             }
           </p>
+          <!-- Always there, so a screen reader hears the warning when a group is chosen -->
+          <div role="status">
+            @if (repeated(); as repeated) {
+              <p
+                class="mt-2 flex items-start gap-2 rounded-xl bg-surface-container-high px-3 py-2 text-body-medium"
+              >
+                <mat-icon class="shrink-0 text-on-surface-variant" aria-hidden="true"
+                  >info</mat-icon
+                >
+                <span i18n="@@copyBlocks.repeated"
+                  >Este grupo ya tiene {{ repeated }}: se añadirán otra vez, aparte de los que hay.
+                  Si solo querías cambiar sus fechas, borra antes los que copiaste («Seleccionar»,
+                  en Bloques) y vuelve a copiar.</span
+                >
+              </p>
+            }
+          </div>
           @if (failure()) {
             <p class="mt-2 text-body-medium text-error" role="alert" i18n="@@copyBlocks.failed">
               No se han podido copiar los bloques. Inténtalo de nuevo.
@@ -156,9 +180,32 @@ export class CopyBlocksDialog {
     },
   );
 
+  /** The titles of the group chosen, to tell those this one has already. */
+  private readonly sourceTitles = resource({
+    params: () => this.model().sourceId || undefined,
+    loader: ({ params }) => this.data.titlesOf(params),
+  });
+
+  /** «Tema 1», «Tema 2»: the blocks of the group chosen whose title this one has already. */
+  protected readonly repeated = computed(() => {
+    // While they load, or if they fail, there is nothing to warn about: the copy works the same
+    if (!this.sourceTitles.hasValue()) return '';
+    const existing = new Set(this.data.targetTitles.map(sameTitle));
+    const titles = this.sourceTitles.value().map((title) => title.trim());
+    return [...new Set(titles)]
+      .filter((title) => existing.has(sameTitle(title)))
+      .map((title) => `«${title}»`)
+      .join(', ');
+  });
+
   /** Where the dates fall in this group, once a group is chosen. */
   protected readonly note = computed(() => {
     const source = this.data.sources.find(({ group }) => group.id === this.model().sourceId);
     return source ? datesNote(source.group.schoolYear, this.data.target.group.schoolYear) : null;
   });
+}
+
+/** Titles that differ only in capitals or spaces at the ends are the same. */
+function sameTitle(title: string): string {
+  return title.trim().toLocaleLowerCase();
 }

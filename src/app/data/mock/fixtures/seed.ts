@@ -2,6 +2,8 @@ import type { MockTables } from '../mock-tables';
 import { ATTEMPTS, EVENTS, INTERACTIONS } from './activity';
 import { ASSIGNMENTS, CLASS_BLOCKS, EXERCISE_SUBJECTS, EXERCISES, TESTS } from './exercises';
 import {
+  HISTORY_ASSIGNMENTS,
+  HISTORY_CLASS_BLOCKS,
   HISTORY_CLASS_MEMBERS,
   HISTORY_CLASSES,
   HISTORY_ENROLLMENTS,
@@ -15,7 +17,7 @@ import { CLASS_MEMBERS, CLASSES, ENROLLMENTS, GROUPS, USERS } from './users';
  * Change it whenever the fixtures change: the mock data saved in a browser with another version is
  * discarded and replaced with the new seed.
  */
-export const SEED_VERSION = 17;
+export const SEED_VERSION = 18;
 
 /** The data both worlds share: the mock data starts from it and `npm run seed` turns it into SQL. */
 export const SEED: MockTables = {
@@ -26,11 +28,11 @@ export const SEED: MockTables = {
   classMembers: [...CLASS_MEMBERS, ...HISTORY_CLASS_MEMBERS],
   groups: [...GROUPS, ...HISTORY_GROUPS],
   enrollments: [...ENROLLMENTS, ...HISTORY_ENROLLMENTS],
-  classBlocks: CLASS_BLOCKS,
+  classBlocks: [...CLASS_BLOCKS, ...HISTORY_CLASS_BLOCKS],
   exercises: EXERCISES,
   exerciseSubjects: EXERCISE_SUBJECTS,
   tests: TESTS,
-  assignments: ASSIGNMENTS,
+  assignments: [...ASSIGNMENTS, ...HISTORY_ASSIGNMENTS],
   attempts: ATTEMPTS,
   interactions: INTERACTIONS,
   events: EVENTS,

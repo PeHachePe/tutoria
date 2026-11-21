@@ -7,8 +7,9 @@ import {
   type PlannedBlock,
   type PlannedGroup,
 } from '../block-service';
-import { DataError } from '../data-error';
+import { DataError, type DataErrorKind } from '../data-error';
 import type { ClassBlock, ExerciseAssignment } from '../exercise';
+import { isOpenClass } from '../school-year';
 import { schoolYearShiftDays } from '../school-year-shift';
 import type { ClassGroup } from '../user';
 import { copyGroupBlocks } from './copy-group-blocks';
@@ -19,7 +20,8 @@ import { compareGroups } from '../group-name';
 
 /**
  * Blocks and assignments in MockDb, with the rules of the RLS of 4.3b: another teacher's groups are
- * `not_found`, and only what nobody started is deleted.
+ * `not_found`, and only what nobody started is deleted. Those of a closed class are read only
+ * (5.2f), and each write fails as in Supabase.
  */
 @Service({ autoProvided: false })
 export class MockBlockService extends BlockService {
@@ -33,12 +35,13 @@ export class MockBlockService extends BlockService {
       return tables.groups
         .filter((group) => canManageGroup(user, group))
         .map((group) => {
-          const { name, schoolYear } = classOfGroup(tables, group);
+          const schoolClass = classOfGroup(tables, group);
           return {
             id: group.id,
-            name,
+            name: schoolClass.name,
             label: group.label,
-            schoolYear,
+            schoolYear: schoolClass.schoolYear,
+            open: isOpenClass(schoolClass, new Date()),
             subject: findRow(tables.subjects, group.subjectId),
           };
         })
@@ -69,7 +72,8 @@ export class MockBlockService extends BlockService {
 
   createBlock(groupId: string, draft: BlockDraft): Promise<ClassBlock> {
     return this.network.request(() => {
-      this.findGroup(groupId);
+      // The RLS checks the new row before the checks of the table
+      this.checkOpen(this.findGroup(groupId), 'forbidden');
       checkTitles(draft);
       const positions = this.db
         .tables()
@@ -89,6 +93,8 @@ export class MockBlockService extends BlockService {
   updateBlock(blockId: string, draft: BlockDraft): Promise<ClassBlock> {
     return this.network.request(() => {
       const current = this.findBlock(blockId);
+      // The RLS hides the row from the update: `.single()` finds none
+      this.checkOpen(this.groupOf(current), 'not_found');
       checkTitles(draft);
       const block: ClassBlock = { ...current, ...draft };
       this.db.update('classBlocks', (rows) =>
@@ -100,11 +106,9 @@ export class MockBlockService extends BlockService {
 
   removeBlock(blockId: string): Promise<void> {
     return this.network.request(() => {
-      this.findBlock(blockId);
-      const started = this.db
-        .tables()
-        .assignments.some((row) => row.blockId === blockId && this.studentsOf(row.id) > 0);
-      if (started) {
+      // The RLS deletes no row: as a block somebody started
+      this.checkOpen(this.groupOf(this.findBlock(blockId)), 'invalid');
+      if (this.isStartedBlock(blockId)) {
         throw new DataError('invalid', 'A block somebody started keeps their attempts');
       }
       this.db.update('classBlocks', (rows) => rows.filter((row) => row.id !== blockId));
@@ -112,11 +116,35 @@ export class MockBlockService extends BlockService {
     });
   }
 
+  removeBlocks(blockIds: readonly string[]): Promise<number> {
+    return this.network.request(() => {
+      const user = this.db.requireUser('teacher', 'admin');
+      const tables = this.db.tables();
+      // As the RLS, which deletes what passes its policy and leaves the rest without an error
+      const deleted = new Set(
+        tables.classBlocks
+          .filter(
+            (block) =>
+              blockIds.includes(block.id) &&
+              canManageGroup(user, this.groupOf(block)) &&
+              isOpenClass(classOfGroup(tables, this.groupOf(block)), new Date()) &&
+              !this.isStartedBlock(block.id),
+          )
+          .map((block) => block.id),
+      );
+      this.db.update('classBlocks', (rows) => rows.filter((row) => !deleted.has(row.id)));
+      this.db.update('assignments', (rows) => rows.filter((row) => !deleted.has(row.blockId)));
+      return deleted.size;
+    });
+  }
+
   reorderBlocks(groupId: string, blockIds: readonly string[]): Promise<void> {
     return this.network.request(() => {
-      this.findGroup(groupId);
+      const group = this.findGroup(groupId);
       const blocks = this.db.tables().classBlocks.filter((block) => block.groupId === groupId);
       const positions = newPositions(blocks, blockIds);
+      // `reorder_blocks` counts them first, then updates none
+      this.checkOpen(group, 'forbidden');
       this.db.update('classBlocks', (rows) => rows.map((row) => withPosition(row, positions)));
     });
   }
@@ -124,6 +152,7 @@ export class MockBlockService extends BlockService {
   assign(blockId: string, exerciseIds: readonly string[]): Promise<ExerciseAssignment[]> {
     return this.network.request(() => {
       const block = this.findBlock(blockId);
+      this.checkOpen(this.groupOf(block), 'forbidden');
       const tables = this.db.tables();
       exerciseIds.forEach((id) => findRow(tables.exercises, id));
       const current = tables.assignments.filter((row) => row.blockId === blockId);
@@ -148,7 +177,9 @@ export class MockBlockService extends BlockService {
 
   updateAssignment(assignmentId: string, changes: AssignmentChanges): Promise<ExerciseAssignment> {
     return this.network.request(() => {
-      const assignment = { ...this.findAssignment(assignmentId), ...changes };
+      const current = this.findAssignment(assignmentId);
+      this.checkOpen(this.groupOf(current), 'not_found');
+      const assignment = { ...current, ...changes };
       this.db.update('assignments', (rows) =>
         rows.map((row) => (row.id === assignmentId ? assignment : row)),
       );
@@ -158,7 +189,7 @@ export class MockBlockService extends BlockService {
 
   unassign(assignmentId: string): Promise<void> {
     return this.network.request(() => {
-      this.findAssignment(assignmentId);
+      this.checkOpen(this.groupOf(this.findAssignment(assignmentId)), 'invalid');
       if (this.studentsOf(assignmentId) > 0) {
         throw new DataError('invalid', 'An assignment somebody started keeps their attempts');
       }
@@ -168,9 +199,10 @@ export class MockBlockService extends BlockService {
 
   reorderAssignments(blockId: string, assignmentIds: readonly string[]): Promise<void> {
     return this.network.request(() => {
-      this.findBlock(blockId);
+      const block = this.findBlock(blockId);
       const assignments = this.db.tables().assignments.filter((row) => row.blockId === blockId);
       const positions = newPositions(assignments, assignmentIds);
+      this.checkOpen(this.groupOf(block), 'forbidden');
       this.db.update('assignments', (rows) => rows.map((row) => withPosition(row, positions)));
     });
   }
@@ -182,6 +214,8 @@ export class MockBlockService extends BlockService {
       if (source.id === target.id) {
         throw new DataError('invalid', 'A group is copied into another');
       }
+      // The source may be closed: the blocks of last year are copied into this one
+      this.checkOpen(target, 'forbidden');
       const tables = this.db.tables();
       const shift = withDates
         ? schoolYearShiftDays(
@@ -208,11 +242,13 @@ export class MockBlockService extends BlockService {
         throw new DataError('not_found');
       }
       const inTarget = this.db.tables().assignments.filter((row) => row.blockId === blockId);
-      if (inTarget.some((row) => row.exerciseId === source.exerciseId)) {
-        throw new DataError('invalid', 'An exercise is only once in a block');
-      }
       if (position < 1 || position > inTarget.length + 1) {
         throw new DataError('invalid', 'No such position in the block');
+      }
+      // Then `move_assignment` updates: the RLS leaves it without rows, or the exercise clashes
+      this.checkOpen(this.groupOf(source), 'forbidden');
+      if (inTarget.some((row) => row.exerciseId === source.exerciseId)) {
+        throw new DataError('invalid', 'An exercise is only once in a block');
       }
       const moved: ExerciseAssignment = { ...source, blockId, position };
       this.db.update('assignments', (rows) =>
@@ -242,6 +278,21 @@ export class MockBlockService extends BlockService {
     return group;
   }
 
+  /** The group of a block or an assignment the user manages. */
+  private groupOf(row: { readonly groupId: string }): ClassGroup {
+    return findRow(this.db.tables().groups, row.groupId);
+  }
+
+  /**
+   * As `is_open_group` in the RLS (5.2f): nothing of a closed class is written, and each write
+   * fails as it does in Supabase, `kind`.
+   */
+  private checkOpen(group: ClassGroup, kind: DataErrorKind): void {
+    if (!isOpenClass(classOfGroup(this.db.tables(), group), new Date())) {
+      throw new DataError(kind, 'The class is of a past year');
+    }
+  }
+
   private findBlock(blockId: string): ClassBlock {
     const block = findRow(this.db.tables().classBlocks, blockId);
     this.findGroup(block.groupId);
@@ -252,6 +303,13 @@ export class MockBlockService extends BlockService {
     const assignment = findRow(this.db.tables().assignments, assignmentId);
     this.findGroup(assignment.groupId);
     return assignment;
+  }
+
+  /** As `is_started_block`: a student opened one of its assignments. */
+  private isStartedBlock(blockId: string): boolean {
+    return this.db
+      .tables()
+      .assignments.some((row) => row.blockId === blockId && this.studentsOf(row.id) > 0);
   }
 
   /** Students with an attempt at the assignment. */

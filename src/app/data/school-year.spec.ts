@@ -1,5 +1,6 @@
 import { SCHOOL_YEAR_PATTERN } from './group-service';
 import {
+  isOpenClass,
   isPastSchoolYear,
   isSchoolYear,
   nextSchoolYear,
@@ -36,6 +37,20 @@ describe('isPastSchoolYear', () => {
     expect(isPastSchoolYear('2025/26', firstDayOf2026)).toBe(true);
     expect(isPastSchoolYear('2026/27', firstDayOf2026)).toBe(false);
     expect(isPastSchoolYear('2027/28', firstDayOf2026)).toBe(false);
+  });
+});
+
+describe('isOpenClass', () => {
+  const today = new Date(2026, 10, 21);
+
+  it('is open of this year or a later one, and closed of a past one (5.2e)', () => {
+    expect(isOpenClass({ schoolYear: '2026/27', reopened: false }, today)).toBe(true);
+    expect(isOpenClass({ schoolYear: '2027/28', reopened: false }, today)).toBe(true);
+    expect(isOpenClass({ schoolYear: '2025/26', reopened: false }, today)).toBe(false);
+  });
+
+  it('is open of a past year once the administration reopens it', () => {
+    expect(isOpenClass({ schoolYear: '2025/26', reopened: true }, today)).toBe(true);
   });
 });
 

@@ -14,6 +14,11 @@ export interface BlockDraft {
 /** A group whose blocks the teacher plans, with its year: the same class of two years apart. */
 export interface PlannedGroup extends AssignedGroup {
   readonly schoolYear: string;
+  /**
+   * Its class is open (5.2f, D-082): of this year or a later one, or reopened. The blocks of a
+   * closed one are read only, and copied into another group.
+   */
+  readonly open: boolean;
 }
 
 /** What the teacher changes of an assignment besides its order. */
@@ -40,7 +45,9 @@ export interface PlannedBlock {
 /**
  * The blocks of a group and what is assigned in them (4.3b, D-046). Abstract class without a
  * decorator: it is the injection token (4.2, D-005). Only the teacher of the group or the
- * administration changes them, and only what nobody started is deleted (D-058).
+ * administration changes them, only while its class is open (5.2f), and only what nobody started is
+ * deleted (D-058). A closed group fails as each write fails in Supabase: `forbidden` to create,
+ * assign, reorder, move or copy into it, `not_found` to change and `invalid` to delete.
  */
 export abstract class BlockService {
   /** The groups the user teaches, or every group for an administrator, by name and subject. */
@@ -56,6 +63,12 @@ export abstract class BlockService {
 
   /** With its assignments. `invalid` if a student started any of them: hide it instead. */
   abstract removeBlock(blockId: string): Promise<void>;
+
+  /**
+   * Several blocks at once, with their assignments (5.2f): those nobody started. How many were
+   * deleted; the others (started, or of a closed class) stay, as the RLS leaves them.
+   */
+  abstract removeBlocks(blockIds: readonly string[]): Promise<number>;
 
   /** `blockIds` are every block of the group in the new order. */
   abstract reorderBlocks(groupId: string, blockIds: readonly string[]): Promise<void>;

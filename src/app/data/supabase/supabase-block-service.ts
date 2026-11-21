@@ -14,6 +14,7 @@ import { SUPABASE_CLIENT } from './supabase-client';
 import { check, unwrap } from './supabase-error';
 import { toAssignment, toClassBlock, toExercise, toSubject } from './supabase-rows';
 import { localTimeZone } from './time-zone';
+import { isOpenClass } from '../school-year';
 import { compareGroups } from '../group-name';
 
 /**
@@ -24,12 +25,15 @@ import { compareGroups } from '../group-name';
 export class SupabaseBlockService extends BlockService {
   private readonly supabase = inject(SUPABASE_CLIENT);
 
-  /** The RLS gives a teacher their groups and the administration every group, with their class. */
+  /**
+   * The RLS gives a teacher their groups and the administration every group, with their class and
+   * whether it is open, as `is_open_class` (5.2f): the RLS stops the writes to a closed one anyway.
+   */
   async listGroups(): Promise<PlannedGroup[]> {
     const rows = unwrap(
       await this.supabase
         .from('class_group')
-        .select('id, label, school_class(name, school_year), subject(*)'),
+        .select('id, label, school_class(name, school_year, reopened), subject(*)'),
     );
     return rows
       .map((row) => ({
@@ -37,6 +41,10 @@ export class SupabaseBlockService extends BlockService {
         name: row.school_class.name,
         label: row.label,
         schoolYear: row.school_class.school_year,
+        open: isOpenClass(
+          { schoolYear: row.school_class.school_year, reopened: row.school_class.reopened },
+          new Date(),
+        ),
         subject: toSubject(row.subject),
       }))
       .sort(compareGroups);
@@ -109,6 +117,18 @@ export class SupabaseBlockService extends BlockService {
       await this.supabase.from('class_block').delete().eq('id', blockId).select('id'),
     );
     if (deleted.length === 0) throw new DataError('invalid', 'The block cannot be deleted');
+  }
+
+  /** One statement: the RLS keeps what somebody started, and the rest goes. */
+  async removeBlocks(blockIds: readonly string[]): Promise<number> {
+    const deleted = unwrap(
+      await this.supabase
+        .from('class_block')
+        .delete()
+        .in('id', [...blockIds])
+        .select('id'),
+    );
+    return deleted.length;
   }
 
   async reorderBlocks(groupId: string, blockIds: readonly string[]): Promise<void> {
