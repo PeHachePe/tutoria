@@ -1,6 +1,6 @@
 # 08 · Ejercicios
 
-`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3), 3 h (4.3b), 3 h (4.3c), 2 h (4.3d), 3 h (4.3e) y parte del 5.2c
+`/docente/ejercicios?asignatura=&buscar=&dificultad=&mios=&pagina=` (banco), `/docente/ejercicios/nuevo?copia=&asignatura=` y `/docente/ejercicios/:exerciseId` (formulario), `/docente/bloques?grupo=` (bloques) · Docente y administrador · Capa 2 · 5 h (4.3), 3 h (4.3b), 3 h (4.3c), 2 h (4.3d), 3 h (4.3e), parte del 5.2c y el 5.2f
 
 ## Objetivo
 
@@ -8,7 +8,7 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 
 ## Datos
 
-**Bloques (4.3b, D-058):** `BlockService.listGroups()` (los grupos del docente con su asignatura; la administración, todos) y `listBlocks(groupId)` (los bloques en orden, ocultos incluidos, con sus ejercicios en orden y cuántos alumnos ha empezado cada uno). `createBlock`, `updateBlock`, `removeBlock` y `reorderBlocks`; `assign`, `updateAssignment` (oculta y fecha de entrega), `unassign` y `reorderAssignments`. Solo se borra lo que nadie empezó. `copyBlocks(origen, destino, conFechas)` (5.2c, D-079) copia los bloques de otro grupo detrás de los que hay; los grupos llegan con su curso (`PlannedGroup`) y, desde el 5.2d, con el nombre de su clase y el de su desdoble. Funciones puras: `moveItem()`, `datesNote()` (en `shared/`), `toBlockFormModel()`, `toBlockDraft()`, `blockSchema` y, en `shared/`, `dueDistance()` y `withTime()`.
+**Bloques (4.3b, D-058):** `BlockService.listGroups()` (los grupos del docente con su asignatura; la administración, todos) y `listBlocks(groupId)` (los bloques en orden, ocultos incluidos, con sus ejercicios en orden y cuántos alumnos ha empezado cada uno). `createBlock`, `updateBlock`, `removeBlock` y `reorderBlocks`; `assign`, `updateAssignment` (oculta y fecha de entrega), `unassign` y `reorderAssignments`. Solo se borra lo que nadie empezó. `copyBlocks(origen, destino, conFechas)` (5.2c, D-079) copia los bloques de otro grupo detrás de los que hay; los grupos llegan con su curso (`PlannedGroup`) y, desde el 5.2d, con el nombre de su clase y el de su desdoble; desde el 5.2f, también si su clase está abierta (`open`). `removeBlocks(ids)` (5.2f) borra varios de una vez y dice cuántos: lo empezado se queda. En una clase cerrada nada se escribe, y cada escritura falla como en Supabase. Funciones puras: `moveItem()`, `datesNote()` (en `shared/`), `toBlockFormModel()`, `toBlockDraft()`, `blockSchema` y, en `shared/`, `dueDistance()` y `withTime()`.
 
 **Probar y traducir (4.3c, D-059):** `CodeRunnerService.check({ code, functionName, tests })` ejecuta la solución del docente en `execute` sin intento, con el detalle de todas las pruebas, y no guarda nada. `ExerciseService.translate({ from, to, texts, functionName, parameters })` pide el borrador de una traducción a la Edge Function `translate`. Las dos, solo para docentes y administración y con un límite por minuto (`staff_request`). Funciones puras: `toSolutionCheck()`, `solutionSkeleton()`, `textFieldsOf()`, `toExerciseText()`, `fillFormModel()`, `subjectsByName()` y `formActionMessage()`.
 
@@ -57,8 +57,11 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - Cabecera con el título, lo que es la pantalla y el grupo (desplegable con la asignatura, o su nombre si solo hay uno).
 - Una tarjeta por bloque: asa para arrastrar (no en el móvil), título en su idioma, cuántos ejercicios tiene, si está oculto y, hasta que se abre, cuándo («Se abre el lun 23 nov, 09:00 · en 8 días», 4.3d), «Visible» y un menú con «Editar el bloque», «Añadir ejercicios», «Fecha de entrega para todo el bloque», «Subir», «Bajar» y «Borrar» (desactivado si alguien ha empezado alguno de sus ejercicios).
 - Dentro, sus ejercicios en orden: asa, número, título (enlace al formulario), quién lo ha empezado, «Archivado» si lo está, dificultad, fecha de entrega («mié 18 nov, 23:59 · en 3 días» o «Sin fecha de entrega»), mostrar u ocultar y un menú con «Subir», «Bajar», «Mover a otro bloque» (un submenú con los demás bloques del grupo; desactivados los que ya lo tienen) y «Quitar del bloque». Debajo, «Añadir ejercicios».
-- «Nuevo bloque», botón flotante abajo a la derecha.
-- «Copiar de otro grupo» (5.2c), si el usuario tiene más de un grupo: sobre la lista y, en un grupo sin bloques, junto a «Nuevo bloque». Su diálogo elige el grupo de origen (los de la misma asignatura primero y, dentro, el curso más reciente), dice dónde irán los bloques («después de los 6 bloques que ya tiene») y, con «Con sus fechas», dónde caerán («pasan a 2027/28, el mismo día de la semana» o «Las mismas fechas»). Los bloques llegan con sus ejercicios, orden, visibilidad y traducciones; el aviso dice cuántos.
+- «Nuevo bloque», botón flotante abajo a la derecha (no mientras se seleccionan bloques para borrar).
+- Sobre la lista, a la derecha, «Copiar de otro grupo» y «Seleccionar» (5.2f).
+- «Copiar de otro grupo» (5.2c), si el usuario tiene más de un grupo: sobre la lista y, en un grupo sin bloques, junto a «Nuevo bloque». Su diálogo elige el grupo de origen (los de la misma asignatura primero y, dentro, el curso más reciente; también los de clases cerradas, que es como se reutiliza un curso pasado), dice dónde irán los bloques («después de los 6 bloques que ya tiene») y, con «Con sus fechas», dónde caerán («pasan a 2027/28, el mismo día de la semana» o «Las mismas fechas»). Desde el 5.2f, si el grupo ya tiene bloques con los mismos títulos, lo avisa antes de copiar («Este grupo ya tiene «Tema 1», «Tema 2»: se añadirán otra vez…»), sin impedirlo. Los bloques llegan con sus ejercicios, orden, visibilidad y traducciones; el aviso dice cuántos y de dónde («4 bloques copiados de 1.º DAW A · Programación básica · 2025/26»), con «Deshacer».
+- «Seleccionar» (5.2f): una casilla en cada bloque (desactivada en los que alguien ha empezado) y, arriba, una barra con fondo propio que se queda fija al bajar: el recuento («4 bloques marcados»), «Marcar los no empezados» (o «Desmarcar todos»), «Borrar 4» y «Cancelar», donde estaba «Seleccionar».
+- **Un grupo de una clase cerrada** (curso pasado, 5.2f, D-083): un aviso con candado («El curso 2025/26 ya terminó: estos bloques se pueden ver, pero no cambiar. Para reutilizarlos, abre tu grupo de 2026/27 y pulsa «Copiar de otro grupo».»; la administración lee además «Para corregirlos, reabre la clase en Grupos») y los bloques sin asas, «Visible», menús, «Añadir ejercicios», «Nuevo bloque», «Copiar de otro grupo» ni «Seleccionar». La fecha de entrega y lo oculto se ven como texto. Sin bloques, «Este grupo no tuvo bloques». Reabierta, todo vuelve y el aviso lo dice.
 - El desplegable de grupos añade el curso cuando «nombre · asignatura» se repite (la misma clase de otro año). Desde el 5.2d (D-081), el nombre es el de la clase y un desdoble añade el suyo tras la asignatura («1.º DAW A · Programación básica · Desdoble inglés»), como en Histórico y en el panel en vivo.
 - Diálogos: el del bloque (título, idioma en que se escribe, títulos en los otros idiomas, «Oculto para los alumnos» y, opcional, el día y la hora en que se abre a los alumnos), «Añadir ejercicios» (el banco de la asignatura del grupo o de todas, con buscador; marca los que ya están y en qué otros bloques), la fecha de entrega (día y hora, «Quitar la fecha») y, desde el banco, «Asignar a un bloque…» (grupo y bloque).
 - El alumno ve la fecha en su catálogo («Entrega: vie 20 nov, 23:59 · en 5 días») hasta que entrega.
@@ -66,7 +69,9 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 ## Interacciones
 
 - **Ordenar bloques y ejercicios:** arrastrando o con «Subir» y «Bajar»; se ve al momento, se anuncia («Bloque «Tema 2» en el lugar 1 de 8») y vuelve atrás si no se puede guardar.
-- **Crear un bloque:** va al final, y la página baja hasta él con el foco en su título.
+- **Crear un bloque:** va al final, y la página baja hasta él con un desplazamiento suave (inmediato con «reducir movimiento»), lo deja arriba y pone el foco en su título (5.2f).
+- **Copiar de otro grupo:** la página baja igual al primer bloque copiado. «Deshacer» dura 10 segundos (los demás avisos, 6) y borra de una vez lo copiado; pasado ese tiempo, «Seleccionar» lo hace (5.2f).
+- **Borrar varios bloques** (5.2f): «Seleccionar», marcar y «Borrar N», que pregunta antes («¿Borrar 4 bloques? … No se puede deshacer»). Lo que alguien empiece mientras tanto se queda, y el aviso lo dice («Bloques borrados: 3. Los demás ya tienen intentos.»).
 - **Quitar un ejercicio:** sin preguntar, con «Deshacer», que lo devuelve a su sitio con su fecha y su visibilidad. **Borrar un bloque:** pregunta antes y dice cuántos ejercicios salen con él.
 - **Fecha de entrega:** sin hora, a las 23:59; el día se escribe en el orden del idioma («25/11/2026»).
 - **Fecha de apertura** (4.3d): sin hora, a las 0:00. Hasta ese momento, el alumno no ve el bloque ni sus ejercicios, como si estuviera oculto (lo hace cumplir la RLS); el docente lo ve con «Se abre el…».
@@ -124,6 +129,9 @@ Que el docente encuentre en el banco común los ejercicios de sus asignaturas, l
 - [x] Revisión visual del autor (4.3e).
 - [x] Copiar los bloques de otro grupo, con sus fechas en el curso del grupo o sin ellas (5.2c).
 - [ ] Revisión visual del autor de «Copiar de otro grupo» (5.2c).
+- [x] Los bloques de una clase cerrada, de solo lectura, con su aviso, y abiertos otra vez al reabrirla; también en la RLS y las funciones (5.2f).
+- [x] Aviso de títulos repetidos al copiar, «Deshacer» tras copiar y «Seleccionar» para borrar varios bloques que nadie ha empezado (5.2f).
+- [x] Revisión del autor en el navegador (5.2f): el aviso, la barra de selección, el desplazamiento y la duración del «Deshacer».
 
 ## Fuera de alcance
 
