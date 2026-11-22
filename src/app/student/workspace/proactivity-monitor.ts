@@ -9,6 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 
+import { PROACTIVE_TIMING } from '../../core/proactive-timing';
 import { runEventDetail } from '../../data/code-runner/run-result';
 import type { Exercise } from '../../data/exercise';
 import type { ProcessEvent } from '../../data/process-event';
@@ -22,17 +23,12 @@ import { TutorSpeaker } from './tutor-speaker';
 import { TutorStore } from './tutor-store';
 import { VoiceCall } from './voice-call';
 
-/** How often the tutor looks whether the student stopped, or whether a help that waited can come (2.7). */
-export const PROACTIVE_CHECK_MS = 15_000;
-
-/** Code changed less than this ago: the student is writing, and the tutor waits (2.7). */
-export const WRITING_PAUSE_MS = 15_000;
-
 /** What the monitor needs of the exercise open: its thresholds (2.7). */
 export type WatchedExercise = Pick<Exercise, 'id' | 'maxRepeatedFailures' | 'maxIdleMinutes'>;
 
 /**
- * The proactive tutor (2.7, 6.2): right after each run and every 15 seconds it works out with
+ * The proactive tutor (2.7, 6.2): right after each run and every 15 seconds (`PROACTIVE_TIMING`,
+ * shorter with the dev toolbar) it works out with
  * `proactiveReasons()` whether the tutor steps in and why, and asks `TutorStore` for it. Before
  * that, it keeps quiet without asking the server when the student turned it off, is out of the tab
  * or offline, or is busy: the tutor answering or speaking, the tests running, a submission, a
@@ -57,6 +53,7 @@ export class ProactivityMonitor {
   private readonly speaker = inject(TutorSpeaker);
   /** Only where the browser can hold a call (6.1c). */
   private readonly call = inject(VoiceCall, { optional: true });
+  private readonly timing = inject(PROACTIVE_TIMING);
 
   private readonly exercise = signal<WatchedExercise | undefined>(undefined);
 
@@ -79,8 +76,15 @@ export class ProactivityMonitor {
   });
 
   constructor() {
-    const timer = setInterval(() => void this.check('timer'), PROACTIVE_CHECK_MS);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    // Each check schedules the next one with the times of that moment, so making them shorter (dev
+    // toolbar) takes effect at the next one
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      void this.check('timer');
+      timer = setTimeout(tick, this.timing().checkMs);
+    };
+    timer = setTimeout(tick, this.timing().checkMs);
+    inject(DestroyRef).onDestroy(() => clearTimeout(timer));
     // Boundary with the timer and the request (4.8): a run is the answer of an imperative call, and
     // the check right after it may send another. Only the run is followed: the rest is read as it is
     effect(() => {
@@ -115,25 +119,32 @@ export class ProactivityMonitor {
     // the code has been still for a while
     if (after === 'run' ? this.attempts.runOutdated() : this.writing()) return;
     const now = Date.now();
-    const reasons = proactiveReasons({
-      status: attempt.status,
-      // Opening the exercise and typing, even unsaved, are activity too
-      updatedAt: new Date(
-        Math.max(
-          Date.parse(attempt.updatedAt),
-          this.attempts.openedAt(),
-          this.attempts.lastEditAt(),
-        ),
-      ).toISOString(),
-      events: [
-        ...this.tutor.loadedEvents(),
-        ...this.signals.events(attempt.id),
-        ...this.visitEvents(),
-      ],
-      lastTurnAt: this.lastTurnAt(),
-      thresholds: exercise,
-      now,
-    });
+    const { idleMinutes, limits } = this.timing();
+    const reasons = proactiveReasons(
+      {
+        status: attempt.status,
+        // Opening the exercise and typing, even unsaved, are activity too
+        updatedAt: new Date(
+          Math.max(
+            Date.parse(attempt.updatedAt),
+            this.attempts.openedAt(),
+            this.attempts.lastEditAt(),
+          ),
+        ).toISOString(),
+        events: [
+          ...this.tutor.loadedEvents(),
+          ...this.signals.events(attempt.id),
+          ...this.visitEvents(),
+        ],
+        lastTurnAt: this.lastTurnAt(),
+        thresholds: {
+          maxRepeatedFailures: exercise.maxRepeatedFailures,
+          maxIdleMinutes: idleMinutes ?? exercise.maxIdleMinutes,
+        },
+        now,
+      },
+      limits,
+    );
     const reason = after === 'run' ? reasons[0] : reasons.find((r) => this.waits(r));
     if (!reason) return;
     const stillWanted = () => !this.silenced(attempt.id) && this.attempts.lastEditAt() <= now;
@@ -161,7 +172,7 @@ export class ProactivityMonitor {
 
   /** The student changed the code a moment ago. */
   private writing(): boolean {
-    return Date.now() - this.attempts.lastEditAt() < WRITING_PAUSE_MS;
+    return Date.now() - this.attempts.lastEditAt() < this.timing().writingPauseMs;
   }
 
   /**

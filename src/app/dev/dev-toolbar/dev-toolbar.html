@@ -101,6 +101,20 @@
       </div>
 
       <div class="flex flex-col items-start gap-2">
+        <h3 class="eyebrow">Tutor proactivo</h3>
+        <mat-slide-toggle
+          [checked]="proactivity.fast()"
+          (change)="proactivity.setFast($event.checked)"
+        >
+          Rápido, para probarlo
+        </mat-slide-toggle>
+        <p class="text-body-small text-on-surface-variant">
+          Parón de 30 s, 20 s entre intervenciones y comprobación cada 5 s, en lugar de los minutos
+          del ejercicio, 3 min y 15 s.
+        </p>
+      </div>
+
+      <div class="flex flex-col items-start gap-2">
         <h3 class="eyebrow">Datos simulados</h3>
         <button matButton="outlined" type="button" (click)="resetData()">
           <mat-icon>restart_alt</mat-icon>

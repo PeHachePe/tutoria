@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import type { Attempt, StoredAttemptStatus } from '../../data/attempt';
@@ -9,7 +9,12 @@ import type { ProactiveReason } from '../../data/tutor';
 import { SettingsStore } from '../settings/settings-store';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
-import { PROACTIVE_CHECK_MS, ProactivityMonitor, WRITING_PAUSE_MS } from './proactivity-monitor';
+import {
+  DEFAULT_PROACTIVE_TIMING,
+  PROACTIVE_TIMING,
+  type ProactiveTiming,
+} from '../../core/proactive-timing';
+import { ProactivityMonitor } from './proactivity-monitor';
 import { TutorSpeaker } from './tutor-speaker';
 import { type TutorTurn, TutorStore } from './tutor-store';
 import { type CallState, VoiceCall } from './voice-call';
@@ -17,6 +22,8 @@ import { type CallState, VoiceCall } from './voice-call';
 const START = Date.parse('2026-11-22T10:00:00.000Z');
 const MINUTE = 60_000;
 const EXERCISE = { id: 'exercise-1', maxRepeatedFailures: 3, maxIdleMinutes: 4 };
+const PROACTIVE_CHECK_MS = DEFAULT_PROACTIVE_TIMING.checkMs;
+const WRITING_PAUSE_MS = DEFAULT_PROACTIVE_TIMING.writingPauseMs;
 
 function attemptOf(id: string, status: StoredAttemptStatus = 'in_progress'): Attempt {
   return {
@@ -92,7 +99,10 @@ describe('ProactivityMonitor', () => {
   let callState: ReturnType<typeof signal<CallState | null>>;
   let onLine: ReturnType<typeof vi.spyOn>;
 
-  function setUp({ call = true }: { call?: boolean } = {}): ProactivityMonitor {
+  function setUp({
+    call = true,
+    timing = signal(DEFAULT_PROACTIVE_TIMING),
+  }: { call?: boolean; timing?: WritableSignal<ProactiveTiming> } = {}): ProactivityMonitor {
     TestBed.configureTestingModule({
       providers: [
         ProactivityMonitor,
@@ -122,6 +132,7 @@ describe('ProactivityMonitor', () => {
         },
         { provide: TutorSpeaker, useValue: { saying } },
         call ? [{ provide: VoiceCall, useValue: { state: callState } }] : [],
+        { provide: PROACTIVE_TIMING, useValue: timing },
       ],
     });
     const monitor = TestBed.inject(ProactivityMonitor);
@@ -512,6 +523,63 @@ describe('ProactivityMonitor', () => {
       change();
 
       expect(stillWanted()).toBe(false);
+    });
+  });
+
+  describe('with the short times of the dev toolbar', () => {
+    const fast: ProactiveTiming = {
+      checkMs: 5000,
+      writingPauseMs: 5000,
+      idleMinutes: 0.5,
+      limits: { ...DEFAULT_PROACTIVE_TIMING.limits, cooldownMs: 20_000 },
+    };
+
+    it('asks about a pause of 30 s, checking every 5 s', async () => {
+      setUp({ timing: signal(fast) });
+
+      await wait(25_000);
+      expect(intervene).not.toHaveBeenCalled();
+      await wait(5000);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['idle']);
+    });
+
+    it('asks about the pause 20 s after helping with the failures', async () => {
+      setUp({ timing: signal(fast) });
+      await runTests('t1');
+      await runTests('t1');
+      await runTests('t1');
+      // The runs are a minute apart: the pause counts from the last one, and the cooldown from the help
+      expect(reasons()).toEqual<ProactiveReason[]>(['failures']);
+
+      await wait(30_000);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['failures', 'idle']);
+    });
+
+    it('takes up a help that waited once the code is still for 5 s', async () => {
+      setUp({ timing: signal(fast) });
+      await runTests('t1');
+      await runTests('t1');
+      // A question a moment ago: the help waits 20 s
+      turns.set([questionAt(2.9)]);
+      await runTests('t1');
+      await wait(10_000);
+
+      lastEditAt.set(Date.now());
+      await wait(5000);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['failures']);
+    });
+
+    it('takes the new times at the next check', async () => {
+      const timing = signal(DEFAULT_PROACTIVE_TIMING);
+      setUp({ timing });
+
+      timing.set(fast);
+      await wait(PROACTIVE_CHECK_MS + 30_000);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['idle']);
     });
   });
 });

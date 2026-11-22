@@ -3,6 +3,7 @@ import { Component, computed, ElementRef, inject, signal, viewChild } from '@ang
 import { MatButton, MatIconButton, MatMiniFabButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatIcon } from '@angular/material/icon';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 import {
   MatFormField,
   MatLabel,
@@ -18,6 +19,7 @@ import { MockDb } from '../../data/mock/mock-db';
 import { DEFAULT_LATENCY, LatencyRange, MockNetwork } from '../../data/mock/mock-network';
 import type { AppUser } from '../../data/user';
 import { ClassSimulator, type SimulationSpread } from '../class-simulator';
+import { DevProactivity } from '../dev-proactivity';
 import { DEV_PATHS } from '../dev-paths';
 import { describeEvent } from './describe-event';
 import { ToolInspector } from './tool-inspector';
@@ -62,8 +64,8 @@ const NONE = 'none';
 
 /**
  * Development-only toolbar (4.3): sign in as any seed user, simulated latency, fail the next request,
- * reset the mock data, simulate a class for the live panel (4.1), try the tools of the screen (2.5e)
- * and watch the latest process events. Drawn by App when the environment provides it.
+ * a fast proactive tutor (6.2b), reset the mock data, simulate a class for the live panel (4.1), try
+ * the tools of the screen (2.5e) and watch the latest process events. Drawn by App when the environment provides it.
  */
 @Component({
   selector: 'app-dev-toolbar',
@@ -80,6 +82,7 @@ const NONE = 'none';
     MatSelect,
     MatOptgroup,
     MatOption,
+    MatSlideToggle,
     RouterLink,
     RouterLinkActive,
     ToolInspector,
@@ -95,6 +98,8 @@ export class DevToolbar {
   private readonly reloader = inject(PageReloader);
   private readonly router = inject(Router);
   protected readonly simulator = inject(ClassSimulator);
+  /** Short times for the proactive tutor (6.2b). */
+  protected readonly proactivity = inject(DevProactivity);
   private readonly toggleButton = viewChild.required('toggle', { read: ElementRef<HTMLElement> });
 
   protected readonly none = NONE;

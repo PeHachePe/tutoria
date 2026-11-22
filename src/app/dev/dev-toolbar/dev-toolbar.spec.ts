@@ -9,6 +9,7 @@ import {
 } from '@angular/material/button-toggle/testing';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MatSelectHarness } from '@angular/material/select/testing';
+import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { provideRouter } from '@angular/router';
 
 import { SEED } from '../../data/mock/fixtures/seed';
@@ -16,6 +17,7 @@ import { DAW_STUDENT_IDS, TEACHER_ID } from '../../data/mock/fixtures/users';
 import { MockDb } from '../../data/mock/mock-db';
 import { MockNetwork } from '../../data/mock/mock-network';
 import { ClassSimulator } from '../class-simulator';
+import { DevProactivity } from '../dev-proactivity';
 import { DevToolbar } from './dev-toolbar';
 import { PageReloader } from '../../core/page-reloader';
 
@@ -84,6 +86,7 @@ describe('DevToolbar', () => {
       'Páginas de desarrollo',
       'Sesión',
       'Red simulada',
+      'Tutor proactivo',
       'Datos simulados',
       'Simular la clase',
       'Herramientas del tutor y WebMCP',
@@ -219,6 +222,21 @@ describe('DevToolbar', () => {
       await failure.clickOptions({ text: 'No' });
       expect(network.failNext()).toBeNull();
     });
+  });
+
+  it('makes the proactive tutor fast, to try it in a minute, and back', async () => {
+    const proactivity = TestBed.inject(DevProactivity);
+    await openPanel();
+    const fast = await loader.getHarness(
+      MatSlideToggleHarness.with({ label: 'Rápido, para probarlo' }),
+    );
+    expect(await fast.isChecked()).toBe(false);
+
+    await fast.toggle();
+    expect(proactivity.fast()).toBe(true);
+
+    await fast.toggle();
+    expect(proactivity.fast()).toBe(false);
   });
 
   it('resets the mock data and reloads the page', async () => {
