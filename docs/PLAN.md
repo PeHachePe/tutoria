@@ -4088,7 +4088,7 @@ Tests, en este orden:
 
 **6.1d · Respuesta del servidor frase a frase (condicional, ≈3,5 h)**
 
-Solo si la medición del 6.1c pasa del umbral (2.11, D-067).
+Solo si la medición del 6.1c pasa del umbral (2.11, D-067). **Medido (22/11/2026):** la mediana de «envío → primer sonido» fue 1508 ms, bajo el umbral; no se hace por ahora y queda condicional para la prueba con alumnos (tabla en la bitácora del 6.1c, `PENDIENTES.md`).
 
 - `delivery: 'sentences'` en `TutorRequest`, que solo envía una llamada.
 - `tutor`: el proveedor en streaming, el mensaje como último campo del JSON, la validación de cada frase y la respuesta en streaming; el cierre con la frase fija si algo falla a mitad.
