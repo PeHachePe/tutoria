@@ -1173,7 +1173,6 @@
     "settings.voice.screenReader": "Si fas servir un lector de pantalla, no cal activar la veu: ja et llegeix les respostes.",
     "tutor.voice.listen": "Escoltar",
     "tutor.voice.stop": "Aturar",
-    "tutor.voice.closing": "T'ho deixo al xat.",
     "settings.voice.default": "Té la que sona més natural al teu navegador. En pots triar una altra.",
     "settings.voice.showAll": "Veure totes les veus ({$INTERPOLATION} més)",
     "settings.voice.better": "Sonen robòtiques? Edge té veus naturals, i en un Mac pots descarregar veus millorades a Configuració del Sistema › Accessibilitat › Contingut parlat.",
@@ -1503,6 +1502,13 @@
     "call.ongoing": "En trucada",
     "call.unstable": "La trucada s'ha tallat: el micròfon es tanca sol. Pots tornar a trucar o continuar escrivint.",
     "call.greeting": "T'escolto.",
-    "workspace.tab.tutorInCall": ", en trucada"
+    "workspace.tab.tutorInCall": ", en trucada",
+    "tutor.voice.closing.code": "Et deixo el codi al xat.",
+    "tutor.voice.closing.code2": "El codi el tens al xat.",
+    "tutor.voice.closing.code3": "Fes un cop d'ull al codi al xat.",
+    "tutor.voice.closing.codeAndButton": "Et deixo al xat el codi i el botó {$button}.",
+    "tutor.voice.closing.button": "Et deixo al xat el botó {$button}.",
+    "tutor.voice.closing.codeAndButtons": "Et deixo al xat el codi i els botons {$buttons}.",
+    "tutor.voice.closing.buttons": "Et deixo al xat els botons {$buttons}."
   }
 }

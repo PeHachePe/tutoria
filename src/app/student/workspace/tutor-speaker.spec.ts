@@ -176,7 +176,7 @@ describe('TutorSpeaker', () => {
     expect(fake.sentences).toEqual(['Mira el bucle.', 'Empieza en cero.']);
     fake.finish();
     await settle();
-    expect(fake.sentences.at(-1)).toBe('Te lo dejo en el chat.');
+    expect(fake.sentences.at(-1)).toBe('Te dejo el código en el chat.');
     expect(fake.spoken[0].options).toEqual({
       voiceId: 'jorge',
       rate: 'normal',
@@ -400,7 +400,49 @@ describe('TutorSpeaker', () => {
     await settle();
     fake.finish();
     await settle();
-    expect(fake.sentences).toEqual(['Te dejo un botón.', 'Te lo dejo en el chat.']);
+    expect(fake.sentences).toEqual([
+      'Te dejo un botón.',
+      'Te dejo en el chat el botón Abrir el siguiente ejercicio.',
+    ]);
+  });
+
+  it('works out the closing once, though the answer changes while it is said', async () => {
+    nextActions = [{ name: 'openExercise', arguments: { exercise: 'next' } }];
+    const answer = await ask();
+    answer.say('Te dejo un botón. Y otra cosa.');
+    answer.end();
+    await settle();
+    // The student presses the button while the tutor still speaks: the closing was already decided
+    void tutor.runAction(tutor.turns().at(-1)!.id, 0);
+    await settle();
+    fake.finish();
+    await settle();
+    fake.finish();
+    await settle();
+    expect(fake.sentences).toEqual([
+      'Te dejo un botón.',
+      'Y otra cosa.',
+      'Te dejo en el chat el botón Abrir el siguiente ejercicio.',
+    ]);
+  });
+
+  it('says the code is in the chat in another way in the next answer', async () => {
+    for (let answers = 0; answers < 2; answers++) {
+      const answer = await ask();
+      answer.say('Mira:\n```js\nlet a;\n```');
+      answer.end();
+      await settle();
+      fake.finish();
+      await settle();
+      fake.finish();
+      await settle();
+    }
+    expect(fake.sentences).toEqual([
+      'Mira:',
+      'Te dejo el código en el chat.',
+      'Mira:',
+      'El código lo tienes en el chat.',
+    ]);
   });
 
   describe('in a call', () => {

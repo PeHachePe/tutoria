@@ -1173,7 +1173,6 @@
     "settings.voice.screenReader": "If you use a screen reader, you do not need to turn the voice on: it already reads the answers to you.",
     "tutor.voice.listen": "Listen",
     "tutor.voice.stop": "Stop",
-    "tutor.voice.closing": "I have left it for you in the chat.",
     "settings.voice.default": "It has the one that sounds most natural in your browser. You can choose another.",
     "settings.voice.showAll": "See all the voices ({$INTERPOLATION} more)",
     "settings.voice.better": "Do they sound robotic? Edge has natural voices, and on a Mac you can download enhanced voices in System Settings › Accessibility › Spoken Content.",
@@ -1503,6 +1502,13 @@
     "call.ongoing": "On a call",
     "call.unstable": "The call was cut off: the microphone closes by itself. You can call again or keep typing.",
     "call.greeting": "I am listening.",
-    "workspace.tab.tutorInCall": ", on a call"
+    "workspace.tab.tutorInCall": ", on a call",
+    "tutor.voice.closing.code": "I leave you the code in the chat.",
+    "tutor.voice.closing.code2": "You have the code in the chat.",
+    "tutor.voice.closing.code3": "Have a look at the code in the chat.",
+    "tutor.voice.closing.codeAndButton": "I leave you the code and the {$button} button in the chat.",
+    "tutor.voice.closing.button": "I leave you the {$button} button in the chat.",
+    "tutor.voice.closing.codeAndButtons": "I leave you the code and the buttons {$buttons} in the chat.",
+    "tutor.voice.closing.buttons": "I leave you the buttons {$buttons} in the chat."
   }
 }

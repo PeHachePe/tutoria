@@ -1,7 +1,8 @@
-import { speakableSentences } from './speakable-sentences';
+import { hasCodeBlock, speakableSentences } from './speakable-sentences';
 
-const closing = 'Te lo dejo en el chat.';
-const es = { locale: 'es', closing } as const;
+const closing = 'Te dejo el código en el chat.';
+const es = { locale: 'es' } as const;
+const closingEs = { locale: 'es', closing } as const;
 
 describe('speakableSentences', () => {
   it('splits a text into its sentences', () => {
@@ -21,27 +22,31 @@ describe('speakableSentences', () => {
     expect(
       speakableSentences(
         'Empieza así:\n```js\nlet a = 1;\n```\nY otro:\n```\nb()\n```\nAcaba.',
-        es,
+        closingEs,
       ),
     ).toEqual(['Empieza así:', 'Y otro:', 'Acaba.', closing]);
   });
 
   it('leaves out a block that never closes, with what follows it', () => {
-    expect(speakableSentences('Mira esto.\n```js\nlet a = 1;\nY más.', es)).toEqual([
+    expect(speakableSentences('Mira esto.\n```js\nlet a = 1;\nY más.', closingEs)).toEqual([
       'Mira esto.',
       closing,
     ]);
   });
 
   it('says only the closing when the answer is only a block', () => {
-    expect(speakableSentences('```js\nlet a = 1;\n```', es)).toEqual([closing]);
+    expect(speakableSentences('```js\nlet a = 1;\n```', closingEs)).toEqual([closing]);
   });
 
-  it('says the closing when the answer leaves a button', () => {
-    expect(speakableSentences('Te lo marco.', { ...es, leavesButton: true })).toEqual([
-      'Te lo marco.',
-      closing,
-    ]);
+  it('says the closing it is given at the end, and none without one', () => {
+    expect(speakableSentences('Te lo marco.', closingEs)).toEqual(['Te lo marco.', closing]);
+    expect(speakableSentences('Te lo marco.', { ...es, closing: null })).toEqual(['Te lo marco.']);
+    expect(speakableSentences('', closingEs)).toEqual([]);
+  });
+
+  it('tells whether a text has a block of code', () => {
+    expect(hasCodeBlock('Mira:\n```js\nlet a;\n```')).toBe(true);
+    expect(hasCodeBlock('Usa `reduce`.')).toBe(false);
   });
 
   it('keeps the inline code as a word', () => {
@@ -100,22 +105,23 @@ describe('speakableSentences', () => {
       'Un bucle, p. ej. For sirve.',
       'Bien.',
     ]);
-    expect(speakableSentences('A loop, e.g. For works. Fine.', { locale: 'en', closing })).toEqual([
+    expect(speakableSentences('A loop, e.g. For works. Fine.', { locale: 'en' })).toEqual([
       'A loop, e.g. For works.',
       'Fine.',
     ]);
-    expect(
-      speakableSentences('Un bucle, p. ex. For va bé. Bé.', { locale: 'ca', closing }),
-    ).toEqual(['Un bucle, p. ex. For va bé.', 'Bé.']);
+    expect(speakableSentences('Un bucle, p. ex. For va bé. Bé.', { locale: 'ca' })).toEqual([
+      'Un bucle, p. ex. For va bé.',
+      'Bé.',
+    ]);
   });
 
   it('while partial, keeps back the last sentence and the closing', () => {
     expect(speakableSentences('Mira el bucle. Prueba co', { ...es, partial: true })).toEqual([
       'Mira el bucle.',
     ]);
-    expect(
-      speakableSentences('Mira esto.\n```js\nlet a', { ...es, partial: true, leavesButton: true }),
-    ).toEqual(['Mira esto.']);
+    expect(speakableSentences('Mira esto.\n```js\nlet a', { ...closingEs, partial: true })).toEqual(
+      ['Mira esto.'],
+    );
     expect(speakableSentences('Mira esto:\n```js\n', { ...es, partial: true })).toEqual([
       'Mira esto:',
     ]);

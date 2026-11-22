@@ -3,10 +3,8 @@ import type { AppLocale } from '../i18n/locale';
 
 export interface SpeakableOptions {
   readonly locale: AppLocale;
-  /** Said last if the text had a block of code or leaves a button: «Te lo dejo en el chat». */
-  readonly closing: string;
-  /** The answer leaves a button in the chat (2.5e). */
-  readonly leavesButton?: boolean;
+  /** Said last, once the text is whole: what it leaves only in the chat (`closingSentence()`). */
+  readonly closing?: string | null;
   /** Still arriving: the last sentence may not be whole, so it waits, and so does the closing. */
   readonly partial?: boolean;
 }
@@ -42,13 +40,17 @@ const HAS_LETTERS = /\p{L}/u;
 /** One per language: it is built for every piece of an answer that arrives. */
 const SEGMENTERS = new Map<AppLocale, Intl.Segmenter>();
 
+/** Whether the text has a block of code, which is not said aloud. */
+export function hasCodeBlock(text: string): boolean {
+  return text.includes(FENCE);
+}
+
 /**
  * The text the tutor says aloud, sentence by sentence (2.11): no blocks of code, Markdown marks nor
  * emojis, and the inline code as a word. While the answer arrives, what it gives never changes as
  * the text grows: the sentences of a longer prefix always start with these.
  */
 export function speakableSentences(text: string, options: SpeakableOptions): string[] {
-  const hadBlock = text.includes(FENCE);
   const segmenter = segmenterOf(options.locale);
   const sentences = splitCodeBlocks(text)
     .filter((part) => part.kind === 'text')
@@ -66,7 +68,7 @@ export function speakableSentences(text: string, options: SpeakableOptions): str
     return sentences.filter((sentence) => HAS_WORDS.test(sentence));
   }
   const spoken = sentences.filter((sentence) => HAS_WORDS.test(sentence));
-  if (text.trim() && (hadBlock || options.leavesButton)) spoken.push(options.closing);
+  if (text.trim() && options.closing) spoken.push(options.closing);
   return spoken;
 }
 

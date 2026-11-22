@@ -10,13 +10,12 @@ import {
 } from '@angular/core';
 
 import { LanguageService } from '../../core/i18n/language-service';
-import { speakableSentences } from '../../core/speech/speakable-sentences';
+import { hasCodeBlock, speakableSentences } from '../../core/speech/speakable-sentences';
 import { SettingsStore } from '../settings/settings-store';
 import { StudentVoice } from '../settings/student-voice';
+import { closingSentence } from './closing-sentence';
+import { actionView } from './tutor/action-labels';
 import { type TutorTurn, TutorStore, waitsForStudent } from './tutor-store';
-
-/** Said last when the answer had code or leaves a button: it is only in the chat (2.11). */
-const CLOSING = $localize`:@@tutor.voice.closing:Te lo dejo en el chat.`;
 
 /** A turn as it was asked: a retry keeps the id, so its time tells it apart. */
 function keyOf(turn: TutorTurn): string {
@@ -97,6 +96,10 @@ export class TutorSpeaker {
   /** Whether the follower was told of the first text and the first sound of the answer. */
   private wroteTold = false;
   private soundTold = false;
+  /** The closing of the answer followed, worked out once it is whole; undefined until then. */
+  private closing: string | null | undefined;
+  /** How many closings about code alone were said in this visit, so the next one changes. */
+  private codeClosings = 0;
   /** Whether the conversation was closed, and took questions, the last time it was looked at. */
   private closed = false;
   private couldAsk = false;
@@ -171,6 +174,7 @@ export class TutorSpeaker {
     this.speakingState.set(null);
     this.sayingState.set(null);
     this.saidState.set([]);
+    this.closing = undefined;
   }
 
   private track(turns: readonly TutorTurn[]): void {
@@ -236,8 +240,7 @@ export class TutorSpeaker {
   private feed(turn: TutorTurn): void {
     const sentences = speakableSentences(turn.answer, {
       locale: this.locale,
-      closing: CLOSING,
-      leavesButton: turn.actions.some((action) => waitsForStudent(action.call)),
+      closing: turn.status === 'done' ? this.closingOf(turn) : null,
       partial: turn.status === 'answering',
     });
     this.queue.push(...sentences.slice(this.taken));
@@ -248,6 +251,23 @@ export class TutorSpeaker {
       this.follower?.wrote();
     }
     this.next();
+  }
+
+  /**
+   * What the answer leaves only in the chat, said last (iteration 2 of 6.1c): the buttons still
+   * waiting for the student, by their names, or that there is code. Worked out once per answer, so
+   * the phrasing about code changes from one answer to the next and not while one grows.
+   */
+  private closingOf(turn: TutorTurn): string | null {
+    if (this.closing === undefined) {
+      const buttons = turn.actions
+        .filter((action) => action.status === 'pending' && waitsForStudent(action.call))
+        .map((action) => actionView(action).text);
+      const code = hasCodeBlock(turn.answer);
+      this.closing = closingSentence({ code, buttons, said: this.codeClosings }, this.locale);
+      if (code && buttons.length === 0) this.codeClosings++;
+    }
+    return this.closing;
   }
 
   private next(): void {
