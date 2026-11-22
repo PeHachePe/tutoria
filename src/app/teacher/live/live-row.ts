@@ -4,8 +4,7 @@ import { LIVE_WINDOW_MINUTES, type LiveExercise, type LiveStudent } from '../../
 import type { ProcessEvent } from '../../data/process-event';
 import type { HintLevel, TutorInteraction } from '../../data/tutor';
 import { awaySince } from '../../shared/away-since';
-import { lastActivityAt } from '../../shared/is-stuck';
-import { type Breakthrough, lastBreakthrough } from '../../shared/last-breakthrough';
+import { type Breakthrough, lastActivityAt, lastBreakthrough } from '../../shared/proactive-reason';
 import type { TestCount } from '../../shared/status-chip/status-chip';
 import { type AttentionReason, attentionReason, failingTest } from './live-attention';
 import { type LivePattern, livePatterns } from './live-patterns';

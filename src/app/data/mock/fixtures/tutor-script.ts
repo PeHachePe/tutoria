@@ -1,5 +1,5 @@
 import type { ContentLocale } from '../../localized-text';
-import type { HintLevel } from '../../tutor';
+import type { HintLevel, ProactiveReason } from '../../tutor';
 
 /**
  * What the scripted tutor says (4.3), in each language of the interface: it answers in the language
@@ -11,8 +11,8 @@ export interface TutorScript {
   readonly hints: Readonly<Record<HintLevel, readonly string[]>>;
   /** To a student who tries to get the solution: no solution, and a question that makes them think. */
   readonly elusion: string;
-  /** The tutor steps in on its own (2.7). */
-  readonly proactive: string;
+  /** The tutor steps in on its own (2.7): it helps with the failures or the pause, or celebrates. */
+  readonly proactive: Readonly<Record<ProactiveReason, string>>;
   /** A question with the code still empty. */
   readonly start: string;
   /** A question about the statement. */
@@ -74,8 +74,12 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
     },
     elusion:
       'Buen intento 😉 La solución no te la puedo dar, pero sí ayudarte a llegar a ella. ¿Qué crees que debería devolver tu función en el caso que falla?',
-    proactive:
-      'Llevas un rato con la misma prueba. ¿Repasamos juntos qué devuelve tu función en ese caso?',
+    proactive: {
+      failures:
+        'Llevas un rato con la misma prueba. ¿Repasamos juntos qué devuelve tu función en ese caso?',
+      idle: '¿Sigues ahí? Si no sabes por dónde seguir, cuéntame qué te frena o pídeme una pista.',
+      achievement: '¡Esa prueba se te resistía y la has sacado! Buen trabajo insistiendo. 🎉',
+    },
     start:
       'Empieza por escribir la función con su nombre y lo que recibe. Después, piensa: con el primer ejemplo de la tabla, ¿qué tendría que devolver?',
     statement:
@@ -137,8 +141,13 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
     },
     elusion:
       "Nice try 😉 I can't give you the solution, but I can help you get there. What do you think your function should return in the failing case?",
-    proactive:
-      "You've been on the same test for a while. Shall we go over together what your function returns in that case?",
+    proactive: {
+      failures:
+        "You've been on the same test for a while. Shall we go over together what your function returns in that case?",
+      idle: 'Still there? If you are not sure how to go on, tell me what is holding you back or ask me for a hint.',
+      achievement:
+        'That test was putting up a fight and you cracked it! Well done for sticking with it. 🎉',
+    },
     start:
       'Start by writing the function with its name and what it takes. Then think: with the first example of the table, what should it return?',
     statement:
@@ -198,8 +207,12 @@ export const TUTOR_SCRIPTS: Readonly<Record<ContentLocale, TutorScript>> = {
     },
     elusion:
       'Bon intent 😉 La solució no te la puc donar, però sí ajudar-te a arribar-hi. Què creus que hauria de retornar la teva funció en el cas que falla?',
-    proactive:
-      'Fa una estona que ets amb la mateixa prova. Repassem junts què retorna la teva funció en aquest cas?',
+    proactive: {
+      failures:
+        'Fa una estona que ets amb la mateixa prova. Repassem junts què retorna la teva funció en aquest cas?',
+      idle: 'Encara hi ets? Si no saps per on continuar, explica’m què et frena o demana’m una pista.',
+      achievement: 'Aquesta prova se’t resistia i l’has superada! Bona feina insistint. 🎉',
+    },
     start:
       'Comença per escriure la funció amb el seu nom i el que rep. Després, pensa: amb el primer exemple de la taula, què hauria de retornar?',
     statement:

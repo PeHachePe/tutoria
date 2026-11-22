@@ -1,20 +1,17 @@
 import type { Attempt } from '../data/attempt';
 import type { StuckThresholds } from '../data/exercise';
-import type { ProcessEvent, ProcessEventType } from '../data/process-event';
+import type { ProcessEvent } from '../data/process-event';
+import {
+  failedTestsByRun,
+  failureStreak,
+  lastActivityAt,
+  type ProactiveReason,
+} from './proactive-reason';
 
 const MINUTE_MS = 60_000;
 
-/** Events that show the student is working. `focus_lost` and `proactive_intervention` do not. */
-const ACTIVITY_EVENTS: ReadonlySet<ProcessEventType> = new Set([
-  'run',
-  'submit',
-  'hint_requested',
-  'paste',
-  'focus_gained',
-]);
-
 /** Why a student seems stuck: the same test keeps failing, or nothing happens. */
-export type StuckReason = 'failures' | 'idle';
+export type StuckReason = Exclude<ProactiveReason, 'achievement'>;
 
 /**
  * Whether a student seems stuck on an attempt (2.7). It is a reading of the events, not a stored status.
@@ -54,21 +51,6 @@ export function stuckReason(
     : null;
 }
 
-/** Longest run of latest consecutive runs in which one same test failed. */
-export function failureStreak(events: readonly ProcessEvent[]): number {
-  return Math.max(0, ...failingStreaks(events).values());
-}
-
-/**
- * Each test failing in the latest run, with the runs in a row, counting back from it, in which it
- * failed. Empty before any run or with every test passed.
- */
-export function failingStreaks(events: readonly ProcessEvent[]): ReadonlyMap<string, number> {
-  const runs = failedTestsByRun(events);
-  const failingNow = runs.at(-1) ?? [];
-  return new Map(failingNow.map((testId) => [testId, trailingFailures(runs, testId)]));
-}
-
 /**
  * Longest run of consecutive runs in which one same test failed, at any point of the attempt and not
  * only at its end (the history, 4.4): a student who got stuck and then passed was stuck. 0 without
@@ -83,32 +65,4 @@ export function longestFailureStreak(events: readonly ProcessEvent[]): number {
     longest = Math.max(longest, ...streaks.values());
   }
   return longest;
-}
-
-/** The tests that failed in each run, in the order of the runs. */
-function failedTestsByRun(events: readonly ProcessEvent[]): (readonly string[])[] {
-  return events
-    .flatMap((event) => (event.type === 'run' ? [event] : []))
-    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
-    .map((run) => run.detail.failedTestIds);
-}
-
-/** Runs in a row, counting back from the latest, in which `testId` failed. */
-function trailingFailures(runs: readonly (readonly string[])[], testId: string): number {
-  let count = 0;
-  while (count < runs.length && runs[runs.length - 1 - count].includes(testId)) {
-    count++;
-  }
-  return count;
-}
-
-/** Time of the latest activity on an attempt, in milliseconds. */
-export function lastActivityAt(
-  attempt: Pick<Attempt, 'updatedAt'>,
-  events: readonly ProcessEvent[],
-): number {
-  const activityTimes = events
-    .filter((event) => ACTIVITY_EVENTS.has(event.type))
-    .map((event) => Date.parse(event.timestamp));
-  return Math.max(Date.parse(attempt.updatedAt), ...activityTimes);
 }

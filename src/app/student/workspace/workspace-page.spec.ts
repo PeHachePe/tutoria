@@ -25,6 +25,7 @@ import { buildRunResult } from '../../data/code-runner/run-result';
 import { SEED } from '../../data/mock/fixtures/seed';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
+import { ProactivityMonitor } from './proactivity-monitor';
 import { FakeTabChannel, provideTestEditingTab, takenByOtherTab } from './editing-tab-testing';
 import { CODE_SHARE, paneShareKey, STATEMENT_SHARE, tutorFloatingKey } from './pane-share';
 import { SettingsStore } from '../settings/settings-store';
@@ -176,6 +177,7 @@ describe('WorkspacePage', () => {
         VoiceCall,
         provideFakeSpeech(speech),
         BrowserSignals,
+        ProactivityMonitor,
         { provide: TutorService, useValue: { ask: () => tutorAnswer() } },
         { provide: EventService, useValue: { send: sendEvents } },
         {
@@ -263,6 +265,14 @@ describe('WorkspacePage', () => {
     expect(document.title).toBe('Sum of the elements of an array · TutorIA');
     const statement = screen.getByRole('region', { name: 'Enunciado' });
     expect(text(statement)).toContain('Write a function sum');
+  });
+
+  it('gives the proactive tutor the thresholds of the exercise (2.7)', async () => {
+    const watch = vi.spyOn(ProactivityMonitor.prototype, 'watch');
+
+    await renderPage();
+
+    expect(watch).toHaveBeenCalledWith(SUM.exercise);
   });
 
   it('shows the title in its own language when it has no translation', async () => {

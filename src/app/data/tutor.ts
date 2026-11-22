@@ -1,6 +1,7 @@
 import type { AppLocale } from '../core/i18n/locale';
 import type { CheckTest } from './code-runner/run-result';
 import type { TranslatableExercise } from './localized-text';
+import type { ProactiveReason } from '../shared/proactive-reason';
 import type {
   Emotion,
   HintLevel,
@@ -35,6 +36,8 @@ export {
   type TutorEvent,
   type TutorTrigger,
 } from './tutor/tutor-contract';
+// Shared with the server too, and with the teacher's panel
+export { PROACTIVE_REASONS, type ProactiveReason } from '../shared/proactive-reason';
 
 /** What the client sends to the tutor (2.6). */
 export interface TutorRequest {
@@ -47,6 +50,8 @@ export interface TutorRequest {
   readonly kind: TutorTrigger;
   /** Only for `question`. */
   readonly message?: string;
+  /** Why the tutor steps in (2.7): only for `proactive`, and required. */
+  readonly reason?: ProactiveReason;
   /** Current editor content, so the tutor always sees the latest code. */
   readonly code: string;
   /** Language of the interface, which the tutor answers in (D-033). */

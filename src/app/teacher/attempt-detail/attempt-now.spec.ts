@@ -162,7 +162,7 @@ describe('attemptNow', () => {
     });
 
     it('does not count an intervention in which the tutor said nothing', () => {
-      const silent = { ...e.proactive('a1', ago(5)), detail: { silent: true } };
+      const silent = e.proactive('a1', ago(5), 'failures', true);
       const hint = e.hint('a1', ago(10), 1);
 
       expect(now([hint, silent]).help?.entryId).toBe(hint.id);

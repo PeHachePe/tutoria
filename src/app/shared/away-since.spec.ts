@@ -33,4 +33,10 @@ describe('awaySince', () => {
 
     expect(awaySince(events)).toBe(T + 2 * MINUTE);
   });
+
+  it('reads events not stored yet, without an id', () => {
+    const left = { type: 'focus_lost', timestamp: new Date(T).toISOString() } as const;
+
+    expect(awaySince([testEvents.run('a', T - MINUTE), left])).toBe(T);
+  });
 });

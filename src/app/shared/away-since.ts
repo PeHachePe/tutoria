@@ -6,7 +6,9 @@ import type { ProcessEvent } from '../data/process-event';
  * browser only records absences of 2 s or more, so a quick look elsewhere never counts. Any event
  * after leaving is a return too: a tab closed and opened again later records none (4.1).
  */
-export function awaySince(events: readonly ProcessEvent[]): number | null {
+export function awaySince(
+  events: readonly Pick<ProcessEvent, 'type' | 'timestamp'>[],
+): number | null {
   const last = events
     .map((event) => ({ type: event.type, at: Date.parse(event.timestamp) }))
     .sort((a, b) => a.at - b.at)

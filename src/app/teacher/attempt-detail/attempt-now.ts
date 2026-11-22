@@ -2,7 +2,7 @@ import type { Attempt } from '../../data/attempt';
 import type { LiveExercise } from '../../data/live-service';
 import type { ProcessEvent } from '../../data/process-event';
 import type { HintLevel, TutorTrigger } from '../../data/tutor';
-import { failingStreaks } from '../../shared/is-stuck';
+import { failingStreaks } from '../../shared/proactive-reason';
 import { formatCall, formatValue } from '../../shared/format-value';
 import type { TestCount } from '../../shared/status-chip/status-chip';
 import type { WorkState } from '../live/live-work';

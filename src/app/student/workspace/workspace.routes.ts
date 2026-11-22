@@ -5,6 +5,7 @@ import { provideAppTools } from '../../core/tools/app-tool';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
 import { EditingTab } from './editing-tab';
+import { ProactivityMonitor } from './proactivity-monitor';
 import { TutorSpeaker } from './tutor-speaker';
 import { TutorStore } from './tutor-store';
 import { VoiceCall } from './voice-call';
@@ -14,7 +15,7 @@ import { workspaceTools } from './workspace-tools';
 /**
  * The workspace, loaded on its own when the student opens an exercise, so the catalog does not
  * download it. Its stores live here: the attempt and the conversation shared by its zones, and the
- * browser signals (2.8) and the tab that edits the attempt (D-041), all destroyed on leaving and kept while moving between exercises (4.5), and the tools of the screen (2.5e).
+ * browser signals (2.8), the proactive tutor (2.7) and the tab that edits the attempt (D-041), all destroyed on leaving and kept while moving between exercises (4.5), and the tools of the screen (2.5e).
  */
 export const workspaceRoutes: Routes = [
   {
@@ -28,6 +29,8 @@ export const workspaceRoutes: Routes = [
       TutorSpeaker,
       VoiceCall,
       BrowserSignals,
+      // The tutor that steps in on its own (2.7); not in the teacher's preview (D-061)
+      ProactivityMonitor,
       // Its tools, for our tutor and for the agents of the browser while it is open (2.5e)
       provideAppTools(workspaceTools),
     ],

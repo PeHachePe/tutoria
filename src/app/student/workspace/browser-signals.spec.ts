@@ -172,4 +172,23 @@ describe('BrowserSignals', () => {
       expect(log).not.toHaveBeenCalled();
     });
   });
+
+  describe('what it recorded, for the proactive tutor (2.7)', () => {
+    it('gives the events of each attempt, in the order it recorded them', () => {
+      signals.pasted(40);
+      signals.hidden();
+      vi.advanceTimersByTime(MIN_AWAY_MS);
+      signals.returned();
+      attempt.set(attemptOf('attempt-2'));
+      signals.pasted(10);
+
+      expect(signals.events('attempt-1').map((event) => event.type)).toEqual([
+        'paste',
+        'focus_lost',
+        'focus_gained',
+      ]);
+      expect(signals.events('attempt-2')).toEqual([log.mock.calls[3][0]]);
+      expect(signals.events('attempt-3')).toEqual([]);
+    });
+  });
 });

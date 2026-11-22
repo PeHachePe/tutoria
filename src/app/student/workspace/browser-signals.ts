@@ -1,6 +1,7 @@
 import { DestroyRef, inject, Service } from '@angular/core';
 
 import { EventLogger } from '../../core/event-logger';
+import type { NewProcessEvent } from '../../data/process-event';
 import { AttemptStore } from './attempt-store';
 
 /**
@@ -31,16 +32,23 @@ export class BrowserSignals {
   /** Not state: nothing is drawn from it, so plain fields instead of signals. */
   private absence: Absence | undefined;
   private leaveTimer: ReturnType<typeof setTimeout> | undefined;
+  /** What it recorded in this visit, which the proactive tutor reads with what was loaded (2.7). */
+  private readonly recorded: NewProcessEvent[] = [];
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.leaveTimer));
+  }
+
+  /** The events recorded for an attempt in this visit, oldest first. */
+  events(attemptId: string): readonly NewProcessEvent[] {
+    return this.recorded.filter((event) => event.attemptId === attemptId);
   }
 
   /** The student pasted text from outside the code into the editor. */
   pasted(length: number): void {
     const attemptId = this.openAttemptId();
     if (!attemptId) return;
-    this.logger.log({
+    this.record({
       attemptId,
       type: 'paste',
       timestamp: isoTime(Date.now()),
@@ -78,7 +86,7 @@ export class BrowserSignals {
     this.absence = undefined;
     if (!absence.recorded) return;
     const now = Date.now();
-    this.logger.log({
+    this.record({
       attemptId: absence.attemptId,
       type: 'focus_gained',
       timestamp: isoTime(now),
@@ -89,12 +97,17 @@ export class BrowserSignals {
   private recordLeave(absence: Absence): void {
     clearTimeout(this.leaveTimer);
     absence.recorded = true;
-    this.logger.log({
+    this.record({
       attemptId: absence.attemptId,
       type: 'focus_lost',
       timestamp: isoTime(absence.since),
       detail: null,
     });
+  }
+
+  private record(event: NewProcessEvent): void {
+    this.recorded.push(event);
+    this.logger.log(event);
   }
 
   /** A submitted attempt is only read: nothing the student does there is a signal. */

@@ -12,11 +12,11 @@ describe('describeEvent', () => {
     [{ ...base, type: 'submit', detail: null }, 'Entrega'],
     [{ ...base, type: 'hint_requested', detail: { level: 2 } }, 'Pista de nivel 2'],
     [
-      { ...base, type: 'proactive_intervention', detail: { silent: false } },
+      { ...base, type: 'proactive_intervention', detail: { silent: false, reason: 'failures' } },
       'Intervención proactiva',
     ],
     [
-      { ...base, type: 'proactive_intervention', detail: { silent: true } },
+      { ...base, type: 'proactive_intervention', detail: { silent: true, reason: 'idle' } },
       'Intervención proactiva (calla)',
     ],
     [{ ...base, type: 'paste', detail: { length: 240 } }, 'Pegado de 240 caracteres'],

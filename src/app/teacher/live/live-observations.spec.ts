@@ -44,7 +44,11 @@ describe('liveObservations', () => {
   });
 
   it('ends with the perseverance: a breakthrough, then the exercises repeated', () => {
-    const row = testRow({ ...working, breakthrough: { at: ago(3), failures: 5 }, repeated: 2 });
+    const row = testRow({
+      ...working,
+      breakthrough: { at: ago(3), failures: 5, testId: 't1' },
+      repeated: 2,
+    });
 
     expect(liveObservations(row)).toEqual([
       { kind: 'breakthrough', failures: 5 },

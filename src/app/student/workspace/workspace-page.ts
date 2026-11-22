@@ -22,6 +22,7 @@ import { nextInBlock } from '../catalog/catalog-blocks';
 import { AttemptStore } from './attempt-store';
 import { TutorSpeaker } from './tutor-speaker';
 import { BrowserSignals } from './browser-signals';
+import { ProactivityMonitor } from './proactivity-monitor';
 import { VoiceCall } from './voice-call';
 import { WorkspaceLayout } from './workspace-layout';
 
@@ -94,12 +95,15 @@ export class WorkspacePage {
   private readonly speaker = inject(TutorSpeaker);
   /** A call waits on hold with the tab hidden: the microphone is never open out of sight (2.11). */
   private readonly call = inject(VoiceCall);
+  /** The tutor that steps in on its own, with the thresholds of the exercise (2.7). */
+  private readonly proactivity = inject(ProactivityMonitor);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
   protected readonly detail = resource({
     params: () => this.id(),
     loader: async ({ params: assignmentId, abortSignal }) => {
       const detail = await this.exercises.getDetail(assignmentId);
+      this.proactivity.watch(detail.exercise);
       // The tab says which exercise it is, not just «Ejercicio» (WCAG 2.4.2), unless the student left.
       if (!abortSignal.aborted) {
         this.titles.setScreenTitle(exerciseText(detail.exercise, this.locale).title);

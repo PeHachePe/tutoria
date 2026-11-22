@@ -2,7 +2,13 @@ import { inject, Service } from '@angular/core';
 
 import { DataError } from '../data-error';
 import type { ProcessEvent } from '../process-event';
-import type { TutorEvent, TutorInteraction, TutorPreviewRequest, TutorRequest } from '../tutor';
+import type {
+  ProactiveReason,
+  TutorEvent,
+  TutorInteraction,
+  TutorPreviewRequest,
+  TutorRequest,
+} from '../tutor';
 import { TutorService } from '../tutor-service';
 import { findOwnAttempt, findRow, now, requireOpenAttempt } from './mock-access';
 import { MockDb } from './mock-db';
@@ -65,10 +71,8 @@ export class MockTutorService extends TutorService {
     answer: ScriptedAnswer;
     interactionId: string | null;
   } {
-    const { attemptId, kind, message, code, language, results } = request;
-    if (kind === 'question' && !message?.trim()) {
-      throw new DataError('invalid', 'A question needs its message');
-    }
+    const { attemptId, kind, message, reason, code, language, results } = request;
+    checkRequest(request);
     const tables = this.db.tables();
     const attempt = findOwnAttempt(tables, this.db.requireUser(), attemptId);
     if (attempt.status === 'submitted') {
@@ -85,6 +89,7 @@ export class MockTutorService extends TutorService {
     const answer = scriptedAnswer({
       kind,
       message,
+      reason,
       code,
       status: attempt.status,
       previous,
@@ -126,9 +131,9 @@ export class MockTutorService extends TutorService {
   private preview(request: TutorPreviewRequest): ScriptedAnswer {
     const { kind, message, code, language, results, preview } = request;
     this.db.requireUser('teacher', 'admin');
-    if (kind === 'question' && !message?.trim()) {
-      throw new DataError('invalid', 'A question needs its message');
-    }
+    checkRequest(request);
+    // The teacher's preview never steps in on its own (D-061)
+    if (kind === 'proactive') throw new DataError('invalid', 'A try gets no interventions');
     const { exercise } = preview;
     return scriptedAnswer({
       kind,
@@ -144,7 +149,7 @@ export class MockTutorService extends TutorService {
 
   /** The process event the server records for a hint or a proactive intervention (2.8). */
   private eventOf(
-    { attemptId, kind }: TutorRequest,
+    { attemptId, kind, reason }: TutorRequest,
     answer: ScriptedAnswer,
     timestamp: string,
   ): ProcessEvent | undefined {
@@ -153,9 +158,24 @@ export class MockTutorService extends TutorService {
       case 'hint':
         return { ...base, type: 'hint_requested', detail: { level: answer.hintLevel } };
       case 'proactive':
-        return { ...base, type: 'proactive_intervention', detail: { silent: answer.silent } };
+        return {
+          ...base,
+          type: 'proactive_intervention',
+          // `checkRequest()` made sure an intervention brings its reason
+          detail: { silent: answer.silent, reason: reason as ProactiveReason },
+        };
       case 'question':
         return undefined;
     }
+  }
+}
+
+/** What the server turns down before anything else (2.6, 2.7). */
+function checkRequest({ kind, message, reason }: TutorRequest | TutorPreviewRequest): void {
+  if (kind === 'question' && !message?.trim()) {
+    throw new DataError('invalid', 'A question needs its message');
+  }
+  if ((kind === 'proactive') !== (reason !== undefined)) {
+    throw new DataError('invalid', 'An intervention needs its reason, and only one has it');
   }
 }

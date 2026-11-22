@@ -1,4 +1,4 @@
-import { computed, inject, linkedSignal, resource, Service } from '@angular/core';
+import { computed, inject, linkedSignal, resource, Service, signal } from '@angular/core';
 
 import { LanguageService } from '../../core/i18n/language-service';
 import { ToolRegistry } from '../../core/tools/app-tool';
@@ -9,14 +9,17 @@ import {
   EMOTION_REACTIONS,
   type HintLevel,
   type Intensity,
+  type ProactiveReason,
   reachedHintLevel,
   type ReactionKind,
   type ToolRequest,
   type ToolResult,
   type TutorInteraction,
   type TutorRequest,
+  type TutorEvent,
   type TutorTrigger,
 } from '../../data/tutor';
+import type { ProcessEvent } from '../../data/process-event';
 import { TutorService } from '../../data/tutor-service';
 import { TUTOR_TOOL } from '../../data/tutor/tutor-tools';
 import type { LineMark } from '../../shared/code-editor/line-mark';
@@ -63,6 +66,8 @@ export function waitsForStudent(call: ToolRequest): boolean {
 export interface TutorTurn {
   readonly id: string;
   readonly trigger: TutorTrigger;
+  /** Why the tutor stepped in, for an intervention of this visit (2.7). */
+  readonly reason?: ProactiveReason;
   /** What the student wrote; null for a hint or an intervention of the tutor. */
   readonly studentMessage: string | null;
   /** The answer, which grows while it arrives. */
@@ -117,6 +122,19 @@ export class TutorStore {
   );
 
   readonly turns = this.turnsState.asReadonly();
+
+  /** The process events loaded with the conversation, for the proactive tutor (2.7); none until then. */
+  readonly loadedEvents = computed<readonly ProcessEvent[]>(() =>
+    this.history.hasValue() ? this.history.value().events : [],
+  );
+
+  /** The student has a question half written: the tutor does not step in (2.7). */
+  private readonly draftingState = signal(false);
+  readonly drafting = this.draftingState.asReadonly();
+
+  /** An intervention is on its way: unseen until its first words arrive. */
+  private readonly interveningState = signal(false);
+  readonly intervening = this.interveningState.asReadonly();
 
   /** The lines of the code the tutor marked (`highlightLines`); none in another exercise. */
   private readonly marksState = linkedSignal<readonly LineMark[]>(() => {
@@ -221,6 +239,64 @@ export class TutorStore {
     this.history.reload();
   }
 
+  /** Whether the question field holds something: the composer tells it as the student writes. */
+  setDrafting(on: boolean): void {
+    this.draftingState.set(on);
+  }
+
+  /**
+   * The tutor steps in on its own, for a reason the proactive tutor found (2.7). Its turn only shows
+   * with its first words: if the tutor keeps quiet, the request fails (429 too) or the student asked
+   * meanwhile and is still being answered, nothing is left, neither turn nor notice nor reaction.
+   * True if the tutor spoke.
+   */
+  async intervene(reason: ProactiveReason): Promise<boolean> {
+    const attempt = this.attemptStore.attempt();
+    if (!attempt || !this.canAsk() || this.interveningState()) return false;
+    this.interveningState.set(true);
+    const id = crypto.randomUUID();
+    const drop = () => this.turnsState.update((turns) => turns.filter((turn) => turn.id !== id));
+    let meta: Partial<TutorTurn> = {};
+    let shown = false;
+    try {
+      const events = this.tutor.ask({
+        requestId: id,
+        attemptId: attempt.id,
+        kind: 'proactive',
+        reason,
+        code: attempt.currentCode,
+        language: this.language,
+      });
+      for await (const event of events) {
+        if (event.type === 'meta') meta = metaChange(event);
+        if (event.type === 'done' && event.silent) {
+          drop();
+          return false;
+        }
+        if (event.type !== 'delta') continue;
+        if (!shown) {
+          // Another exercise has its own conversation, and a question asked meanwhile goes first
+          if (this.attemptId() !== attempt.id || this.answering()) return false;
+          this.turnsState.update((turns) => [
+            ...turns,
+            { ...newTurn(id, 'proactive', null), reason, ...meta },
+          ]);
+          shown = true;
+        }
+        this.patch(id, (turn) => ({ answer: turn.answer + event.text }));
+      }
+    } catch {
+      drop();
+      return false;
+    } finally {
+      this.interveningState.set(false);
+    }
+    if (!shown) return false;
+    this.patch(id, () => ({ status: 'done' }));
+    await this.runWithoutWaiting(id);
+    return true;
+  }
+
   /** Marks lines of the code with a note, or clears them with none (2.5e). */
   mark(lines: readonly LineMark[]): void {
     this.marksState.set(lines);
@@ -307,29 +383,8 @@ export class TutorStore {
   ): Promise<void> {
     const attempt = this.attemptStore.attempt();
     if (!attempt || !this.canAsk()) return;
-    this.turnsState.update((turns) => [
-      ...turns,
-      {
-        id,
-        trigger: kind,
-        studentMessage: message ?? null,
-        answer: '',
-        hintLevel: null,
-        emotion: null,
-        intensity: null,
-        reaction: null,
-        elusion: false,
-        createdAt: new Date().toISOString(),
-        status: 'answering',
-        fresh: true,
-        actions: [],
-        queried: [],
-      },
-    ]);
-    const patch = (change: (turn: TutorTurn) => Partial<TutorTurn>) =>
-      this.turnsState.update((turns) =>
-        turns.map((turn) => (turn.id === id ? { ...turn, ...change(turn) } : turn)),
-      );
+    this.turnsState.update((turns) => [...turns, newTurn(id, kind, message ?? null)]);
+    const patch = (change: (turn: TutorTurn) => Partial<TutorTurn>) => this.patch(id, change);
 
     try {
       const request: TutorRequest = {
@@ -351,17 +406,7 @@ export class TutorStore {
               queries = event.calls;
               break;
             case 'meta':
-              patch(() => ({
-                hintLevel: event.hintLevel,
-                emotion: event.emotion,
-                intensity: event.intensity,
-                reaction: event.reaction ?? EMOTION_REACTIONS[event.emotion],
-                elusion: event.elusion ?? false,
-                actions: (event.actions ?? []).map((call) => ({
-                  call,
-                  status: 'pending' as const,
-                })),
-              }));
+              patch(() => metaChange(event));
               break;
             case 'delta':
               patch((turn) => ({ answer: turn.answer + event.text }));
@@ -388,6 +433,13 @@ export class TutorStore {
     await this.runWithoutWaiting(id);
   }
 
+  /** Changes a turn, if it is still in the conversation: another exercise has its own. */
+  private patch(id: string, change: (turn: TutorTurn) => Partial<TutorTurn>): void {
+    this.turnsState.update((turns) =>
+      turns.map((turn) => (turn.id === id ? { ...turn, ...change(turn) } : turn)),
+    );
+  }
+
   /** Once the answer is whole, the actions that only change the screen run by themselves (2.5e). */
   private async runWithoutWaiting(turnId: string): Promise<void> {
     const actions = this.turnsState().find((turn) => turn.id === turnId)?.actions ?? [];
@@ -395,6 +447,38 @@ export class TutorStore {
       if (!waitsForStudent(action.call)) await this.run(turnId, index, action.call);
     }
   }
+}
+
+/** A turn asked in this visit, still waiting for its answer. */
+function newTurn(id: string, trigger: TutorTrigger, studentMessage: string | null): TutorTurn {
+  return {
+    id,
+    trigger,
+    studentMessage,
+    answer: '',
+    hintLevel: null,
+    emotion: null,
+    intensity: null,
+    reaction: null,
+    elusion: false,
+    createdAt: new Date().toISOString(),
+    status: 'answering',
+    fresh: true,
+    actions: [],
+    queried: [],
+  };
+}
+
+/** What the `meta` of an answer decides of its turn: level, emotion, reaction and actions (2.6). */
+function metaChange(event: Extract<TutorEvent, { type: 'meta' }>): Partial<TutorTurn> {
+  return {
+    hintLevel: event.hintLevel,
+    emotion: event.emotion,
+    intensity: event.intensity,
+    reaction: event.reaction ?? EMOTION_REACTIONS[event.emotion],
+    elusion: event.elusion ?? false,
+    actions: (event.actions ?? []).map((call) => ({ call, status: 'pending' as const })),
+  };
 }
 
 function pastTurn(interaction: TutorInteraction): TutorTurn {

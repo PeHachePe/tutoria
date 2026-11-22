@@ -224,7 +224,7 @@ describe('liveRow', () => {
 
       expect(
         row({ attempts: [attempt], events: [...failing, e.run('a1', ago(2))] }).breakthrough,
-      ).toEqual({ at: ago(2), failures: 3 });
+      ).toEqual({ at: ago(2), failures: 3, testId: 't1' });
     });
 
     it('forgets one older than the session', () => {

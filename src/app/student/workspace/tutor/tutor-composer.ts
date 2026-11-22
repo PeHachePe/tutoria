@@ -88,6 +88,7 @@ export class TutorComposer {
           this.stopDictation();
           // As the Angular guide does after a submission: empty, and untouched again
           field().reset({ message: '' });
+          this.store.setDrafting(false);
           // Not awaited: the field is free for the next question while the tutor answers
           void this.store.ask(message);
           return undefined;
@@ -121,7 +122,11 @@ export class TutorComposer {
   };
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopDictation());
+    inject(DestroyRef).onDestroy(() => {
+      this.stopDictation();
+      // What was written goes with the field
+      this.store.setDrafting(false);
+    });
   }
 
   focus(): void {
@@ -132,6 +137,7 @@ export class TutorComposer {
   insert(text: string): void {
     const message = appendDictation(this.model().message, text, MAX_QUESTION_LENGTH);
     this.model.update((value) => ({ ...value, message }));
+    this.keepDraft(message);
   }
 
   /** Intro sends; with Mayús, or while an input method composes a character, it is a new line. */
@@ -161,7 +167,8 @@ export class TutorComposer {
   }
 
   /** Only the keyboard fires `input`: typing takes over from the dictation. */
-  protected typed(): void {
+  protected typed(event: Event): void {
+    this.keepDraft((event.target as HTMLTextAreaElement).value);
     this.stopDictation();
     this.dictationError.set(null);
     this.nothingHeard.set(false);
@@ -202,6 +209,7 @@ export class TutorComposer {
     this.heardAny = true;
     const message = appendDictation(this.written, text, MAX_QUESTION_LENGTH);
     this.model.update((value) => ({ ...value, message }));
+    this.keepDraft(message);
     if (final) this.written = message;
     this.silence.schedule(this.stopOnSilence);
   }
@@ -220,6 +228,11 @@ export class TutorComposer {
    */
   private sayIfNothingHeard(): void {
     if (!this.heardAny) this.nothingHeard.set(true);
+  }
+
+  /** The tutor does not step in while a question is half written (2.7): only text counts, not the focus. */
+  private keepDraft(message: string): void {
+    this.store.setDrafting(message.trim() !== '');
   }
 
   private stopDictation(): void {

@@ -1,4 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { getDebugNode } from '@angular/core';
 import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
@@ -16,6 +17,8 @@ import {
   FakeTabChannel,
   provideTestEditingTab,
 } from '../../../student/workspace/editing-tab-testing';
+import { ProactivityMonitor } from '../../../student/workspace/proactivity-monitor';
+import { TutorStore } from '../../../student/workspace/tutor-store';
 import { openTryout } from './exercise-tryout-dialog';
 import { TRYOUT_SUM } from './tryout-testing';
 
@@ -88,6 +91,15 @@ describe('ExerciseTryoutDialog', () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(within(dialog).getByRole('heading', { name: 'Suma' })),
     );
+  });
+
+  it('never has the tutor step in on its own (D-061)', async () => {
+    const { dialog } = await openDialog();
+
+    // The workspace of the try has its stores, the tutor's among them, but not the proactive one
+    const injector = getDebugNode(dialog.querySelector('app-tryout-workspace'))?.injector;
+    expect(injector?.get(TutorStore, null)).toBeInstanceOf(TutorStore);
+    expect(injector?.get(ProactivityMonitor, null)).toBeNull();
   });
 
   it('closes with its button, not with Esc', async () => {

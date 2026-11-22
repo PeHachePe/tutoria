@@ -31,7 +31,7 @@
       cdkAutosizeMaxRows="4"
       [formField]="questionForm.message"
       (keydown.enter)="sendOnEnter($event)"
-      (input)="typed()"
+      (input)="typed($event)"
     ></textarea>
     <span matSuffix class="flex">
       @if (canDictate()) {

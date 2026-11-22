@@ -73,7 +73,7 @@ describe('attemptTimeline', () => {
   it('keeps the hints and interventions without a recorded answer, and the silent ones', () => {
     const lonelyHint = e.hint('a1', ago(20), 3);
     const farAnswer = testInteraction('a1', ago(10), { hintLevel: 1 });
-    const silent = { ...e.proactive('a1', ago(15)), detail: { silent: true } };
+    const silent = e.proactive('a1', ago(15), 'failures', true);
     const lonelyProactive = e.proactive('a1', ago(12));
 
     const entries = attemptTimeline(

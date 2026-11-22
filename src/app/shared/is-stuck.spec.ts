@@ -1,14 +1,7 @@
 import type { Attempt, StoredAttemptStatus } from '../data/attempt';
 import type { StuckThresholds } from '../data/exercise';
 import type { ProcessEvent } from '../data/process-event';
-import {
-  failingStreaks,
-  failureStreak,
-  isStuck,
-  lastActivityAt,
-  longestFailureStreak,
-  stuckReason,
-} from './is-stuck';
+import { isStuck, longestFailureStreak, stuckReason } from './is-stuck';
 
 const NOW = Date.parse('2026-11-07T10:00:00.000Z');
 const MINUTE = 60_000;
@@ -47,7 +40,7 @@ function event(
     case 'paste':
       return { ...base, type, detail: { length: 40 } };
     case 'proactive_intervention':
-      return { ...base, type, detail: { silent: false } };
+      return { ...base, type, detail: { silent: false, reason: 'idle' } };
     case 'hint_requested':
       return { ...base, type, detail: { level: 1 } };
     case 'focus_gained':
@@ -180,45 +173,6 @@ describe('stuckReason', () => {
 
   it('is null when the student is not stuck', () => {
     expect(stuckReason(attempt('in_progress', ago(1)), [], THRESHOLDS, NOW)).toBeNull();
-  });
-});
-
-describe('lastActivityAt', () => {
-  it('is the latest change of the attempt or activity event, in milliseconds', () => {
-    const events = [event('paste', 2), event('focus_lost', 1)];
-
-    expect(lastActivityAt(attempt('in_progress', ago(5)), events)).toBe(NOW - 2 * MINUTE);
-  });
-});
-
-describe('failureStreak', () => {
-  it('counts the latest runs in a row in which one same test failed', () => {
-    expect(failureStreak([run(3, ['t2']), run(2, ['t1', 't2']), run(1, ['t2'])])).toBe(3);
-  });
-
-  it('is 0 without runs', () => {
-    expect(failureStreak([])).toBe(0);
-  });
-});
-
-describe('failingStreaks', () => {
-  it('is empty without runs', () => {
-    expect(failingStreaks([])).toEqual(new Map());
-  });
-
-  it('is empty when every test passes in the latest run', () => {
-    expect(failingStreaks([run(2, ['t1']), run(1, [])])).toEqual(new Map());
-  });
-
-  it('gives each test failing in the latest run the runs in a row it has failed', () => {
-    const events = [run(4, ['t1']), run(3, ['t1', 't2']), run(2, ['t1']), run(1, ['t1', 't3'])];
-
-    expect(failingStreaks(events)).toEqual(
-      new Map([
-        ['t1', 4],
-        ['t3', 1],
-      ]),
-    );
   });
 });
 

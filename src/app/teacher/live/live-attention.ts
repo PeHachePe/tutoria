@@ -2,7 +2,7 @@ import type { Attempt } from '../../data/attempt';
 import type { StuckThresholds, Test } from '../../data/exercise';
 import type { ProcessEvent } from '../../data/process-event';
 import { isStuckMessage, MAX_HINT_LEVEL, type TutorInteraction } from '../../data/tutor';
-import { failingStreaks, failureStreak } from '../../shared/is-stuck';
+import { failingStreaks, failureStreak } from '../../shared/proactive-reason';
 
 /** Messages in a row telling the tutor they do not know how to go on (D-068). */
 export const CHAT_STUCK_MESSAGES = 2;

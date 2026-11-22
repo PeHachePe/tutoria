@@ -1,4 +1,5 @@
 import type { ProcessEvent } from './process-event';
+import type { ProactiveReason } from './tutor';
 
 /** Test helpers: process events of one attempt, at a time given in milliseconds. */
 
@@ -19,11 +20,16 @@ export const testEvents = {
     ({ ...base(attemptId, at), type: 'submit', detail: null }) satisfies ProcessEvent,
   hint: (attemptId: string, at: number, level: 1 | 2 | 3 = 1) =>
     ({ ...base(attemptId, at), type: 'hint_requested', detail: { level } }) satisfies ProcessEvent,
-  proactive: (attemptId: string, at: number) =>
+  proactive: (
+    attemptId: string,
+    at: number,
+    reason: ProactiveReason = 'failures',
+    silent = false,
+  ) =>
     ({
       ...base(attemptId, at),
       type: 'proactive_intervention',
-      detail: { silent: false },
+      detail: { silent, reason },
     }) satisfies ProcessEvent,
   paste: (attemptId: string, at: number, length = 40) =>
     ({ ...base(attemptId, at), type: 'paste', detail: { length } }) satisfies ProcessEvent,

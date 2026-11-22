@@ -36,11 +36,12 @@ async function renderComposer({
   const fake = new FakeSpeechService();
   fake.place = place;
   const ask = vi.fn(() => Promise.resolve());
+  const setDrafting = vi.fn();
   const stopSpeaking = vi.fn();
   const view = await render(TutorComposer, {
     providers: [
       { provide: AuthStore, useValue: { userId: signal('u1') } },
-      { provide: TutorStore, useValue: { canAsk: signal(true), ask } },
+      { provide: TutorStore, useValue: { canAsk: signal(true), ask, setDrafting } },
       provideFakeSpeech(fake),
       speaker ? [{ provide: TutorSpeaker, useValue: { stop: stopSpeaking } }] : [],
       speaker && inCall !== null
@@ -56,7 +57,7 @@ async function renderComposer({
   } else {
     await view.fixture.whenStable();
   }
-  return { ...view, fake, ask, stopSpeaking };
+  return { ...view, fake, ask, setDrafting, stopSpeaking };
 }
 
 function dictateButton(): HTMLElement | null {
@@ -370,5 +371,43 @@ describe('TutorComposer, dictating', () => {
     view.fixture.componentInstance.insert('por qué falla');
     view.fixture.detectChanges();
     expect(field().value).toBe('Una duda. Por qué falla');
+  });
+
+  describe('a question half written, which the tutor does not interrupt (2.7)', () => {
+    it('is written, then emptied, then sent', async () => {
+      const view = await renderComposer({ voice: false });
+
+      await userEvent.type(field(), 'Una');
+      expect(view.setDrafting).toHaveBeenLastCalledWith(true);
+      await userEvent.clear(field());
+      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
+      await userEvent.type(field(), '  ');
+      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
+
+      await userEvent.type(field(), '¿Y ahora?{Enter}');
+      expect(view.ask).toHaveBeenCalled();
+      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
+    });
+
+    it('is dictated, or put there from a call', async () => {
+      const view = await renderComposer();
+      await startDictating(view);
+
+      hear(view, 'por qué');
+      expect(view.setDrafting).toHaveBeenLastCalledWith(true);
+
+      view.setDrafting.mockClear();
+      view.fixture.componentInstance.insert('falla');
+      expect(view.setDrafting).toHaveBeenLastCalledWith(true);
+    });
+
+    it('is gone with the field', async () => {
+      const view = await renderComposer({ voice: false });
+      await userEvent.type(field(), 'Una');
+
+      view.fixture.destroy();
+
+      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
+    });
   });
 });

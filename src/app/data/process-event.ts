@@ -1,4 +1,4 @@
-import type { HintLevel } from './tutor';
+import type { HintLevel, ProactiveReason } from './tutor';
 
 interface ProcessEventBase<Type extends string, Detail> {
   readonly id: string;
@@ -13,7 +13,11 @@ export type ProcessEvent =
   | ProcessEventBase<'run', RunDetail>
   | ProcessEventBase<'submit', null>
   | ProcessEventBase<'hint_requested', { readonly level: HintLevel }>
-  | ProcessEventBase<'proactive_intervention', { readonly silent: boolean }>
+  /** `reason`: why the tutor stepped in (2.7); `silent`: it kept to itself. */
+  | ProcessEventBase<
+      'proactive_intervention',
+      { readonly silent: boolean; readonly reason: ProactiveReason }
+    >
   | ProcessEventBase<'paste', { readonly length: number }>
   | ProcessEventBase<'focus_lost', null>
   /** `awayMs`: how long the student was out of the window, since its `focus_lost`. */

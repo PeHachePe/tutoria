@@ -5,6 +5,7 @@ import {
   type HintLevel,
   type Intensity,
   isStuckMessage,
+  type ProactiveReason,
   type ReactionKind,
   skeletonBlock,
   skeletonParameters,
@@ -28,6 +29,8 @@ type ScriptTurn = Pick<
 export interface ScriptInput {
   readonly kind: TutorTrigger;
   readonly message?: string;
+  /** Why it steps in, for `proactive` (2.7). */
+  readonly reason?: ProactiveReason;
   readonly code: string;
   readonly status: StoredAttemptStatus;
   /** The earlier interactions of the attempt (or turns of a try, 4.3e), oldest first. */
@@ -99,6 +102,7 @@ const STATEMENT_PATTERN = /enunciado|enunciat|statement/;
 export function scriptedAnswer({
   kind,
   message,
+  reason,
   code,
   status,
   previous,
@@ -123,10 +127,17 @@ export function scriptedAnswer({
     case 'hint':
       return answer(hint, 'encouragement', HINT_REACTIONS[hintLevel]);
     case 'proactive':
+      // An achievement is always worth it (2.7)
+      if (reason === 'achievement') {
+        return answer(script.proactive.achievement, 'celebration', 'party');
+      }
       // Once is enough: right after stepping in, it lets the student work
-      return previous.at(-1)?.trigger === 'proactive'
-        ? { ...answer('', 'encouragement', 'eyes'), silent: true }
-        : answer(script.proactive, 'encouragement', proactiveReaction(previous));
+      if (previous.at(-1)?.trigger === 'proactive') {
+        return { ...answer('', 'encouragement', 'eyes'), silent: true };
+      }
+      return reason === 'idle'
+        ? answer(script.proactive.idle, 'encouragement', 'sleepy')
+        : answer(script.proactive.failures, 'encouragement', proactiveReaction(previous));
     case 'question': {
       const question = withoutAccents(message ?? '');
       // Asking for the solution gets a joke: «hey, not that»
@@ -181,7 +192,7 @@ function withoutAccents(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
-/** The proactive tutor takes turns: it looks in, then shows it understands. */
+/** The proactive tutor takes turns with the failures: it looks in, then shows it understands. */
 function proactiveReaction(previous: readonly ScriptTurn[]): ReactionKind {
   const before = previous.filter((interaction) => interaction.trigger === 'proactive').length;
   return PROACTIVE_REACTIONS[before % PROACTIVE_REACTIONS.length];

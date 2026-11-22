@@ -162,26 +162,50 @@ describe('scripted answer', () => {
     expect(answer.reaction).toBe('party');
   });
 
-  it('steps in on its own, but keeps quiet right after doing so', () => {
-    expect(scriptedAnswer(input({ kind: 'proactive' }))).toEqual({
-      text: SPANISH.proactive,
-      hintLevel: 1,
-      emotion: 'encouragement',
-      reaction: 'eyes',
-      intensity: 3,
-      elusion: false,
-      silent: false,
+  describe('stepping in on its own (2.7)', () => {
+    const proactive = (overrides: Partial<ScriptInput>) =>
+      scriptedAnswer(input({ kind: 'proactive', reason: 'failures', ...overrides }));
+
+    it('helps with the failures, taking turns between looking in and understanding', () => {
+      expect(proactive({})).toEqual({
+        text: SPANISH.proactive.failures,
+        hintLevel: 1,
+        emotion: 'encouragement',
+        reaction: 'eyes',
+        intensity: 3,
+        elusion: false,
+        silent: false,
+      });
+      expect(
+        proactive({ previous: [interaction('proactive'), interaction('question')] }).reaction,
+      ).toBe('empathy');
     });
-    expect(
-      scriptedAnswer(
-        input({ kind: 'proactive', previous: [interaction('proactive'), interaction('question')] }),
-      ).reaction,
-    ).toBe('empathy');
-    const quiet = scriptedAnswer(
-      input({ kind: 'proactive', previous: [interaction('proactive')] }),
-    );
-    expect(quiet.silent).toBe(true);
-    expect(quiet.text).toBe('');
+
+    it('asks a student who stopped what holds them back, sleepily', () => {
+      const answer = proactive({ reason: 'idle' });
+
+      expect(answer.text).toBe(SPANISH.proactive.idle);
+      expect(answer.reaction).toBe('sleepy');
+      expect(answer.silent).toBe(false);
+    });
+
+    it('keeps quiet when it helped right before', () => {
+      const quiet = proactive({ reason: 'idle', previous: [interaction('proactive')] });
+
+      expect(quiet.silent).toBe(true);
+      expect(quiet.text).toBe('');
+    });
+
+    it('always celebrates an achievement, also right after stepping in', () => {
+      expect(proactive({ reason: 'achievement', previous: [interaction('proactive')] })).toEqual(
+        expect.objectContaining({
+          text: SPANISH.proactive.achievement,
+          emotion: 'celebration',
+          reaction: 'party',
+          silent: false,
+        }),
+      );
+    });
   });
 
   it('answers in the language of the request, like the real tutor', () => {
@@ -191,8 +215,8 @@ describe('scripted answer', () => {
     expect(scriptedAnswer(input({ message: 'Give me the code', language: 'en' })).text).toBe(
       TUTOR_SCRIPTS.en.elusion,
     );
-    expect(scriptedAnswer(input({ kind: 'proactive', language: 'ca' })).text).toBe(
-      TUTOR_SCRIPTS.ca.proactive,
+    expect(scriptedAnswer(input({ kind: 'proactive', reason: 'idle', language: 'ca' })).text).toBe(
+      TUTOR_SCRIPTS.ca.proactive.idle,
     );
   });
 
@@ -250,7 +274,7 @@ describe('scripted answer', () => {
       expect(
         [
           script.elusion,
-          script.proactive,
+          ...Object.values(script.proactive),
           script.start,
           script.statement,
           script.passed,

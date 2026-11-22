@@ -180,8 +180,8 @@ describe('MockTutorService', () => {
   it('records a proactive intervention, and keeps quiet without an interaction', async () => {
     setUp();
 
-    await collect(service.ask(request({ kind: 'proactive' })));
-    const quiet = await collect(service.ask(request({ kind: 'proactive' })));
+    await collect(service.ask(request({ kind: 'proactive', reason: 'failures' })));
+    const quiet = await collect(service.ask(request({ kind: 'proactive', reason: 'idle' })));
 
     expect(quiet).toEqual([
       {
@@ -196,9 +196,36 @@ describe('MockTutorService', () => {
     ]);
     expect(db.tables().interactions).toHaveLength(1);
     expect(db.tables().events.map((event) => event.detail)).toEqual([
-      { silent: false },
-      { silent: true },
+      { silent: false, reason: 'failures' },
+      { silent: true, reason: 'idle' },
     ]);
+  });
+
+  it('celebrates an achievement with its reaction (2.7)', async () => {
+    setUp();
+
+    const events = await collect(
+      service.ask(request({ kind: 'proactive', reason: 'achievement' })),
+    );
+
+    expect(events[0]).toEqual(
+      expect.objectContaining({ type: 'meta', emotion: 'celebration', reaction: 'party' }),
+    );
+    expect(db.tables().events.map((event) => event.detail)).toEqual([
+      { silent: false, reason: 'achievement' },
+    ]);
+  });
+
+  it('turns down an intervention without its reason, and a reason without one', async () => {
+    setUp();
+
+    await expect(collect(service.ask(request({ kind: 'proactive' })))).rejects.toEqual(
+      new DataError('invalid', 'An intervention needs its reason, and only one has it'),
+    );
+    await expect(collect(service.ask(request({ reason: 'idle' })))).rejects.toEqual(
+      new DataError('invalid', 'An intervention needs its reason, and only one has it'),
+    );
+    expect(db.tables().events).toEqual([]);
   });
 
   it('writes a little at a time', async () => {
@@ -304,6 +331,15 @@ describe('MockTutorService', () => {
       await expect(
         collect(service.tryOut(preview({ kind: 'question', message: ' ' }))),
       ).rejects.toEqual(new DataError('invalid', 'A question needs its message'));
+    });
+
+    it('does not step in on its own in a try (D-061)', async () => {
+      setUp();
+      db.setSession(TEACHER_ID);
+
+      await expect(
+        collect(service.tryOut(preview({ kind: 'proactive', reason: 'idle' }))),
+      ).rejects.toEqual(new DataError('invalid', 'A try gets no interventions'));
     });
   });
 });

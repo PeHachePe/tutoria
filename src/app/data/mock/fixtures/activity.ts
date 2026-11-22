@@ -1,6 +1,11 @@
 import type { Attempt, StoredAttemptStatus } from '../../attempt';
 import type { ProcessEvent } from '../../process-event';
-import { type HintLevel, MAX_HINT_LEVEL, type TutorInteraction } from '../../tutor';
+import {
+  type HintLevel,
+  MAX_HINT_LEVEL,
+  type ProactiveReason,
+  type TutorInteraction,
+} from '../../tutor';
 import {
   assignmentId,
   blockAssignmentId,
@@ -30,7 +35,7 @@ type Step =
   | { readonly kind: 'run'; readonly failing: readonly number[] }
   | { readonly kind: 'hint' }
   | { readonly kind: 'question'; readonly message: string; readonly elusion: boolean }
-  | { readonly kind: 'proactive'; readonly silent: boolean }
+  | { readonly kind: 'proactive'; readonly reason: ProactiveReason; readonly silent: boolean }
   | { readonly kind: 'paste'; readonly length: number }
   | { readonly kind: 'away'; readonly minutes: number }
   | { readonly kind: 'submit' };
@@ -41,7 +46,11 @@ type Script = readonly Step[] | null;
 const run = (...failing: number[]): Step => ({ kind: 'run', failing });
 const hint: Step = { kind: 'hint' };
 const ask = (message: string, elusion = false): Step => ({ kind: 'question', message, elusion });
-const proactive = (silent = false): Step => ({ kind: 'proactive', silent });
+const proactive = (reason: ProactiveReason = 'failures', silent = false): Step => ({
+  kind: 'proactive',
+  reason,
+  silent,
+});
 const paste = (length: number): Step => ({ kind: 'paste', length });
 const away = (minutes: number): Step => ({ kind: 'away', minutes });
 const submit: Step = { kind: 'submit' };
@@ -321,7 +330,7 @@ const FEATURED_SCRIPTS: readonly (readonly Script[])[] = [
     [away(5), paste(240), run(), submit],
     [run(0, 1, 2, 3, 4), away(6), paste(310), run(), submit],
     [run(1), away(3), run()],
-    [paste(150), run(4), proactive(true), run(4)],
+    [paste(150), run(4), proactive('idle', true), run(4)],
     null,
     [],
     null,
@@ -592,14 +601,14 @@ function addAttempt({
           attemptId,
           type: 'proactive_intervention',
           timestamp,
-          detail: { silent: step.silent },
+          detail: { silent: step.silent, reason: step.reason },
         });
         if (!step.silent) {
           addInteraction({
             trigger: 'proactive',
             hintLevel: answerLevel(),
             studentMessage: null,
-            transcript: PAST_SCRIPT.proactive,
+            transcript: PAST_SCRIPT.proactive[step.reason],
             emotion: 'encouragement',
             intensity: 2,
             elusion: false,

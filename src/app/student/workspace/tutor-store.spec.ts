@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import type { Attempt, AttemptHistory, StoredAttemptStatus } from '../../data/attempt';
 import { AttemptService } from '../../data/attempt-service';
 import { DataError } from '../../data/data-error';
+import { testEvents } from '../../data/process-event-testing';
 import type { HintLevel, TutorEvent, TutorInteraction, TutorRequest } from '../../data/tutor';
 import { TutorService } from '../../data/tutor-service';
 import { appTool, ToolError, ToolRegistry } from '../../core/tools/app-tool';
@@ -470,6 +471,168 @@ describe('TutorStore', () => {
     await loaded();
     expect(store.loadError()).toBeUndefined();
     expect(store.canAsk()).toBe(true);
+  });
+
+  describe('stepping in on its own (2.7)', () => {
+    it('sends the reason, and the turn shows up with its first words', async () => {
+      await loaded();
+      const rest = deferred<void>();
+      ask.mockImplementation(() => answer(['¿Sigues ', 'ahí?'], 1, { waitFor: rest.promise }));
+
+      const stepping = store.intervene('idle');
+      await vi.waitFor(() => expect(store.intervening()).toBe(true));
+
+      // Until the first words arrive nothing shows: neither a turn nor «answering»
+      expect(store.turns()).toEqual([]);
+      expect(store.answering()).toBe(false);
+      rest.resolve();
+      expect(await stepping).toBe(true);
+
+      expect(ask).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'proactive', reason: 'idle', attemptId: 'a1' }),
+      );
+      expect(store.turns()).toEqual([
+        expect.objectContaining({
+          trigger: 'proactive',
+          reason: 'idle',
+          studentMessage: null,
+          answer: '¿Sigues ahí?',
+          hintLevel: 1,
+          status: 'done',
+          fresh: true,
+        }),
+      ]);
+      expect(store.intervening()).toBe(false);
+      expect(store.reaction()).not.toBeNull();
+    });
+
+    it('leaves nothing when the tutor keeps quiet', async () => {
+      await loaded();
+      ask.mockImplementation(() => answer([], 1, { silent: true }));
+
+      expect(await store.intervene('failures')).toBe(false);
+
+      expect(store.turns()).toEqual([]);
+      expect(store.reaction()).toBeNull();
+      expect(store.intervening()).toBe(false);
+    });
+
+    it('leaves nothing, not even an error, when it fails before or halfway', async () => {
+      await loaded();
+      ask.mockImplementationOnce(() => failing(new DataError('rate_limited')));
+      ask.mockImplementationOnce(async function* () {
+        yield { type: 'meta', emotion: 'joy', intensity: 1, hintLevel: 1 };
+        yield { type: 'delta', text: 'A medias' };
+        throw new DataError('network');
+      });
+
+      expect(await store.intervene('failures')).toBe(false);
+      expect(await store.intervene('failures')).toBe(false);
+
+      expect(store.turns()).toEqual([]);
+      expect(store.reaction()).toBeNull();
+    });
+
+    it('leaves nothing when it ends without a word', async () => {
+      await loaded();
+      ask.mockImplementation(() => answer([]));
+
+      expect(await store.intervene('idle')).toBe(false);
+
+      expect(store.turns()).toEqual([]);
+    });
+
+    it('is dropped when the student asked meanwhile and is still being answered', async () => {
+      await loaded();
+      const proactive = deferred<void>();
+      const question = deferred<void>();
+      ask.mockImplementationOnce(() => answer(['Tarde'], 1, { waitFor: proactive.promise }));
+      ask.mockImplementationOnce(() => answer(['Primero'], 1, { waitFor: question.promise }));
+
+      const stepping = store.intervene('failures');
+      await vi.waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
+      // The student can still ask: the intervention is not seen yet
+      const asking = store.ask('¿Qué falla?');
+      proactive.resolve();
+
+      expect(await stepping).toBe(false);
+      question.resolve();
+      await asking;
+      expect(store.turns().map((turn) => turn.answer)).toEqual(['Primero']);
+    });
+
+    it('is dropped when the student opened another exercise meanwhile', async () => {
+      await loaded();
+      const rest = deferred<void>();
+      ask.mockImplementation(() => answer(['Tarde'], 1, { waitFor: rest.promise }));
+      const stepping = store.intervene('idle');
+      await vi.waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
+
+      attempt.set(attemptOf('a2'));
+      await loaded();
+      rest.resolve();
+
+      expect(await stepping).toBe(false);
+      expect(store.turns()).toEqual([]);
+    });
+
+    it('sends nothing when the student cannot ask, or with another on its way', async () => {
+      expect(await store.intervene('idle')).toBe(false);
+      await loaded();
+      const rest = deferred<void>();
+      ask.mockImplementation(() => answer(['Una'], 1, { waitFor: rest.promise }));
+
+      const first = store.intervene('idle');
+      expect(await store.intervene('failures')).toBe(false);
+      rest.resolve();
+      await first;
+
+      expect(ask).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs the actions that only change the screen once it arrives whole', async () => {
+      const mark = vi.fn();
+      TestBed.inject(ToolRegistry).register(
+        appTool(TUTOR_TOOL.highlightLines, mark),
+        TestBed.inject(DestroyRef),
+      );
+      await loaded();
+      ask.mockImplementation(async function* () {
+        yield {
+          type: 'meta',
+          emotion: 'encouragement',
+          intensity: 1,
+          hintLevel: 1,
+          actions: [{ name: 'highlightLines', arguments: { lines: [{ line: 2, note: 'Aquí' }] } }],
+        } satisfies TutorEvent;
+        yield { type: 'delta', text: 'Mira la línea 2.' } satisfies TutorEvent;
+      });
+
+      await store.intervene('failures');
+
+      expect(mark).toHaveBeenCalled();
+      expect(store.turns()[0].actions[0].status).toBe('done');
+    });
+  });
+
+  it('gives the events loaded with the conversation, and none until then', async () => {
+    const events = [testEvents.run('a1', Date.parse('2026-11-09T10:01:00.000Z'), ['t1'])];
+    history.mockResolvedValue({ ...historyOf(attemptOf('a1')), events });
+
+    expect(store.loadedEvents()).toEqual([]);
+    await loaded();
+
+    expect(store.loadedEvents()).toEqual(events);
+  });
+
+  it('knows when the student has a question half written', () => {
+    expect(store.drafting()).toBe(false);
+
+    store.setDrafting(true);
+    expect(store.drafting()).toBe(true);
+
+    store.setDrafting(false);
+    expect(store.drafting()).toBe(false);
   });
 
   describe('with the tools of the tutor (2.5e)', () => {
