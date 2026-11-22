@@ -138,18 +138,40 @@ describe('CodeEditor', () => {
       expect(view.state.doc.toString()).toBe(MESSY);
     });
 
-    it('formats with Mayús + Alt + F, as VS Code does', async () => {
+    /** Mayús + Alt + F as a Mac sends it: the key F, and the character Option types with it. */
+    const formatKey = () =>
+      new KeyboardEvent('keydown', {
+        key: 'ﬁ',
+        code: 'KeyF',
+        keyCode: 70,
+        shiftKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+
+    it('formats with Mayús + Alt + F, as VS Code does, also on a Mac where it types «ﬁ»', async () => {
       const { view } = await renderEditor({ initialCode: MESSY });
+      const event = formatKey();
 
-      const handled = runScopeHandlers(
-        view,
-        // With Shift the key is «F»: CodeMirror finds the binding by its key code, as browsers send
-        new KeyboardEvent('keydown', { key: 'F', keyCode: 70, shiftKey: true, altKey: true }),
-        'editor',
-      );
+      view.contentDOM.dispatchEvent(event);
 
-      expect(handled).toBe(true);
+      // Nothing typed: the character does not reach the code
+      expect(event.defaultPrevented).toBe(true);
       await waitFor(() => expect(view.state.doc.toString()).toBe(TIDY));
+    });
+
+    it('leaves the other keys alone, and a read-only code with that one', async () => {
+      const { view } = await renderEditor({ initialCode: MESSY, readonly: true });
+      const event = formatKey();
+      const other = new KeyboardEvent('keydown', { key: 'a', code: 'KeyA', cancelable: true });
+
+      view.contentDOM.dispatchEvent(event);
+      view.contentDOM.dispatchEvent(other);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(other.defaultPrevented).toBe(false);
+      expect(view.state.doc.toString()).toBe(MESSY);
     });
 
     it('says the line of the error of a code it cannot read, until the code changes', async () => {

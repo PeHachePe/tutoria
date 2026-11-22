@@ -28,6 +28,7 @@ import {
 import type { Language } from '../../data/exercise';
 import { codeEditorTheme } from './code-editor-theme';
 import { CodeFormatter } from './code-formatter';
+import { isFormatKey } from './format-key';
 import type { LineMark } from './line-mark';
 import { lineMarks, setLineMarks } from './line-marks';
 
@@ -251,20 +252,21 @@ export class CodeEditor {
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
       // Before the default keymap, whose Mod-Enter would insert a blank line instead; Ctrl too on a
       // Mac, where Mod is ⌘, as many code playgrounds do
-      Prec.highest(
+      Prec.highest([
         keymap.of(
           readonly
             ? []
-            : [
-                ...['Mod-Enter', 'Ctrl-Enter'].map((key) => ({
-                  key,
-                  run: () => this.requestRun(),
-                })),
-                // As «Format document» in VS Code (2.5d)
-                { key: 'Shift-Alt-f', run: () => this.requestFormat() },
-              ],
+            : ['Mod-Enter', 'Ctrl-Enter'].map((key) => ({ key, run: () => this.requestRun() })),
         ),
-      ),
+        // Mayús + Alt + F, by the key and not by a key binding, so it works on a Mac too (2.5d)
+        EditorView.domEventHandlers({
+          keydown: (event) => {
+            if (readonly || !isFormatKey(event)) return false;
+            event.preventDefault();
+            return this.requestFormat();
+          },
+        }),
+      ]),
       placeholder(this.placeholder()),
       EditorState.readOnly.of(readonly),
       EditorView.contentAttributes.of({
