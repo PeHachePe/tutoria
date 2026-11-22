@@ -400,6 +400,27 @@
     </div>
   </section>
 
+  <section aria-labelledby="call-title" class="flex flex-col gap-3">
+    <h2 id="call-title" class="text-title-large">Llamada con el tutor</h2>
+    <p class="text-body-medium text-on-surface-variant">
+      La tarjeta de una llamada (6.1c) en sus cinco estados, al ancho de la columna del tutor. El
+      anillo de la mascota dice que el micrófono está abierto.
+    </p>
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      @for (sample of callSamples; track sample.state) {
+        <div class="flex max-w-sm flex-col gap-2">
+          <p class="text-label-large text-on-surface-variant">{{ sample.name }}</p>
+          <app-call-bar
+            [state]="sample.state"
+            [heard]="sample.heard"
+            [saying]="sample.saying"
+            [microphoneOpen]="sample.microphoneOpen"
+          />
+        </div>
+      }
+    </div>
+  </section>
+
   <section aria-labelledby="results-title" class="flex flex-col gap-3">
     <h2 id="results-title" class="text-title-large">Resultados de las pruebas</h2>
     <div class="flex flex-wrap items-center gap-2">

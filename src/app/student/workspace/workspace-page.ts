@@ -22,6 +22,7 @@ import { nextInBlock } from '../catalog/catalog-blocks';
 import { AttemptStore } from './attempt-store';
 import { TutorSpeaker } from './tutor-speaker';
 import { BrowserSignals } from './browser-signals';
+import { VoiceCall } from './voice-call';
 import { WorkspaceLayout } from './workspace-layout';
 
 /**
@@ -91,6 +92,8 @@ export class WorkspacePage {
   protected readonly signals = inject(BrowserSignals);
   /** The tutor's voice: silent with the tab hidden (2.11). */
   private readonly speaker = inject(TutorSpeaker);
+  /** A call waits on hold with the tab hidden: the microphone is never open out of sight (2.11). */
+  private readonly call = inject(VoiceCall);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
   protected readonly detail = resource({
@@ -196,6 +199,7 @@ export class WorkspacePage {
       this.store.saveNow();
       this.signals.hidden();
       this.speaker.stop();
+      this.call.hold();
     } else if (this.document.hasFocus()) {
       this.signals.returned();
     }

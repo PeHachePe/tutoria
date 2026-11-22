@@ -43,6 +43,8 @@
           i18n-aria-label="@@tutor.dictate"
           [attr.aria-pressed]="dictating()"
           [matTooltip]="dictating() ? stopDictatingTooltip : dictateTooltip"
+          disabledInteractive
+          [disabled]="inCall()"
           (click)="toggleDictation()"
         >
           <mat-icon [class.text-primary]="dictating()">mic</mat-icon>

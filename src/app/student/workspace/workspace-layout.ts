@@ -13,6 +13,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 import { MatTab, MatTabGroup, MatTabLabel } from '@angular/material/tabs';
 import { MatTooltip } from '@angular/material/tooltip';
 import { map } from 'rxjs';
@@ -43,9 +45,23 @@ import {
   STATEMENT_ZONE_ID,
   StatementZone,
 } from './statement-zone/statement-zone';
+import { callMood, callShown } from './tutor/call-bar';
 import { TutorPanel } from './tutor/tutor-panel';
 import { TutorSpeaker } from './tutor-speaker';
 import { type Pointer, TutorStore } from './tutor-store';
+import { VoiceCall } from './voice-call';
+
+/**
+ * With Ctrl, pausing or resuming a call (6.1c): Ctrl also on macOS, where ⌘ + . cancels. Neither
+ * CodeMirror nor the browsers use it.
+ */
+const HOLD_KEY = '.';
+
+/**
+ * Control pressed and released alone, this fast, interrupts the tutor. A longer press, or another key
+ * or a click in between (Ctrl + C, Ctrl + ., Ctrl + click), is not one.
+ */
+export const CONTROL_TAP_MS = 500;
 
 /**
  * Below this width (Tailwind's `md`) the zones become tabs, one at a time: stacked, they did not fit
@@ -78,6 +94,8 @@ const TUTOR_TAB = TABS.indexOf('tutor');
   selector: 'app-workspace-layout',
   imports: [
     ReactionOverlay,
+    MatIcon,
+    MatIconButton,
     MatTab,
     MatTabGroup,
     MatTabLabel,
@@ -89,7 +107,13 @@ const TUTOR_TAB = TABS.indexOf('tutor');
     TutorPanel,
   ],
   templateUrl: './workspace-layout.html',
-  host: { class: 'flex min-h-0 flex-1 flex-col' },
+  host: {
+    class: 'flex min-h-0 flex-1 flex-col',
+    // The call goes on with the tutor folded, so its keys are heard on the whole screen
+    '(document:keydown)': 'callKey($event)',
+    '(document:keyup)': 'controlUp($event)',
+    '(document:pointerdown)': 'controlTapStart = null',
+  },
 })
 export class WorkspaceLayout {
   /** What the statement shows, once it is there. */
@@ -114,6 +138,8 @@ export class WorkspaceLayout {
   private readonly tutor = inject(TutorStore);
   /** Not in the teacher's preview, who has no voice settings (D-061). */
   private readonly speaker = inject(TutorSpeaker, { optional: true });
+  /** The call with the tutor (6.1c); none in the teacher's preview either. */
+  protected readonly call = inject(VoiceCall, { optional: true });
   private readonly settings = inject(SettingsStore);
   protected readonly reactionMode = this.settings.reactions;
   protected readonly reactionEmojis = this.settings.reactionEmojis;
@@ -207,12 +233,32 @@ export class WorkspaceLayout {
    */
   protected readonly floatingMascotMood = computed<MascotMood>(() => {
     if (this.tutorOpen()) return 'chat';
+    const call = this.call?.state();
+    if (call) return callMood(call);
     if (this.speaker?.speakingTurnId()) return 'speaking';
     return this.tutor.answering() ? 'thinking' : 'idle';
   });
 
   /** The first words of the last answer, shown beside the folded mascot. */
   protected readonly latestAnswer = this.tutor.announcement;
+
+  /**
+   * Folded, a line over the mascot says where the call is (2.11): what is being understood, the
+   * sentence the tutor says or the name of the state. It takes the place of the bubble of the answer,
+   * which would say the same.
+   */
+  protected readonly callLine = computed(() => {
+    const state = this.call?.state();
+    if (!state) return null;
+    const shown = callShown(state);
+    const said =
+      state === 'hearing'
+        ? this.call?.heard()
+        : state === 'speaking'
+          ? this.speaker?.saying()
+          : undefined;
+    return { ...shown, text: said || shown.label };
+  });
 
   /**
    * A dot (and, folded, a bubble) when an answer arrives while the tutor is out of sight: another
@@ -308,6 +354,46 @@ export class WorkspaceLayout {
 
   private focusQuestion(): void {
     afterNextRender(() => this.floatingPanel()?.focusQuestion(), { injector: this.injector });
+  }
+
+  /** When Control went down alone, to tell a tap from a combination; null without one. */
+  protected controlTapStart: number | null = null;
+
+  /**
+   * The keys of a call (2.11): Ctrl + . pauses or resumes it, and Esc drops what the student was
+   * saying, from anywhere. Without a call, they are left alone.
+   */
+  protected callKey(event: KeyboardEvent): void {
+    // Any other key, or Control held down, is no tap
+    this.controlTapStart = event.key === 'Control' && !event.repeat ? Date.now() : null;
+    const call = this.call;
+    if (!call?.active()) return;
+    if (event.ctrlKey && event.key === HOLD_KEY) {
+      event.preventDefault();
+      call.toggleHold();
+    } else if (event.key === 'Escape') {
+      call.discard();
+    }
+  }
+
+  /** Control alone, released at once: «Interrumpir», the quickest way to have the turn. */
+  protected controlUp(event: KeyboardEvent): void {
+    const start = this.controlTapStart;
+    this.controlTapStart = null;
+    if (event.key === 'Control' && start !== null && Date.now() - start <= CONTROL_TAP_MS) {
+      this.call?.interrupt();
+    }
+  }
+
+  /** «Colgar» beside the folded mascot: the focus goes to the mascot, as the line is gone. */
+  protected hangUpFolded(): void {
+    this.call?.hangUp();
+    afterNextRender(() => this.tutorToggle()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  /** Esc on the floating tutor folds it, unless it is dropping what the student was saying. */
+  protected escapeTutor(): void {
+    if (this.call?.state() !== 'hearing') this.closeTutor();
   }
 
   /** Esc or «Minimizar» fold the tutor and give the focus back to the mascot that opened it. */

@@ -1,5 +1,6 @@
 <header class="flex items-center gap-3">
-  @if (store.turns().length > 0) {
+  <!-- In a call, the mascot goes down to its card, as the face of the tutor -->
+  @if (store.turns().length > 0 && !call?.active()) {
     <app-mascot class="size-12 shrink-0" [mood]="mascotMood()" [reaction]="mascotReaction()" />
   }
   <div class="flex min-w-0 flex-1 flex-col gap-1">
@@ -13,8 +14,9 @@
     </h2>
     <app-hint-level-meter [level]="store.hintLevel()" />
   </div>
-  <!-- While the tutor speaks, always in sight, with a way to silence it (2.11) -->
-  @if (speaker?.speakingTurnId()) {
+  <!-- While the tutor speaks, always in sight, with a way to silence it (2.11); in a call, the card
+       says so and has «Interrumpir» -->
+  @if (speaker?.speakingTurnId() && !call?.active()) {
     <button
       matButton="tonal"
       type="button"
@@ -26,6 +28,24 @@
       <mat-icon class="motion-safe:animate-pulse">graphic_eq</mat-icon>
       <ng-container i18n="@@tutor.voice.speaking">Hablando</ng-container>
       <mat-icon iconPositionEnd>stop</mat-icon>
+    </button>
+  }
+  <!-- A call with the tutor (6.1c). During one it stays, disabled, so the focus comes back to it -->
+  @if (call && (call.canCall() || call.active())) {
+    <button
+      #callButton
+      matIconButton
+      type="button"
+      class="self-start"
+      disabledInteractive
+      [disabled]="call.active()"
+      [attr.aria-label]="call.active() ? ongoingLabel : callLabel"
+      [matTooltip]="call.active() ? ongoingLabel : callLabel"
+      (click)="startCall()"
+    >
+      <mat-icon [class.text-primary]="call.active()">{{
+        call.active() ? 'phone_in_talk' : 'call'
+      }}</mat-icon>
     </button>
   }
   <!-- Fixed in its column or floating over the code: the student chooses (proposal of step 1.7) -->
@@ -101,7 +121,10 @@
     } @else if (items().length === 0) {
       <!-- An empty chat greets, says what to expect and offers a way to start -->
       <div class="flex flex-col items-center gap-3 py-2 text-center">
-        <app-mascot class="size-24" [mood]="mascotMood()" />
+        <!-- In a call, the mascot is in its card: one face for the tutor -->
+        @if (!call?.active()) {
+          <app-mascot class="size-24" [mood]="mascotMood()" />
+        }
         <p class="text-title-medium">{{ greeting() }}</p>
         <p class="max-w-64 text-body-medium text-on-surface-variant">
           @if (store.readonly()) {
@@ -321,6 +344,33 @@
   </p>
 } @else {
   <div class="flex flex-col gap-2">
+    @if (callNoticeOpen()) {
+      <app-audio-notice (accepted)="acceptCallNotice()" />
+    }
+    @if (call; as call) {
+      @if (call.notice(); as notice) {
+        <div
+          role="alert"
+          class="flex items-center gap-2 rounded-lg bg-error-container p-3 text-on-error-container"
+        >
+          <mat-icon class="shrink-0" aria-hidden="true">call_end</mat-icon>
+          <p class="min-w-0 flex-1 text-body-medium">{{ callNoticeMessage(notice) }}</p>
+        </div>
+      }
+      @if (call.state(); as state) {
+        <app-call-bar
+          [state]="state"
+          [heard]="call.heard()"
+          [saying]="speaker?.saying() ?? null"
+          [microphoneOpen]="call.microphoneOpen()"
+          (hold)="call.hold()"
+          (correct)="correctCall(call, composer)"
+          (interrupt)="call.interrupt()"
+          (keepTalking)="call.resume()"
+          (hangUp)="hangUp()"
+        />
+      }
+    }
     <!-- disabledInteractive: while the tutor answers, the button keeps the focus and says why -->
     <button
       matButton="tonal"

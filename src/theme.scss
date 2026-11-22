@@ -239,6 +239,23 @@ body {
   );
 }
 
+// «Colgar» (step 6.1c): red, as in any call, so the way out of it is found at a glance.
+.app-hang-up-button {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-error),
+      filled-label-text-color: var(--mat-sys-on-error),
+      filled-state-layer-color: var(--mat-sys-on-error),
+      filled-ripple-color: color-mix(in srgb, var(--mat-sys-on-error) 12%, transparent),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-error),
+    )
+  );
+}
+
 // Icon buttons inside the app bar take the bar's text colour.
 .mat-toolbar {
   @include mat.icon-button-overrides(

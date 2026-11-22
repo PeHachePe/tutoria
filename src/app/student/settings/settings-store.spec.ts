@@ -150,4 +150,15 @@ describe('SettingsStore', () => {
     userId.set('u1');
     expect(store.audioNoticeSeen()).toBe(true);
   });
+
+  it('remembers per user interrupting the tutor by speaking, off by default', () => {
+    expect(store.interruptBySpeaking()).toBe(false);
+
+    store.setInterruptBySpeaking(true);
+    expect(store.interruptBySpeaking()).toBe(true);
+    expect(localStorage.getItem(settingKey('interruptBySpeaking', 'u1'))).toBe('true');
+
+    userId.set('u2');
+    expect(store.interruptBySpeaking()).toBe(false);
+  });
 });

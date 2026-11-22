@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   speechRate: 'tutoria.speech-rate',
   readAloud: 'tutoria.read-aloud',
   audioNoticeSeen: 'tutoria.audio-notice-seen',
+  interruptBySpeaking: 'tutoria.interrupt-by-speaking',
 } as const;
 
 export type SettingName = keyof typeof STORAGE_KEYS;
@@ -31,7 +32,7 @@ export function settingKey(setting: SettingName, userId: string): string {
  * reactions show (1.8), whether the tutor may speak first (it does from step 6.2) and the mascot's
  * accessories, and the voice (2.11): whether it is on, the tutor's voice (none until the student
  * chooses one), its speed, whether new answers are read aloud and whether the student was told where
- * the audio of the dictation goes. The colour mode is for the whole browser, because the login uses it too:
+ * the audio of the dictation goes, and whether speaking interrupts the tutor in a call. The colour mode is for the whole browser, because the login uses it too:
  * ThemeService keeps it. Whether the data notice was seen is part of the user (AuthStore, RF-07).
  */
 @Service()
@@ -59,6 +60,12 @@ export class SettingsStore {
   private readonly readAloudState = this.flag('readAloud', false);
   /** The student was told where the audio goes before dictating for the first time (2.11). */
   private readonly audioNoticeSeenState = this.flag('audioNoticeSeen', false);
+  /**
+   * In a call, the microphone stays open while the tutor speaks, and speaking over it silences it
+   * (2.11). Off by default: with speakers the microphone may hear the tutor, and in a classroom, the
+   * others.
+   */
+  private readonly interruptBySpeakingState = this.flag('interruptBySpeaking', false);
 
   readonly reactions = this.reactionsState.asReadonly();
   readonly reactionEmojis = this.reactionEmojisState.asReadonly();
@@ -71,6 +78,7 @@ export class SettingsStore {
   readonly speechRate = this.speechRateState.asReadonly();
   readonly readAloud = this.readAloudState.asReadonly();
   readonly audioNoticeSeen = this.audioNoticeSeenState.asReadonly();
+  readonly interruptBySpeaking = this.interruptBySpeakingState.asReadonly();
 
   setReactions(mode: ReactionMode): void {
     this.update('reactions', this.reactionsState, mode);
@@ -115,6 +123,10 @@ export class SettingsStore {
   /** «Entendido» on the notice of where the audio goes: it does not show again for this user. */
   setAudioNoticeSeen(): void {
     this.update('audioNoticeSeen', this.audioNoticeSeenState, true);
+  }
+
+  setInterruptBySpeaking(on: boolean): void {
+    this.update('interruptBySpeaking', this.interruptBySpeakingState, on);
   }
 
   /** Read again for each user who signs in; a choice without a user lasts until the page closes. */

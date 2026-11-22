@@ -67,6 +67,7 @@ describe('ShowcasePage', () => {
       'Tabla con ordenación y paginación',
       'Progreso, avisos y diálogos',
       'Editor de código',
+      'Llamada con el tutor',
       'Resultados de las pruebas',
       'Panel en vivo',
       'Dónde está la clase',
@@ -246,6 +247,21 @@ describe('ShowcasePage', () => {
     ).toHaveLength(4);
     expect(section.textContent).toContain('Para explicar a todos');
     expect(section.querySelectorAll('app-live-chip')).toHaveLength(5);
+  });
+
+  it('shows the card of a call in its five states (6.1c)', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const section = element.querySelector('[aria-labelledby="call-title"]') as HTMLElement;
+    const cards = [...section.querySelectorAll('app-call-bar')];
+    expect(cards.map((card) => card.querySelector('[aria-live]')?.textContent?.trim())).toEqual([
+      'Te escucho',
+      'Te escucho',
+      'Pensando…',
+      'Hablando…',
+      'En espera',
+    ]);
+    expect(cards[1].textContent).toContain('¿Por qué me da undefined');
+    expect(cards[3].textContent).toContain('Fíjate en qué devuelve');
   });
 
   it('shows the pieces of the history', () => {

@@ -97,14 +97,14 @@ export class StudentVoice {
   }
 
   /**
-   * Says a sentence with the tutor's voice and rate; `cancelled` without one. Rejects with a
-   * SpeechError.
+   * Says a sentence with the tutor's voice and rate, and tells when its sound starts; `cancelled`
+   * without a voice. Rejects with a SpeechError.
    */
-  async say(sentence: string): Promise<'ended' | 'cancelled'> {
+  async say(sentence: string, started?: () => void): Promise<'ended' | 'cancelled'> {
     const speech = this.speech();
     const voice = this.tutorVoice();
     if (!speech || !voice) return 'cancelled';
-    return speech.speak(sentence, { voiceId: voice.id, rate: this.settings.speechRate() });
+    return speech.speak(sentence, { voiceId: voice.id, rate: this.settings.speechRate(), started });
   }
 
   /** «Probar»: stops what sounds and says the sample with that voice; never rejects. */

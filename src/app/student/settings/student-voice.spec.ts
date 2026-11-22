@@ -126,6 +126,16 @@ describe('StudentVoice', () => {
     expect(await said).toBe('ended');
   });
 
+  it('tells when the sound of the sentence starts', async () => {
+    setup();
+    await turnOn();
+    const started = vi.fn();
+    void voice.say('Hola.', started);
+    await vi.waitFor(() => expect(fake.spoken).toHaveLength(1));
+    fake.startSound();
+    expect(started).toHaveBeenCalledOnce();
+  });
+
   it('tries a voice after stopping what sounds, and never fails', async () => {
     setup();
     await turnOn();

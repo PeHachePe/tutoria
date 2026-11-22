@@ -17,6 +17,8 @@ export interface SpeechVoice {
 export interface SpeakOptions {
   readonly voiceId: string;
   readonly rate: SpeechRate;
+  /** The sound starts: the browser may take a moment after `speak()`. */
+  readonly started?: () => void;
 }
 
 /**

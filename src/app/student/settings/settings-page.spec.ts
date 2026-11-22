@@ -155,7 +155,7 @@ describe('SettingsPage', () => {
       expect(screen.getByRole('radio', { name: /Jorge · México/ })).toBeTruthy();
       expect(screen.getByText(/Si usas un lector de pantalla/)).toBeTruthy();
       expect(
-        screen.getByText('Podrás escucharle y dictarle. Nunca se graba el audio.'),
+        screen.getByText('Podrás escucharle, dictarle y llamarle. Nunca se graba el audio.'),
       ).toBeTruthy();
     });
 
@@ -235,6 +235,17 @@ describe('SettingsPage', () => {
       expect(readAloud.getAttribute('aria-describedby')).toBe('settings-read-aloud-hint');
       await user.click(readAloud);
       expect(settings.readAloud()).toBe(true);
+    });
+
+    it('saves interrupting the tutor by speaking, where a call can listen', async () => {
+      const { user, settings } = await turnVoiceOn();
+      const interrupt = await screen.findByRole('switch', {
+        name: 'Interrumpir al tutor hablando',
+      });
+      expect(interrupt.getAttribute('aria-describedby')).toBe('settings-interrupt-hint');
+      expect(screen.getByText(/Mejor con auriculares/)).toBeTruthy();
+      await user.click(interrupt);
+      expect(settings.interruptBySpeaking()).toBe(true);
     });
 
     it('folds, silences the tutor and keeps the choice when turned off', async () => {

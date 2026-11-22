@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { undo } from '@codemirror/commands';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { screen, waitFor, within } from '@testing-library/angular';
+import { fireEvent, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
 
@@ -29,6 +29,8 @@ import { FakeTabChannel, provideTestEditingTab, takenByOtherTab } from './editin
 import { CODE_SHARE, paneShareKey, STATEMENT_SHARE, tutorFloatingKey } from './pane-share';
 import { SettingsStore } from '../settings/settings-store';
 import { TutorSpeaker } from './tutor-speaker';
+import { VoiceCall } from './voice-call';
+import { CONTROL_TAP_MS } from './workspace-layout';
 import { TutorStore } from './tutor-store';
 import { FakeSpeechService, provideFakeSpeech } from '../../core/speech/speech-testing';
 import { StudentVoice } from '../settings/student-voice';
@@ -171,6 +173,7 @@ describe('WorkspacePage', () => {
         ...provideTestEditingTab(channel),
         TutorStore,
         TutorSpeaker,
+        VoiceCall,
         provideFakeSpeech(speech),
         BrowserSignals,
         { provide: TutorService, useValue: { ask: () => tutorAnswer() } },
@@ -1616,6 +1619,159 @@ describe('WorkspacePage', () => {
         .click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Entregar' }));
       expect(await submitted).toEqual({ ok: true, result: { submitted: true } });
       expect(submitAttempt).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('call with the tutor (6.1c)', () => {
+    afterEach(() => localStorage.clear());
+
+    const mascot = () => screen.getByRole('button', { name: /^(Abrir|Cerrar) el tutor$/ });
+
+    /** Turns the voice on, calls and lets «Te escucho» end: the microphone is open. */
+    async function renderCalling(setup: Setup = {}) {
+      const view = await renderPage(setup);
+      const settings = TestBed.inject(SettingsStore);
+      settings.setVoice(true);
+      settings.setAudioNoticeSeen();
+      const call = TestBed.inject(VoiceCall);
+      await vi.waitFor(() => {
+        TestBed.tick();
+        expect(call.canCall()).toBe(true);
+      });
+      call.start();
+      await vi.waitFor(() => expect(speech.sentences).toContain('Te escucho.'));
+      speech.finish();
+      await vi.waitFor(() => expect(speech.listening).toBe(true));
+      await view.fixture.whenStable();
+      return { ...view, call };
+    }
+
+    /** The tutor answers a hint and says it. */
+    async function speaking(call: VoiceCall) {
+      await TestBed.inject(TutorStore).requestHint();
+      await vi.waitFor(() => {
+        TestBed.tick();
+        expect(call.state()).toBe('speaking');
+      });
+    }
+
+    function keyDown(init: KeyboardEventInit): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      document.body.dispatchEvent(event);
+      return event;
+    }
+
+    it('leaves the keys alone without a call', async () => {
+      await renderPage();
+      expect(keyDown({ key: '.', ctrlKey: true }).defaultPrevented).toBe(false);
+      expect(TestBed.inject(VoiceCall).state()).toBeNull();
+    });
+
+    it('pauses and resumes with Ctrl + .', async () => {
+      const { call } = await renderCalling();
+      const user = userEvent.setup();
+      await user.keyboard('{Control>}.{/Control}');
+      expect(call.state()).toBe('standby');
+      expect(speech.listening).toBe(false);
+      await user.keyboard('{Control>}.{/Control}');
+      expect(call.state()).toBe('listening');
+      expect(keyDown({ key: '.', ctrlKey: true }).defaultPrevented).toBe(true);
+    });
+
+    it('interrupts the tutor with Control alone, and only then', async () => {
+      const { call } = await renderCalling();
+      const user = userEvent.setup();
+      await user.keyboard('{Control}');
+      expect(call.state()).toBe('listening');
+
+      await speaking(call);
+      // Ctrl + C, Control held down or with a click in between are not Control alone
+      await user.keyboard('{Control>}c{/Control}');
+      expect(call.state()).toBe('speaking');
+      keyDown({ key: 'Control' });
+      keyDown({ key: 'Control', repeat: true });
+      document.body.dispatchEvent(new KeyboardEvent('keyup', { key: 'Control', bubbles: true }));
+      expect(call.state()).toBe('speaking');
+      keyDown({ key: 'Control' });
+      fireEvent.pointerDown(document.body);
+      fireEvent.keyUp(document.body, { key: 'Control' });
+      expect(call.state()).toBe('speaking');
+      // The clock is fixed at both ends: a slow machine must not shorten the press
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      keyDown({ key: 'Control' });
+      now.mockReturnValue(1_000 + CONTROL_TAP_MS + 1);
+      fireEvent.keyUp(document.body, { key: 'Control' });
+      expect(call.state()).toBe('speaking');
+      vi.mocked(Date.now).mockRestore();
+
+      await user.keyboard('{Control}');
+      expect(call.state()).toBe('listening');
+    });
+
+    it('drops what the student was saying with Esc, without folding the floating tutor', async () => {
+      const { call, fixture } = await renderCalling();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Ampliar el código' }));
+      await user.click(mascot());
+      await fixture.whenStable();
+      speech.hear('no, espera', false);
+      await fixture.whenStable();
+      expect(call.state()).toBe('hearing');
+
+      await user.keyboard('{Escape}');
+      await fixture.whenStable();
+      expect(call.state()).toBe('listening');
+      expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
+      await user.keyboard('{Escape}');
+      await fixture.whenStable();
+      expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+    });
+
+    it('says where the call is over the folded mascot, and hangs up from there', async () => {
+      const { call, fixture } = await renderCalling();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Ampliar el código' }));
+      await fixture.whenStable();
+      const announced = () =>
+        [...document.querySelectorAll('[aria-live="polite"]')].map((live) => text(live));
+      expect(announced()).toContain('Te escucho');
+      expect(mascot().querySelector('.border-primary')).toBeTruthy();
+
+      speech.hear('por qué falla', false);
+      await fixture.whenStable();
+      expect(text(mascot().parentElement)).toContain('Por qué falla');
+
+      await speaking(call);
+      await fixture.whenStable();
+      expect(text(mascot().parentElement)).toContain('Mira el bucle.');
+      expect(mascot().querySelector('app-mascot')?.classList).toContain('mascot-speaking');
+
+      await user.click(screen.getByRole('button', { name: 'Colgar' }));
+      await fixture.whenStable();
+      expect(call.active()).toBe(false);
+      expect(document.activeElement).toBe(mascot());
+      expect(mascot().querySelector('.border-primary')).toBeNull();
+    });
+
+    it('waits on hold with the tab hidden', async () => {
+      const { call } = await renderCalling();
+      hideTab();
+      expect(call.state()).toBe('standby');
+      expect(speech.listening).toBe(false);
+    });
+
+    it('hangs up with the microphone closed on leaving the screen', async () => {
+      const { fixture } = await renderCalling();
+      fixture.destroy();
+      TestBed.resetTestingModule();
+      expect(speech.listening).toBe(false);
+    });
+
+    it('says on a phone, in the tab of the tutor, that the call goes on', async () => {
+      const { fixture } = await renderCalling({ compact: true });
+      await userEvent.setup().click(screen.getByRole('tab', { name: 'Código' }));
+      await fixture.whenStable();
+      expect(screen.getByRole('tab', { name: 'Tutor , en llamada' })).toBeTruthy();
     });
   });
 });

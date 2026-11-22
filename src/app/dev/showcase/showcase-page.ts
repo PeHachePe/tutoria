@@ -34,6 +34,8 @@ import type { SaveStatus } from '../../student/workspace/attempt-store';
 import { RunResults } from '../../student/workspace/code-zone/run-results';
 import { SaveIndicator } from '../../student/workspace/code-zone/save-indicator';
 import { AudioNotice } from '../../student/workspace/tutor/audio-notice';
+import { CallBar } from '../../student/workspace/tutor/call-bar';
+import type { CallState } from '../../student/workspace/voice-call';
 import { TutorActions } from '../../student/workspace/tutor/tutor-actions';
 import { TutorMessage } from '../../shared/tutor-message/tutor-message';
 import type { TurnAction } from '../../student/workspace/tutor-store';
@@ -121,6 +123,7 @@ import { ShowcaseTable } from './showcase-table';
     TutorMessage,
     TutorActions,
     AudioNotice,
+    CallBar,
     RunResults,
     Splitter,
     LiveBar,
@@ -138,6 +141,33 @@ export class ShowcasePage {
   /** The root leads to the home of the signed-in role, or to the login. */
   protected readonly homePath = APP_PATHS.root;
   protected readonly theme = inject(ThemeService);
+
+  /** The card of a call in each state (6.1c). */
+  protected readonly callSamples: readonly {
+    readonly state: CallState;
+    readonly name: string;
+    readonly heard: string;
+    readonly saying: string | null;
+    readonly microphoneOpen: boolean;
+  }[] = [
+    { state: 'listening', name: 'Escucha', heard: '', saying: null, microphoneOpen: true },
+    {
+      state: 'hearing',
+      name: 'Te oye',
+      heard: '¿Por qué me da undefined la función cuando el bucle acaba?',
+      saying: null,
+      microphoneOpen: true,
+    },
+    { state: 'thinking', name: 'Piensa', heard: '', saying: null, microphoneOpen: false },
+    {
+      state: 'speaking',
+      name: 'Habla',
+      heard: '',
+      saying: 'Fíjate en qué devuelve la función cuando el bucle termina.',
+      microphoneOpen: false,
+    },
+    { state: 'standby', name: 'En espera', heard: '', saying: null, microphoneOpen: false },
+  ];
 
   protected readonly classOverview = SAMPLE_OVERVIEW;
   protected readonly classStrip = SAMPLE_STRIP;

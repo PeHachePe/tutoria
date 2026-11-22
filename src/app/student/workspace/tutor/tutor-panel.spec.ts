@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { provideSessionOf, restoreSession } from '../../../auth/auth-testing';
+import { FakeSpeechService, provideFakeSpeech } from '../../../core/speech/speech-testing';
 import type { Attempt, AttemptHistory, StoredAttemptStatus } from '../../../data/attempt';
 import { appTool, ToolRegistry } from '../../../core/tools/app-tool';
 import { AttemptService } from '../../../data/attempt-service';
@@ -11,11 +12,12 @@ import { TUTOR_TOOL } from '../../../data/tutor/tutor-tools';
 import { DataError } from '../../../data/data-error';
 import type { HintLevel, TutorEvent, TutorInteraction, TutorRequest } from '../../../data/tutor';
 import { TutorService } from '../../../data/tutor-service';
-import { SettingsStore } from '../../settings/settings-store';
+import { SettingsStore, settingKey } from '../../settings/settings-store';
 import { AttemptStore } from '../attempt-store';
 import { TutorSpeaker } from '../tutor-speaker';
 import { TutorStore } from '../tutor-store';
-import { MAX_QUESTION_LENGTH } from './tutor-composer';
+import { type CallNotice, type CallState, VoiceCall } from '../voice-call';
+import { MAX_QUESTION_LENGTH } from './question-limit';
 import { TutorPanel } from './tutor-panel';
 
 const TODAY = new Date().toISOString();
@@ -87,6 +89,10 @@ interface Setup {
   signedIn?: boolean;
   /** The tutor's voice; none, as in the teacher's preview. */
   speaker?: FakeSpeaker;
+  /** The call with the tutor; none, as in the teacher's preview. */
+  call?: FakeCall;
+  /** The speech of the browser, with the voice on; none leaves it off. */
+  speech?: FakeSpeechService;
 }
 
 /** What the panel reads of the tutor's voice. */
@@ -96,11 +102,35 @@ function fakeSpeaker({ available = true } = {}) {
     available: signal(available),
     ready: signal(true),
     speakingTurnId,
+    saying: signal<string | null>(null),
     listen: vi.fn((turnId: string) => speakingTurnId.set(turnId)),
     stop: vi.fn(() => speakingTurnId.set(null)),
   };
 }
 type FakeSpeaker = ReturnType<typeof fakeSpeaker>;
+
+/** What the panel reads of a call, and what it asks of it. */
+function fakeCall({ canCall = true } = {}) {
+  const state = signal<CallState | null>(null);
+  return {
+    state,
+    active: computed(() => state() !== null),
+    canCall: signal(canCall),
+    heard: signal(''),
+    microphoneOpen: signal(false),
+    notice: signal<CallNotice | null>(null),
+    start: vi.fn(() => state.set('listening')),
+    hangUp: vi.fn(() => state.set(null)),
+    hold: vi.fn(() => state.set('standby')),
+    resume: vi.fn(() => state.set('listening')),
+    interrupt: vi.fn(() => state.set('listening')),
+    correct: vi.fn(() => {
+      state.set('standby');
+      return 'por qué falla';
+    }),
+  };
+}
+type FakeCall = ReturnType<typeof fakeCall>;
 
 async function renderPanel({
   status = 'in_progress',
@@ -110,7 +140,10 @@ async function renderPanel({
   settle = true,
   signedIn = true,
   speaker,
+  call,
+  speech,
 }: Setup = {}) {
+  if (speech) localStorage.setItem(settingKey('voice', 'student-1'), 'true');
   const attempt = signal(attemptOf(status));
   let hints = interactions.filter((interaction) => interaction.trigger === 'hint').length;
   const askTutor = vi.fn<TutorService['ask']>(
@@ -144,6 +177,8 @@ async function renderPanel({
       },
       { provide: TutorService, useValue: { ask: askTutor } },
       speaker ? [{ provide: TutorSpeaker, useValue: speaker }] : [],
+      call ? [{ provide: VoiceCall, useValue: call }] : [],
+      speech ? [provideFakeSpeech(speech)] : [],
     ],
   });
   await restoreSession();
@@ -663,6 +698,174 @@ describe('TutorPanel', () => {
         fixture.detectChanges();
         expect(screen.getByRole('button', { name: 'Escuchar' })).toBeTruthy();
       });
+    });
+  });
+
+  describe('call', () => {
+    const past = [interactionOf('question', 'Mira el bucle.', { studentMessage: '¿Qué hago?' })];
+
+    // The voice turned on for one of them must not reach the others
+    afterEach(() => localStorage.clear());
+
+    function callButton(): HTMLElement {
+      return screen.getByRole('button', { name: /Llamar al tutor|En llamada/ });
+    }
+
+    function callCard(): HTMLElement | null {
+      return screen.queryByRole('group', { name: 'Llamada con el tutor' });
+    }
+
+    it('offers «Llamar al tutor» only where the call can be made', async () => {
+      await renderPanel({ call: fakeCall({ canCall: false }), speaker: fakeSpeaker() });
+      expect(screen.queryByRole('button', { name: 'Llamar al tutor' })).toBeNull();
+    });
+
+    it("has no call in the teacher's preview", async () => {
+      await renderPanel();
+      expect(screen.queryByRole('button', { name: 'Llamar al tutor' })).toBeNull();
+    });
+
+    it('calls, shows the card and keeps «En llamada» disabled but reachable', async () => {
+      const call = fakeCall();
+      const { fixture } = await renderPanel({ interactions: past, call, speaker: fakeSpeaker() });
+      expect(mascots()).toHaveLength(1);
+      await userEvent.click(callButton());
+      fixture.detectChanges();
+
+      expect(call.start).toHaveBeenCalledOnce();
+      expect(callCard()).toBeTruthy();
+      expect(callButton().getAttribute('aria-label')).toBe('En llamada');
+      expect(callButton().getAttribute('aria-disabled')).toBe('true');
+      fireEvent.click(callButton());
+      expect(call.start).toHaveBeenCalledOnce();
+      // The mascot goes down to the card, as the face of the tutor
+      expect(mascots()).toHaveLength(1);
+      expect(within(callCard()!).getByText('Te escucho')).toBeTruthy();
+      expect(mascots()[0].classList).toContain('mascot-chat');
+    });
+
+    it('shows only the face of the card while the chat is empty', async () => {
+      const call = fakeCall();
+      call.state.set('thinking');
+      await renderPanel({ call, speaker: fakeSpeaker() });
+      expect(mascots()).toHaveLength(1);
+      expect(mascots()[0].classList).toContain('mascot-thinking');
+    });
+
+    it('moves the mascot with each state of the call', async () => {
+      const call = fakeCall();
+      const speaker = fakeSpeaker();
+      const { fixture } = await renderPanel({ interactions: past, call, speaker });
+      const moods: Partial<Record<CallState, string>> = {
+        hearing: 'mascot-chat',
+        thinking: 'mascot-thinking',
+        speaking: 'mascot-speaking',
+      };
+      for (const [state, mood] of Object.entries(moods)) {
+        call.state.set(state as CallState);
+        fixture.detectChanges();
+        expect(mascots()[0].classList).toContain(mood);
+      }
+      call.state.set('standby');
+      fixture.detectChanges();
+      expect(mascots()[0].className).not.toMatch(/mascot-(chat|thinking|speaking)/);
+    });
+
+    it('shows «Hablando» only in the card while in a call', async () => {
+      const call = fakeCall();
+      const speaker = fakeSpeaker();
+      const { fixture } = await renderPanel({ interactions: past, call, speaker });
+      call.state.set('speaking');
+      speaker.listen('i-Mira el bucle.');
+      speaker.saying.set('Mira el bucle.');
+      fixture.detectChanges();
+      expect(screen.queryByRole('button', { name: /El tutor está hablando/ })).toBeNull();
+      expect(within(callCard()!).getByText('Mira el bucle.')).toBeTruthy();
+      await userEvent.click(screen.getByRole('button', { name: 'Interrumpir' }));
+      expect(call.interrupt).toHaveBeenCalledOnce();
+    });
+
+    it('pauses and keeps talking from the card', async () => {
+      const call = fakeCall();
+      const { fixture } = await renderPanel({ call, speaker: fakeSpeaker() });
+      call.state.set('listening');
+      fixture.detectChanges();
+      await userEvent.click(screen.getByRole('button', { name: 'Pausar' }));
+      fixture.detectChanges();
+      expect(call.hold).toHaveBeenCalledOnce();
+      await userEvent.click(screen.getByRole('button', { name: 'Seguir hablando' }));
+      expect(call.resume).toHaveBeenCalledOnce();
+    });
+
+    it('leaves what was said in the field with «Corregir», with the focus', async () => {
+      const call = fakeCall();
+      const { fixture } = await renderPanel({ call, speaker: fakeSpeaker() });
+      call.state.set('hearing');
+      call.heard.set('por qué falla');
+      fixture.detectChanges();
+      await userEvent.click(screen.getByRole('button', { name: 'Corregir' }));
+      fixture.detectChanges();
+      const field = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Pregunta al tutor' });
+      expect(field.value).toBe('Por qué falla');
+      expect(document.activeElement).toBe(field);
+    });
+
+    it('gives the focus back to «Llamar al tutor» on hanging up', async () => {
+      const call = fakeCall();
+      const { fixture } = await renderPanel({ call, speaker: fakeSpeaker() });
+      await userEvent.click(callButton());
+      fixture.detectChanges();
+      await userEvent.click(screen.getByRole('button', { name: 'Colgar' }));
+      await fixture.whenStable();
+      expect(call.hangUp).toHaveBeenCalledOnce();
+      expect(callCard()).toBeNull();
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Llamar al tutor' }));
+    });
+
+    it('moves no focus when the state changes', async () => {
+      const call = fakeCall();
+      const { fixture } = await renderPanel({ call, speaker: fakeSpeaker() });
+      await userEvent.click(callButton());
+      fixture.detectChanges();
+      const field = screen.getByRole('textbox', { name: 'Pregunta al tutor' });
+      field.focus();
+      for (const state of ['hearing', 'thinking', 'speaking', 'standby'] as const) {
+        call.state.set(state);
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(field);
+      }
+    });
+
+    it('says where the audio goes before the first call', async () => {
+      const call = fakeCall();
+      const speech = new FakeSpeechService();
+      speech.voiceList = [{ id: 'jorge', name: 'Jorge', lang: 'es-ES' }];
+      const { fixture } = await renderPanel({ call, speaker: fakeSpeaker(), speech });
+      await vi.waitFor(() => {
+        fixture.detectChanges();
+        expect(screen.getByRole('button', { name: 'Dictar' })).toBeTruthy();
+      });
+      await userEvent.click(callButton());
+      fixture.detectChanges();
+      expect(call.start).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole('button', { name: 'Entendido' }));
+      fixture.detectChanges();
+      expect(call.start).toHaveBeenCalledOnce();
+      expect(TestBed.inject(SettingsStore).audioNoticeSeen()).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Entendido' })).toBeNull();
+    });
+
+    it('says why a call ended by itself', async () => {
+      const call = fakeCall();
+      const { fixture } = await renderPanel({ call, speaker: fakeSpeaker() });
+      call.notice.set('unstable');
+      fixture.detectChanges();
+      expect(screen.getByRole('alert').textContent).toContain(
+        'La llamada se ha cortado: el micrófono se cierra solo.',
+      );
+      call.notice.set('no-microphone');
+      fixture.detectChanges();
+      expect(screen.getByRole('alert').textContent).toContain('No encuentro ningún micrófono.');
     });
   });
 });

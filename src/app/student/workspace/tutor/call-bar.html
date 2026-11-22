@@ -1,0 +1,95 @@
+<div
+  role="group"
+  aria-label="Llamada con el tutor"
+  i18n-aria-label="@@call.group"
+  class="flex flex-col gap-2 rounded-xl bg-surface-container-high p-3 text-on-surface"
+>
+  <div class="flex items-start gap-3">
+    <div class="relative mt-0.5 shrink-0">
+      <app-mascot class="size-14" [mood]="mood()" />
+      <!-- The microphone is open: always in sight (2.11) -->
+      @if (microphoneOpen()) {
+        <span
+          class="pointer-events-none absolute -inset-1 rounded-full border-2 border-primary motion-safe:animate-pulse"
+          aria-hidden="true"
+        ></span>
+      }
+    </div>
+    <div class="flex min-w-0 flex-1 flex-col gap-1">
+      <p class="flex items-center gap-1.5 text-title-small" [class.text-primary]="microphoneOpen()">
+        <mat-icon
+          class="size-5! shrink-0 text-[1.25rem]!"
+          [class]="microphoneOpen() ? 'motion-safe:animate-pulse' : ''"
+          aria-hidden="true"
+          >{{ shown().icon }}</mat-icon
+        >
+        <span>{{ shown().label }}</span>
+      </p>
+      <!-- Two lines always, so the card does not jump from one state to another -->
+      <p
+        class="line-clamp-2 min-h-10 text-body-medium"
+        [class.text-on-surface-variant]="detail().muted"
+      >
+        {{ detail().text }}
+      </p>
+    </div>
+  </div>
+  <!-- The whole width of the card, so the buttons fit in one row in the narrowest column -->
+  <div class="flex flex-wrap items-center gap-2">
+    @switch (state()) {
+      @case ('listening') {
+        <button
+          matButton="tonal"
+          type="button"
+          [matTooltip]="pauseTooltip"
+          [attr.aria-keyshortcuts]="keys.hold.aria"
+          (click)="hold.emit()"
+        >
+          <mat-icon>pause</mat-icon>
+          <span i18n="@@call.pause">Pausar</span>
+        </button>
+      }
+      @case ('hearing') {
+        <button matButton="tonal" type="button" (click)="correct.emit()">
+          <mat-icon>edit</mat-icon>
+          <span i18n="@@call.correct">Corregir</span>
+        </button>
+      }
+      @case ('speaking') {
+        <button
+          matButton="tonal"
+          type="button"
+          [matTooltip]="interruptTooltip"
+          [attr.aria-keyshortcuts]="keys.interrupt.aria"
+          (click)="interrupt.emit()"
+        >
+          <mat-icon>pan_tool</mat-icon>
+          <span i18n="@@call.interrupt">Interrumpir</span>
+        </button>
+      }
+      @case ('standby') {
+        <button
+          matButton="tonal"
+          type="button"
+          [matTooltip]="resumeTooltip"
+          [attr.aria-keyshortcuts]="keys.hold.aria"
+          (click)="keepTalking.emit()"
+        >
+          <mat-icon>mic</mat-icon>
+          <span i18n="@@call.resume">Seguir hablando</span>
+        </button>
+      }
+    }
+    <button
+      matButton="filled"
+      type="button"
+      class="app-hang-up-button ms-auto"
+      (click)="hangUp.emit()"
+    >
+      <mat-icon>call_end</mat-icon>
+      <span i18n="@@call.hangUp">Colgar</span>
+    </button>
+  </div>
+</div>
+<!-- Each state once: «Te escucho» stays while the student speaks, so it is not said again -->
+<p class="sr-only" aria-live="polite">{{ shown().label }}</p>

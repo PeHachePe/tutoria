@@ -15,6 +15,7 @@ class FakeUtterance {
   voice: FakeVoice | null = null;
   lang = '';
   rate = 1;
+  onstart: (() => void) | null = null;
   onend: (() => void) | null = null;
   onerror: ((event: { error: string }) => void) | null = null;
   constructor(readonly text: string) {}
@@ -114,6 +115,15 @@ describe('WebSpeechService', () => {
       expect(utterance).toMatchObject({ text: 'Hola.', voice: jorge, lang: 'es-ES', rate: 0.85 });
       utterance.onend?.();
       expect(await said).toBe('ended');
+    });
+
+    it('tells when the sound starts', async () => {
+      const started = vi.fn();
+      void speech.speak('Hola.', { voiceId: 'jorge', rate: 'normal', started });
+      await vi.waitFor(() => expect(synthesis.queue).toHaveLength(1));
+      expect(started).not.toHaveBeenCalled();
+      synthesis.queue[0].onstart?.();
+      expect(started).toHaveBeenCalledOnce();
     });
 
     it('is cancelled when silenced', async () => {

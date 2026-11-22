@@ -19,12 +19,11 @@ import { SettingsStore } from '../../settings/settings-store';
 import { StudentVoice } from '../../settings/student-voice';
 import { TutorSpeaker } from '../tutor-speaker';
 import { TutorStore } from '../tutor-store';
+import { VoiceCall } from '../voice-call';
 import { appendDictation } from './append-dictation';
 import { AudioNotice } from './audio-notice';
 import { listenErrorMessage } from './listen-error-message';
-
-/** Longest question, which keeps the requests to the tutor short (2.6). */
-export const MAX_QUESTION_LENGTH = 500;
+import { MAX_QUESTION_LENGTH } from './question-limit';
 
 /** Silence that ends the dictation: the student has finished saying the question (2.11). */
 export const DICTATION_SILENCE_MS = 8000;
@@ -63,6 +62,8 @@ export class TutorComposer {
   private readonly store = inject(TutorStore);
   /** Only on the student's screen: its presence is what offers the voice. */
   private readonly speaker = inject(TutorSpeaker, { optional: true });
+  /** The call uses the microphone too: «Dictar» waits until it ends. */
+  private readonly call = inject(VoiceCall, { optional: true });
   private readonly voice = inject(StudentVoice);
   private readonly settings = inject(SettingsStore);
   private readonly locale = inject(LanguageService).locale;
@@ -101,6 +102,7 @@ export class TutorComposer {
   );
 
   protected readonly canDictate = computed(() => this.speaker !== null && this.voice.canDictate());
+  protected readonly inCall = computed(() => this.call?.active() ?? false);
   protected readonly dictating = signal(false);
   protected readonly dictationError = signal<ListenError | null>(null);
   protected readonly noticeOpen = signal(false);
@@ -126,6 +128,12 @@ export class TutorComposer {
     this.questionForm.message().focusBoundControl();
   }
 
+  /** «Corregir» of a call: what was said goes after what is written, as a dictation, to send it. */
+  insert(text: string): void {
+    const message = appendDictation(this.model().message, text, MAX_QUESTION_LENGTH);
+    this.model.update((value) => ({ ...value, message }));
+  }
+
   /** Intro sends; with Mayús, or while an input method composes a character, it is a new line. */
   protected sendOnEnter(event: Event): void {
     const key = event as KeyboardEvent;
@@ -136,6 +144,8 @@ export class TutorComposer {
 
   /** «Dictar»: starts, or stops; the first time the audio leaves the device, the notice first. */
   protected toggleDictation(): void {
+    // Disabled but reachable during a call, so the click still arrives
+    if (this.inCall()) return;
     if (this.dictating()) this.stopDictation();
     else if (this.voice.needsAudioNotice()) this.noticeOpen.set(true);
     else this.startDictation();

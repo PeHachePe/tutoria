@@ -10,7 +10,9 @@ import { settingKey } from '../../settings/settings-store';
 import { StudentVoice } from '../../settings/student-voice';
 import { TutorSpeaker } from '../tutor-speaker';
 import { TutorStore } from '../tutor-store';
-import { DICTATION_SILENCE_MS, MAX_QUESTION_LENGTH, TutorComposer } from './tutor-composer';
+import { VoiceCall } from '../voice-call';
+import { MAX_QUESTION_LENGTH } from './question-limit';
+import { DICTATION_SILENCE_MS, TutorComposer } from './tutor-composer';
 
 interface Setup {
   voice?: boolean;
@@ -18,6 +20,8 @@ interface Setup {
   noticeSeen?: boolean;
   /** False, as in the teacher's preview. */
   speaker?: boolean;
+  /** Whether a call with the tutor is on; null without the call. */
+  inCall?: boolean | null;
 }
 
 async function renderComposer({
@@ -25,6 +29,7 @@ async function renderComposer({
   place = 'device',
   noticeSeen = false,
   speaker = true,
+  inCall = false,
 }: Setup = {}) {
   localStorage.setItem(settingKey('voice', 'u1'), String(voice));
   localStorage.setItem(settingKey('audioNoticeSeen', 'u1'), String(noticeSeen));
@@ -38,6 +43,9 @@ async function renderComposer({
       { provide: TutorStore, useValue: { canAsk: signal(true), ask } },
       provideFakeSpeech(fake),
       speaker ? [{ provide: TutorSpeaker, useValue: { stop: stopSpeaking } }] : [],
+      speaker && inCall !== null
+        ? [{ provide: VoiceCall, useValue: { active: signal(inCall) } }]
+        : [],
     ],
   });
   if (voice && place !== 'none' && speaker) {
@@ -340,5 +348,27 @@ describe('TutorComposer, dictating', () => {
     await startDictating(view);
     expect(view.fake.listening).toBe(true);
     expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('offers «Dictar» without the call', async () => {
+    await renderComposer({ inCall: null });
+    expect(dictateButton()?.hasAttribute('aria-disabled')).toBe(false);
+  });
+
+  it('leaves «Dictar» disabled, but reachable, during a call, which uses the microphone', async () => {
+    const view = await renderComposer({ inCall: true });
+    const dictate = dictateButton() as HTMLElement;
+    expect(dictate.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(dictate);
+    view.fixture.detectChanges();
+    expect(view.fake.listening).toBe(false);
+  });
+
+  it('puts what was said in a call after what is written, as a dictation, with «Corregir»', async () => {
+    const view = await renderComposer();
+    await userEvent.type(field(), 'Una duda.');
+    view.fixture.componentInstance.insert('por qué falla');
+    view.fixture.detectChanges();
+    expect(field().value).toBe('Una duda. Por qué falla');
   });
 });

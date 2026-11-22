@@ -10,7 +10,7 @@ import { TutorService } from '../../data/tutor-service';
 import { SettingsStore } from '../settings/settings-store';
 import { StudentVoice } from '../settings/student-voice';
 import { AttemptStore } from './attempt-store';
-import { TutorSpeaker } from './tutor-speaker';
+import { type AnswerFollower, TutorSpeaker } from './tutor-speaker';
 import { TutorStore } from './tutor-store';
 
 function attemptOf(id: string): Attempt {
@@ -81,6 +81,7 @@ function controlled(actions?: ToolRequest[]) {
 
 describe('TutorSpeaker', () => {
   let attempt: ReturnType<typeof signal<Attempt | undefined>>;
+  let submitted: ReturnType<typeof signal<boolean>>;
   let answers: ReturnType<typeof controlled>[];
   let fake: FakeSpeechService;
   let tutor: TutorStore;
@@ -91,6 +92,7 @@ describe('TutorSpeaker', () => {
   beforeEach(async () => {
     localStorage.clear();
     attempt = signal<Attempt | undefined>(attemptOf('a1'));
+    submitted = signal(false);
     answers = [];
     nextActions = undefined;
     fake = new FakeSpeechService();
@@ -101,7 +103,7 @@ describe('TutorSpeaker', () => {
         TutorSpeaker,
         provideFakeSpeech(fake),
         { provide: AuthStore, useValue: { userId: signal('u1') } },
-        { provide: AttemptStore, useValue: { attempt, readonly: computed(() => false) } },
+        { provide: AttemptStore, useValue: { attempt, readonly: computed(() => submitted()) } },
         {
           provide: AttemptService,
           useValue: {
@@ -175,7 +177,11 @@ describe('TutorSpeaker', () => {
     fake.finish();
     await settle();
     expect(fake.sentences.at(-1)).toBe('Te lo dejo en el chat.');
-    expect(fake.spoken[0].options).toEqual({ voiceId: 'jorge', rate: 'normal' });
+    expect(fake.spoken[0].options).toEqual({
+      voiceId: 'jorge',
+      rate: 'normal',
+      started: expect.any(Function),
+    });
     fake.finish();
     await settle();
     expect(speaker.speakingTurnId()).toBeNull();
@@ -395,5 +401,179 @@ describe('TutorSpeaker', () => {
     fake.finish();
     await settle();
     expect(fake.sentences).toEqual(['Te dejo un botón.', 'Te lo dejo en el chat.']);
+  });
+
+  describe('in a call', () => {
+    let events: string[];
+    let frees: number;
+    let call: AnswerFollower;
+
+    beforeEach(() => {
+      settings.setReadAloud(false);
+      events = [];
+      frees = 0;
+      call = {
+        following: (turn) => events.push(`following ${turn.studentMessage ?? turn.id}`),
+        wrote: () => events.push('wrote'),
+        sounded: () => events.push('sounded'),
+        ended: (how, turn) =>
+          events.push(`ended ${how}${turn?.status === 'failed' ? ' failed' : ''}`),
+        closed: () => events.push('closed'),
+        free: () => frees++,
+      };
+      speaker.follow(call);
+    });
+
+    it('says every new answer, without reading aloud, and tells how it goes', async () => {
+      const answer = await ask('¿Y ahora?');
+      await settle();
+      expect(events).toEqual(['following ¿Y ahora?']);
+      answer.say('Mira el bucle. E');
+      await settle();
+      fake.startSound();
+      fake.startSound();
+      expect(events).toEqual(['following ¿Y ahora?', 'wrote', 'sounded']);
+      answer.say('mpieza en cero.');
+      answer.end();
+      await settle();
+      fake.finish();
+      await settle();
+      fake.startSound();
+      fake.finish();
+      await settle();
+      expect(events).toEqual(['following ¿Y ahora?', 'wrote', 'sounded', 'ended said']);
+      expect(speaker.speakingTurnId()).toBeNull();
+    });
+
+    it('says the sentence that sounds, and those said since the answer started', async () => {
+      const answer = await ask();
+      answer.say('Mira el bucle. Empieza en cero. Y');
+      await settle();
+      expect(speaker.saying()).toBe('Mira el bucle.');
+      expect(speaker.said()).toEqual(['Mira el bucle.']);
+      fake.finish();
+      await settle();
+      expect(speaker.saying()).toBe('Empieza en cero.');
+      expect(speaker.said()).toEqual(['Mira el bucle.', 'Empieza en cero.']);
+      fake.finish();
+      await settle();
+      // Between sentences, the last one stays, as a subtitle would
+      expect(speaker.saying()).toBe('Empieza en cero.');
+
+      speaker.listen(tutor.turns()[0].id);
+      await settle();
+      expect(speaker.said()).toEqual(['Mira el bucle.']);
+      speaker.stop();
+      expect([speaker.saying(), speaker.said()]).toEqual([null, []]);
+    });
+
+    it('tells the answer was silenced by stop(), and not when a new one takes its place', async () => {
+      const first = await ask('Uno');
+      first.say('Mira el bucle. Y más.');
+      first.end();
+      await settle();
+      const second = await ask('Dos');
+      await settle();
+      expect(events).toEqual(['following Uno', 'wrote', 'following Dos']);
+      second.say('Otra cosa. Y');
+      await settle();
+      speaker.stop();
+      expect(events.at(-1)).toBe('ended silenced');
+      speaker.stop();
+      expect(events.filter((event) => event.startsWith('ended'))).toHaveLength(1);
+    });
+
+    it('tells an answer failed, with its turn, or went away', async () => {
+      const failing = await ask();
+      await settle();
+      failing.fail();
+      await settle();
+      expect(events.at(-1)).toBe('ended failed failed');
+
+      const silent = await ask('Otra');
+      await settle();
+      silent.end(true);
+      await settle();
+      expect(events.at(-1)).toBe('ended silenced');
+    });
+
+    it('tells when the conversation takes a question again', async () => {
+      const answer = await ask();
+      answer.say('Mira el bucle.');
+      await settle();
+      speaker.stop();
+      expect(events.at(-1)).toBe('ended silenced');
+      expect(frees).toBe(0);
+      answer.end();
+      await settle();
+      expect(frees).toBe(1);
+      await settle();
+      expect(frees).toBe(1);
+    });
+
+    it('says an answer of the history with «Escuchar»', async () => {
+      speaker.listen(tutor.turns()[0].id);
+      await settle();
+      expect(events).toEqual(['following ¿Qué hago?', 'wrote']);
+      expect(fake.sentences).toEqual(['Mira el bucle.']);
+    });
+
+    it('does not follow a new answer with the tab hidden', async () => {
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+      const answer = await ask();
+      answer.say('Mira el bucle. Y');
+      await settle();
+      expect(events).toEqual([]);
+      expect(fake.spoken).toEqual([]);
+    });
+
+    it('tells the conversation closed with another exercise or a submitted attempt', async () => {
+      submitted.set(true);
+      await settle();
+      expect(events).toEqual(['closed']);
+
+      submitted.set(false);
+      await settle();
+      attempt.set(attemptOf('a2'));
+      await settle();
+      expect(events).toEqual(['closed', 'closed']);
+    });
+
+    it('stops telling, and saying new answers, once the call ends', async () => {
+      speaker.follow(null);
+      const answer = await ask();
+      answer.say('Mira el bucle. Y');
+      await settle();
+      expect(events).toEqual([]);
+      expect(fake.spoken).toEqual([]);
+    });
+  });
+
+  describe('say()', () => {
+    it('says a fixed sentence after silencing what sounded, and tells how it ended', async () => {
+      speaker.listen(tutor.turns()[0].id);
+      await settle();
+      const stops = fake.stops;
+      const said = speaker.say('Te escucho.');
+      expect(fake.stops).toBe(stops + 1);
+      expect(speaker.speakingTurnId()).toBeNull();
+      await vi.waitFor(() => expect(fake.sentences.at(-1)).toBe('Te escucho.'));
+      expect(speaker.saying()).toBe('Te escucho.');
+      fake.finish();
+      expect(await said).toBe('ended');
+      expect(speaker.saying()).toBeNull();
+
+      const silenced = speaker.say('Te escucho.');
+      await vi.waitFor(() => expect(fake.spoken).toHaveLength(3));
+      speaker.stop();
+      expect(await silenced).toBe('cancelled');
+    });
+
+    it('never rejects', async () => {
+      const said = speaker.say('Te escucho.');
+      await vi.waitFor(() => expect(fake.spoken).toHaveLength(1));
+      fake.fail();
+      expect(await said).toBe('cancelled');
+    });
   });
 });

@@ -107,6 +107,11 @@ export class FakeSpeechService extends SpeechService {
     return this.voicesListeners.size;
   }
 
+  /** The sound of the latest sentence starts. */
+  startSound(): void {
+    this.spoken.at(-1)?.options.started?.();
+  }
+
   /** The sentence that sounds ends. */
   finish(): void {
     this.end('ended');

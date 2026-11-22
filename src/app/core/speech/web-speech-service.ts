@@ -115,6 +115,7 @@ export class WebSpeechService extends SpeechService {
     this.current = utterance;
     const synthesis = this.synthesis;
     return new Promise<'ended' | 'cancelled'>((resolve, reject) => {
+      utterance.onstart = () => options.started?.();
       utterance.onend = () => resolve('ended');
       utterance.onerror = (event) =>
         CANCEL_CODES.includes(event.error)

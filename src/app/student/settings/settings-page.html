@@ -211,7 +211,7 @@
           class="ps-14 text-body-small text-on-surface-variant"
           i18n="@@settings.tutor.voice.hint"
         >
-          Podrás escucharle y dictarle. Nunca se graba el audio.
+          Podrás escucharle, dictarle y llamarle. Nunca se graba el audio.
         </p>
       </div>
       @if (settings.voice()) {
@@ -321,6 +321,27 @@
               Las respuestas nuevas suenan solas. Si no, pulsa «Escuchar» bajo la que quieras oír.
             </p>
           </div>
+          <!-- Only where a call can listen (6.1c) -->
+          @if (voice.canDictate()) {
+            <div class="flex flex-col gap-1">
+              <mat-slide-toggle
+                aria-describedby="settings-interrupt-hint"
+                [checked]="settings.interruptBySpeaking()"
+                (change)="settings.setInterruptBySpeaking($event.checked)"
+                i18n="@@settings.voice.interruptBySpeaking"
+              >
+                Interrumpir al tutor hablando
+              </mat-slide-toggle>
+              <p
+                id="settings-interrupt-hint"
+                class="ps-14 text-body-small text-on-surface-variant"
+                i18n="@@settings.voice.interruptBySpeaking.hint"
+              >
+                En una llamada, el micrófono sigue abierto mientras te habla. Mejor con auriculares:
+                con altavoces, puede oír al tutor y cortarle sin querer.
+              </p>
+            </div>
+          }
           @if (voice.recognition(); as place) {
             <div class="flex flex-col gap-2">
               <h3

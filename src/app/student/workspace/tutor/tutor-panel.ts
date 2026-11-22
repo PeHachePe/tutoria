@@ -1,9 +1,11 @@
 import { DatePipe, formatDate } from '@angular/common';
 import {
+  afterNextRender,
   Component,
   computed,
   ElementRef,
   inject,
+  Injector,
   input,
   LOCALE_ID,
   output,
@@ -15,20 +17,26 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 
 import { AuthStore } from '../../../auth/auth-store';
+import { LanguageService } from '../../../core/i18n/language-service';
 import { MAX_HINT_LEVEL, raisesHintLevel } from '../../../data/tutor';
 import { Mascot, type MascotMood } from '../../../shared/mascot/mascot';
 import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { SettingsStore } from '../../settings/settings-store';
+import { StudentVoice } from '../../settings/student-voice';
 import { AttemptStore } from '../attempt-store';
 import { TutorSpeaker } from '../tutor-speaker';
 import { TutorStore, type TutorTurn } from '../tutor-store';
+import { type CallNotice, VoiceCall } from '../voice-call';
+import { AudioNotice } from './audio-notice';
+import { CallBar } from './call-bar';
 import { HINT_LEVELS, HintLevelMeter } from './hint-level-meter';
 import { TutorComposer } from './tutor-composer';
 import { TutorActions } from './tutor-actions';
 import { TutorMessage } from '../../../shared/tutor-message/tutor-message';
 import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
+import { listenErrorMessage } from './listen-error-message';
 import { tutorErrorMessage } from './tutor-error-message';
 
 /** Questions the empty chat suggests, so nobody has to think how to start. */
@@ -65,6 +73,8 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
     TutorMessage,
     TutorActions,
     SignInAgain,
+    AudioNotice,
+    CallBar,
   ],
   templateUrl: './tutor-panel.html',
   host: {
@@ -90,6 +100,12 @@ export class TutorPanel {
   protected readonly store = inject(TutorStore);
   /** The tutor's voice; none in the teacher's preview (D-061). */
   protected readonly speaker = inject(TutorSpeaker, { optional: true });
+  /** The call with the tutor (6.1c); none in the teacher's preview either. */
+  protected readonly call = inject(VoiceCall, { optional: true });
+  private readonly voice = inject(StudentVoice);
+  private readonly settings = inject(SettingsStore);
+  private readonly language = inject(LanguageService).locale;
+  private readonly injector = inject(Injector);
   protected readonly isSessionExpired = isSessionExpired;
   private readonly attempt = inject(AttemptStore);
   private readonly user = inject(AuthStore).user;
@@ -111,7 +127,7 @@ export class TutorPanel {
   /** The student is writing to the tutor: the mascot listens, with its tongue out. */
   protected readonly composing = signal(false);
 
-  private readonly reactionMode = inject(SettingsStore).reactions;
+  private readonly reactionMode = this.settings.reactions;
   /** The mascot moves with the emotion of each new answer (1.8), unless the reactions are off. */
   protected readonly mascotReaction = computed(() =>
     this.reactionMode() === 'off' ? null : this.store.reaction(),
@@ -166,7 +182,13 @@ export class TutorPanel {
     });
   });
 
+  protected readonly callLabel = $localize`:@@call.start:Llamar al tutor`;
+  protected readonly ongoingLabel = $localize`:@@call.ongoing:En llamada`;
+  /** Where the audio goes, said before the first call as before the first dictation (2.11). */
+  protected readonly callNoticeOpen = signal(false);
+
   private readonly composer = viewChild<TutorComposer>('composer');
+  private readonly callButton = viewChild('callButton', { read: ElementRef<HTMLElement> });
   private readonly conversation = viewChild.required<ElementRef<HTMLElement>>('conversation');
 
   /** Ready to write: the question field, or the conversation of a submitted attempt, to read it. */
@@ -177,6 +199,39 @@ export class TutorPanel {
     } else {
       this.conversation().nativeElement.focus();
     }
+  }
+
+  /** «Llamar al tutor»: the first time the audio leaves the device, the notice first. */
+  protected startCall(): void {
+    // «En llamada» is disabled but reachable, so the click still arrives
+    if (this.call?.active()) return;
+    if (this.voice.needsAudioNotice()) this.callNoticeOpen.set(true);
+    else this.call?.start();
+  }
+
+  /** «Entendido»: not again for this student, and the call starts. */
+  protected acceptCallNotice(): void {
+    this.settings.setAudioNoticeSeen();
+    this.callNoticeOpen.set(false);
+    this.call?.start();
+  }
+
+  /** «Corregir»: what was said goes into the field, with the focus, to correct it and send it. */
+  protected correctCall(call: VoiceCall, composer: TutorComposer): void {
+    composer.insert(call.correct());
+    composer.focus();
+  }
+
+  /** «Colgar»: the focus goes back to «Llamar al tutor», as the bar that had it is gone. */
+  protected hangUp(): void {
+    this.call?.hangUp();
+    afterNextRender(() => this.callButton()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected callNoticeMessage(notice: CallNotice): string {
+    return notice === 'unstable'
+      ? $localize`:@@call.unstable:La llamada se ha cortado: el micrófono se cierra solo. Puedes volver a llamar o seguir escribiendo.`
+      : listenErrorMessage(notice, this.language);
   }
 
   protected errorMessage(turn: TutorTurn): string {

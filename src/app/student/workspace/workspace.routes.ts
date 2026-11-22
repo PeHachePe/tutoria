@@ -7,6 +7,7 @@ import { BrowserSignals } from './browser-signals';
 import { EditingTab } from './editing-tab';
 import { TutorSpeaker } from './tutor-speaker';
 import { TutorStore } from './tutor-store';
+import { VoiceCall } from './voice-call';
 import { WorkspacePage } from './workspace-page';
 import { workspaceTools } from './workspace-tools';
 
@@ -23,8 +24,9 @@ export const workspaceRoutes: Routes = [
       AttemptStore,
       EditingTab,
       TutorStore,
-      // The tutor's voice, silenced on leaving the screen (2.11)
+      // The tutor's voice and the call with it, silenced and hung up on leaving the screen (2.11)
       TutorSpeaker,
+      VoiceCall,
       BrowserSignals,
       // Its tools, for our tutor and for the agents of the browser while it is open (2.5e)
       provideAppTools(workspaceTools),
