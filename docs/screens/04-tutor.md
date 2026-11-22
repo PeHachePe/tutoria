@@ -13,8 +13,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
   - envía cada pregunta o pista con `TutorService.ask()`, con el código actual del editor y el idioma de la interfaz;
   - escribe la respuesta según llegan sus eventos (`meta` → `delta` → `done`, §2.6).
 - El nivel de pista lo decide el servidor: «Pedir pista» lo sube (de 1 a 3) y una pregunta se responde en el nivel actual (§2.6).
-- El tutor simulado registra cada interacción y los eventos `hint_requested` y `proactive_intervention` (§2.8).
-- `ProactivityMonitor` (6.2b, provisto en la ruta; no en la vista previa del docente): tras cada ejecución y cada 15 segundos decide con `proactiveReason()` si el tutor se acerca y por qué (`failures`, `idle` o `achievement`, §2.7), y se lo pide a `TutorStore`. Lee el ajuste `SettingsStore.proactive` y `awaySince()`.
+- El tutor simulado registra cada interacción y los eventos `hint_requested` y `proactive_intervention`, este con su motivo (§2.8).
+- `ProactivityMonitor` (6.2b, provisto en la ruta; no en la vista previa del docente): tras cada ejecución y cada 15 segundos decide con `proactiveReason()` si el tutor se acerca y por qué (`failures`, `idle` o `achievement`, §2.7), y se lo pide a `TutorStore`. Lee el ajuste `SettingsStore.proactive` y `awaySince()`, y calla mientras el tutor responde o habla, el alumno habla en una llamada o tiene una pregunta en el campo (D-088). La intervención no se ve hasta sus primeras palabras (`TutorStore.intervene()`).
 - La voz (6.1, §2.11), solo con el ajuste `SettingsStore.voice` activado, que es cuando se carga `SpeechService`:
   - `TutorSpeaker` (6.1a, provisto en la ruta) dice las respuestas frase a frase, con la voz y la velocidad de los ajustes;
   - el dictado (6.1b) escribe en el campo de la pregunta lo que el navegador reconoce;
@@ -58,7 +58,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
   - las respuestas del historial, las que fallan a mitad y las intervenciones que el tutor decide callar no reaccionan;
   - una intervención de ayuda (por fallos repetidos o por un parón) reacciona en reducido, con un solo icono pequeño, sea cual sea su intensidad: el alumno no ha pedido nada y la pantalla no se le llena. La de un logro, completa (6.2d);
   - ejecutar las pruebas también reacciona (2.2, D-041): fiesta cuando pasan todas, aplausos más discretos si siguen pasando al volver a ejecutar, ánimo cuando pasan más que en la ejecución anterior y nada con fallos, que solo desanimaría. Gana la reacción más reciente, del tutor o de la ejecución.
-  - En el tutor simulado, siempre con intensidad 3: las pistas de nivel 1, 2 y 3 dan pensando, bombilla y cohete; pedir la solución, por turnos, guiño, secreto, «¿en serio?», lanzamiento y enfado; las preguntas, aplausos, mente explotando, risas o fuego; el enunciado, corazones; el código vacío, ánimo; el ejercicio superado, fiesta; sus intervenciones, ojos o empatía.
+  - En el tutor simulado, siempre con intensidad 3: las pistas de nivel 1, 2 y 3 dan pensando, bombilla y cohete; pedir la solución, por turnos, guiño, secreto, «¿en serio?», lanzamiento y enfado; las preguntas, aplausos, mente explotando, risas o fuego; el enunciado, corazones; el código vacío, ánimo; el ejercicio superado, fiesta; sus intervenciones por fallos, ojos o empatía por turnos; por un parón, sueño; y un logro, fiesta (6.2b).
 
 ## Interacciones
 
@@ -138,10 +138,10 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 - [x] «¿Cuántos me quedan?» responde con los datos del alumno y dice «Ha consultado tu progreso»; «pon el modo oscuro» lo aplica con «Deshacer»; «ponme el siguiente» deja el botón (2.5e).
 - [x] «Arréglame el código» con un `retrun` deja «Aplicar la corrección» con «Línea 5: retrun → return»; «formatéalo», «ejecuta las pruebas» y «entrégalo» dejan su botón y dicen qué pasó; sin despiste, no hay arreglo (2.5f, con datos simulados).
-- [ ] Tres ejecuciones seguidas con la misma prueba fallando traen una intervención con «El tutor se acerca»; no se repite hasta otros tres fallos ni antes de tres minutos, y recargar no la repite (6.2b).
-- [ ] Cuatro minutos sin actividad traen una sola intervención, y ninguna con el alumno fuera de la pestaña, con una pregunta a medio escribir o con la proactividad desactivada (6.2b).
-- [ ] Superar una prueba que llevaba tres fallos trae una felicitación, sin esperar al cooldown (6.2b).
-- [ ] Una intervención que el tutor calla o que falla no deja turno, aviso ni reacción (6.2b).
+- [x] Tres ejecuciones seguidas con la misma prueba fallando traen una intervención con «El tutor se acerca»; no se repite hasta otros tres fallos ni antes de tres minutos, y recargar no la repite (6.2b).
+- [x] Cuatro minutos sin actividad traen una sola intervención, y ninguna con el alumno fuera de la pestaña, con una pregunta a medio escribir o con la proactividad desactivada (6.2b).
+- [x] Superar una prueba que llevaba tres fallos trae una felicitación, sin esperar al cooldown (6.2b).
+- [x] Una intervención que el tutor calla o que falla no deja turno, aviso ni reacción (6.2b).
 - [ ] Una petición proactiva sin motivo real recibe silencio del servidor, sin llamada al modelo (6.2c).
 - [ ] Plegado, «Pregúntale al tutor» enseña «pensando» y después la respuesta sin mover el foco; una intervención entra sin «pensando»; «Cerrar el aviso» deja el punto (6.2d).
 - [ ] El atajo sale solo en los ejemplos visibles que fallan y en el móvil cambia a la pestaña «Tutor» (6.2d).

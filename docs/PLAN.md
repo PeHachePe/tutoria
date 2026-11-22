@@ -351,7 +351,7 @@ El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en
 
 - **Motivos** (`reason` de la petición), con los umbrales de cada ejercicio:
   - `failures`: la misma prueba falla en las últimas `max_repeated_failures` ejecuciones seguidas (por defecto, 3), y la cuenta vuelve a cero si la supera. Una ejecución que no carga cuenta como fallo de todas sus pruebas;
-  - `idle`: pasan `max_idle_minutes` (por defecto, 4) desde la última actividad del alumno (guardar código, ejecutar, entregar, pedir pista, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan);
+  - `idle`: pasan `max_idle_minutes` (por defecto, 4) desde la última actividad del alumno (guardar código, ejecutar, entregar, pedir pista, preguntar al tutor, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan). Preguntar cuenta como en el panel en vivo (D-068): quien acaba de hablar con el tutor no está parado (D-088);
   - `achievement` (RF-09 y CU-03 de la memoria, D-017): la última ejecución supera una prueba que llevaba al menos `max_repeated_failures` ejecuciones seguidas fallando. El modelo celebra en lugar de ayudar.
   - Basta con llegar al umbral. Los dos primeros son los de `stuckReason()`, la lectura de `isStuck()` que comparte el panel docente (D-015), y el tercero, `lastBreakthrough()` (D-054).
 - **Comprobación:** justo después de cada ejecución (fallos y logros) y cada 15 segundos (inactividad, y lo que quedó esperando). La ayuda, solo en intentos en `in_progress` o `tests_failed`; el logro, en cualquiera sin entregar.
@@ -365,7 +365,7 @@ El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en
 - **El cliente calla,** sin llamar al servidor, si:
   - el alumno desactivó la proactividad en sus ajustes, o es la vista previa del docente (D-061);
   - el alumno está fuera de la pestaña (`awaySince()`, D-054) o sin conexión;
-  - el tutor está respondiendo, hay una ejecución o una entrega en curso, o el alumno tiene una pregunta a medio escribir.
+  - el tutor está respondiendo o hablando en voz alta, el alumno habla en una llamada, hay una ejecución o una entrega en curso, o el alumno tiene una pregunta a medio escribir o dictada en el campo (D-088).
   - Lo que queda esperando se vuelve a mirar en la siguiente comprobación. El logro no espera: si no puede salir al momento, se pierde, porque una felicitación tardía no se entiende.
 - **El servidor comprueba el motivo** (D-065): `kind: 'proactive'` lo elige el navegador, así que `tutor` vuelve a calcular `proactiveReason()` con sus eventos y la última actividad del intento, con holgura por los relojes (cooldown de 2 minutos y 30 segundos menos de inactividad). Si no sale el mismo motivo, responde `silent` sin llamar al modelo. La petición cuenta su turno como cualquier otra (D-063), usa el nivel actual y no lo sube.
 - **Prompt** (v7, en `docs/prompt-history.md` desde el paso 6.2c): el servidor dice al modelo el motivo y sus hechos, y qué se espera en cada uno:
@@ -4117,6 +4117,8 @@ Cada subpaso va en su sesión y deja la aplicación funcionando: tras el 6.2b el
 🧪 Primero los tests de `proactiveReason()`: cada motivo en su umbral y uno antes; fallos que se rearman a los 3, 6 y 9; un parón que no repite hasta que hay actividad; un logro por ejecución, sin esperar al cooldown y también con el intento superado; cooldown tras pregunta, pista e intervención callada; el tope de 5; intento entregado. Después, el monitor con temporizadores simulados: cada silencio del cliente, lo que espera a la siguiente comprobación, el logro que se pierde, el ajuste que se apaga a mitad y el temporizador que se para al salir de la pantalla.
 Commit: `feat(tutor): proactivity monitor (step 6.2b)`.
 
+**Hecho (22/11/2026, D-088).** Cambios sobre el plan de abajo: `currentFailure()` en lugar de `longestFailure()` (ya existía `longestFailureStreak()`); `failingStreaks()` y `failedTestsByRun()` también se mudan a `proactive-reason.ts`; `lastTurnAt` es el último turno que pidió el alumno y cuenta como actividad; los eventos de la visita se vacían con cada carga de la conversación; el monitor también calla mientras `TutorSpeaker` habla; y el tutor simulado ya rechaza las intervenciones en la vista previa.
+
 **Plan de implementación del 6.2b** (17/11/2026, tras leer el código: quien lo implemente no tiene que decidir nada)
 
 Dudas resueltas:
@@ -4240,7 +4242,7 @@ export function proactiveReason(
 | `idle`        | ¿Sigues ahí? Si no sabes por dónde seguir, cuéntame qué te frena o pídeme una pista. | Still there? If you are not sure how to go on, tell me what is holding you back or ask me for a hint. | Encara hi ets? Si no saps per on continuar, explica'm què et frena o demana'm una pista. |
 | `achievement` | ¡Esa prueba se te resistía y la has sacado! Buen trabajo insistiendo. 🎉             | That test was putting up a fight and you cracked it! Well done for sticking with it. 🎉               | Aquesta prova se't resistia i l'has superada! Bona feina insistint. 🎉                   |
 
-- Sin textos de interfaz nuevos. Documentación al cerrar: ficha 04 (las reacciones del simulado), `PENDIENTES.md` (filas del 1.6 y del 1.9, esta sin la parte de la voz) y D-070.
+- Sin textos de interfaz nuevos. Documentación al cerrar: ficha 04 (las reacciones del simulado), `PENDIENTES.md` (filas del 1.6 y del 1.9, esta sin la parte de la voz) y la decisión (D-088; D-070 ya era la del panel en vivo).
 
 Tests, en este orden:
 
@@ -4301,7 +4303,7 @@ export function checkReason(
 ): ProactiveFacts | null;
 ```
 
-- `answer-store.ts`: `AttemptActivity { updatedAt: string; thresholds: ReasonThresholds; events: readonly AttemptEvent[]; lastTurnAt: string | null }`, `findActivity(attemptId): Promise<AttemptActivity | null>` y `NewAnswer.reason?: ProactiveReason`. `supabase-answer-store.ts`: `attempt` (`updated_at`, `exercise(max_repeated_failures, max_idle_minutes)`, `tutor_interaction(created_at)`) y los últimos 1000 `process_event` (`type, timestamp, detail`) por `timestamp`; `recordAnswer` pasa `answer_reason`.
+- `answer-store.ts`: `AttemptActivity { updatedAt: string; thresholds: ReasonThresholds; events: readonly AttemptEvent[]; lastTurnAt: string | null }` (`lastTurnAt`: la última interacción que no es proactiva, como en el cliente, D-088), `findActivity(attemptId): Promise<AttemptActivity | null>` y `NewAnswer.reason?: ProactiveReason`. `supabase-answer-store.ts`: `attempt` (`updated_at`, `exercise(max_repeated_failures, max_idle_minutes)`, `tutor_interaction(created_at, trigger)`) y los últimos 1000 `process_event` (`type, timestamp, detail`) por `timestamp`; `recordAnswer` pasa `answer_reason`.
 - `tutor.ts`: `reason: z.enum(PROACTIVE_REASONS).optional()` en `askFields`; `asksRight` exige además `(kind === 'proactive') === (reason !== undefined)`; el esquema de la vista previa rechaza `kind: 'proactive'` (400); tras contar el turno, `checkReason()` o silencio; `answerTurn` recibe los hechos, pasa `offerFix: kind !== 'proactive' || reason === 'failures'` y filtra las acciones; `recordAnswer` lleva `reason`. El mensaje del 400 nombra `reason?`.
 - `prompt.ts`: `PROMPT_VERSION = 'v7'`; `PromptInput.proactive?: ProactiveFacts`; `slipNote` también con `failures`; `askModel` no pide esqueleto ni sintaxis en una intervención. Textos:
   - en la instrucción, el párrafo «Si la petición llega marcada como proactiva…» pasa a: «INTERVENCIONES. A veces te acercas tú, sin que el alumno pregunte: la petición lo dice, con el motivo y sus hechos. Nadie te ha preguntado, así que eres breve, sin bromas ni teatro, y no repites lo que ya le dijiste. Si tu última respuesta trataba de lo mismo o no tienes nada nuevo, calla: devuelve "message" vacío. Por fallos repetidos: una o dos frases en el nivel indicado sobre la prueba que se resiste, que acaban ofreciéndole seguir; reacción "eyes" o "empathy". Por un parón: una o dos frases que le preguntan qué le frena o le ofrecen por dónde seguir; reacción "sleepy". Por un logro: una sola frase que celebra su esfuerzo y nombra lo conseguido, sin pistas ni peros, con emoción "celebration" y una reacción de celebración. En una intervención no usas herramientas, salvo proposeFix si la petición dice que su código no se ejecuta por un despiste.» Y «En proactivas donde decidas no intervenir» pasa a «En una intervención en la que decidas callar»;
@@ -4309,7 +4311,7 @@ export function checkReason(
     - `failures`: «te acercas tú, sin que el alumno pregunte, porque {prueba} lleva {runs} ejecuciones seguidas fallando. Una o dos frases en el nivel {N} sobre esa prueba, que acaben ofreciéndole seguir.»
     - `idle`: «te acercas tú, sin que el alumno pregunte, porque lleva {minutes} minutos sin actividad ({estado}). Una o dos frases, como mucho en el nivel {N}, que le pregunten qué le frena o le ofrezcan por dónde seguir.» Estado: «todavía no ha escrito nada», «su última ejecución dejó {failed} pruebas sin superar» o «tiene código sin ejecutar».
     - `achievement`: «te acercas tú, sin que el alumno pregunte, para felicitarle: acaba de superar {prueba}, que llevaba {failures} ejecuciones seguidas fallando. Una sola frase que celebre su esfuerzo y nombre lo conseguido, sin pistas ni peros.»
-- App: `MockTutorService.tryOut` responde `invalid` a una proactiva. Documentación al cerrar: `docs/prompt-history.md` («v7 · El tutor sabe por qué se acerca»), `PENDIENTES.md` (filas del 2.4 y del 2.5f, y la frase de la auditoría), D-065 como implementada y `pgTAP` en `supabase/tests/database/record_tutor_interaction.test.sql`.
+- App: `MockTutorService.tryOut` ya responde `invalid` a una proactiva (6.2b). Documentación al cerrar: `docs/prompt-history.md` («v7 · El tutor sabe por qué se acerca»), `PENDIENTES.md` (filas del 2.4 y del 2.5f, y la frase de la auditoría), D-065 como implementada y `pgTAP` en `supabase/tests/database/record_tutor_interaction.test.sql`.
 
 Tests, en este orden:
 
@@ -4317,7 +4319,7 @@ Tests, en este orden:
 2. `proactive.test.ts` (nuevo): cada motivo con sus hechos y `null` sin ellos; cooldown de 2 minutos; 30 segundos de holgura; tope de 5; logro y fallos a la vez aceptan los dos.
 3. `prompt.test.ts`: la línea de cada motivo con sus hechos; prueba oculta sin valores; los tres estados del parón; la nota del despiste solo con `failures`; la instrucción dice cuándo callar y las reacciones; `v7`.
 4. `tutor.test.ts` (`FakeStore` gana `activity`): 400 sin `reason` en una proactiva y con `reason` en las demás; 400 a una proactiva en la vista previa; motivo que cuadra, respondido y guardado con su `reason`; motivo que no cuadra, callado sin modelo ni `recordAnswer`, con el turno contado; el nivel no sube; el modelo que calla y el que falla dos veces; el despiste deja `proposeFix` solo en `failures`; cualquier otra acción se descarta.
-5. `supabase-tutor-service.spec.ts`: el cuerpo lleva `reason`. `mock-tutor-service.spec.ts`: la vista previa rechaza la proactiva.
+5. `supabase-tutor-service.spec.ts`: el cuerpo lleva `reason` (el de `mock-tutor-service.spec.ts` con la vista previa ya está, 6.2b).
 
 **6.2d · Interfaz (≈2,5 h)**
 

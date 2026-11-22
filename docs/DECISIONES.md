@@ -2607,3 +2607,39 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - En [E2E-PENDIENTES](E2E-PENDIENTES.md), el e2e de la llamada con un reconocimiento falso y axe en cada estado.
 
 **Aprobación:** el autor aprobó la tarjeta C y las propuestas («lo que consideres mejor»), preguntó si los `effect()` eran necesarios (de ahí la llamada sin `effect()`) y si los temporizadores eran la mejor solución (se quedan los tres de tiempo sin voz; el sondeo de la pregunta que espera pasó a un aviso). Pidió una sola tecla para interrumpir; se habló de Esc y de Control sola, y Claude eligió Control sola con Ctrl + . para pausar, por delegación del autor. Lo probó en su navegador y lo dio por bueno («así está bien, termínalo»).
+
+## D-088 · El tutor proactivo en el navegador: una función sin imports, los eventos de la visita y una intervención que no se ve hasta que habla (22/11/2026, propuesta)
+
+**Contexto:** el 6.2b pone en marcha la lógica del tutor proactivo con datos simulados (2.7, D-064 y D-065). El plan de implementación lo dejaba casi todo decidido; al leer el código salieron cuatro huecos: los eventos podían contarse dos veces, el tutor podía cortarse a sí mismo mientras leía en voz alta, preguntar al tutor no contaba como actividad y dos funciones con nombres casi iguales hacían cosas distintas.
+
+**Decisión (cómo se usa):**
+
+- **Cuándo se acerca:** justo después de cada ejecución y cada 15 segundos. Tras tres ejecuciones seguidas con la misma prueba fallando (el umbral del ejercicio), el turno entra en la conversación con «El tutor se acerca» y una frase sobre esa prueba; no vuelve hasta otros tres fallos seguidos (a los 6, a los 9…) ni antes de 3 minutos desde el último turno con el tutor. Tras cuatro minutos parado, pregunta si sigue ahí y qué le frena, una vez por parón. Cuando el alumno supera una prueba que se le resistía, lo celebra al momento, sin esperar al cooldown y también con el intento ya superado; si en ese instante no puede (el tutor responde, por ejemplo), el logro se pierde, porque una felicitación tardía no se entiende.
+- **Cuándo calla sin preguntar al servidor:** con la proactividad desactivada (con efecto al momento), fuera de la pestaña, sin conexión, mientras el tutor responde o **habla en voz alta**, mientras el alumno **habla en una llamada**, durante una ejecución o una entrega, con una pregunta a medio escribir o dictada en el campo (cuenta el texto, no el foco), en un intento que no se puede editar y en la vista previa del docente. Lo que espera se vuelve a mirar en la siguiente comprobación.
+- **Preguntar al tutor cuenta como actividad** para el parón, como en el panel en vivo (D-068): quien acaba de preguntar no recibe «¿Sigues ahí?» al acabar el cooldown.
+- **Una intervención no se ve hasta sus primeras palabras:** ni turno, ni «respondiendo», ni mascota pensativa mientras viaja, así que el alumno puede seguir preguntando. Si el tutor calla, la petición falla (también con 429) o el alumno preguntó mientras tanto y aún le están respondiendo, no queda nada: ni turno, ni aviso de error, ni reacción. Si el alumno cambió de ejercicio, tampoco.
+- **El tutor simulado** responde según el motivo: ayuda con los fallos (mirando o comprendiendo, por turnos, como antes), pregunta con sueño ante el parón y celebra el logro siempre, con fiesta. Calla la ayuda justo después de otra intervención.
+
+**Decisión (técnica):**
+
+- **`shared/proactive-reason.ts` sin imports:** la Edge Function `tutor` lo importará tal cual en el 6.2c (D-042), así que las lecturas de los eventos de ejecución se mudan a él con tipos estructurales (`ProcessEvent` encaja en `AttemptEvent` sin importarlo): `failingStreaks()`, `failureStreak()`, `currentFailure()`, `failedTestsByRun()`, `lastActivityAt()` y `lastBreakthrough()`, que gana el `testId`. `is-stuck.ts` se queda con `isStuck()`, `stuckReason()` y `longestFailureStreak()` (la historia del 4.4), y `last-breakthrough.ts` desaparece.
+- **`currentFailure()`** en lugar del `longestFailure()` del plan: ya existía `longestFailureStreak()`, que mira toda la historia, y con nombres casi iguales se confundían. Esta es la prueba que falla ahora en más ejecuciones seguidas, con su `testId`, para que el 6.2c diga en el prompt qué prueba es.
+- **`proactiveReasons()` devuelve todos los motivos que se cumplen,** en orden `achievement`, `failures`, `idle`. El monitor toma el primero tras una ejecución y, en el temporizador, el primero que no es un logro. El servidor (6.2c) comprobará que el recibido está en la lista, con su holgura (`ProactiveLimits`: cooldown e inactividad son parámetros).
+- **`lastTurnAt` es el último turno que pidió el alumno** (pregunta o pista): vale para el cooldown y como actividad. Las intervenciones, también las calladas, salen de los eventos.
+- **Los eventos de la visita** (las ejecuciones, leídas de `AttemptStore.lastRun()`, y las peticiones propias) se vacían cada vez que `TutorStore` carga la conversación, que ya los trae: así una recarga tras un error no cuenta dos veces la misma ejecución, y otro intento empieza limpio (`linkedSignal` sobre `loadedEvents`). Una petición que acaba con otro ejercicio abierto no deja su evento en él. Las ausencias y los pegados los guarda `BrowserSignals` (`events()`).
+- **Toda petición deja un evento local,** también si el tutor calla o falla: el cooldown y el episodio valen en la visita y no se pregunta cada 15 segundos.
+- **Un `effect()`** sobre `lastRun()`, frontera con el temporizador y la petición (4.8), que solo sigue la ejecución: el resto se lee con `untracked()`. El temporizador es un `setInterval` que se para con `DestroyRef`.
+- **El tutor simulado rechaza** una intervención sin motivo, un motivo sin intervención y cualquier intervención en la vista previa (D-061), como hará el servidor.
+
+**Alternativas:**
+
+- **Filtrar los eventos locales por intento** en lugar de vaciarlos con cada carga: no evitaba la doble cuenta tras una recarga.
+- **Derivar «a medio escribir» del modelo del campo con un `effect()`:** el compositor ya sabe cuándo cambia el texto (teclado, dictado, «Corregir» y envío), así que llama a `setDrafting()` en esos puntos.
+- **Dejar que un logro corte la lectura en voz alta:** el alumno perdería la respuesta que estaba escuchando.
+
+**Consecuencias:**
+
+- El 6.2c calcula `lastTurnAt` con las interacciones que no son proactivas, como el cliente, y usa `currentFailure()` para el prompt.
+- `SupabaseTutorService` ya envía `reason`; el servidor lo ignora hasta el 6.2c.
+
+**Aprobación:** el autor aprobó el plan con las cuatro mejoras propuestas («Sí, adelante»).
