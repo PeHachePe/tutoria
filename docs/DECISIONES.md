@@ -2564,3 +2564,45 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Entra en [PENDIENTES](PENDIENTES.md) la tabla de motores con un dictado real en cada navegador, y en [E2E-PENDIENTES](E2E-PENDIENTES.md) el e2e del dictado con un reconocimiento falso.
 
 **Aprobación:** el autor aprobó el plan y los cinco ajustes propuestos («Sí, adelante»). Al probarlo en su Chrome no salía nada; se diagnosticó con él (el fallo es del reconocimiento de su Chrome, no de la app) y aprobó las dos mejoras que salieron: el aviso de no haber entendido nada y un «Te escucho…» más visible. El detalle técnico, por delegación del autor.
+
+## D-087 · La llamada con el tutor: la tarjeta, las teclas y una llamada sin `effect()` (22/11/2026, propuesta)
+
+**Contexto:** el 6.1c une la síntesis (6.1a) y el dictado (6.1b) en una conversación por turnos y sin manos (2.11). El plan de implementación fijaba la máquina de estados; quedaban por decidir el aspecto de la llamada (en `PENDIENTES.md`, un «aspecto de videollamada» con boceto), las teclas y el ajuste para interrumpir hablando. Al revisarlo salieron además cinco fallos del plan.
+
+**Decisión (cómo se usa):**
+
+- **Llamar:** un teléfono, «Llamar al tutor», en la cabecera del tutor, con la voz activada, una voz y un navegador que reconoce la voz. La primera vez, si el audio sale del equipo, antes el aviso del audio (el mismo del dictado). El tutor dice «Te escucho» y después se abre el micrófono. Durante la llamada el botón sigue ahí, deshabilitado y enfocable («En llamada»), y al colgar el foco vuelve a él.
+- **La tarjeta** (boceto C de tres, aprobado por el autor), sobre «Pedir pista»: la mascota es la cara del tutor, con su gesto en cada estado (escucha con la lengua fuera, piensa, habla, descansa) y un anillo que late mientras el micrófono está abierto; el estado («Te escucho», «Pensando…», «Hablando…», «En espera»); dos líneas fijas, para que la tarjeta no salte, con lo que se va entendiendo, la frase que dice el tutor como subtítulo, «Habla cuando quieras» o «Micrófono cerrado»; y una fila a todo el ancho con el botón del estado («Pausar», «Corregir», «Interrumpir», «Seguir hablando») y «Colgar», en rojo. Durante la llamada, la mascota de la cabecera y la del chat vacío se ocultan (una sola cara), «Hablando · Parar» de la cabecera no sale (la tarjeta ya tiene «Interrumpir») y «Dictar» queda deshabilitado (los dos usan el micrófono).
+- **Turnos:** el alumno habla y, tras 1,5 s de silencio, la pregunta se envía. Si el tutor aún escribe la respuesta anterior (porque el alumno le interrumpió), la pregunta espera a que acabe; no se pierde. Una pregunta escrita o una pista durante la llamada también se dicen. «Escuchar» bajo una respuesta, en una llamada, la repite: cierra el micrófono, la dice y vuelve a escuchar.
+- **Teclas:** **Control sola** (pulsar y soltar sin otra tecla ni clic en medio, en menos de medio segundo) interrumpe al tutor mientras habla, y en cualquier otro momento no hace nada; **Ctrl + .** pausa la llamada en cualquier estado o la retoma; **Esc** descarta lo que el alumno está diciendo, sin plegar el tutor flotante. Los tooltips lo dicen: «Interrumpir (Ctrl)», «Pausar (Ctrl + .)», «Seguir hablando (Ctrl + .)».
+- **Interrumpir hablando:** el ajuste «Interrumpir al tutor hablando», apagado por defecto y solo donde el navegador reconoce la voz, con «Mejor con auriculares: con altavoces, puede oír al tutor y cortarle sin querer». Con él, el micrófono sigue abierto mientras el tutor habla y dos palabras propias lo cortan; lo que repite al tutor (`isEcho()`, comparado con sus dos últimas frases) no.
+- **Plegado:** la mascota flotante lleva el anillo, y una línea encima, en lugar del bocadillo de la respuesta, dice lo que se va entendiendo, el estado o el subtítulo, con un «Colgar» pequeño que devuelve el foco a la mascota. En el móvil, la pestaña «Tutor» lleva un micrófono mientras dura la llamada y su nombre dice «en llamada».
+- **Espera y cortes:** «Pausar», Ctrl + ., 90 s sin voz u ocultar la pestaña dejan la llamada en espera con el micrófono cerrado. Una respuesta que llega en espera se dice y deja 10 s para contestar. Si la respuesta falla, el tutor lo dice («No he podido responder») y el chat tiene su «Reintentar»; con demasiadas preguntas dice cuánto esperar y queda en espera. Un error del micrófono, o tres cierres seguidos en menos de un segundo, cuelgan con un aviso que dice por qué.
+- **Colgar:** «Colgar», cambiar de ejercicio, entregar o salir de la pantalla cierran el micrófono y callan al tutor.
+
+**Decisión (técnica):**
+
+- **`VoiceCall` sin `effect()`:** el plan le daba uno para seguir los turnos, pero `TutorSpeaker` ya tiene el suyo sobre los mismos turnos y Angular no garantiza el orden de los dos. Si el de la llamada corría primero, veía la respuesta completa aún sin voz, abría el micrófono y el tutor hablaba con él abierto. En su lugar, `TutorSpeaker` avisa a la llamada (`follow(AnswerFollower)`): empieza a decir una respuesta, primer texto, primer sonido, acaba (dicha, callada o fallida), la conversación se cierra (otro ejercicio o el intento entregado) o vuelve a aceptar preguntas. `VoiceCall` queda en métodos, temporizadores (`createDebouncer`, como los 8 s del dictado) y `computed()`: pasar de «Pensando…» a «Hablando…» se deriva de `speakingTurnId()`. El único `effect()` de la voz sigue siendo el de `TutorSpeaker` (frontera con Web Speech, 4.8), más el de `voiceschanged` de `StudentVoice`.
+- **La pregunta que espera** no sondea con un temporizador: la envía el aviso `free()` cuando la respuesta que llegaba está completa.
+- **Control sola** no es una tecla de carácter (WCAG 2.1.4 no pide poder cambiarla) y nadie la usa sola: ni CodeMirror ni los navegadores. Los lectores de pantalla ya la usan para callar, así que encaja. **Ctrl + .** abre el micrófono solo a propósito, con una combinación; en macOS es Control porque ⌘ + . es «cancelar». `aria-keyshortcuts` en cada botón.
+- **El ajuste se llama por lo que hace** (`interruptBySpeaking`), no `headphones`: con altavoces se puede probar, y la ayuda dice el riesgo.
+- **`isEcho()`** compara con las dos últimas frases, no con toda la respuesta: las palabras con que el alumno corta suelen estar en ella y no podría interrumpir.
+- **Marcas de la medición:** una por turno; la última palabra con su hora (`performance.mark(…, { startTime })`), no una por palabra. Solo se miden las respuestas a lo que pregunta la propia llamada. `SpeakOptions.started` marca el primer sonido con el evento `start` de la locución.
+- **`MAX_QUESTION_LENGTH`** pasa a su propio fichero (`tutor/question-limit.ts`) para que `VoiceCall` y `TutorComposer` no se importen entre sí.
+- **Un botón deshabilitado y enfocable recibe el clic** (`disabledInteractive` no lo detiene ante el manejador de la plantilla): «Dictar» y «Llamar al tutor» comprueban la llamada ellos mismos.
+
+**Alternativas:**
+
+- **La barra del plan** (icono, texto y botones): sobria, pero sin la cara del tutor ni el micrófono a la vista.
+- **Videollamada completa** (la mascota grande arriba, cronómetro, subtítulos): quitaba unos 150 px al chat, un tercio del tutor flotante. El cronómetro no ayuda a programar y obliga a repintar cada segundo.
+- **Esc para interrumpir:** la tecla universal de «parar», pero choca con plegar el tutor flotante, con cerrar menús y con salir del editor (Esc y Tab).
+- **Atajo configurable:** no lo pide la accesibilidad y casi nadie lo cambiaría; queda en `PENDIENTES.md` un interruptor para desactivar Control sola si corta sin querer.
+- **Un `effect()` en `VoiceCall`,** como en el plan: más directo de leer, pero con la carrera de arriba y transiciones que llegan un ciclo después.
+
+**Consecuencias:**
+
+- El 6.2b conecta el silencio de la proactividad mientras el alumno habla en una llamada (anotado en su plan).
+- La medición de los diez turnos la hace el autor y decide el 6.1d (`PENDIENTES.md`); también si Chrome de Android pita al reabrir el micrófono.
+- En [E2E-PENDIENTES](E2E-PENDIENTES.md), el e2e de la llamada con un reconocimiento falso y axe en cada estado.
+
+**Aprobación:** el autor aprobó la tarjeta C y las propuestas («lo que consideres mejor»), preguntó si los `effect()` eran necesarios (de ahí la llamada sin `effect()`) y si los temporizadores eran la mejor solución (se quedan los tres de tiempo sin voz; el sondeo de la pregunta que espera pasó a un aviso). Pidió una sola tecla para interrumpir; se habló de Esc y de Control sola, y Claude eligió Control sola con Ctrl + . para pausar, por delegación del autor. Lo probó en su navegador y lo dio por bueno («así está bien, termínalo»).

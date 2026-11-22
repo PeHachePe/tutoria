@@ -463,7 +463,7 @@ abstract class SpeechService {
 - `tutorVoice`: la voz del tutor. Mientras el alumno no elija otra, la más natural del idioma (D-078, que sustituye la voz sin elegir de D-066): las voces se ordenan por calidad y las robóticas de macOS se esconden tras «Ver todas las voces»; cada una con «Probar».
 - `speechRate`: lenta, normal o rápida.
 - `readAloud`: «Leer las respuestas en voz alta» fuera de una llamada. Apagado por defecto: en un aula, veinticinco tutores hablando a la vez no ayudan a nadie.
-- `headphones`: «Llevo auriculares: puedo interrumpir al tutor hablando» (modo llamada).
+- `interruptBySpeaking`: «Interrumpir al tutor hablando» (modo llamada), mejor con auriculares: con altavoces, el micrófono puede oír al tutor (D-087).
 
 **Síntesis:**
 
@@ -481,20 +481,20 @@ abstract class SpeechService {
 - **Sin reconocimiento** (Firefox): no hay «Dictar» ni llamada, y los ajustes dicen que se puede escuchar al tutor y escribirle.
 - **Errores**, cada uno con su mensaje junto al campo y sin perder lo escrito: sin permiso para el micrófono (cómo darlo, o seguir escribiendo), sin micrófono, servicio no disponible e idioma no admitido. No oír nada no es un error, pero si el dictado acaba en silencio sin que el navegador haya dado ningún texto, un aviso suave lo dice («No he entendido nada. Prueba otra vez o escribe tu pregunta»): hay navegadores que oyen la voz y no devuelven nada, y sin el aviso parecería que «Dictar» no hace nada.
 
-**Modo llamada.** `VoiceCall` (`student/workspace/`, de ámbito de pantalla como `ProactivityMonitor`) une las dos piezas con `TutorStore`: lee `turns()` y `answering()` y pregunta con `ask()`. El store no cambia y la conversación es la misma: una pregunta escrita durante una llamada también recibe su respuesta hablada. Su `effect()` está en la frontera con Web Speech (4.8).
+**Modo llamada.** `VoiceCall` (`student/workspace/`, de ámbito de pantalla como `ProactivityMonitor`) une las dos piezas con `TutorStore`: lee `turns()` y `answering()` y pregunta con `ask()`. El store no cambia y la conversación es la misma: una pregunta escrita durante una llamada también recibe su respuesta hablada. No tiene `effect()`: `TutorSpeaker`, que ya sigue la conversación con el suyo, le avisa de cómo va cada respuesta (`AnswerFollower`: empieza, primer texto, primer sonido, acaba, falla, la conversación se cierra o vuelve a aceptar preguntas), y así no hay dos `effect()` sobre los mismos turnos en un orden que Angular no garantiza (D-087).
 
-| Estado      | Micrófono                         | En pantalla                          | Pasa a                                                                                                      |
-| ----------- | --------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `listening` | Abierto                           | «Te escucho»                         | `hearing` con la primera palabra; `standby` tras 90 s sin voz                                               |
-| `hearing`   | Abierto                           | Lo que va entendiendo                | `thinking` tras 1,5 s sin palabras nuevas (envía); `listening` con Esc (descarta); `standby` con «Corregir» |
-| `thinking`  | Cerrado                           | «Pensando…» y la mascota pensativa   | `speaking` con la primera frase; `listening` si el tutor falla, tras decirlo                                |
-| `speaking`  | Cerrado; abierto con `headphones` | La respuesta, que también se escribe | `listening` al acabar o al interrumpir                                                                      |
-| `standby`   | Cerrado                           | «En espera» y «Seguir hablando»      | `listening` con el botón o el atajo                                                                         |
+| Estado      | Micrófono                                  | En pantalla                          | Pasa a                                                                                                      |
+| ----------- | ------------------------------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `listening` | Abierto                                    | «Te escucho»                         | `hearing` con la primera palabra; `standby` tras 90 s sin voz                                               |
+| `hearing`   | Abierto                                    | Lo que va entendiendo                | `thinking` tras 1,5 s sin palabras nuevas (envía); `listening` con Esc (descarta); `standby` con «Corregir» |
+| `thinking`  | Cerrado                                    | «Pensando…» y la mascota pensativa   | `speaking` con la primera frase; `listening` si el tutor falla, tras decirlo                                |
+| `speaking`  | Cerrado; abierto con `interruptBySpeaking` | La respuesta, que también se escribe | `listening` al acabar o al interrumpir                                                                      |
+| `standby`   | Cerrado                                    | «En espera» y «Seguir hablando»      | `listening` con el botón o el atajo                                                                         |
 
 - **Empezar:** «Llamar al tutor», en la cabecera del tutor, con la voz activada, una voz elegida y reconocimiento en el navegador. El navegador pide el micrófono, y la llamada empieza diciendo «Te escucho» (una frase fija, que no es un turno).
 - **Turnos:** habla uno cada vez. El turno del alumno acaba con 1,5 segundos de silencio, y durante ese tiempo lo que el navegador ha entendido está en pantalla: seguir hablando lo alarga, Esc lo descarta y «Corregir» lo pasa al campo como un dictado y deja la llamada en espera. Es la revisión de RF-08 sin soltar el teclado. Un turno vacío no se envía.
 - **El tutor nunca interrumpe:** una intervención proactiva espera mientras el alumno habla (`hearing`), igual que con una pregunta a medio escribir (2.7).
-- **Interrupciones del alumno:** «Interrumpir», el atajo de la llamada, enviar una pregunta escrita o pedir una pista callan al tutor al momento. Con `headphones`, también hablar: el micrófono sigue abierto mientras el tutor habla, y dos palabras o más que no sean eco lo callan y empiezan el turno del alumno. Es eco lo que coincide con la frase que el tutor está diciendo (`isEcho()`, función pura). Sin auriculares el micrófono está cerrado, así que el tutor no puede oírse a sí mismo. El turno interrumpido queda entero en el chat.
+- **Interrupciones del alumno:** «Interrumpir», el atajo de la llamada, enviar una pregunta escrita o pedir una pista callan al tutor al momento. Con `interruptBySpeaking`, también hablar: el micrófono sigue abierto mientras el tutor habla, y dos palabras o más que no sean eco lo callan y empiezan el turno del alumno. Es eco lo que coincide con la frase que el tutor está diciendo (`isEcho()`, función pura). Sin auriculares el micrófono está cerrado, así que el tutor no puede oírse a sí mismo. El turno interrumpido queda entero en el chat.
 - **Editar el código no interrumpe:** de eso se trata.
 - **Silencios:**
   - el navegador corta el reconocimiento cuando no oye nada: `VoiceCall` lo vuelve a abrir, salvo que se cierre tres veces seguidas en menos de un segundo, que acaba la llamada con un aviso;
@@ -504,8 +504,8 @@ abstract class SpeechService {
   - mientras el tutor piensa, la pantalla lo dice al instante; no hay frases de relleno;
   - si la respuesta falla, el tutor lo dice («No he podido responder») y el chat ofrece «Reintentar»; con el límite de turnos (429), dice cuánto hay que esperar y deja la llamada en espera.
 - **Colgar:** «Colgar», cambiar de ejercicio, entregar o salir de la pantalla. Cierra el micrófono y calla al tutor.
-- **Con el tutor plegado** la llamada sigue: la mascota muestra el estado y el bocadillo (D-064) enseña lo que se va entendiendo, «pensando» y la respuesta.
-- **Atajo de la llamada:** una combinación de teclas de la pantalla de trabajo que interrumpe, pone en espera o retoma según el estado. Se elige en el 6.1c, comprobando que no choca con el editor ni con el navegador en Windows y macOS.
+- **Con el tutor plegado** la llamada sigue: la mascota muestra el estado, con un anillo mientras el micrófono escucha, y una línea encima (que durante la llamada ocupa el sitio del bocadillo de D-064) dice lo que se va entendiendo, el estado o la frase que dice el tutor, con un «Colgar» pequeño. En el móvil, la pestaña «Tutor» lleva el micrófono mientras dura la llamada.
+- **Teclas de la llamada** (elegidas en el 6.1c, D-087): **Control sola** (pulsada y soltada sin otra tecla ni clic en medio, en menos de medio segundo) interrumpe al tutor mientras habla, y no hace nada más; **Ctrl + .** pausa la llamada en cualquier estado o la retoma en espera, porque abrir el micrófono tiene que ser a propósito; **Esc** descarta lo que el alumno está diciendo. Ni el editor ni los navegadores usan Control sola ni Ctrl + . (en macOS, ⌘ + . es «cancelar», por eso Control); ninguna es una tecla de carácter (WCAG 2.1.4).
 - Los tiempos (1,5 s, 8 s, 10 s, 90 s) son constantes con nombre, que se ajustan al probarlo.
 
 **Respuesta frase a frase** (D-067):
@@ -3905,6 +3905,19 @@ Tests, en este orden:
 🧪 e2e (a `E2E-PENDIENTES.md`): con un reconocimiento falso inyectado, una pregunta dicha recibe su respuesta en el chat y la barra pasa por sus estados.
 Commit: `feat(voice): call mode with the tutor (step 6.1c)`.
 
+- **Hecho así (D-087):** como el plan de abajo, con estos cambios:
+  - **Sin `effect()` en `VoiceCall`:** `TutorSpeaker` le avisa (`follow(AnswerFollower)`) y la llamada es métodos, temporizadores y `computed()`. Así se evita una carrera entre dos `effect()` sobre los mismos turnos: si el de la llamada corría primero, veía la respuesta completa aún sin voz y abría el micrófono con el tutor hablando.
+  - **La pregunta espera:** si el alumno interrumpe mientras la respuesta aún llega y vuelve a hablar, su pregunta se envía cuando el tutor acaba de escribir (aviso `free()`), en lugar de perderse.
+  - **«Escuchar» en una llamada** es «repite»: cierra el micrófono, lo dice y vuelve a escuchar.
+  - **Un fallo a mitad de respuesta** también se dice en voz alta, no solo antes de la primera frase.
+  - **Las marcas,** una por turno: la última palabra con su hora (`startTime`), no una por palabra.
+  - **El ajuste** es `interruptBySpeaking` («Interrumpir al tutor hablando»), no `headphones`: dice lo que hace, y los auriculares van en su ayuda.
+  - **Las teclas:** Control sola interrumpe; Ctrl + . pausa o retoma (en `speaking` ya no interrumpe: pausa); Esc descarta.
+  - **La tarjeta de la llamada** (boceto C aprobado por el autor): la mascota es la cara del tutor, con un anillo mientras el micrófono escucha; el estado; dos líneas fijas con lo que se entiende, la frase que dice el tutor (subtítulo) o el estado del micrófono; y una fila con «Pausar», «Corregir», «Interrumpir» o «Seguir hablando», y «Colgar» en rojo. Durante la llamada, la mascota de la cabecera y la del chat vacío se ocultan y «Hablando · Parar» no sale.
+  - **Plegado,** la línea de la llamada sustituye al bocadillo de la respuesta, con el subtítulo y un «Colgar» que devuelve el foco a la mascota; en el móvil, la pestaña «Tutor» lleva el micrófono y su nombre dice «en llamada».
+  - **`MAX_QUESTION_LENGTH`** pasa a `tutor/question-limit.ts`, para que `VoiceCall` y `TutorComposer` no se importen entre sí.
+  - **La medición de los diez turnos** la hace el autor con `npm run start:local` (en Safari o Edge: su Chrome de macOS no transcribe) y decide el 6.1d (`PENDIENTES.md`).
+
 **Plan de implementación del 6.1c** (17/11/2026; necesita el 6.1a y el 6.1b hechos)
 
 Dudas resueltas:
@@ -4108,7 +4121,7 @@ Commit: `feat(tutor): proactivity monitor (step 6.2b)`.
 
 Dudas resueltas:
 
-- **Un fichero sin imports.** El Edge Runtime solo resuelve imports con extensión, también los de tipos (D-042), y el 6.2c importa `proactive-reason.ts` tal cual. Así que ese fichero no importa nada, y las lecturas que necesita se mudan a él con tipos estructurales (`ProcessEvent`, `Attempt` y `StuckThresholds` encajan sin importarlos): `failureStreak()`, `lastActivityAt()` y `lastBreakthrough()`. `is-stuck.ts` se queda con `isStuck()` y `stuckReason()` y los importa de él; `last-breakthrough.ts` y su spec se borran (sus casos pasan a `proactive-reason.spec.ts`); `live-row.ts` importa de `proactive-reason`. Proponer **D-070** al cerrar.
+- **Un fichero sin imports.** El Edge Runtime solo resuelve imports con extensión, también los de tipos (D-042), y el 6.2c importa `proactive-reason.ts` tal cual. Así que ese fichero no importa nada, y las lecturas que necesita se mudan a él con tipos estructurales (`ProcessEvent`, `Attempt` y `StuckThresholds` encajan sin importarlos): `failureStreak()`, `lastActivityAt()` y `lastBreakthrough()`. `is-stuck.ts` se queda con `isStuck()` y `stuckReason()` y los importa de él; `last-breakthrough.ts` y su spec se borran (sus casos pasan a `proactive-reason.spec.ts`); `live-row.ts` importa de `proactive-reason`. Proponer al cerrar la siguiente decisión libre (D-070 ya es la del panel en vivo).
 - **No se apoya en `stuckReason()`:** devuelve `failures` antes que `idle` y taparía un parón tras un episodio de fallos ya atendido. Usa `failureStreak()` y `lastActivityAt()` por separado.
 - **Devuelve todos los motivos que se cumplen,** en orden `achievement`, `failures`, `idle`. Tras una ejecución el monitor toma el primero; en el temporizador, el primero que no sea `achievement` (un logro tardío se pierde, y no debe tapar a los demás); el servidor (6.2c) comprueba que el motivo recibido está en la lista.
 - **De dónde salen los eventos en el navegador:** de lo cargado con la conversación (`TutorStore` ya pide `AttemptService.history()`), más lo ocurrido en la visita: la ejecución (`runEventDetail()` sobre `AttemptStore.lastRun()`), los eventos que registra `BrowserSignals` y las propias intervenciones. Sin peticiones nuevas.
@@ -4116,7 +4129,7 @@ Dudas resueltas:
 - **Una intervención no se ve hasta su primer `delta`:** ni turno, ni «respondiendo», ni mascota pensativa. Si el alumno pregunta mientras viaja y su turno sigue respondiendo cuando llega, la intervención se descarta.
 - **«Pregunta a medio escribir»** es texto en el campo (no el foco): `TutorComposer` se lo dice al store.
 - **`reason` es obligatorio en el tipo del evento.** Las fixtures lo ganan: `proactive(reason = 'failures', silent = false)`, y el caso callado de `activity.ts` (`[paste(150), run(4), proactive(true), run(4)]`) pasa a `proactive('idle', true)`. Después, `npm run seed`.
-- **6.1 sin hacer:** el silencio «mientras el alumno habla» lo conecta el 6.1c.
+- **6.1c hecho (D-087):** el monitor calla mientras el alumno habla en una llamada: `inject(VoiceCall, { optional: true })?.state() === 'hearing'` es un silencio más del cliente, con su test. Una intervención con la llamada en espera ya se oye y abre el micrófono 10 s: `VoiceCall` lo hace con cualquier turno nuevo.
 - **Umbrales:** `WorkspacePage` ya carga el ejercicio; el cargador de `detail` se los pasa al monitor (`watch()`), como hace con el título.
 
 Ficheros:

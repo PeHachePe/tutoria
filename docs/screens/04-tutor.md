@@ -18,7 +18,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - La voz (6.1, §2.11), solo con el ajuste `SettingsStore.voice` activado, que es cuando se carga `SpeechService`:
   - `TutorSpeaker` (6.1a, provisto en la ruta) dice las respuestas frase a frase, con la voz y la velocidad de los ajustes;
   - el dictado (6.1b) escribe en el campo de la pregunta lo que el navegador reconoce;
-  - `VoiceCall` (6.1c, provisto en la ruta) lleva los turnos de una llamada: lee `turns()` y `answering()` y pregunta con `ask()`. `TutorStore` no cambia, y no se guarda nada nuevo: ni audio ni si la pregunta fue hablada.
+  - `VoiceCall` (6.1c, provisto en la ruta) lleva los turnos de una llamada: pregunta con `ask()` y sabe de cada respuesta por `TutorSpeaker`, que se lo avisa (D-087). `TutorStore` no cambia, y no se guarda nada nuevo: ni audio ni si la pregunta fue hablada.
 
 ## Contenido y disposición
 
@@ -45,8 +45,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Voz** (6.1, §2.11, D-066), solo con la voz activada en los ajustes:
   - **Escuchar** (6.1a): bajo cada respuesta del tutor, «Escuchar», que pasa a «Parar» mientras suena. Con «Leer las respuestas en voz alta» en los ajustes, las respuestas nuevas suenan solas. Mientras habla, la mascota mueve la lengua (también plegada) y la cabecera enseña «Hablando» con «Parar», para que se vea aunque la respuesta quede fuera de la vista. Sin voz elegida, habla con la más natural del navegador (D-078);
   - **Dictar** (6.1b): un botón con un micrófono junto a enviar. Mientras escucha, el botón queda marcado (`aria-pressed`, el micrófono en el color principal y el tooltip «Dejar de dictar») y bajo el campo se lee «Te escucho…» con el micrófono latiendo; lo reconocido aparece en el campo, con mayúscula si empieza frase. La primera vez, si el audio sale del equipo, un aviso sobre el campo lo dice, con «Entendido». Un error (sin permiso, sin micrófono, servicio caído, idioma no admitido) sale sobre el campo con qué hacer. Si acaba en silencio sin que el navegador haya dado ningún texto, «No he entendido nada. Prueba otra vez o escribe tu pregunta». En un navegador sin reconocimiento, y en la vista previa del docente, el botón no existe;
-  - **Llamar al tutor** (6.1c): un botón con un teléfono en la cabecera. En una llamada, una barra sobre el pie con el estado («Te escucho», lo que va entendiendo, «Pensando…», «Hablando…» o «En espera»), y sus botones según el estado: «Interrumpir» mientras el tutor habla, «Corregir» mientras el alumno habla, «Seguir hablando» en espera y siempre «Colgar». El campo de la pregunta y «Pedir pista» siguen debajo: voz y teclado se mezclan;
-  - con el tutor plegado, la llamada sigue: la mascota muestra el estado y el bocadillo enseña lo que se va entendiendo, «pensando» y la respuesta. En el móvil, la llamada vive en la pestaña «Tutor» y sigue al cambiar de pestaña.
+  - **Llamar al tutor** (6.1c): un botón con un teléfono en la cabecera; durante la llamada sigue ahí, deshabilitado y enfocable, como «En llamada». La primera vez, si el audio sale del equipo, antes el aviso del audio. En una llamada, una tarjeta sobre el pie (D-087): la mascota como cara del tutor, con un anillo mientras el micrófono escucha (la de la cabecera se oculta); el estado («Te escucho», «Pensando…», «Hablando…» o «En espera»); dos líneas con lo que va entendiendo, la frase que dice el tutor como subtítulo, «Habla cuando quieras» o «Micrófono cerrado»; y sus botones: «Pausar» mientras escucha, «Corregir» mientras el alumno habla, «Interrumpir» mientras el tutor habla, «Seguir hablando» en espera y siempre «Colgar», en rojo. «Hablando · Parar» de la cabecera no sale, y «Dictar» queda deshabilitado. El campo de la pregunta y «Pedir pista» siguen debajo: voz y teclado se mezclan;
+  - con el tutor plegado, la llamada sigue: la mascota muestra el estado, con el anillo, y una línea encima (en lugar del bocadillo de la respuesta) dice lo que se va entendiendo, el estado o el subtítulo, con un «Colgar» pequeño. En el móvil, la llamada vive en la pestaña «Tutor», que lleva un micrófono mientras dura, y sigue al cambiar de pestaña.
 - **Reacciones flotantes (1.8, D-035 a D-037):** cada respuesta nueva, cuando llega completa, lanza durante 2 o 3 segundos la reacción que eligió el tutor (o la de su emoción) en una capa sobre toda la pantalla:
   - un emoji grande en el centro (animado en 3D, o el mismo en 3D estático si el alumno desactiva «Emojis animados» o mientras el animado carga, D-043), con un halo y ondas de luz a su compás, y alrededor coronas, lluvia de emojis pequeños y confeti; nunca sale igual;
   - dieciocho reacciones: corazones, ánimo, fiesta, pensando, bombilla, cohete, fuego, aplausos, mente explotando, risas, guiño, secreto, «¿en serio?», lanzamiento (pelota, huevo, tarta, tomate o caca, que se estampan con un 💥 y dejan su mancha), enfado de broma (que en la intensidad 3 explota con una bomba y un fogonazo), ojos vigilantes, empatía y sueño;
@@ -79,9 +79,9 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Dictar** (6.1b): pulsar empieza y pulsar otra vez acaba; también Esc (que no pliega el tutor flotante), escribir en el campo, enviar, ocultar la pestaña, salir de la pantalla u 8 segundos de silencio. Empezar calla al tutor si estaba hablando, para que el micrófono no recoja su voz. Lo dictado se añade a lo ya escrito y nunca se envía solo: el alumno lo revisa y pulsa enviar (RF-08). Lo que se estaba entendiendo al parar se queda en el campo. El foco se queda en el campo.
 - **Llamada** (6.1c, §2.11):
   - **Turnos:** el alumno habla y, tras 1,5 segundos de silencio, su pregunta se envía; mientras, ve lo que el navegador ha entendido. Seguir hablando alarga el turno, Esc lo descarta y «Corregir» lo pasa al campo y deja la llamada en espera;
-  - **Interrumpir al tutor:** «Interrumpir», el atajo de la llamada, enviar una pregunta escrita o pedir una pista lo callan al momento, y la respuesta queda entera en el chat. Con «Llevo auriculares» en los ajustes, también hablar;
+  - **Interrumpir al tutor:** «Interrumpir», pulsar Control sola, enviar una pregunta escrita o pedir una pista lo callan al momento, y la respuesta queda entera en el chat. Con «Interrumpir al tutor hablando» en los ajustes, también hablar. «Escuchar» bajo una respuesta, en una llamada, la repite;
   - **El tutor no interrumpe:** mientras el alumno habla, una intervención espera. Editar el código no corta nada;
-  - **En espera:** tras 90 segundos sin voz o al ocultar la pestaña, el micrófono se cierra y la barra dice «En espera»; «Seguir hablando» o el atajo lo abren. Una intervención del tutor en espera se oye y deja 10 segundos para contestar;
+  - **En espera:** «Pausar», Ctrl + ., 90 segundos sin voz u ocultar la pestaña cierran el micrófono y la tarjeta dice «En espera»; «Seguir hablando» o Ctrl + . lo abren. Una respuesta que llega en espera (una pregunta escrita o una intervención del tutor) se oye y deja 10 segundos para contestar;
   - **Colgar:** «Colgar», cambiar de ejercicio, entregar o salir. El foco vuelve a «Llamar al tutor».
 
 - **Preguntar por sus datos** (2.5e): «¿cuántos me quedan?», «¿qué asignaturas tengo?», «¿cuántos errores llevo?»: el tutor los consulta con la sesión del alumno (solo ve lo suyo) y responde con ellos; mientras, los tres puntos de siempre.
@@ -119,8 +119,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - El atajo se llama «Pregúntale al tutor por qué falla el ejemplo N», para distinguir los de cada fila.
 - La voz no sustituye a nada: todo lo que el tutor dice está escrito y todo lo que se puede hacer hablando se puede hacer con el teclado (RF-08). Las regiones `aria-live` siguen igual con la voz activada; los ajustes avisan de que con un lector de pantalla no hace falta activarla.
 - «Dictar» es un botón conmutador (`aria-pressed`) y «Te escucho…» se anuncia una vez. El micrófono abierto se ve siempre con icono y texto, no solo con color.
-- La barra de la llamada es un grupo «Llamada con el tutor». Cada cambio de estado se anuncia una vez (`polite`); lo que se va entendiendo no se anuncia palabra a palabra, solo la pregunta enviada, como cualquier otra. Ningún cambio de estado mueve el foco, y todos sus botones se alcanzan con el teclado.
-- El atajo de la llamada aparece en el tooltip de sus botones.
+- La tarjeta de la llamada es un grupo «Llamada con el tutor». Cada cambio de estado se anuncia una vez (`polite`); lo que se va entendiendo no se anuncia palabra a palabra, solo la pregunta enviada, como cualquier otra. Ningún cambio de estado mueve el foco, y todos sus botones se alcanzan con el teclado.
+- Las teclas de la llamada aparecen en el tooltip de sus botones («Interrumpir (Ctrl)», «Pausar (Ctrl + .)», «Seguir hablando (Ctrl + .)») y en su `aria-keyshortcuts`. Ninguna es una tecla de carácter (WCAG 2.1.4).
 - Las animaciones (entrada de cada turno, puntos y cursor) respetan `prefers-reduced-motion`.
 
 ## Criterios de aceptación
@@ -151,9 +151,9 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [x] Con la voz desactivada no aparece ningún control de voz ni se descarga su código (6.1a).
 - [x] «Dictar» escribe en el campo lo que se dice sin borrar lo escrito y no envía nada; sin permiso para el micrófono, el aviso dice qué hacer y se puede seguir escribiendo (6.1b).
 - [x] En un navegador sin reconocimiento no hay «Dictar» ni «Llamar al tutor», y el resto funciona (6.1b).
-- [ ] En una llamada, una pregunta dicha se envía tras el silencio, su respuesta se oye y se lee, y el micrófono vuelve a abrirse al acabar (6.1c).
-- [ ] «Interrumpir» calla al tutor al momento y deja la respuesta entera en el chat; Esc descarta lo que se estaba diciendo y «Corregir» lo deja en el campo (6.1c).
-- [ ] Tras 90 segundos sin voz y al ocultar la pestaña, la llamada queda en espera con el micrófono cerrado; colgar, cambiar de ejercicio y entregar lo cierran (6.1c).
+- [x] En una llamada, una pregunta dicha se envía tras el silencio, su respuesta se oye y se lee, y el micrófono vuelve a abrirse al acabar (6.1c).
+- [x] «Interrumpir» calla al tutor al momento y deja la respuesta entera en el chat; Esc descarta lo que se estaba diciendo y «Corregir» lo deja en el campo (6.1c).
+- [x] Tras 90 segundos sin voz y al ocultar la pestaña, la llamada queda en espera con el micrófono cerrado; colgar, cambiar de ejercicio y entregar lo cierran (6.1c).
 - [ ] axe sin infracciones en claro y oscuro con el dictado en marcha y con la llamada en cada estado (6.1b y 6.1c).
 
 ## Fuera de alcance

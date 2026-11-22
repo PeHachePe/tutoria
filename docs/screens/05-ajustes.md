@@ -21,11 +21,11 @@ Que el alumno adapte TutorIA a su gusto: aspecto, idioma, reacciones del tutor (
   - **Mascota:** la mascota en vista previa en directo y tres interruptores: auriculares con micro, pajarita de cuadros (los dos activados por defecto) y puntero de hueso al pasar por encima.
   - **Reacciones del tutor:** completas, reducidas o desactivadas, con una línea que explica la elegida; «Emojis 3D»; «Probar una reacción», que lanza una reacción alegre distinta cada vez, pasando por las tres intensidades, con la opción elegida (y la mascota de la vista previa se mueve con ella).
   - **Tutor:** «El tutor puede escribirme por iniciativa propia» (activado por defecto; actúa desde el paso 6.2) y «Hablar con el tutor por voz», que funciona desde el 6.1a.
-  - **Voz** (6.1a y 6.1b, §2.11, D-066 y D-078), dentro de la tarjeta del tutor. «Hablar con el tutor por voz» está apagado por defecto y dice lo que ya funciona: «Podrás escuchar sus respuestas. Nunca se graba el audio» en el 6.1a, y «Podrás escucharle y dictarle. Nunca se graba el audio» desde el 6.1b; el 6.1c lo amplía. Al activarlo aparecen:
+  - **Voz** (6.1a y 6.1b, §2.11, D-066 y D-078), dentro de la tarjeta del tutor. «Hablar con el tutor por voz» está apagado por defecto y dice lo que ya funciona: «Podrás escuchar sus respuestas. Nunca se graba el audio» en el 6.1a, y «Podrás escucharle y dictarle. Nunca se graba el audio» en el 6.1b, y «Podrás escucharle, dictarle y llamarle. Nunca se graba el audio» desde el 6.1c. Al activarlo aparecen:
     - **Voz del tutor:** un grupo de opciones con las voces del navegador para el idioma de la interfaz, con el nombre que les da el sistema y su región si el nombre no la dice, de la más natural a la menos (D-078). Mientras el alumno no elija otra, está marcada la más natural, con «Tiene la que suena más natural en tu navegador. Puedes elegir otra»: la aplicación elige por calidad, no por género, que la API no dice. Las robóticas y las de broma de macOS van tras «Ver todas las voces (N más)». Cada una con «Probar», que dice una frase corta y pasa a «Parar» mientras suena. Debajo, «¿Suenan robóticas?», con cómo conseguir voces naturales (Edge, voces mejoradas del Mac). Sin voces del idioma: «Tu navegador no tiene voces en catalán: el tutor te escribirá»;
     - **Velocidad:** lenta, normal o rápida, con botones conmutadores; «Probar» la usa;
     - «Leer las respuestas en voz alta» (apagado por defecto): fuera de una llamada, las respuestas nuevas suenan solas;
-    - «Llevo auriculares: puedo interrumpir al tutor hablando» (6.1c, apagado por defecto), con «Sin auriculares, el tutor se oiría a sí mismo»;
+    - «Interrumpir al tutor hablando» (6.1c, D-087, apagado por defecto; solo si el navegador reconoce la voz), con «En una llamada, el micrófono sigue abierto mientras te habla. Mejor con auriculares: con altavoces, puede oír al tutor y cortarle sin querer»;
     - **Dónde se transcribe tu voz** (6.1b), una línea según el navegador: «En este equipo: el audio no sale de él»; «En el servicio de tu navegador, que recibe el audio para transcribirlo», con «Reconocer la voz en este equipo» si se puede descargar el paquete del idioma («Descargando…» mientras tanto; al acabar, el foco pasa al título de la línea y la línea nueva se anuncia); o «Tu navegador no reconoce la voz: puedes escuchar al tutor y escribirle»;
     - una nota: «Si usas un lector de pantalla, no necesitas activar la voz: ya te lee las respuestas».
 - Abajo, a todo el ancho, **Privacidad**, con el enlace «Ver los datos registrados».
@@ -58,6 +58,7 @@ Solo el de con datos: la pantalla no lee nada que tarde.
 - [x] Sin scroll horizontal a 375 px.
 - [x] Al activar la voz está marcada la más natural del navegador y las robóticas y de broma quedan tras «Ver todas las voces»; «Probar» suena con la voz y la velocidad elegidas y «Parar» la calla; todo sigue tras recargar, por usuario (6.1a).
 - [x] La línea «Dónde se transcribe tu voz» dice lo que hace este navegador, y en uno sin reconocimiento la voz se puede activar igual para escuchar (6.1b).
+- [x] «Interrumpir al tutor hablando» se guarda por usuario y solo sale donde el navegador reconoce la voz (6.1c).
 - [ ] axe sin infracciones en claro y oscuro con la voz activada (6.1a).
 
 ## Fuera de alcance
