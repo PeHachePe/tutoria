@@ -351,7 +351,7 @@ El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en
 
 - **Motivos** (`reason` de la petición), con los umbrales de cada ejercicio:
   - `failures`: la misma prueba falla en las últimas `max_repeated_failures` ejecuciones seguidas (por defecto, 3), y la cuenta vuelve a cero si la supera. Una ejecución que no carga cuenta como fallo de todas sus pruebas;
-  - `idle`: pasan `max_idle_minutes` (por defecto, 4) desde la última actividad del alumno (guardar código, ejecutar, entregar, pedir pista, preguntar al tutor, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan). Preguntar cuenta como en el panel en vivo (D-068): quien acaba de hablar con el tutor no está parado (D-088);
+  - `idle`: pasan `max_idle_minutes` (por defecto, 4) desde la última actividad del alumno (abrir el ejercicio, escribir o guardar código, ejecutar, entregar, pedir pista, preguntar al tutor, pegar o volver a la pestaña; perder el foco y las intervenciones del tutor no cuentan). Preguntar cuenta como en el panel en vivo (D-068): quien acaba de hablar con el tutor no está parado (D-088);
   - `achievement` (RF-09 y CU-03 de la memoria, D-017): la última ejecución supera una prueba que llevaba al menos `max_repeated_failures` ejecuciones seguidas fallando. El modelo celebra en lugar de ayudar.
   - Basta con llegar al umbral. Los dos primeros son los de `stuckReason()`, la lectura de `isStuck()` que comparte el panel docente (D-015), y el tercero, `lastBreakthrough()` (D-054).
 - **Comprobación:** justo después de cada ejecución (fallos y logros) y cada 15 segundos (inactividad, y lo que quedó esperando). La ayuda, solo en intentos en `in_progress` o `tests_failed`; el logro, en cualquiera sin entregar.
@@ -364,8 +364,10 @@ El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en
 - **Una sola función pura,** `proactiveReason()` en `shared/`, junta motivos, episodios, cooldown y tope, y la usan el cliente y el servidor.
 - **El cliente calla,** sin llamar al servidor, si:
   - el alumno desactivó la proactividad en sus ajustes, o es la vista previa del docente (D-061);
-  - el alumno está fuera de la pestaña (`awaySince()`, D-054) o sin conexión;
-  - el tutor está respondiendo o hablando en voz alta, el alumno habla en una llamada, hay una ejecución o una entrega en curso, o el alumno tiene una pregunta a medio escribir o dictada en el campo (D-088).
+  - el alumno está fuera de la pestaña (`awaySince()` con las ausencias de esta visita, D-054 y D-088) o sin conexión;
+  - el tutor está respondiendo o hablando en voz alta, el alumno habla en una llamada, hay una ejecución o una entrega en curso, el alumno tiene una pregunta a medio escribir o dictada en el campo, o está escribiendo código: en la comprobación de cada 15 s, hasta que el código lleva 15 s quieto; tras una ejecución, si lo cambió mientras corría (D-088);
+  - en la comprobación de cada 15 s, los fallos de otra visita: solo saca los que esperaban en esta.
+  - Al llegar las primeras palabras de la intervención se vuelven a mirar estos silencios; si alguno se cumple, se descarta.
   - Lo que queda esperando se vuelve a mirar en la siguiente comprobación. El logro no espera: si no puede salir al momento, se pierde, porque una felicitación tardía no se entiende.
 - **El servidor comprueba el motivo** (D-065): `kind: 'proactive'` lo elige el navegador, así que `tutor` vuelve a calcular `proactiveReason()` con sus eventos y la última actividad del intento, con holgura por los relojes (cooldown de 2 minutos y 30 segundos menos de inactividad). Si no sale el mismo motivo, responde `silent` sin llamar al modelo. La petición cuenta su turno como cualquier otra (D-063), usa el nivel actual y no lo sube.
 - **Prompt** (v7, en `docs/prompt-history.md` desde el paso 6.2c): el servidor dice al modelo el motivo y sus hechos, y qué se espera en cada uno:
@@ -4117,7 +4119,7 @@ Cada subpaso va en su sesión y deja la aplicación funcionando: tras el 6.2b el
 🧪 Primero los tests de `proactiveReason()`: cada motivo en su umbral y uno antes; fallos que se rearman a los 3, 6 y 9; un parón que no repite hasta que hay actividad; un logro por ejecución, sin esperar al cooldown y también con el intento superado; cooldown tras pregunta, pista e intervención callada; el tope de 5; intento entregado. Después, el monitor con temporizadores simulados: cada silencio del cliente, lo que espera a la siguiente comprobación, el logro que se pierde, el ajuste que se apaga a mitad y el temporizador que se para al salir de la pantalla.
 Commit: `feat(tutor): proactivity monitor (step 6.2b)`.
 
-**Hecho (22/11/2026, D-088).** Cambios sobre el plan de abajo: `currentFailure()` en lugar de `longestFailure()` (ya existía `longestFailureStreak()`); `failingStreaks()` y `failedTestsByRun()` también se mudan a `proactive-reason.ts`; `lastTurnAt` es el último turno que pidió el alumno y cuenta como actividad; los eventos de la visita se vacían con cada carga de la conversación; el monitor también calla mientras `TutorSpeaker` habla; y el tutor simulado ya rechaza las intervenciones en la vista previa.
+**Hecho (22/11/2026, D-088).** Cambios sobre el plan de abajo: `currentFailure()` en lugar de `longestFailure()` (ya existía `longestFailureStreak()`); `failingStreaks()` y `failedTestsByRun()` también se mudan a `proactive-reason.ts`; `lastTurnAt` es el último turno que pidió el alumno y cuenta como actividad; los eventos de la visita se vacían con cada carga de la conversación; el monitor también calla mientras `TutorSpeaker` habla; y el tutor simulado ya rechaza las intervenciones en la vista previa. En la iteración 2: abrir el ejercicio y teclear cuentan como actividad, nunca mientras escribe código, solo las ausencias de esta visita, sin fallos de otra visita en el temporizador, los silencios otra vez al llegar las primeras palabras, la pregunta a medio escribir guardada en `TutorStore` y el simulado que calla solo por el mismo motivo.
 
 **Plan de implementación del 6.2b** (17/11/2026, tras leer el código: quien lo implemente no tiene que decidir nada)
 
