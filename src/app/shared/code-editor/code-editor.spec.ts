@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { render, screen, waitFor } from '@testing-library/angular';
 
 import { CodeEditor } from './code-editor';
+import { IS_MAC } from '../../core/is-mac';
 import { CodeFormatter } from './code-formatter';
 
 interface Options {
@@ -84,11 +85,23 @@ describe('CodeEditor', () => {
     expect(codeChange).not.toHaveBeenCalled();
   });
 
-  it('explains how to leave the editor with the keyboard', async () => {
+  it('explains how to leave the editor with the keyboard, and its shortcuts', async () => {
+    TestBed.overrideProvider(IS_MAC, { useValue: false });
     const { textbox } = await renderEditor();
 
     const hint = screen.getByText(/Esc y después Tab/);
     expect(textbox.getAttribute('aria-describedby')).toBe(hint.id);
+    expect(hint.textContent).toContain('Mayús + Alt + F formatea el código');
+    expect(hint.textContent).toContain('Ctrl + Intro ejecuta las pruebas');
+  });
+
+  it('names the shortcuts with the symbols of a Mac there', async () => {
+    TestBed.overrideProvider(IS_MAC, { useValue: true });
+    await renderEditor();
+
+    const hint = screen.getByText(/Esc y después Tab/);
+    expect(hint.textContent).toContain('Mayús + ⌥ + F formatea el código');
+    expect(hint.textContent).toContain('⌘ + Intro ejecuta las pruebas');
   });
 
   it('asks to run the tests with Ctrl + Enter, instead of adding a line', async () => {

@@ -38,6 +38,8 @@ import { RunResults } from './run-results';
 import { SaveIndicator } from './save-indicator';
 import { SubmitDialog } from './submit-dialog';
 import { TutorStore } from '../tutor-store';
+import { IS_MAC } from '../../../core/is-mac';
+import { editorKeys } from '../../../shared/code-editor/editor-keys';
 
 /** What the zone asks of the editor, without naming its class (see `editableEditor`). */
 interface WritableEditor {
@@ -111,6 +113,8 @@ export class CodeZone {
   readonly practised = output<void>();
 
   protected readonly store = inject(AttemptStore);
+  /** The names of the shortcuts of the editor, for the tooltips: ⌘ and ⌥ on a Mac. */
+  protected readonly keys = editorKeys(inject(IS_MAC));
   /** Where the tutor marks the code and points at the results (2.5e). */
   protected readonly tutor = inject(TutorStore);
   /** Pastes from outside the code, recorded for the attempt open for changes (2.8). */

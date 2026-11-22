@@ -162,7 +162,7 @@
     "workspace.statementSize": "Mida de l'enunciat",
     "workspace.submittedNote": " Lliurat el {$INTERPOLATION}. El codi ja no es pot canviar. ",
     "workspace.submittedBack": " Tornar als exercicis ",
-    "workspace.runTooltip": "També amb Ctrl + Retorn des de l'editor",
+    "workspace.runTooltip": "També amb {$INTERPOLATION} des de l'editor",
     "workspace.running": "Executant…",
     "workspace.run": "Executar proves",
     "workspace.submitTooltip": "Supera totes les proves per poder lliurar",
@@ -337,11 +337,11 @@
     "codeBlock.copiedAnnounce": "Codi copiat",
     "codeBlock.label": "Codi",
     "tutor.moreHelp": "Més ajuda · nivell {$INTERPOLATION}",
-    "codeEditor.hintFormat": " Tab sagna; Maj + Alt + F formata el codi; Ctrl + Retorn executa les proves; per sortir de l'editor, Esc i després Tab. ",
+    "codeEditor.hintFormat": " Tab sagna; {$INTERPOLATION} formata el codi; {$INTERPOLATION_1} executa les proves; per sortir de l'editor, Esc i després Tab. ",
     "codeEditor.formatErrorLine": "No es pot formatar: el codi té un error a la línia {$INTERPOLATION}. Corregeix-lo i torna-ho a provar.",
     "codeEditor.formatError": "No s'ha pogut formatar el codi. Torna-ho a provar.",
     "workspace.formatCode": "Formata el codi",
-    "workspace.formatCodeTooltip": "Formata el codi (Maj + Alt + F)",
+    "workspace.formatCodeTooltip": "Formata el codi ({$INTERPOLATION})",
     "tutorAction.language.es": "castellà",
     "tutorAction.language.en": "anglès",
     "tutorAction.language.ca": "català",
@@ -1509,6 +1509,10 @@
     "tutor.voice.closing.codeAndButton": "Et deixo al xat el codi i el botó {$button}.",
     "tutor.voice.closing.button": "Et deixo al xat el botó {$button}.",
     "tutor.voice.closing.codeAndButtons": "Et deixo al xat el codi i els botons {$buttons}.",
-    "tutor.voice.closing.buttons": "Et deixo al xat els botons {$buttons}."
+    "tutor.voice.closing.buttons": "Et deixo al xat els botons {$buttons}.",
+    "codeEditor.keys.format": "Maj + Alt + F",
+    "codeEditor.keys.format.mac": "Maj + ⌥ + F",
+    "codeEditor.keys.run": "Ctrl + Retorn",
+    "codeEditor.keys.run.mac": "⌘ + Retorn"
   }
 }

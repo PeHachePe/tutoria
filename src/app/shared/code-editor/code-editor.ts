@@ -25,9 +25,11 @@ import {
   type ViewUpdate,
 } from '@codemirror/view';
 
+import { IS_MAC } from '../../core/is-mac';
 import type { Language } from '../../data/exercise';
 import { codeEditorTheme } from './code-editor-theme';
 import { CodeFormatter } from './code-formatter';
+import { editorKeys } from './editor-keys';
 import { isFormatKey } from './format-key';
 import type { LineMark } from './line-mark';
 import { lineMarks, setLineMarks } from './line-marks';
@@ -80,8 +82,8 @@ function pastedFromOutside(transaction: Transaction): number {
         class="hidden text-body-small text-on-surface-variant group-focus-within:block pointer-coarse:hidden"
         i18n="@@codeEditor.hintFormat"
       >
-        Tab sangra; Mayús + Alt + F formatea el código; Ctrl + Intro ejecuta las pruebas; para salir
-        del editor, Esc y después Tab.
+        Tab sangra; {{ keys.format }} formatea el código; {{ keys.run }} ejecuta las pruebas; para
+        salir del editor, Esc y después Tab.
       </p>
     }
     <!-- Formatting left the code as it was: it says why, until the code changes (2.5d) -->
@@ -127,6 +129,8 @@ export class CodeEditor {
   readonly runShortcut = output();
 
   protected readonly hintId = `app-code-editor-hint-${nextId++}`;
+  /** The names of its shortcuts, as on the keyboard of the student: ⌘ and ⌥ on a Mac. */
+  protected readonly keys = editorKeys(inject(IS_MAC));
   /** Why the last «Formatear» left the code as it was: the line of its error, if it says one. */
   protected readonly formatProblem = signal<{ readonly line?: number } | null>(null);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;

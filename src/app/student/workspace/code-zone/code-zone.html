@@ -21,7 +21,7 @@
         type="button"
         aria-label="Formatear el código"
         i18n-aria-label="@@workspace.formatCode"
-        matTooltip="Formatear el código (Mayús + Alt + F)"
+        matTooltip="Formatear el código ({{ keys.format }})"
         i18n-matTooltip="@@workspace.formatCodeTooltip"
         (click)="formatCode()"
       >
@@ -177,7 +177,7 @@
         [matButton]="store.canSubmit() ? 'tonal' : 'filled'"
         disabledInteractive
         [disabled]="!store.canRun()"
-        matTooltip="También con Ctrl + Intro desde el editor"
+        matTooltip="También con {{ keys.run }} desde el editor"
         i18n-matTooltip="@@workspace.runTooltip"
         (click)="store.run()"
       >

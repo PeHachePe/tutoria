@@ -162,7 +162,7 @@
     "workspace.statementSize": "Size of the statement",
     "workspace.submittedNote": " Submitted on {$INTERPOLATION}. The code can no longer change. ",
     "workspace.submittedBack": " Back to the exercises ",
-    "workspace.runTooltip": "Also with Ctrl + Enter from the editor",
+    "workspace.runTooltip": "Also with {$INTERPOLATION} from the editor",
     "workspace.running": "Running…",
     "workspace.run": "Run tests",
     "workspace.submitTooltip": "Pass every test to be able to submit",
@@ -337,11 +337,11 @@
     "codeBlock.copiedAnnounce": "Code copied",
     "codeBlock.label": "Code",
     "tutor.moreHelp": "More help · level {$INTERPOLATION}",
-    "codeEditor.hintFormat": " Tab indents; Shift + Alt + F formats the code; Ctrl + Enter runs the tests; to leave the editor, Esc and then Tab. ",
+    "codeEditor.hintFormat": " Tab indents; {$INTERPOLATION} formats the code; {$INTERPOLATION_1} runs the tests; to leave the editor, Esc and then Tab. ",
     "codeEditor.formatErrorLine": "It cannot be formatted: the code has an error on line {$INTERPOLATION}. Fix it and try again.",
     "codeEditor.formatError": "The code could not be formatted. Try again.",
     "workspace.formatCode": "Format the code",
-    "workspace.formatCodeTooltip": "Format the code (Shift + Alt + F)",
+    "workspace.formatCodeTooltip": "Format the code ({$INTERPOLATION})",
     "tutorAction.language.es": "Spanish",
     "tutorAction.language.en": "English",
     "tutorAction.language.ca": "Catalan",
@@ -1509,6 +1509,10 @@
     "tutor.voice.closing.codeAndButton": "I leave you the code and the {$button} button in the chat.",
     "tutor.voice.closing.button": "I leave you the {$button} button in the chat.",
     "tutor.voice.closing.codeAndButtons": "I leave you the code and the buttons {$buttons} in the chat.",
-    "tutor.voice.closing.buttons": "I leave you the buttons {$buttons} in the chat."
+    "tutor.voice.closing.buttons": "I leave you the buttons {$buttons} in the chat.",
+    "codeEditor.keys.format": "Shift + Alt + F",
+    "codeEditor.keys.format.mac": "Shift + ⌥ + F",
+    "codeEditor.keys.run": "Ctrl + Enter",
+    "codeEditor.keys.run.mac": "⌘ + Enter"
   }
 }
