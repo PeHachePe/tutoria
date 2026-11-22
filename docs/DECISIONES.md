@@ -2651,3 +2651,28 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Una intervención que el cliente descarta ya está guardada en el servidor (y en el simulado): al recargar aparece en la conversación. Lo decide el 6.2c (`PENDIENTES.md`).
 
 **Aprobación:** el autor aprobó el plan con las cuatro mejoras propuestas («Sí, adelante»). En la iteración 2 pidió revisar el plan inicial, preguntó por qué el tutor no miraba el editor y pidió arreglar todo lo que Claude viera; de esa revisión salieron los arreglos marcados como iteración 2.
+
+## D-089 · Los atajos en el Mac: por la tecla física y con los símbolos de sus teclas (22/11/2026, propuesta)
+
+**Contexto:** el autor vio en su Mac que Mayús + Opción + F escribía «ﬁ» en lugar de formatear el código (2.5d), y preguntó si había más atajos que corregir en el Mac. La fila del 1.6 de `PENDIENTES.md` ya decía que la ayuda nombraba «Ctrl + Intro» donde en el Mac lo natural es ⌘.
+
+**Decisión (cómo se usa):**
+
+- **Formatear con Mayús + ⌥ + F funciona en el Mac,** como en VS Code, y ya no escribe nada en el código.
+- **En un Mac, la ayuda del editor y los tooltips nombran las teclas con los símbolos impresos en ellas:** «Mayús + ⌥ + F formatea el código; ⌘ + Intro ejecuta las pruebas» y «Formatear el código (Mayús + ⌥ + F)», «También con ⌘ + Intro desde el editor». En el resto, como siempre. Ctrl + Intro sigue funcionando también en el Mac. En inglés y catalán, igual («Shift + ⌥ + F», «⌘ + Enter»; «Maj + ⌥ + F», «⌘ + Retorn»).
+- **Los atajos de la llamada no cambian:** «Ctrl» y «Ctrl + .» son la tecla control también en el Mac, a propósito (D-087).
+- Revisados todos los atajos de la app: no falla ningún otro en el Mac.
+
+**Decisión (técnica):**
+
+- **Por la tecla física:** CodeMirror (6.43) deja a propósito las combinaciones con Opción en macOS para escribir caracteres y no las compara con los atajos. `isFormatKey()` (`shared/code-editor/format-key.ts`) mira `event.code === 'KeyF'` con Mayús y Alt, sin Ctrl ni ⌘, en un manejador de `keydown` de máxima prioridad que cancela el carácter, como hace VS Code.
+- **`IS_MAC`** (`core/is-mac.ts`): `navigator.userAgentData.platform` donde existe y, si no, `navigator.platform`; cuenta también el iPad y el iPhone con teclado. Un token, para cambiarlo en los tests.
+- **`editorKeys(mac)`** (`shared/code-editor/editor-keys.ts`) da los nombres de las teclas, traducidos, y las tres frases los llevan como marcador: un solo sitio para los nombres, y las frases no se duplican por plataforma.
+- **Símbolos y no nombres:** la tecla Opción se llama «option» o «alt» según el teclado del Mac, y ⌥ y ⌘ están en todos; los lectores de pantalla del Mac los leen por su nombre.
+
+**Alternativas:**
+
+- **Otro atajo para el Mac** (⌘ + Mayús + F): obligaría a dos atajos distintos y no es el de VS Code.
+- **Frases enteras por plataforma:** seis textos más por idioma en lugar de cuatro nombres de teclas.
+
+**Aprobación:** el autor pidió arreglar el atajo y hacer aquí la tarea de los nombres, por delegación en lo demás.
