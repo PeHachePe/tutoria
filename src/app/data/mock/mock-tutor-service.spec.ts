@@ -181,7 +181,8 @@ describe('MockTutorService', () => {
     setUp();
 
     await collect(service.ask(request({ kind: 'proactive', reason: 'failures' })));
-    const quiet = await collect(service.ask(request({ kind: 'proactive', reason: 'idle' })));
+    // Again for the failures, with nothing in between: it has nothing new to say
+    const quiet = await collect(service.ask(request({ kind: 'proactive', reason: 'failures' })));
 
     expect(quiet).toEqual([
       {
@@ -197,8 +198,20 @@ describe('MockTutorService', () => {
     expect(db.tables().interactions).toHaveLength(1);
     expect(db.tables().events.map((event) => event.detail)).toEqual([
       { silent: false, reason: 'failures' },
-      { silent: true, reason: 'idle' },
+      { silent: true, reason: 'failures' },
     ]);
+  });
+
+  it('asks about a pause right after helping with the failures', async () => {
+    setUp();
+
+    // A hint first: its event is not an intervention
+    await collect(service.ask(request()));
+    await collect(service.ask(request({ kind: 'proactive', reason: 'failures' })));
+    const events = await collect(service.ask(request({ kind: 'proactive', reason: 'idle' })));
+
+    expect(events[0]).toEqual(expect.objectContaining({ type: 'meta', reaction: 'sleepy' }));
+    expect(events.at(-1)).toEqual(expect.objectContaining({ type: 'done', silent: false }));
   });
 
   it('celebrates an achievement with its reaction (2.7)', async () => {

@@ -12,6 +12,7 @@ import {
 import { runEventDetail } from '../../data/code-runner/run-result';
 import type { Exercise } from '../../data/exercise';
 import type { ProcessEvent } from '../../data/process-event';
+import type { ProactiveReason } from '../../data/tutor';
 import { awaySince } from '../../shared/away-since';
 import { type AttemptEvent, proactiveReasons } from '../../shared/proactive-reason';
 import { SettingsStore } from '../settings/settings-store';
@@ -24,6 +25,9 @@ import { VoiceCall } from './voice-call';
 /** How often the tutor looks whether the student stopped, or whether a help that waited can come (2.7). */
 export const PROACTIVE_CHECK_MS = 15_000;
 
+/** Code changed less than this ago: the student is writing, and the tutor waits (2.7). */
+export const WRITING_PAUSE_MS = 15_000;
+
 /** What the monitor needs of the exercise open: its thresholds (2.7). */
 export type WatchedExercise = Pick<Exercise, 'id' | 'maxRepeatedFailures' | 'maxIdleMinutes'>;
 
@@ -32,8 +36,12 @@ export type WatchedExercise = Pick<Exercise, 'id' | 'maxRepeatedFailures' | 'max
  * `proactiveReasons()` whether the tutor steps in and why, and asks `TutorStore` for it. Before
  * that, it keeps quiet without asking the server when the student turned it off, is out of the tab
  * or offline, or is busy: the tutor answering or speaking, the tests running, a submission, a
- * question half written or the student speaking in a call. What waits is looked at again in the
- * next check; an achievement does not wait, as late congratulations make no sense.
+ * question half written, the student speaking in a call or writing code. What waits is looked at
+ * again in the next check; an achievement does not wait, as late congratulations make no sense.
+ * When the first words arrive, the same silences are looked at again (D-088).
+ *
+ * Opening the exercise and typing count as activity, and only the absences of this visit count:
+ * a tab closed another day leaves its `focus_lost` with no return.
  *
  * It reads the events loaded with the conversation and those of this visit: the runs, the absences
  * and pastes of `BrowserSignals` and its own requests, which count even if the tutor kept quiet or
@@ -102,24 +110,34 @@ export class ProactivityMonitor {
     const attempt = this.attempts.attempt();
     const exercise = this.exercise();
     if (!attempt || exercise?.id !== attempt.exerciseId) return;
-    const events: AttemptEvent[] = [
-      ...this.tutor.loadedEvents(),
-      ...this.signals.events(attempt.id),
-      ...this.visitEvents(),
-    ];
-    if (this.quiet(events)) return;
+    if (!this.tutor.canAsk() || this.tutor.intervening() || this.silenced(attempt.id)) return;
+    // Never while writing code: after a run, if it changed while the tests ran; on the timer, until
+    // the code has been still for a while
+    if (after === 'run' ? this.attempts.runOutdated() : this.writing()) return;
     const now = Date.now();
     const reasons = proactiveReasons({
       status: attempt.status,
-      updatedAt: attempt.updatedAt,
-      events,
+      // Opening the exercise and typing, even unsaved, are activity too
+      updatedAt: new Date(
+        Math.max(
+          Date.parse(attempt.updatedAt),
+          this.attempts.openedAt(),
+          this.attempts.lastEditAt(),
+        ),
+      ).toISOString(),
+      events: [
+        ...this.tutor.loadedEvents(),
+        ...this.signals.events(attempt.id),
+        ...this.visitEvents(),
+      ],
       lastTurnAt: this.lastTurnAt(),
       thresholds: exercise,
       now,
     });
-    const reason = after === 'run' ? reasons[0] : reasons.find((r) => r !== 'achievement');
+    const reason = after === 'run' ? reasons[0] : reasons.find((r) => this.waits(r));
     if (!reason) return;
-    const spoke = await this.tutor.intervene(reason);
+    const stillWanted = () => !this.silenced(attempt.id) && this.attempts.lastEditAt() <= now;
+    const spoke = await this.tutor.intervene(reason, stillWanted);
     // Another exercise opened meanwhile has events of its own
     if (this.attempts.attempt()?.id !== attempt.id) return;
     this.record({
@@ -129,12 +147,30 @@ export class ProactivityMonitor {
     });
   }
 
-  /** The silences of the client (2.7): it does not even ask the server. */
-  private quiet(events: readonly AttemptEvent[]): boolean {
+  /**
+   * What the timer takes up: an idle pause, or failures that waited for their moment in this
+   * visit. Not an achievement, which would come late, nor the failures of another day: opening the
+   * exercise is not the moment to say «you have been on the same test for a while».
+   */
+  private waits(reason: ProactiveReason): boolean {
+    return (
+      reason === 'idle' ||
+      (reason === 'failures' && this.visitEvents().some((event) => event.type === 'run'))
+    );
+  }
+
+  /** The student changed the code a moment ago. */
+  private writing(): boolean {
+    return Date.now() - this.attempts.lastEditAt() < WRITING_PAUSE_MS;
+  }
+
+  /**
+   * The silences of the client (2.7): it does not even ask the server, and drops what arrives. Away
+   * only by the absences of this visit.
+   */
+  private silenced(attemptId: string): boolean {
     return (
       !this.settings.proactive() ||
-      !this.tutor.canAsk() ||
-      this.tutor.intervening() ||
       this.tutor.drafting() ||
       this.speaker.saying() !== null ||
       this.call?.state() === 'hearing' ||
@@ -142,7 +178,7 @@ export class ProactivityMonitor {
       this.attempts.submitting() ||
       !this.attempts.editable() ||
       navigator.onLine === false ||
-      awaySince(events) !== null
+      awaySince(this.signals.events(attemptId)) !== null
     );
   }
 

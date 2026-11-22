@@ -189,15 +189,35 @@ describe('scripted answer', () => {
       expect(answer.silent).toBe(false);
     });
 
-    it('keeps quiet when it helped right before', () => {
-      const quiet = proactive({ reason: 'idle', previous: [interaction('proactive')] });
+    it('keeps quiet when it stepped in right before for the same reason', () => {
+      const quiet = proactive({
+        reason: 'idle',
+        previous: [interaction('proactive')],
+        lastIntervention: 'idle',
+      });
 
       expect(quiet.silent).toBe(true);
       expect(quiet.text).toBe('');
     });
 
+    it('helps with a pause right after helping with the failures', () => {
+      const answer = proactive({
+        reason: 'idle',
+        previous: [interaction('proactive')],
+        lastIntervention: 'failures',
+      });
+
+      expect(answer.text).toBe(SPANISH.proactive.idle);
+    });
+
     it('always celebrates an achievement, also right after stepping in', () => {
-      expect(proactive({ reason: 'achievement', previous: [interaction('proactive')] })).toEqual(
+      expect(
+        proactive({
+          reason: 'achievement',
+          previous: [interaction('proactive')],
+          lastIntervention: 'achievement',
+        }),
+      ).toEqual(
         expect.objectContaining({
           text: SPANISH.proactive.achievement,
           emotion: 'celebration',

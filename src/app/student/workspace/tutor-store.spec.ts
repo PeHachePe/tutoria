@@ -590,6 +590,22 @@ describe('TutorStore', () => {
       expect(ask).toHaveBeenCalledTimes(1);
     });
 
+    it('is dropped when the one who asked for it no longer wants it as its first words arrive', async () => {
+      await loaded();
+      let wanted = true;
+      const rest = deferred<void>();
+      ask.mockImplementation(() => answer(['Tarde'], 1, { waitFor: rest.promise }));
+
+      const stepping = store.intervene('idle', () => wanted);
+      await vi.waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
+      // The student started writing a question meanwhile, for instance
+      wanted = false;
+      rest.resolve();
+
+      expect(await stepping).toBe(false);
+      expect(store.turns()).toEqual([]);
+    });
+
     it('runs the actions that only change the screen once it arrives whole', async () => {
       const mark = vi.fn();
       TestBed.inject(ToolRegistry).register(
@@ -625,13 +641,15 @@ describe('TutorStore', () => {
     expect(store.loadedEvents()).toEqual(events);
   });
 
-  it('knows when the student has a question half written', () => {
+  it('keeps the question half written, which stops the tutor stepping in (2.7)', () => {
+    expect(store.draft()).toBe('');
     expect(store.drafting()).toBe(false);
 
-    store.setDrafting(true);
+    store.setDraft('¿Por qué ');
+    expect(store.draft()).toBe('¿Por qué ');
     expect(store.drafting()).toBe(true);
 
-    store.setDrafting(false);
+    store.setDraft('   ');
     expect(store.drafting()).toBe(false);
   });
 

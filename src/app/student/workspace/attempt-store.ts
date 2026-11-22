@@ -53,6 +53,8 @@ export class AttemptStore {
   private readonly actionErrorState = signal<ActionError | undefined>(undefined);
   private readonly draftRestoredState = signal(false);
   private readonly runReactionState = signal<Reaction | null>(null);
+  private readonly openedAtState = signal(0);
+  private readonly lastEditAtState = signal(0);
   /** The save on its way, which a run waits for before sending the code. */
   private saving: Promise<void> = Promise.resolve();
   /**
@@ -108,6 +110,13 @@ export class AttemptStore {
   readonly actionError = this.actionErrorState.asReadonly();
   /** How the screen celebrates the last run: every test passing, or more than before (1.8). */
   readonly runReaction = this.runReactionState.asReadonly();
+  /**
+   * When the attempt was opened in this visit, in ms: the student just arrived, which is activity
+   * for the proactive tutor (2.7). 0 without an attempt.
+   */
+  readonly openedAt = this.openedAtState.asReadonly();
+  /** When the student last changed the code in this visit, in ms; 0 before any change. */
+  readonly lastEditAt = this.lastEditAtState.asReadonly();
   /** The code came back from the local draft: the server did not have it (D-041). */
   readonly draftRestored = this.draftRestoredState.asReadonly();
   readonly running = computed(() => this.isCurrent(this.runningIdState()));
@@ -232,6 +241,8 @@ export class AttemptStore {
     this.lastRunCodeState.set(undefined);
     this.runReactionState.set(null);
     this.actionErrorState.set(undefined);
+    this.openedAtState.set(Date.now());
+    this.lastEditAtState.set(0);
     // What the server missed goes to it as soon as possible
     if (draft !== undefined) this.autosave.schedule(() => void this.startSave());
     // If another tab takes it, what this one still had goes to the server at once
@@ -248,6 +259,7 @@ export class AttemptStore {
     this.saveFailedState.set(false);
     this.changedState.set(true);
     this.draftRestoredState.set(false);
+    this.lastEditAtState.set(Date.now());
     this.autosave.schedule(() => void this.startSave());
   }
 

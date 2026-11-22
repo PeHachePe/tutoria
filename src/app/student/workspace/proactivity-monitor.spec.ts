@@ -9,7 +9,7 @@ import type { ProactiveReason } from '../../data/tutor';
 import { SettingsStore } from '../settings/settings-store';
 import { AttemptStore } from './attempt-store';
 import { BrowserSignals } from './browser-signals';
-import { PROACTIVE_CHECK_MS, ProactivityMonitor } from './proactivity-monitor';
+import { PROACTIVE_CHECK_MS, ProactivityMonitor, WRITING_PAUSE_MS } from './proactivity-monitor';
 import { TutorSpeaker } from './tutor-speaker';
 import { type TutorTurn, TutorStore } from './tutor-store';
 import { type CallState, VoiceCall } from './voice-call';
@@ -77,6 +77,9 @@ describe('ProactivityMonitor', () => {
   let running: ReturnType<typeof signal<boolean>>;
   let submitting: ReturnType<typeof signal<boolean>>;
   let editable: ReturnType<typeof signal<boolean>>;
+  let openedAt: ReturnType<typeof signal<number>>;
+  let lastEditAt: ReturnType<typeof signal<number>>;
+  let runOutdated: ReturnType<typeof signal<boolean>>;
   let proactive: ReturnType<typeof signal<boolean>>;
   let loadedEvents: ReturnType<typeof signal<readonly ProcessEvent[]>>;
   let turns: ReturnType<typeof signal<readonly TutorTurn[]>>;
@@ -95,7 +98,16 @@ describe('ProactivityMonitor', () => {
         ProactivityMonitor,
         {
           provide: AttemptStore,
-          useValue: { attempt, lastRun, running, submitting, editable },
+          useValue: {
+            attempt,
+            lastRun,
+            running,
+            submitting,
+            editable,
+            openedAt,
+            lastEditAt,
+            runOutdated,
+          },
         },
         { provide: SettingsStore, useValue: { proactive } },
         {
@@ -126,6 +138,9 @@ describe('ProactivityMonitor', () => {
     running = signal(false);
     submitting = signal(false);
     editable = signal(true);
+    openedAt = signal(START);
+    lastEditAt = signal(0);
+    runOutdated = signal(false);
     proactive = signal(true);
     loadedEvents = signal<readonly ProcessEvent[]>([]);
     turns = signal<readonly TutorTurn[]>([]);
@@ -388,5 +403,115 @@ describe('ProactivityMonitor', () => {
     await runTests('t1');
 
     expect(reasons()).toEqual<ProactiveReason[]>(['idle', 'failures']);
+  });
+
+  describe('a visit that starts on an attempt of another day', () => {
+    const yesterday = START - 24 * 60 * MINUTE;
+
+    beforeEach(() => {
+      attempt.set({ ...attemptOf('a1'), updatedAt: new Date(yesterday).toISOString() });
+    });
+
+    it('counts the pause from when the student opened the exercise', async () => {
+      setUp();
+
+      await wait(4 * MINUTE - PROACTIVE_CHECK_MS);
+      expect(intervene).not.toHaveBeenCalled();
+      await wait(PROACTIVE_CHECK_MS);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['idle']);
+    });
+
+    it('does not take the student for away because of an absence of another visit', async () => {
+      // Closing the tab records leaving, and never coming back
+      loadedEvents.set([testEvents.focusLost('a1', yesterday)]);
+      setUp();
+
+      await wait(4 * MINUTE);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['idle']);
+    });
+
+    it('does not bring up on the timer the failures of another visit', async () => {
+      loadedEvents.set([1, 2, 3].map((m) => testEvents.run('a1', yesterday + m * MINUTE, ['t1'])));
+      setUp();
+
+      await wait(4 * MINUTE);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['idle']);
+    });
+  });
+
+  describe('never while the student writes code (2.7)', () => {
+    it('counts typing as activity, before it is even saved', async () => {
+      setUp();
+      lastEditAt.set(START + 3 * MINUTE);
+
+      await wait(7 * MINUTE - PROACTIVE_CHECK_MS);
+      expect(intervene).not.toHaveBeenCalled();
+      await wait(PROACTIVE_CHECK_MS);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['idle']);
+    });
+
+    it('brings the help that waited once the code is still for a while', async () => {
+      setUp();
+      await runTests('t1');
+      await runTests('t1');
+      turns.set([questionAt(1.5)]);
+      await runTests('t1');
+
+      // The student keeps writing past the cooldown
+      for (let second = 0; second < 150; second += 5) {
+        lastEditAt.set(Date.now());
+        await wait(5000);
+      }
+      expect(intervene).not.toHaveBeenCalled();
+      await wait(WRITING_PAUSE_MS);
+
+      expect(reasons()).toEqual<ProactiveReason[]>(['failures']);
+    });
+
+    it('says nothing after a run if the code changed while it ran', async () => {
+      setUp();
+      await runTests('t1');
+      await runTests('t1');
+
+      runOutdated.set(true);
+      await runTests('t1');
+
+      expect(intervene).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when the first words arrive (2.7)', () => {
+    /** Asks for an idle intervention and gives what decides whether it is still wanted. */
+    async function asked(): Promise<() => boolean> {
+      setUp();
+      await wait(4 * MINUTE);
+      const [, stillWanted] = intervene.mock.calls[0];
+      return stillWanted as () => boolean;
+    }
+
+    it('still wants it when nothing changed', async () => {
+      expect((await asked())()).toBe(true);
+    });
+
+    const cases: [string, () => void][] = [
+      ['with the setting turned off', () => proactive.set(false)],
+      ['with a question started', () => drafting.set(true)],
+      ['with the tutor speaking', () => saying.set('Hola')],
+      ['with the tests running', () => running.set(true)],
+      ['with the student gone', () => browserEvents.push(focusEvent('focus_lost', 4))],
+      ['with the code changed', () => lastEditAt.set(Date.now() + 1)],
+    ];
+
+    it.each(cases)('drops it %s', async (_, change) => {
+      const stillWanted = await asked();
+
+      change();
+
+      expect(stillWanted()).toBe(false);
+    });
   });
 });

@@ -128,9 +128,14 @@ export class TutorStore {
     this.history.hasValue() ? this.history.value().events : [],
   );
 
-  /** The student has a question half written: the tutor does not step in (2.7). */
-  private readonly draftingState = signal(false);
-  readonly drafting = this.draftingState.asReadonly();
+  /**
+   * The question the student is writing, kept here so it outlives the field: folding the tutor,
+   * moving it or switching tabs on a phone destroys the field, not what was written.
+   */
+  private readonly draftState = signal('');
+  readonly draft = this.draftState.asReadonly();
+  /** A question half written: the tutor does not step in (2.7). Only text counts, not the focus. */
+  readonly drafting = computed(() => this.draftState().trim() !== '');
 
   /** An intervention is on its way: unseen until its first words arrive. */
   private readonly interveningState = signal(false);
@@ -239,18 +244,22 @@ export class TutorStore {
     this.history.reload();
   }
 
-  /** Whether the question field holds something: the composer tells it as the student writes. */
-  setDrafting(on: boolean): void {
-    this.draftingState.set(on);
+  /** What the question field holds: the composer tells it as the student writes or dictates. */
+  setDraft(text: string): void {
+    this.draftState.set(text);
   }
 
   /**
    * The tutor steps in on its own, for a reason the proactive tutor found (2.7). Its turn only shows
-   * with its first words: if the tutor keeps quiet, the request fails (429 too) or the student asked
-   * meanwhile and is still being answered, nothing is left, neither turn nor notice nor reaction.
-   * True if the tutor spoke.
+   * with its first words: if the tutor keeps quiet, the request fails (429 too), the student asked
+   * meanwhile and is still being answered, or `stillWanted` says no at that moment (the student
+   * started writing, say), nothing is left, neither turn nor notice nor reaction. True if the
+   * tutor spoke.
    */
-  async intervene(reason: ProactiveReason): Promise<boolean> {
+  async intervene(
+    reason: ProactiveReason,
+    stillWanted: () => boolean = () => true,
+  ): Promise<boolean> {
     const attempt = this.attemptStore.attempt();
     if (!attempt || !this.canAsk() || this.interveningState()) return false;
     this.interveningState.set(true);
@@ -276,7 +285,7 @@ export class TutorStore {
         if (event.type !== 'delta') continue;
         if (!shown) {
           // Another exercise has its own conversation, and a question asked meanwhile goes first
-          if (this.attemptId() !== attempt.id || this.answering()) return false;
+          if (this.attemptId() !== attempt.id || this.answering() || !stillWanted()) return false;
           this.turnsState.update((turns) => [
             ...turns,
             { ...newTurn(id, 'proactive', null), reason, ...meta },

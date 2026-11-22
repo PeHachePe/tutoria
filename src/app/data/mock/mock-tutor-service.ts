@@ -90,6 +90,10 @@ export class MockTutorService extends TutorService {
       kind,
       message,
       reason,
+      lastIntervention:
+        previous.at(-1)?.trigger === 'proactive'
+          ? lastInterventionReason(tables.events, attemptId)
+          : undefined,
       code,
       status: attempt.status,
       previous,
@@ -178,4 +182,20 @@ function checkRequest({ kind, message, reason }: TutorRequest | TutorPreviewRequ
   if ((kind === 'proactive') !== (reason !== undefined)) {
     throw new DataError('invalid', 'An intervention needs its reason, and only one has it');
   }
+}
+
+/** Why the tutor last stepped in and spoke on an attempt, read from its events (2.8). */
+function lastInterventionReason(
+  events: readonly ProcessEvent[],
+  attemptId: string,
+): ProactiveReason | undefined {
+  return events
+    .flatMap((event) =>
+      event.attemptId === attemptId &&
+      event.type === 'proactive_intervention' &&
+      !event.detail.silent
+        ? [event.detail.reason]
+        : [],
+    )
+    .at(-1);
 }

@@ -31,6 +31,8 @@ export interface ScriptInput {
   readonly message?: string;
   /** Why it steps in, for `proactive` (2.7). */
   readonly reason?: ProactiveReason;
+  /** Why it stepped in on the previous turn, when that turn was an intervention. */
+  readonly lastIntervention?: ProactiveReason;
   readonly code: string;
   readonly status: StoredAttemptStatus;
   /** The earlier interactions of the attempt (or turns of a try, 4.3e), oldest first. */
@@ -103,6 +105,7 @@ export function scriptedAnswer({
   kind,
   message,
   reason,
+  lastIntervention,
   code,
   status,
   previous,
@@ -131,8 +134,9 @@ export function scriptedAnswer({
       if (reason === 'achievement') {
         return answer(script.proactive.achievement, 'celebration', 'party');
       }
-      // Once is enough: right after stepping in, it lets the student work
-      if (previous.at(-1)?.trigger === 'proactive') {
+      // Once is enough: right after stepping in for the same reason, it lets the student work, as
+      // the real one is told to do when it has nothing new to say (2.7)
+      if (lastIntervention === reason) {
         return { ...answer('', 'encouragement', 'eyes'), silent: true };
       }
       return reason === 'idle'

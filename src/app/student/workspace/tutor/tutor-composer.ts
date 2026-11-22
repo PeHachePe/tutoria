@@ -74,7 +74,8 @@ export class TutorComposer {
   protected readonly dictateTooltip = $localize`:@@tutor.dictate:Dictar`;
   protected readonly stopDictatingTooltip = $localize`:@@tutor.dictate.stop:Dejar de dictar`;
 
-  protected readonly model = signal({ message: '' });
+  /** It starts with what was being written: the field may come back after the tutor was folded. */
+  protected readonly model = signal({ message: this.store.draft() });
   protected readonly questionForm = form(
     this.model,
     (path) => {
@@ -88,7 +89,7 @@ export class TutorComposer {
           this.stopDictation();
           // As the Angular guide does after a submission: empty, and untouched again
           field().reset({ message: '' });
-          this.store.setDrafting(false);
+          this.store.setDraft('');
           // Not awaited: the field is free for the next question while the tutor answers
           void this.store.ask(message);
           return undefined;
@@ -122,11 +123,7 @@ export class TutorComposer {
   };
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.stopDictation();
-      // What was written goes with the field
-      this.store.setDrafting(false);
-    });
+    inject(DestroyRef).onDestroy(() => this.stopDictation());
   }
 
   focus(): void {
@@ -230,9 +227,9 @@ export class TutorComposer {
     if (!this.heardAny) this.nothingHeard.set(true);
   }
 
-  /** The tutor does not step in while a question is half written (2.7): only text counts, not the focus. */
+  /** The store keeps what is written, for when the field comes back and for the proactive tutor (2.7). */
   private keepDraft(message: string): void {
-    this.store.setDrafting(message.trim() !== '');
+    this.store.setDraft(message);
   }
 
   private stopDictation(): void {

@@ -36,12 +36,13 @@ async function renderComposer({
   const fake = new FakeSpeechService();
   fake.place = place;
   const ask = vi.fn(() => Promise.resolve());
-  const setDrafting = vi.fn();
+  const draft = signal('');
+  const setDraft = vi.fn((text: string) => draft.set(text));
   const stopSpeaking = vi.fn();
   const view = await render(TutorComposer, {
     providers: [
       { provide: AuthStore, useValue: { userId: signal('u1') } },
-      { provide: TutorStore, useValue: { canAsk: signal(true), ask, setDrafting } },
+      { provide: TutorStore, useValue: { canAsk: signal(true), ask, draft, setDraft } },
       provideFakeSpeech(fake),
       speaker ? [{ provide: TutorSpeaker, useValue: { stop: stopSpeaking } }] : [],
       speaker && inCall !== null
@@ -57,7 +58,7 @@ async function renderComposer({
   } else {
     await view.fixture.whenStable();
   }
-  return { ...view, fake, ask, setDrafting, stopSpeaking };
+  return { ...view, fake, ask, draft, stopSpeaking };
 }
 
 function dictateButton(): HTMLElement | null {
@@ -373,41 +374,44 @@ describe('TutorComposer, dictating', () => {
     expect(field().value).toBe('Una duda. Por qué falla');
   });
 
-  describe('a question half written, which the tutor does not interrupt (2.7)', () => {
-    it('is written, then emptied, then sent', async () => {
+  describe('the question half written, kept in the store (2.7)', () => {
+    it('follows what is written, emptied and sent', async () => {
       const view = await renderComposer({ voice: false });
 
       await userEvent.type(field(), 'Una');
-      expect(view.setDrafting).toHaveBeenLastCalledWith(true);
+      expect(view.draft()).toBe('Una');
       await userEvent.clear(field());
-      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
-      await userEvent.type(field(), '  ');
-      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
+      expect(view.draft()).toBe('');
 
       await userEvent.type(field(), '¿Y ahora?{Enter}');
       expect(view.ask).toHaveBeenCalled();
-      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
+      expect(view.draft()).toBe('');
     });
 
-    it('is dictated, or put there from a call', async () => {
+    it('follows what is dictated, or put there from a call', async () => {
       const view = await renderComposer();
       await startDictating(view);
 
       hear(view, 'por qué');
-      expect(view.setDrafting).toHaveBeenLastCalledWith(true);
+      expect(view.draft()).toBe('Por qué');
 
-      view.setDrafting.mockClear();
       view.fixture.componentInstance.insert('falla');
-      expect(view.setDrafting).toHaveBeenLastCalledWith(true);
+      expect(view.draft()).toBe('Por qué falla');
     });
 
-    it('is gone with the field', async () => {
+    it('comes back with the field, after folding or moving the tutor', async () => {
       const view = await renderComposer({ voice: false });
-      await userEvent.type(field(), 'Una');
-
+      await userEvent.type(field(), 'Una duda');
       view.fixture.destroy();
 
-      expect(view.setDrafting).toHaveBeenLastCalledWith(false);
+      const again = TestBed.createComponent(TutorComposer);
+      again.detectChanges();
+
+      expect(view.draft()).toBe('Una duda');
+      expect(screen.getByRole('textbox', { name: 'Pregunta al tutor' })).toHaveProperty(
+        'value',
+        'Una duda',
+      );
     });
   });
 });

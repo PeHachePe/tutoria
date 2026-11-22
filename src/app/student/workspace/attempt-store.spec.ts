@@ -247,6 +247,32 @@ describe('AttemptStore', () => {
     });
   });
 
+  it('knows when the student arrived and last edited the code, for the proactive tutor (2.7)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse('2026-11-08T10:00:00.000Z'));
+    openOrCreate.mockResolvedValue(attemptOf('exercise-3'));
+    expect(store.openedAt()).toBe(0);
+
+    await store.open('exercise-3');
+    expect(store.openedAt()).toBe(Date.parse('2026-11-08T10:00:00.000Z'));
+    expect(store.lastEditAt()).toBe(0);
+
+    vi.setSystemTime(Date.parse('2026-11-08T10:01:00.000Z'));
+    store.updateCode('function sum() {}');
+    expect(store.lastEditAt()).toBe(Date.parse('2026-11-08T10:01:00.000Z'));
+    // The same code is no edit
+    vi.setSystemTime(Date.parse('2026-11-08T10:02:00.000Z'));
+    store.updateCode('function sum() {}');
+    expect(store.lastEditAt()).toBe(Date.parse('2026-11-08T10:01:00.000Z'));
+
+    // Another exercise starts again
+    openOrCreate.mockResolvedValue(attemptOf('exercise-4'));
+    await store.open('exercise-4');
+    expect(store.openedAt()).toBe(Date.parse('2026-11-08T10:02:00.000Z'));
+    expect(store.lastEditAt()).toBe(0);
+    vi.useRealTimers();
+  });
+
   describe('autosave', () => {
     const attempt = attemptOf('exercise-3', 'passed');
 
