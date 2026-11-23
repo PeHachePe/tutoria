@@ -127,6 +127,7 @@
           "options": {
             "runnerConfig": "vitest-base.config.mts",
             "setupFiles": ["src/jsdom-testing.ts"],
+            "providersFile": "src/providers-testing.ts",
             "reporters": [
               "default",
               [

@@ -1,5 +1,4 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
-import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { Component } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -37,8 +36,6 @@ describe('StaffLayout', () => {
       providers: [
         provideSessionOf(role),
         { provide: BreakpointObserver, useValue: breakpoints },
-        // Material reports a closed menu when its animation ends, which jsdom never plays
-        { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
         provideRouter([
           {
             path: '',

@@ -7,7 +7,6 @@ import {
   MatButtonToggleGroupHarness,
   MatButtonToggleHarness,
 } from '@angular/material/button-toggle/testing';
-import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { provideRouter } from '@angular/router';
@@ -33,11 +32,7 @@ describe('DevToolbar', () => {
     reload.mockReset();
     openHome.mockReset();
     TestBed.configureTestingModule({
-      providers: [
-        { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
-        { provide: PageReloader, useValue: { reload, openHome } },
-        provideRouter([]),
-      ],
+      providers: [{ provide: PageReloader, useValue: { reload, openHome } }, provideRouter([])],
     });
     db = TestBed.inject(MockDb);
     // This year alone: the classes and students of the years before are not what these test

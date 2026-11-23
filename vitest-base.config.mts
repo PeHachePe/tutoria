@@ -50,6 +50,14 @@ function isAsyncClassMetadata(node: Node): boolean {
 const TEST_TIMEOUT_MS = 15_000;
 
 /**
+ * Half the logical cores, not all but one as Vitest does: the performance cores of a Mac with
+ * efficiency cores (4 of 8 on an M3), or the physical cores of a machine with two threads per core
+ * (Windows, the CI). With 7 workers on that M3, the largest screens ran at once on the slow cores,
+ * besides Docker, and some went past 15 s; with 4 every test passed, and the suite took less (D-091).
+ */
+const MAX_WORKERS = '50%';
+
+/**
  * The time zone of the school, for every unit test whatever the clock of the machine (D-074). The
  * screens show the dates in local time, so a test that reads «23:59» would see «22:59» on a machine
  * in UTC (Windows set so, a cloud session). The same zone as the e2e (`playwright.config.ts`).
@@ -60,6 +68,7 @@ export default defineConfig({
   test: {
     env: { TZ: TEST_TIME_ZONE },
     testTimeout: TEST_TIMEOUT_MS,
+    maxWorkers: MAX_WORKERS,
     coverage: {
       ignoreNode: (node) =>
         isClosureGuard(node) || isAsyncClassMetadata(node)

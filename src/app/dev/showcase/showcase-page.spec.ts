@@ -3,7 +3,6 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { DOCUMENT } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
-import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
 import { MatDialogHarness } from '@angular/material/dialog/testing';
 import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
@@ -23,11 +22,7 @@ describe('ShowcasePage', () => {
   beforeEach(async () => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [
-        { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
-        provideSessionOf(null),
-        provideRouter([]),
-      ],
+      providers: [provideSessionOf(null), provideRouter([])],
     });
     fixture = TestBed.createComponent(ShowcasePage);
     loader = TestbedHarnessEnvironment.loader(fixture);
