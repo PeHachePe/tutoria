@@ -2715,3 +2715,47 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - La batería de elusión tendrá que preparar los eventos del intento para que el servidor acepte cada motivo (`PENDIENTES.md`).
 
 **Aprobación:** el autor aprobó el plan con los cinco cambios y pidió aplicarlos todos. Preguntó por qué no compensaba registrar la apertura del ejercicio y aceptó dejarlo si complica más de lo que aporta.
+
+## D-091 · Los unitarios con el equipo cargado: consultas dentro de su zona, Material sin animaciones y la mitad de los núcleos (23/11/2026, propuesta)
+
+**Contexto:** desde el 6.2b, `npm run check` fallaba con el equipo cargado, siempre en tests distintos de las pantallas grandes del docente. En la línea base de esta sesión fallaron 22 tests de 5 ficheros, casi todos por los 15 s; solos, pasaban. Medido con perfiles de CPU y contando las llamadas a `getComputedStyle()`, salieron tres causas que se suman:
+
+- **Las consultas a toda la página.** `getByRole(…, { name })` calcula el nombre accesible de cada elemento con ese rol y, para saber qué está oculto, el estilo de cada elemento de dentro. jsdom 30 calcula para cada uno la cascada entera, en torno a 1 ms, y la olvida con cualquier cambio del DOM. En la página de bloques de 1.º DAW A, con 1300 elementos y 127 botones, una consulta de botón por nombre sobre `screen` calculaba unos 630 estilos: medio segundo. Las consultas eran la mitad del tiempo de `blocks-page.spec.ts`.
+- **Las animaciones de Material.** jsdom no las reproduce, y Material esperaba cada una con un temporizador: un diálogo no tomaba el foco ni avisaba de que se había cerrado hasta que vencía, y un menú tampoco se daba por cerrado. En Grupos, «Añadir asignaturas a…» se abre después de guardar la clase y de cerrar el primer diálogo, y con carga no llegaba en el segundo que espera `findByRole`.
+- **Demasiados workers.** Vitest lanza tantos como núcleos menos uno: 7 en el M3 del autor, que tiene 4 núcleos de rendimiento y 4 de eficiencia, mientras Docker (Supabase) y otra aplicación ocupaban la CPU. Vitest empieza por los ficheros más lentos, así que las pantallas grandes corrían a la vez en los núcleos lentos. En la suite entera, un test tardaba entre 20 y 60 veces lo que tarda solo, sobre todo al principio de cada fichero. La memoria no era el problema: los workers sumaban unos 2,2 GB y el swap no creció.
+
+Además, un test que se pasa del tiempo no se detiene: en la línea base, el de crear un ejercicio siguió tecleando `[2, 3]` dentro del siguiente, que falló por eso. Es el fallo «por el orden» que se vio en el 6.2c.
+
+**Decisión:**
+
+- **Los elementos que se repiten se buscan dentro de su zona,** como los busca el docente: los botones de un bloque y de sus ejercicios, dentro del bloque (`blockButton()`, `blockMenu()` y `exerciseMenu()` en `blocks-page.spec.ts`), y los de la barra para borrar varios bloques, dentro de la barra. `class-students.spec.ts` ya lo hacía con las casillas de la tabla (`box()`). Los botones de la página sin zona propia («Nuevo bloque», «Seleccionar», «Copiar de otro grupo») siguen buscándose en `screen`: son uno o dos por test.
+- **Material sin animaciones en todos los unitarios:** `src/providers-testing.ts`, el `providersFile` del builder de Angular. Un test puede volver a activarlas. Tres specs lo hacían por su cuenta (`staff-layout`, `dev-toolbar` y `showcase-page`) y dejan de repetirlo.
+- **`maxWorkers: '50%'`** en `vitest-base.config.mts`: los núcleos de rendimiento de un Mac con núcleos de eficiencia, o los físicos de un equipo con dos hilos por núcleo (el de Windows, el CI).
+- **Los tiempos máximos no cambian:** 15 s por test y la espera de Testing Library para los diálogos. No hizo falta alargarlos.
+
+**Resultados,** en el mismo equipo y con la misma carga de fondo (suite entera de unitarios, 3256 tests):
+
+| Pasada                               | Fallos | Duración | Suma de los tests | Test más lento |
+| ------------------------------------ | ------ | -------- | ----------------- | -------------- |
+| Línea base (7 workers)               | 22     | 430 s    | 2446 s            | 20,2 s         |
+| Consultas acotadas y sin animaciones | 5      | 389 s    | 1915 s            | 16,2 s         |
+| Lo anterior y 4 workers              | 0      | 303 s    | 914 s             | 9,4 s          |
+
+En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Después, `npm run check` pasó entero tres veces seguidas, con una carga de 3,2 a 6,1 al empezar y el test más lento por debajo de 10 s.
+
+**Alternativas:**
+
+- **Subir el tiempo máximo:** esconde la causa, y un test que se pasa sigue corriendo y estropea el siguiente.
+- **`configure({ defaultHidden: true })` de Testing Library:** se salta la comprobación de lo oculto en todas las consultas, lo que cambia lo que prueban, y apenas ahorra: el coste está en el nombre accesible.
+- **Buscar los botones por su `aria-label` (`getByLabelText`):** más barato, pero deja de comprobar el rol.
+- **jsdom 31 o happy-dom:** una versión mayor recién salida, u otro entorno para 272 ficheros, sin saber si calculan los estilos más deprisa.
+- **Una caché propia de `getComputedStyle()`:** jsdom ya tiene una; lo que cuesta es llenarla después de cada cambio del DOM.
+
+**Consecuencias:**
+
+- En el CI (4 vCPU) corren 2 workers en lugar de 3: el job `check` puede tardar algo más.
+- Un spec nuevo de una pantalla grande busca dentro de su zona (bloque, fila, barra o diálogo) los elementos que se repiten.
+
+**Aprobación:** propuesta. El autor pidió diagnosticar primero por qué eran lentos, arreglar la causa y subir el límite solo donde la espera fuera legítima.
+
+---
