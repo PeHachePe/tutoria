@@ -2730,7 +2730,7 @@ Además, un test que se pasa del tiempo no se detiene: en la línea base, el de 
 
 - **Los elementos que se repiten se buscan dentro de su zona,** como los busca el docente: los botones de un bloque y de sus ejercicios, dentro del bloque (`blockButton()`, `blockMenu()` y `exerciseMenu()` en `blocks-page.spec.ts`), y los de la barra para borrar varios bloques, dentro de la barra. `class-students.spec.ts` ya lo hacía con las casillas de la tabla (`box()`). Los botones de la página sin zona propia («Nuevo bloque», «Seleccionar», «Copiar de otro grupo») siguen buscándose en `screen`: son uno o dos por test.
 - **Material sin animaciones en todos los unitarios:** `src/providers-testing.ts`, el `providersFile` del builder de Angular. Un test puede volver a activarlas. Tres specs lo hacían por su cuenta (`staff-layout`, `dev-toolbar` y `showcase-page`) y dejan de repetirlo.
-- **`maxWorkers: '50%'`** en `vitest-base.config.mts`: los núcleos de rendimiento de un Mac con núcleos de eficiencia, o los físicos de un equipo con dos hilos por núcleo (el de Windows, el CI).
+- **`maxWorkers: '50%'`** en `vitest-base.config.mts`, salvo en el CI: en el M3, sus 4 núcleos de rendimiento. El CI es una máquina limpia, donde estos tests no fallaban, y sigue con lo que Vitest pone por defecto (3 workers con sus 4 vCPU), para no alargar el job `check` sin ganar nada (iteración 2).
 - **Los tiempos máximos no cambian:** 15 s por test y la espera de Testing Library para los diálogos. No hizo falta alargarlos.
 
 **Resultados,** en el mismo equipo y con la misma carga de fondo (suite entera de unitarios, 3256 tests):
@@ -2753,9 +2753,10 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 
 **Consecuencias:**
 
-- En el CI (4 vCPU) corren 2 workers en lugar de 3: el job `check` puede tardar algo más.
 - Un spec nuevo de una pantalla grande busca dentro de su zona (bloque, fila, barra o diálogo) los elementos que se repiten.
 
-**Aprobación:** propuesta. El autor pidió diagnosticar primero por qué eran lentos, arreglar la causa y subir el límite solo donde la espera fuera legítima.
+- La fila del 1.10 de `PENDIENTES.md` (un test de `app.routes.spec.ts` que falló una vez con la suite entera) se cierra con esta decisión: tiene el mismo patrón y no falló en ninguna de las seis pasadas completas de este trabajo. Si vuelve a fallar, se reabre.
+
+**Aprobación:** propuesta. El autor pidió diagnosticar primero por qué eran lentos, arreglar la causa y subir el límite solo donde la espera fuera legítima. En la iteración 2 preguntó qué ganaba el CI con 2 workers en lugar de 3: nada, y vuelve a los de Vitest; aceptó también cerrar la fila del 1.10.
 
 ---

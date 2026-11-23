@@ -50,12 +50,12 @@ function isAsyncClassMetadata(node: Node): boolean {
 const TEST_TIMEOUT_MS = 15_000;
 
 /**
- * Half the logical cores, not all but one as Vitest does: the performance cores of a Mac with
- * efficiency cores (4 of 8 on an M3), or the physical cores of a machine with two threads per core
- * (Windows, the CI). With 7 workers on that M3, the largest screens ran at once on the slow cores,
- * besides Docker, and some went past 15 s; with 4 every test passed, and the suite took less (D-091).
+ * Half the logical cores on the machines of development, not all but one as Vitest does: on an M3,
+ * the 4 performance cores of 8. With 7 workers there, the largest screens ran at once on the slow
+ * cores, besides Docker, and some went past 15 s; with 4 every test passed, and the suite took less
+ * (D-091). The CI, a clean machine where they never failed, keeps the default of Vitest.
  */
-const MAX_WORKERS = '50%';
+const MAX_WORKERS = process.env['CI'] ? undefined : '50%';
 
 /**
  * The time zone of the school, for every unit test whatever the clock of the machine (D-074). The

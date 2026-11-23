@@ -19,7 +19,7 @@ Que `npm run check` vuelva a ser fiable con el equipo cargado. Desde el 6.2b fal
 3. **Pasó la suite entera como línea base:** 22 fallos en 5 ficheros (también `system-page`) y 430 s. En la suite, cada test tardaba entre 20 y 60 veces lo que tarda solo, sobre todo al principio de cada fichero: Vitest lanza 7 workers en el M3 del autor (4 núcleos de rendimiento y 4 de eficiencia), empieza por los ficheros más lentos y los reparte también por los núcleos lentos, con Docker y otra aplicación ocupando la CPU. Uno de los fallos lo provocó el anterior: el test de crear un ejercicio agotó su tiempo y siguió tecleando `[2, 3]` en el siguiente.
 4. **Acotó las consultas de `blocks-page.spec.ts`:** los botones de un bloque o de sus ejercicios se buscan dentro del bloque (`blockButton()`, `blockMenu()` y `exerciseMenu()`, que sustituyen a `menu()`), y los de la barra de borrar varios, dentro de la barra (`toolbarButton()`). Los estilos calculados del fichero bajan de 49 600 a 25 200.
 5. **Quitó las animaciones de Material en todos los unitarios** con `src/providers-testing.ts`, el `providersFile` del builder: jsdom no las reproduce y Material las esperaba con temporizadores, también para dar el foco a un diálogo o avisar de que se cerró. Tres specs lo hacían por su cuenta y dejan de repetirlo.
-6. **Limitó los workers a la mitad de los núcleos** (`maxWorkers: '50%'` en `vitest-base.config.mts`). Con los dos cambios anteriores y 7 workers quedaban 5 fallos (389 s); con 4, ninguno, y la suite tardó 303 s.
+6. **Limitó los workers a la mitad de los núcleos** (`maxWorkers: '50%'` en `vitest-base.config.mts`, salvo en el CI desde la iteración 2). Con los dos cambios anteriores y 7 workers quedaban 5 fallos (389 s); con 4, ninguno, y la suite tardó 303 s.
 7. Pasó `npm run check` tres veces seguidas (abajo), escribió D-091 y cerró la fila de `PENDIENTES.md`.
 
 ## Cómo funciona (para el manual)
@@ -28,7 +28,7 @@ No cambia nada de la aplicación: solo cómo corren sus unitarios.
 
 - **Un test de una pantalla grande busca lo que se repite dentro de su zona** (el bloque, la fila, la barra o el diálogo), como lo busca quien usa la pantalla. Así la consulta mira unos pocos elementos en lugar de toda la página.
 - **En los unitarios, Material no anima:** diálogos, menús y avisos se abren y se cierran al momento. Un test que quiera probar una animación puede volver a activarlas con su propio `MATERIAL_ANIMATIONS`.
-- **`ng test` usa la mitad de los núcleos lógicos:** 4 en el Mac del autor y 2 en el CI.
+- **`ng test` usa la mitad de los núcleos lógicos** (4 en el Mac del autor) salvo en el CI, que sigue con lo de Vitest por defecto (3).
 
 ## Comandos e instalaciones
 
@@ -46,7 +46,7 @@ Sin instalaciones.
 ## Archivos creados o modificados
 
 - `src/providers-testing.ts` (nuevo) y `angular.json` (`providersFile`): Material sin animaciones en los unitarios.
-- `vitest-base.config.mts`: `maxWorkers: '50%'`, con su porqué.
+- `vitest-base.config.mts`: `maxWorkers: '50%'` fuera del CI, con su porqué.
 - `src/app/teacher/blocks/blocks-page.spec.ts`: las consultas, dentro del bloque o de la barra.
 - `src/app/shared/staff-layout/staff-layout.spec.ts`, `src/app/dev/dev-toolbar/dev-toolbar.spec.ts` y `src/app/dev/showcase/showcase-page.spec.ts`: sin su `MATERIAL_ANIMATIONS`.
 - `docs/DECISIONES.md` (D-091), `docs/PENDIENTES.md` (fila cerrada), `docs/REGISTRO.md` y esta bitácora.
@@ -83,7 +83,9 @@ Después, `npm run check` tres veces seguidas, todas en verde, con Supabase y la
 
 ## Validación humana
 
-Pendiente de la revisión del autor. Claude lo comprobó con las pasadas de arriba: la línea base reproduce los fallos, cada cambio se midió por separado y los tres `check` seguidos pasan enteros.
+Claude lo comprobó con las pasadas de arriba: la línea base reproduce los fallos, cada cambio se midió por separado y los tres `check` seguidos pasan enteros.
+
+**Iteración 2:** el autor preguntó si lo había solucionado y qué pasaba, y después qué ganaba el CI con 2 workers en lugar de 3. Nada: el CI no fallaba, y el comentario daba por hecho, sin comprobarlo, que sus vCPU son dos hilos por núcleo. El CI vuelve a lo de Vitest por defecto y el comentario y D-091 se corrigen. Preguntó también qué era la fila del 1.10 (`app.routes.spec.ts`) y aceptó cerrarla con D-091: mismo patrón y ningún fallo en seis pasadas completas.
 
 ## Métricas
 
