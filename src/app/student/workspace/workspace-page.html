@@ -2,6 +2,7 @@
   <a
     matIconButton
     [routerLink]="catalogPath"
+    [appGuideAnchor]="anchors.workspaceBack"
     aria-label="Volver a los ejercicios"
     i18n-aria-label="@@workspace.back"
     matTooltip="Volver a los ejercicios"
@@ -12,7 +13,11 @@
   <div class="flex min-w-0 flex-1 flex-col">
     @if (place(); as current) {
       <!-- Where the exercise is (2.5c): the subject leads to its tab of the catalog -->
-      <nav aria-label="Ubicación" i18n-aria-label="@@workspace.place">
+      <nav
+        aria-label="Ubicación"
+        i18n-aria-label="@@workspace.place"
+        [appGuideAnchor]="anchors.workspacePlace"
+      >
         <ol class="flex min-w-0 items-center gap-1 text-label-large text-on-surface-variant">
           <li class="min-w-0 truncate">
             <a
@@ -53,13 +58,25 @@
   @if (exercise(); as current) {
     <!-- On phones the chips take their own line, so the title keeps the width of the screen -->
     <div class="flex w-full flex-wrap items-center gap-2 ps-12 sm:w-auto sm:ps-0">
-      <app-difficulty-chip [difficulty]="current.difficulty" />
+      <app-difficulty-chip
+        [appGuideAnchor]="anchors.workspaceDifficulty"
+        [difficulty]="current.difficulty"
+      />
       @if (store.attempt()) {
-        <app-status-chip [status]="store.status()" [testCount]="store.testCount()" />
+        <app-status-chip
+          [appGuideAnchor]="anchors.workspaceStatus"
+          [status]="store.status()"
+          [testCount]="store.testCount()"
+        />
       }
       @if (attemptChoices().length > 1) {
         <!-- The attempts at the assignment (2.5c): the earlier ones can still be reviewed -->
-        <button matButton type="button" [matMenuTriggerFor]="attemptMenu">
+        <button
+          matButton
+          type="button"
+          [matMenuTriggerFor]="attemptMenu"
+          [appGuideAnchor]="anchors.attemptMenu"
+        >
           <mat-icon>history</mat-icon>
           <span i18n="@@workspace.attemptOf"
             >Intento {{ store.attempt()?.number }} de {{ attemptChoices().length }}</span
@@ -70,6 +87,7 @@
           @for (choice of attemptChoices(); track choice.number) {
             <a
               mat-menu-item
+              [appGuideAnchor]="anchors.attemptChoices"
               [routerLink]="[]"
               [queryParams]="choice.queryParams"
               [queryParamsHandling]="'merge'"

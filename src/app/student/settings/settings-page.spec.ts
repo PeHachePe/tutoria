@@ -145,8 +145,15 @@ describe('SettingsPage', () => {
     }
 
     it('shows its controls when turned on, without moving the focus, with the most natural voice', async () => {
+      expect(screen.queryByRole('region', { name: 'Voz' })).toBeNull();
       const { settings, toggle } = await turnVoiceOn();
       expect(settings.voice()).toBe(true);
+      // In a card of their own, so the tutor stays as high as the reactions beside it (7.0a)
+      const voiceCard = screen.getByRole('region', { name: 'Voz' });
+      expect(within(voiceCard).getByRole('radiogroup', { name: 'Voz del tutor' })).toBeTruthy();
+      expect(
+        within(screen.getByRole('region', { name: 'Tutor' })).queryByRole('radiogroup'),
+      ).toBeNull();
       expect(document.activeElement).toBe(toggle);
       expect(screen.getByText(/la que suena más natural en tu navegador/)).toBeTruthy();
       const voices = within(group('Voz del tutor')).getAllByRole('radio');

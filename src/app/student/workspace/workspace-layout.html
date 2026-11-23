@@ -15,7 +15,11 @@
         [compact]="true"
       />
     </mat-tab>
-    <mat-tab label="Código" i18n-label="@@workspace.tab.code">
+    <mat-tab>
+      <!-- A label of its own, so the guided help can point at the tab (2.12) -->
+      <ng-template mat-tab-label>
+        <span [appGuideAnchor]="anchors.workspaceTabCode" i18n="@@workspace.tab.code">Código</span>
+      </ng-template>
       <app-code-zone
         [exercise]="exercise()"
         [compact]="true"
@@ -29,7 +33,7 @@
       <ng-template mat-tab-label>
         <!-- With an answer not seen yet, a dot, and its name says so; in a call, it says so too,
              as the microphone may be open in another tab (2.11) -->
-        <span class="flex items-center gap-1.5">
+        <span class="flex items-center gap-1.5" [appGuideAnchor]="anchors.workspaceTabTutor">
           @if (tutorUnread()) {
             <span aria-hidden="true" i18n="@@workspace.tab.tutor">Tutor</span>
             <span class="size-2 rounded-full bg-primary" aria-hidden="true"></span>
@@ -80,6 +84,7 @@
         />
         @if (statementOpen()) {
           <app-splitter
+            [appGuideAnchor]="anchors.statementSplitter"
             label="Tamaño del enunciado"
             i18n-label="@@workspace.statementSize"
             [controls]="statementZoneId"
@@ -103,6 +108,7 @@
     </div>
     @if (!floatingTutor()) {
       <app-splitter
+        [appGuideAnchor]="anchors.codeSplitter"
         orientation="vertical"
         label="Ancho del código"
         i18n-label="@@workspace.codeWidth"
@@ -167,6 +173,7 @@
       <button
         #tutorToggle
         type="button"
+        [appGuideAnchor]="anchors.tutorToggle"
         class="relative grid size-16 place-items-center rounded-full bg-primary-container shadow-lg outline-offset-2 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none"
         aria-controls="floating-tutor"
         [attr.aria-expanded]="tutorOpen()"

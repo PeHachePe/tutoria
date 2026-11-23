@@ -13,3 +13,8 @@
 
 /* The strips of the credentials to print (5.2h) */
 @import './app/admin/users/credentials-sheet.css';
+
+/* Guided help (7.0a): the layout of driver.js and, over it, the look of the app */
+@import 'driver.js/dist/driver.css';
+@import 'driver.js/dist/hints.css';
+@import './styles/guide.css';

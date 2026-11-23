@@ -6,6 +6,7 @@
   matTooltip="Menú de usuario"
   i18n-matTooltip="@@userMenu.tooltip"
   [matMenuTriggerFor]="menu"
+  [appGuideAnchor]="anchor"
 >
   <mat-icon>account_circle</mat-icon>
 </button>
@@ -20,7 +21,7 @@
   }
 
   @for (link of links(); track link.path) {
-    <a mat-menu-item [routerLink]="link.path">
+    <a mat-menu-item [routerLink]="link.path" [appGuideAnchor]="link.guideAnchor ?? null">
       <mat-icon>{{ link.icon }}</mat-icon>
       <span>{{ link.label }}</span>
     </a>
@@ -29,7 +30,7 @@
     <mat-divider />
   }
 
-  <button mat-menu-item type="button" (click)="signOut()">
+  <button mat-menu-item type="button" [appGuideAnchor]="signOutAnchor" (click)="signOut()">
     <mat-icon>logout</mat-icon>
     <span i18n="@@userMenu.signOut">Cerrar sesión</span>
   </button>

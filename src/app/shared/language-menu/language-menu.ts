@@ -6,6 +6,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 
 import { LanguageService } from '../../core/i18n/language-service';
 import { AppLocale, LANGUAGE_OPTIONS } from '../../core/i18n/locale';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /**
  * Language of the interface, in the bar of the login and of the shells: an icon button that opens
@@ -15,7 +16,7 @@ import { AppLocale, LANGUAGE_OPTIONS } from '../../core/i18n/locale';
  */
 @Component({
   selector: 'app-language-menu',
-  imports: [MatIconButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger, MatTooltip],
+  imports: [GuideAnchor, MatIconButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger, MatTooltip],
   template: `
     <button
       matIconButton
@@ -25,6 +26,7 @@ import { AppLocale, LANGUAGE_OPTIONS } from '../../core/i18n/locale';
       matTooltip="Idioma"
       i18n-matTooltip="@@language.group"
       [matMenuTriggerFor]="menu"
+      [appGuideAnchor]="anchors.languageMenu"
     >
       <mat-icon>translate</mat-icon>
     </button>
@@ -51,6 +53,7 @@ import { AppLocale, LANGUAGE_OPTIONS } from '../../core/i18n/locale';
   `,
 })
 export class LanguageMenu {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly language = inject(LanguageService);
 
   protected readonly options = LANGUAGE_OPTIONS;

@@ -13,13 +13,18 @@
     @if (store.editable()) {
       @if (!preview()) {
         <!-- A teacher's try keeps nothing (4.3e): «Guardado» would say otherwise -->
-        <app-save-indicator [status]="store.saveStatus()" (retry)="store.retrySave()" />
+        <app-save-indicator
+          [appGuideAnchor]="anchors.saveIndicator"
+          [status]="store.saveStatus()"
+          (retry)="store.retrySave()"
+        />
       }
       <!-- Indentation and spaces in order, as «Format document» does in VS Code (2.5d) -->
       <button
         matIconButton
         type="button"
         aria-label="Formatear el código"
+        [appGuideAnchor]="anchors.formatCode"
         i18n-aria-label="@@workspace.formatCode"
         matTooltip="Formatear el código ({{ keys.format }})"
         i18n-matTooltip="@@workspace.formatCodeTooltip"
@@ -35,6 +40,7 @@
         matIconButton
         type="button"
         aria-label="Ampliar el código"
+        [appGuideAnchor]="anchors.expandCode"
         i18n-aria-label="@@workspace.expandCode"
         [attr.aria-pressed]="expanded()"
         [matTooltip]="expanded() ? collapseCodeTooltip : expandCodeTooltip"
@@ -74,6 +80,7 @@
   <!-- Practice does not change the data of the class: the student knows it before writing (2.5c) -->
   <p
     class="flex items-center gap-2 rounded-lg bg-surface-container-high px-3 py-2 text-body-small text-on-surface-variant"
+    [appGuideAnchor]="anchors.practiceNote"
   >
     <mat-icon class="shrink-0">replay</mat-icon>
     <span i18n="@@workspace.practiceNote"
@@ -90,6 +97,7 @@
     @if (!store.editable()) {
       <app-code-editor
         class="min-h-24 flex-1"
+        [appGuideAnchor]="anchors.editor"
         [initialCode]="current.code"
         [label]="editorLabel"
         [language]="current.language"
@@ -99,6 +107,7 @@
       <app-code-editor
         #editableEditor
         class="min-h-24 flex-1"
+        [appGuideAnchor]="anchors.editor"
         [initialCode]="current.code"
         [label]="editorLabel"
         [language]="current.language"
@@ -136,6 +145,7 @@
     <div
       #submittedNote
       tabindex="-1"
+      [appGuideAnchor]="anchors.submittedNote"
       class="flex flex-wrap items-center gap-3 rounded-lg bg-success-container p-3 text-on-success-container outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
     >
       <mat-icon class="shrink-0">task_alt</mat-icon>
@@ -148,6 +158,7 @@
           <button
             matButton="tonal"
             type="button"
+            [appGuideAnchor]="anchors.practiseAgain"
             [disabled]="store.retrying()"
             (click)="practiseAgain()"
           >
@@ -158,7 +169,7 @@
         @if (preview()) {
           <!-- A teacher's try (4.3e): there is nowhere to go but the dialog's own «Cerrar» -->
         } @else if (nextPath(); as path) {
-          <a matButton="filled" [routerLink]="path">
+          <a matButton="filled" [routerLink]="path" [appGuideAnchor]="anchors.nextExercise">
             <span i18n="@@workspace.nextExercise">Siguiente ejercicio</span>
             <mat-icon iconPositionEnd>arrow_forward</mat-icon>
           </a>
@@ -177,6 +188,7 @@
         [matButton]="store.canSubmit() ? 'tonal' : 'filled'"
         disabledInteractive
         [disabled]="!store.canRun()"
+        [appGuideAnchor]="anchors.runTests"
         matTooltip="También con {{ keys.run }} desde el editor"
         i18n-matTooltip="@@workspace.runTooltip"
         (click)="store.run()"
@@ -193,6 +205,7 @@
         [matButton]="store.canSubmit() ? 'filled' : 'outlined'"
         disabledInteractive
         [disabled]="!store.canSubmit()"
+        [appGuideAnchor]="anchors.submit"
         matTooltip="Supera todas las pruebas para poder entregar"
         i18n-matTooltip="@@workspace.submitTooltip"
         [matTooltipDisabled]="store.canSubmit() || store.submitting()"
@@ -228,6 +241,7 @@
   <!-- It scrolls on its own, so it takes the focus to scroll with the keyboard (WCAG 2.1.1) -->
   <app-run-results
     tabindex="0"
+    [appGuideAnchor]="anchors.runResults"
     role="group"
     aria-label="Resultados de las pruebas"
     i18n-aria-label="@@workspace.results"

@@ -63,6 +63,7 @@ describe('ShowcasePage', () => {
       'Progreso, avisos y diálogos',
       'Editor de código',
       'Llamada con el tutor',
+      'Ayuda guiada',
       'Bocadillo del tutor',
       'Resultados de las pruebas',
       'Panel en vivo',

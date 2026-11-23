@@ -17,6 +17,7 @@ import type { RunResult, TestResult } from '../../../data/attempt';
 import { formatCall, formatValue, isMultilineText } from '../../../shared/format-value';
 import type { Pointer } from '../tutor-store';
 import { type FailingExample, failureQuestion } from './failure-question';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../../core/guide/guide-anchor';
 
 /**
  * How a test ended: passed, a wrong value, an error thrown, out of time, or never started because
@@ -104,11 +105,12 @@ function shown(value: unknown): { readonly text: string; readonly block: boolean
  */
 @Component({
   selector: 'app-run-results',
-  imports: [NgTemplateOutlet, MatIcon, MatIconButton, MatTooltip],
+  imports: [GuideAnchor, NgTemplateOutlet, MatIcon, MatIconButton, MatTooltip],
   templateUrl: './run-results.html',
   host: { class: 'flex flex-col gap-3' },
 })
 export class RunResults {
+  protected readonly anchors = GUIDE_ANCHORS;
   readonly result = input.required<RunResult>();
   /** Name of the function of the exercise, to write each call. */
   readonly functionName = input.required<string>();

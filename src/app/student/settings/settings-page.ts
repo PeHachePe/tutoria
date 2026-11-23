@@ -19,6 +19,7 @@ import type { Reaction, ReactionMode } from '../../shared/reactions/reaction';
 import { ReactionOverlay } from '../../shared/reactions/reaction-overlay';
 import { SettingsStore } from './settings-store';
 import { StudentVoice } from './student-voice';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** Short labels for the toggle: the heading already says it is the theme. */
 const THEME_CHOICES: readonly {
@@ -98,6 +99,7 @@ export function sampleReaction(tryIndex: number): Omit<Reaction, 'id'> {
 @Component({
   selector: 'app-settings-page',
   imports: [
+    GuideAnchor,
     MatAnchor,
     MatButton,
     MatButtonToggle,
@@ -114,6 +116,7 @@ export function sampleReaction(tryIndex: number): Omit<Reaction, 'id'> {
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly settings = inject(SettingsStore);
   private readonly theme = inject(ThemeService);
   private readonly language = inject(LanguageService);

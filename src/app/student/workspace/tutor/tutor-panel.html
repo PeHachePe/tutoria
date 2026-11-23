@@ -12,7 +12,7 @@
     >
       Tutor
     </h2>
-    <app-hint-level-meter [level]="store.hintLevel()" />
+    <app-hint-level-meter [appGuideAnchor]="anchors.hintLevel" [level]="store.hintLevel()" />
   </div>
   <!-- While the tutor speaks, always in sight, with a way to silence it (2.11); in a call, the card
        says so and has «Interrumpir» -->
@@ -35,6 +35,7 @@
     <button
       #callButton
       matIconButton
+      [appGuideAnchor]="anchors.tutorCall"
       type="button"
       class="self-start"
       disabledInteractive
@@ -56,6 +57,7 @@
       class="self-start"
       [attr.aria-label]="dockLabel()"
       [matTooltip]="dockLabel()"
+      [appGuideAnchor]="anchors.tutorDock"
       (click)="dockChange.emit()"
     >
       <mat-icon>{{ dock() === 'float' ? 'picture_in_picture_alt' : 'dock_to_right' }}</mat-icon>
@@ -69,6 +71,7 @@
       class="-ms-2 self-start"
       aria-label="Minimizar el tutor"
       i18n-aria-label="@@tutor.minimize"
+      [appGuideAnchor]="anchors.tutorMinimize"
       matTooltip="Minimizar"
       i18n-matTooltip="@@tutor.minimizeTooltip"
       (click)="minimize.emit()"
@@ -86,6 +89,7 @@
   role="group"
   aria-label="Conversación con el tutor"
   i18n-aria-label="@@tutor.conversation"
+  [appGuideAnchor]="anchors.tutorConversation"
   class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto scroll-shadows rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
   [attr.aria-busy]="store.loading()"
 >
@@ -141,6 +145,7 @@
             class="flex flex-wrap justify-center gap-2"
             aria-label="Preguntas sugeridas"
             i18n-aria-label="@@tutor.suggestions"
+            [appGuideAnchor]="anchors.tutorSuggestions"
           >
             @for (suggestion of suggestions(); track suggestion) {
               <li>
@@ -269,6 +274,7 @@
                     <button
                       type="button"
                       class="inline-grid min-h-6 place-items-center rounded-full px-2 text-label-medium text-primary outline-offset-2 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-primary"
+                      [appGuideAnchor]="anchors.tutorListen"
                       (click)="toggleListen(turn.id)"
                     >
                       <span
@@ -380,6 +386,7 @@
       disabledInteractive
       [disabled]="!store.canAsk()"
       [matTooltip]="hintTooltip()"
+      [appGuideAnchor]="anchors.hint"
       (click)="requestHint()"
     >
       <mat-icon>lightbulb</mat-icon>

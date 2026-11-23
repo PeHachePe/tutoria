@@ -24,6 +24,7 @@ import { appendDictation } from './append-dictation';
 import { AudioNotice } from './audio-notice';
 import { listenErrorMessage } from './listen-error-message';
 import { MAX_QUESTION_LENGTH } from './question-limit';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../../core/guide/guide-anchor';
 
 /** Silence that ends the dictation: the student has finished saying the question (2.11). */
 export const DICTATION_SILENCE_MS = 8000;
@@ -42,6 +43,7 @@ const COUNTER_FROM = 400;
 @Component({
   selector: 'app-tutor-composer',
   imports: [
+    GuideAnchor,
     AudioNotice,
     CdkTextareaAutosize,
     FormRoot,
@@ -59,6 +61,7 @@ const COUNTER_FROM = 400;
   host: { '(document:visibilitychange)': 'stopIfHidden()' },
 })
 export class TutorComposer {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly store = inject(TutorStore);
   /** Only on the student's screen: its presence is what offers the voice. */
   private readonly speaker = inject(TutorSpeaker, { optional: true });

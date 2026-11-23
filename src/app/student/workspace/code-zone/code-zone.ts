@@ -40,6 +40,7 @@ import { SubmitDialog } from './submit-dialog';
 import { TutorStore } from '../tutor-store';
 import { IS_MAC } from '../../../core/is-mac';
 import { editorKeys } from '../../../shared/code-editor/editor-keys';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../../core/guide/guide-anchor';
 
 /** What the zone asks of the editor, without naming its class (see `editableEditor`). */
 interface WritableEditor {
@@ -67,6 +68,7 @@ export const CODE_ZONE_ID = 'code-zone';
 @Component({
   selector: 'app-code-zone',
   imports: [
+    GuideAnchor,
     DatePipe,
     NgTemplateOutlet,
     RouterLink,
@@ -93,6 +95,7 @@ export const CODE_ZONE_ID = 'code-zone';
   },
 })
 export class CodeZone {
+  protected readonly anchors = GUIDE_ANCHORS;
   /** The exercise, once it is there: the editor needs its language and the name of its function. */
   readonly exercise = input<Exercise>();
   /** Phones: a tab of its own, which needs no «Ampliar el código». */

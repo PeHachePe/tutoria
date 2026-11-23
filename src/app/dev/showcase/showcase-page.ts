@@ -30,6 +30,7 @@ import type { Difficulty } from '../../data/exercise';
 import type { Intensity, ReactionKind } from '../../data/tutor';
 import type { RunResult } from '../../data/attempt';
 import { Splitter } from '../../shared/splitter/splitter';
+import { ShowcaseGuide } from './showcase-guide';
 import type { SaveStatus } from '../../student/workspace/attempt-store';
 import { RunResults } from '../../student/workspace/code-zone/run-results';
 import { SaveIndicator } from '../../student/workspace/code-zone/save-indicator';
@@ -84,6 +85,7 @@ import { ShowcaseTable } from './showcase-table';
 @Component({
   selector: 'app-showcase-page',
   imports: [
+    ShowcaseGuide,
     RouterLink,
     MatToolbar,
     MatButton,

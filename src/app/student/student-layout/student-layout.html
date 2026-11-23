@@ -8,6 +8,7 @@
         <li>
           <a
             [routerLink]="catalogPath"
+            [appGuideAnchor]="anchors.navExercises"
             [attr.aria-current]="onCatalog() ? 'page' : null"
             [class]="inExercises() ? 'underline decoration-2 underline-offset-8' : ''"
             class="rounded-md px-3 py-2 text-label-large"
@@ -18,6 +19,7 @@
         </li>
       </ul>
     </nav>
+    <app-help-button />
     <app-theme-menu />
     <app-language-menu />
     <app-user-menu [links]="accountLinks" />

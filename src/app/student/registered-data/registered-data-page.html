@@ -9,6 +9,7 @@
   <div class="grid gap-6 lg:grid-cols-2">
     <section
       aria-labelledby="my-data-recorded"
+      [appGuideAnchor]="anchors.dataRecorded"
       class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6 lg:row-span-3"
     >
       <h2 id="my-data-recorded" class="text-title-large" i18n="@@myData.recorded">Se registra</h2>
@@ -33,6 +34,7 @@
     <!-- What is never recorded stands apart, as in the prototype (figure 23) -->
     <section
       aria-labelledby="my-data-never"
+      [appGuideAnchor]="anchors.dataNever"
       class="flex flex-col gap-2 rounded-2xl bg-success-container p-4 text-on-success-container sm:p-6"
     >
       <h2 id="my-data-never" class="flex items-center gap-2 text-title-large">
@@ -50,6 +52,7 @@
 
     <section
       aria-labelledby="my-data-purpose"
+      [appGuideAnchor]="anchors.dataPurpose"
       class="flex flex-col gap-2 rounded-2xl bg-panel p-4 sm:p-6"
     >
       <h2 id="my-data-purpose" class="text-title-large" i18n="@@myData.purpose">Para qué</h2>
@@ -61,6 +64,7 @@
 
     <section
       aria-labelledby="my-data-viewers"
+      [appGuideAnchor]="anchors.dataViewers"
       class="flex flex-col gap-2 rounded-2xl bg-panel p-4 sm:p-6"
     >
       <h2 id="my-data-viewers" class="text-title-large" i18n="@@myData.viewers">Quién lo ve</h2>
@@ -75,6 +79,7 @@
 
   <section
     aria-labelledby="my-data-services"
+    [appGuideAnchor]="anchors.dataServices"
     class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
   >
     <h2 id="my-data-services" class="text-title-large" i18n="@@myData.services">
@@ -102,6 +107,7 @@
   <!-- What the student decides, in a panel like the privacy one of the settings -->
   <section
     aria-labelledby="my-data-choices"
+    [appGuideAnchor]="anchors.dataChoices"
     class="flex flex-col items-start gap-3 rounded-2xl bg-panel p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6"
   >
     <div class="flex flex-col gap-1">

@@ -45,6 +45,7 @@
       <section
         class="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-primary-container p-5 text-on-primary-container sm:flex-row sm:items-center sm:gap-5"
         aria-labelledby="catalog-next"
+        [appGuideAnchor]="anchors.catalogNextCard"
       >
         <app-mascot class="hidden size-20 shrink-0 sm:block" />
         <div class="flex min-w-0 flex-1 flex-col gap-1">
@@ -73,7 +74,12 @@
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <app-status-chip [status]="next.status" />
-          <a matButton="filled" class="ms-auto" [routerLink]="next.path">
+          <a
+            matButton="filled"
+            class="ms-auto"
+            [routerLink]="next.path"
+            [appGuideAnchor]="anchors.catalogNext"
+          >
             {{ next.action.label
             }}<span class="sr-only" [attr.lang]="next.lang">: {{ next.title }}</span>
             <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
@@ -85,6 +91,7 @@
       <section
         class="flex flex-col items-center gap-4 rounded-2xl bg-success-container p-6 text-center text-on-success-container sm:flex-row sm:text-start"
         aria-labelledby="catalog-done"
+        [appGuideAnchor]="anchors.catalogDone"
       >
         <app-mascot class="size-28 shrink-0" mood="joy" />
         <div class="flex flex-col gap-1">
@@ -104,6 +111,7 @@
         <nav
           mat-tab-nav-bar
           [tabPanel]="groupPanel"
+          [appGuideAnchor]="anchors.catalogSubjects"
           aria-label="Asignaturas"
           i18n-aria-label="@@catalog.subjects"
         >
@@ -133,6 +141,7 @@
   <section
     class="grid gap-4 rounded-2xl bg-panel p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
     aria-labelledby="catalog-progress"
+    [appGuideAnchor]="anchors.catalogProgress"
   >
     <div class="flex flex-col gap-3">
       <p id="catalog-progress" class="flex items-baseline gap-2">
@@ -148,7 +157,10 @@
         i18n-aria-label="@@catalog.progressBar"
       />
     </div>
-    <ul class="flex flex-wrap gap-2 md:max-w-sm md:justify-end">
+    <ul
+      class="flex flex-wrap gap-2 md:max-w-sm md:justify-end"
+      [appGuideAnchor]="anchors.catalogCounts"
+    >
       @if (counts().passed > 0) {
         <li
           class="inline-flex items-center gap-1 rounded-full bg-success-container py-1 ps-2 pe-3 text-label-large text-on-success-container"
@@ -208,6 +220,7 @@
           class="flex w-full items-center gap-3 p-4 text-start outline-offset-[-2px] hover:bg-on-surface/5 focus-visible:outline-2 focus-visible:outline-primary"
           [attr.aria-expanded]="!folded().has(block.id)"
           [attr.aria-controls]="'block-list-' + block.id"
+          [appGuideAnchor]="anchors.catalogBlock"
           (click)="toggle(block.id)"
         >
           <mat-icon
@@ -245,6 +258,7 @@
             <span
               class="grid size-10 shrink-0 place-items-center rounded-full text-title-medium"
               [class]="card.marker"
+              [appGuideAnchor]="anchors.catalogMarker"
               aria-hidden="true"
             >
               @if (card.done) {
@@ -260,20 +274,29 @@
                   {{ card.topics }}
                 </p>
                 @if (card.dueAt; as dueAt) {
-                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                  <p
+                    class="flex items-center gap-1 text-body-small text-on-surface-variant"
+                    [appGuideAnchor]="anchors.catalogDue"
+                  >
                     <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">event</mat-icon>
                     <span i18n="@@catalog.due">Entrega:</span>
                     <app-due-label [dueAt]="dueAt" />
                   </p>
                 }
                 @if (card.ready) {
-                  <p class="flex items-center gap-1 text-label-large text-primary">
+                  <p
+                    class="flex items-center gap-1 text-label-large text-primary"
+                    [appGuideAnchor]="anchors.catalogReady"
+                  >
                     <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">outbox</mat-icon>
                     <span i18n="@@catalog.ready">Listo para entregar</span>
                   </p>
                 }
                 @if (card.hintCount > 0) {
-                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                  <p
+                    class="flex items-center gap-1 text-body-small text-on-surface-variant"
+                    [appGuideAnchor]="anchors.catalogHints"
+                  >
                     <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">lightbulb</mat-icon>
                     <span i18n="@@catalog.hints">{card.hintCount, plural,
                       =1 {1 pista pedida}
@@ -284,7 +307,10 @@
                 }
                 @if (card.repetitions > 0) {
                   <!-- Practice after the attempt that counts: it does not change the data of the class -->
-                  <p class="flex items-center gap-1 text-body-small text-on-surface-variant">
+                  <p
+                    class="flex items-center gap-1 text-body-small text-on-surface-variant"
+                    [appGuideAnchor]="anchors.catalogRepetitions"
+                  >
                     <mat-icon class="size-4! text-[1rem]!" aria-hidden="true">replay</mat-icon>
                     <span i18n="@@catalog.repetitions">{card.repetitions, plural,
                       =1 {Repetido 1 vez}
@@ -294,12 +320,16 @@
                 }
               </div>
               <div class="flex flex-wrap items-center gap-2">
-                <app-difficulty-chip [difficulty]="card.difficulty" />
-                <app-status-chip [status]="card.status" />
+                <app-difficulty-chip
+                  [appGuideAnchor]="anchors.catalogDifficulty"
+                  [difficulty]="card.difficulty"
+                />
+                <app-status-chip [appGuideAnchor]="anchors.catalogStatus" [status]="card.status" />
                 <a
                   class="ms-auto min-w-28"
                   [matButton]="card.action.appearance"
                   [routerLink]="card.path"
+                  [appGuideAnchor]="anchors.catalogExercise"
                 >
                   {{ card.action.label
                   }}<span class="sr-only" [attr.lang]="card.lang">: {{ card.title }}</span>

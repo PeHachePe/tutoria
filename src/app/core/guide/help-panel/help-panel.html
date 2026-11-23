@@ -1,0 +1,226 @@
+<div class="flex items-center gap-3 px-4 pt-3 pb-1 sm:px-6">
+  <app-mascot class="size-11 shrink-0" [mood]="celebrating() ? 'joy' : 'idle'" />
+  <h2
+    [id]="titleId"
+    tabindex="-1"
+    class="flex-1 text-title-large outline-none"
+    i18n="@@helpPanel.title"
+  >
+    Ayuda
+  </h2>
+  <button
+    matIconButton
+    type="button"
+    mat-dialog-close
+    aria-label="Cerrar la ayuda"
+    i18n-aria-label="@@helpPanel.close"
+  >
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content>
+  <!-- Material styles the content itself, so the layout goes in a box of our own (4.8) -->
+  <div class="flex flex-col gap-6 pb-2">
+    <!-- What helps right here first: two tiles of the same size, or one as wide as the panel -->
+    <section class="flex flex-col gap-2" aria-labelledby="help-this-screen">
+      <h3 id="help-this-screen" class="eyebrow" i18n="@@helpPanel.thisScreen">Esta pantalla</h3>
+      @if (guide.screenTour() || guide.hasBeacons()) {
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2">
+          @if (guide.screenTour(); as tour) {
+            <button
+              type="button"
+              class="flex flex-col items-start gap-1 rounded-2xl bg-secondary-container p-3 text-start text-on-secondary-container outline-offset-2 hover:bg-secondary-container/80 focus-visible:outline-2 focus-visible:outline-primary"
+              (click)="startScreenTour(tour)"
+            >
+              <mat-icon aria-hidden="true">tour</mat-icon>
+              <span class="text-title-small" i18n="@@helpPanel.screenTour"
+                >Recorrer esta pantalla</span
+              >
+              <span class="text-body-small" i18n="@@helpPanel.screenTour.hint"
+                >Cada pieza, una a una</span
+              >
+            </button>
+          }
+          @if (guide.hasBeacons()) {
+            <button
+              type="button"
+              class="flex flex-col items-start gap-1 rounded-2xl bg-secondary-container p-3 text-start text-on-secondary-container outline-offset-2 hover:bg-secondary-container/80 focus-visible:outline-2 focus-visible:outline-primary"
+              (click)="toggleBeacons()"
+            >
+              <mat-icon aria-hidden="true">ads_click</mat-icon>
+              @if (guide.beaconsShown()) {
+                <span class="text-title-small" i18n="@@helpPanel.hideBeacons"
+                  >Ocultar la ayuda de esta pantalla</span
+                >
+              } @else {
+                <span class="text-title-small" i18n="@@helpPanel.showBeacons"
+                  >Ayuda de esta pantalla</span
+                >
+              }
+              <span class="text-body-small" i18n="@@helpPanel.showBeacons.hint"
+                >Un punto junto a cada pieza</span
+              >
+            </button>
+          }
+        </div>
+      }
+      <button matButton type="button" class="self-start" (click)="showWelcome()">
+        <mat-icon>replay</mat-icon>
+        <span i18n="@@helpPanel.welcome">Ver la bienvenida</span>
+      </button>
+    </section>
+
+    @if (celebrating()) {
+      <section
+        class="flex flex-col gap-3 rounded-2xl bg-success-container p-4 text-on-success-container"
+        aria-labelledby="help-first-steps-done"
+      >
+        <h3 id="help-first-steps-done" class="text-title-medium" i18n="@@helpPanel.firstSteps.done">
+          ¡Ya sabes lo básico!
+        </h3>
+        <p class="text-body-medium" i18n="@@helpPanel.firstSteps.doneText">
+          Has hecho los primeros pasos. Aquí debajo tienes todo lo demás, para cuando lo necesites.
+        </p>
+        <button
+          matButton="filled"
+          type="button"
+          class="self-end"
+          (click)="hideFirstSteps()"
+          i18n="@@helpPanel.firstSteps.doneOk"
+        >
+          Entendido
+        </button>
+      </section>
+    } @else if (guide.firstStepsShown()) {
+      <section class="flex flex-col gap-2" aria-labelledby="help-first-steps">
+        <div class="flex items-baseline justify-between gap-2">
+          <h3 id="help-first-steps" class="eyebrow" i18n="@@helpPanel.firstSteps">
+            Primeros pasos
+          </h3>
+          <span class="text-label-large text-on-surface-variant" i18n="@@helpPanel.firstSteps.count"
+            >{{ firstSteps().done }} de {{ firstSteps().total }}</span
+          >
+        </div>
+        <mat-progress-bar
+          class="rounded-full"
+          mode="determinate"
+          [value]="percent()"
+          aria-label="Primeros pasos hechos"
+          i18n-aria-label="@@helpPanel.firstSteps.progress"
+        />
+        <ul class="flex flex-col">
+          @for (row of firstStepRows(); track row.task.id) {
+            <li>
+              <ng-container
+                [ngTemplateOutlet]="taskButton"
+                [ngTemplateOutletContext]="{ row, compact: true }"
+              />
+            </li>
+          }
+        </ul>
+        <button
+          matButton
+          type="button"
+          class="self-end"
+          (click)="hideFirstSteps()"
+          i18n="@@helpPanel.firstSteps.hide"
+        >
+          Ya sé usarla
+        </button>
+      </section>
+    }
+
+    <section class="flex flex-col gap-2" aria-labelledby="help-how-to">
+      <h3 id="help-how-to" class="eyebrow" i18n="@@helpPanel.howTo">¿Cómo se hace…?</h3>
+      <mat-form-field subscriptSizing="dynamic" class="w-full">
+        <mat-label i18n="@@helpPanel.filter">Busca una tarea</mat-label>
+        <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        <input
+          matInput
+          type="search"
+          autocomplete="off"
+          [value]="query()"
+          (input)="onQuery($event)"
+        />
+      </mat-form-field>
+      @if (howToRows().length > 0) {
+        <ul class="flex flex-col">
+          @for (row of howToRows(); track row.task.id) {
+            <li>
+              <ng-container
+                [ngTemplateOutlet]="taskButton"
+                [ngTemplateOutletContext]="{ row, compact: false }"
+              />
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="px-3 py-2 text-body-medium text-on-surface-variant" i18n="@@helpPanel.noMatch">
+          Ninguna tarea coincide con «{{ query().trim() }}».
+        </p>
+      }
+    </section>
+  </div>
+</mat-dialog-content>
+
+<!-- One row: a button that starts the task, or that says why it cannot start yet -->
+<ng-template #taskButton let-row="row" let-compact="compact">
+  <button
+    type="button"
+    class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-start outline-offset-[-2px] focus-visible:outline-2 focus-visible:outline-primary"
+    [class]="row.unavailable === null ? 'hover:bg-on-surface/5' : 'cursor-default'"
+    [attr.aria-disabled]="row.unavailable !== null"
+    [attr.aria-describedby]="
+      compact && row.unavailable === null
+        ? null
+        : 'help-task-' + (compact ? 'first-' : '') + row.task.id
+    "
+    (click)="start(row)"
+  >
+    @if (compact) {
+      <!-- The first steps say whether they are done with their icon, which is not read -->
+      <mat-icon
+        class="shrink-0"
+        [class]="row.done ? 'text-primary' : 'text-on-surface-variant'"
+        aria-hidden="true"
+        >{{ row.done ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon
+      >
+    }
+    <span class="flex min-w-0 flex-1 flex-col">
+      <span class="text-body-large"
+        >{{ row.task.title }}
+        @if (row.done) {
+          <span class="sr-only" i18n="@@helpPanel.doneLabel">, hecha</span>
+        }
+      </span>
+      <!-- Out of the name, which is the title: it is read as the description of the button -->
+      @if (!compact || row.unavailable !== null) {
+        <span
+          [id]="'help-task-' + (compact ? 'first-' : '') + row.task.id"
+          class="text-body-small text-on-surface-variant"
+          aria-hidden="true"
+        >
+          @if (row.unavailable === null) {
+            {{ row.task.summary }}
+          } @else {
+            <span i18n="@@helpPanel.unavailable">No disponible: {{ row.unavailable }}</span>
+          }
+        </span>
+      }
+    </span>
+    @if (row.done && !compact) {
+      <span
+        class="shrink-0 rounded-full bg-success-container px-2 py-0.5 text-label-medium text-on-success-container"
+        aria-hidden="true"
+        i18n="@@helpPanel.done"
+        >Hecha</span
+      >
+    }
+    @if (row.unavailable === null) {
+      <mat-icon class="shrink-0 text-on-surface-variant" aria-hidden="true">chevron_right</mat-icon>
+    } @else {
+      <mat-icon class="shrink-0 text-on-surface-variant" aria-hidden="true">lock</mat-icon>
+    }
+  </button>
+</ng-template>

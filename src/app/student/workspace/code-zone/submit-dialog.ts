@@ -6,6 +6,7 @@ import {
   MatDialogContent,
   MatDialogTitle,
 } from '@angular/material/dialog';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../../core/guide/guide-anchor';
 
 /**
  * Confirms «Entregar»: once submitted, the code cannot change (2.4). Closes with `true` only when
@@ -13,7 +14,14 @@ import {
  */
 @Component({
   selector: 'app-submit-dialog',
-  imports: [MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose, MatButton],
+  imports: [
+    GuideAnchor,
+    MatDialogTitle,
+    MatDialogContent,
+    MatDialogActions,
+    MatDialogClose,
+    MatButton,
+  ],
   template: `
     <h2 mat-dialog-title i18n="@@submitDialog.title">¿Entregar el ejercicio?</h2>
     <mat-dialog-content i18n="@@submitDialog.body">
@@ -28,6 +36,7 @@ import {
         matButton="filled"
         type="button"
         [mat-dialog-close]="true"
+        [appGuideAnchor]="anchors.submitDialog"
         i18n="@@submitDialog.confirm"
       >
         Entregar
@@ -35,4 +44,6 @@ import {
     </mat-dialog-actions>
   `,
 })
-export class SubmitDialog {}
+export class SubmitDialog {
+  protected readonly anchors = GUIDE_ANCHORS;
+}

@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 
 import { SEED, SEED_VERSION } from '../../src/app/data/mock/fixtures/seed';
 import { ADMIN_ID, DAW_STUDENT_IDS, TEACHER_ID } from '../../src/app/data/mock/fixtures/users';
+import { WELCOME_VERSIONS } from '../../src/app/core/guide/welcome-versions';
 
 /** Seed users of each role, the same ones the dev toolbar offers. */
 export const USERS = {
@@ -23,18 +24,20 @@ const NOTICE_SEEN_AT = '2026-09-15T08:00:00.000Z';
 /**
  * The mock database as MockDb saves it, with the notice seen by `userId`: since step 2.2 the notice
  * lives in `app_user.privacy_notice_seen_at` (D-041), so it is part of the data, not a key of its own.
+ * The welcome of the guided help (7.0a), too: seen, so it does not cover the screens under test.
  */
 function databaseWithNoticeSeen(userId: string): string {
   const users = SEED.users.map((user) =>
     user.id === userId ? { ...user, privacyNoticeSeenAt: NOTICE_SEEN_AT } : user,
   );
-  return JSON.stringify({ version: SEED_VERSION, tables: { ...SEED, users } });
+  const guideStates = { [userId]: { welcome: Math.max(...Object.values(WELCOME_VERSIONS)) } };
+  return JSON.stringify({ version: SEED_VERSION, tables: { ...SEED, users, guideStates } });
 }
 
 /**
  * Starts every page of the test with the given session (or none) and without simulated latency, as
- * the dev toolbar would leave it, and with the notice on the registered data already seen, unless a
- * test about the notice says otherwise. It must run before the first `page.goto()`.
+ * the dev toolbar would leave it, and with the notice on the registered data and the welcome of the
+ * guided help already seen, unless a test about the notice says otherwise. It must run before the first `page.goto()`.
  */
 export async function startAs(
   page: Page,

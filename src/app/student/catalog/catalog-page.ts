@@ -33,6 +33,7 @@ import {
   isPassed,
   nextExercise,
 } from './catalog-blocks';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** Colour tokens of the marker in front of each exercise and of the dots of each block. */
 const STATUS_TONES: Record<AttemptStatus, { readonly marker: string; readonly dot: string }> = {
@@ -66,6 +67,7 @@ interface ShownText {
 @Component({
   selector: 'app-catalog-page',
   imports: [
+    GuideAnchor,
     NgTemplateOutlet,
     RouterLink,
     MatAnchor,
@@ -86,6 +88,7 @@ interface ShownText {
   templateUrl: './catalog-page.html',
 })
 export class CatalogPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly exercises = inject(ExerciseService);
   private readonly auth = inject(AuthStore);
   private readonly locale = inject(LanguageService).locale;

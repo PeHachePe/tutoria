@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, TitleStrategy, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -6,6 +7,7 @@ import { screen } from '@testing-library/angular';
 import { adminRoutes } from './admin/admin.routes';
 import { routes } from './app.routes';
 import { provideSessionOf, restoreSession } from './auth/auth-testing';
+import { TourRunner } from './core/guide/tour-runner';
 import { AppTitleStrategy } from './core/app-title-strategy';
 import { provideFormFieldDefaults } from './core/form-field-defaults';
 import { provideLocalizedPaginator } from './core/i18n/localized-paginator-intl';
@@ -32,6 +34,16 @@ describe('app routes', () => {
       // jsdom has no viewport: the deferred editor of the workspace stays as its placeholder
       deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
+        // Nor is the guided help: its welcome would start driver.js after the test has ended
+        {
+          provide: TourRunner,
+          useValue: {
+            run: () => Promise.resolve('closed'),
+            showBeacons: () => Promise.resolve(),
+            hideBeacons: () => undefined,
+            beaconsShown: signal(false),
+          },
+        },
         // The data notice of the student area is not under test: open after render, it would race
         // the assertions and hide the page behind its dialog on a slow machine
         provideSessionOf(role, { privacyNoticeSeenAt: NOTICE_SEEN_AT }),

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -7,6 +7,8 @@ import userEvent from '@testing-library/user-event';
 
 import { AuthStore } from '../../auth/auth-store';
 import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
+import { TourRunner } from '../../core/guide/tour-runner';
+import { ExerciseService } from '../../data/exercise-service';
 import { RegisteredDataPage } from '../registered-data/registered-data-page';
 import { READING_PAGE_CLASS, StudentLayout, WIDE_PAGE_CLASS } from './student-layout';
 
@@ -22,6 +24,17 @@ describe('StudentLayout', () => {
           'student',
           noticeSeen ? { privacyNoticeSeenAt: '2026-09-01T08:00:00.000Z' } : {},
         ),
+        // The guided help of the area: no exercises, and tours that end at once
+        { provide: ExerciseService, useValue: { listAssigned: () => Promise.resolve([]) } },
+        {
+          provide: TourRunner,
+          useValue: {
+            run: () => Promise.resolve('closed'),
+            showBeacons: () => Promise.resolve(),
+            hideBeacons: () => undefined,
+            beaconsShown: signal(false),
+          },
+        },
         provideRouter([
           { path: 'login', component: Page },
           {

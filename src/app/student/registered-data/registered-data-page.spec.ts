@@ -30,7 +30,8 @@ describe('RegisteredDataPage', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Datos registrados' })).toBeTruthy();
     const recorded = screen.getByRole('region', { name: 'Se registra' });
-    expect(within(recorded).getAllByRole('listitem')).toHaveLength(7);
+    expect(within(recorded).getAllByRole('listitem')).toHaveLength(8);
+    expect(within(recorded).getByText('Qué ayuda has visto')).toBeTruthy();
     expect(within(recorded).getByText('Cuándo sales de la pantalla de trabajo')).toBeTruthy();
     expect(
       within(screen.getByRole('region', { name: 'Nunca se registra' })).getByText(/El audio/),

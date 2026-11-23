@@ -15,7 +15,7 @@
       <h2 id="settings-appearance" class="text-title-large" i18n="@@settings.appearance">
         Apariencia
       </h2>
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2" [appGuideAnchor]="anchors.settingsTheme">
         <h3 id="settings-theme" class="text-title-small" i18n="@@settings.theme">Tema</h3>
         <div class="max-w-full overflow-x-auto">
           <mat-button-toggle-group
@@ -33,7 +33,7 @@
           </mat-button-toggle-group>
         </div>
       </div>
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2" [appGuideAnchor]="anchors.settingsLanguage">
         <h3 id="settings-language" class="text-title-small" i18n="@@settings.language">Idioma</h3>
         <div class="max-w-full overflow-x-auto">
           <mat-button-toggle-group
@@ -63,6 +63,7 @@
     <!-- The mascot, with a live preview of its accessories -->
     <section
       aria-labelledby="settings-mascot"
+      [appGuideAnchor]="anchors.settingsMascot"
       class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
     >
       <h2 id="settings-mascot" class="text-title-large" i18n="@@settings.mascot">Mascota</h2>
@@ -103,6 +104,7 @@
     <section
       aria-labelledby="settings-reactions"
       class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
+      [appGuideAnchor]="anchors.settingsReactions"
     >
       <div class="flex flex-col gap-1">
         <h2 id="settings-reactions" class="text-title-large" i18n="@@settings.reactions">
@@ -135,6 +137,7 @@
         </p>
       </div>
       <mat-slide-toggle
+        [appGuideAnchor]="anchors.settingsEmojis"
         aria-describedby="settings-emojis-hint"
         [checked]="settings.reactionEmojis()"
         [disabled]="settings.reactions() === 'off'"
@@ -155,6 +158,7 @@
         <button
           matButton="tonal"
           type="button"
+          [appGuideAnchor]="anchors.settingsTryReaction"
           aria-describedby="settings-try-hint"
           [disabled]="settings.reactions() === 'off'"
           (click)="trySample()"
@@ -179,7 +183,7 @@
       class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
     >
       <h2 id="settings-tutor" class="text-title-large" i18n="@@settings.tutor">Tutor</h2>
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-1" [appGuideAnchor]="anchors.settingsProactive">
         <mat-slide-toggle
           aria-describedby="settings-proactive-hint"
           [checked]="settings.proactive()"
@@ -197,7 +201,7 @@
           pidas.
         </p>
       </div>
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-1" [appGuideAnchor]="anchors.settingsVoice">
         <mat-slide-toggle
           aria-describedby="settings-voice-hint"
           [checked]="settings.voice()"
@@ -214,10 +218,19 @@
           Podrás escucharle, dictarle y llamarle. Nunca se graba el audio.
         </p>
       </div>
-      @if (settings.voice()) {
-        <!-- The voice (2.11): shown without taking the focus, under the switch like its hint -->
-        <div class="flex flex-col gap-5 ps-14">
-          <div class="flex flex-col gap-2">
+    </section>
+
+    @if (settings.voice()) {
+      <!-- The voice (2.11), in a card of its own as wide as the grid: its choices in two columns, so
+           the tutor and the reactions keep the same height beside each other (7.0a). It appears
+           without taking the focus, right under the switch that shows it. -->
+      <section
+        aria-labelledby="settings-voice"
+        class="flex flex-col gap-5 rounded-2xl bg-panel p-4 sm:p-6 lg:col-span-2"
+      >
+        <h2 id="settings-voice" class="text-title-large" i18n="@@settings.voice.heading">Voz</h2>
+        <div class="grid items-start gap-x-10 gap-y-5 lg:grid-cols-2">
+          <div class="flex flex-col gap-2" [appGuideAnchor]="anchors.settingsTutorVoice">
             <h3
               id="settings-tutor-voice"
               class="text-title-small"
@@ -287,133 +300,136 @@
               </p>
             }
           </div>
-          <div class="flex flex-col gap-2">
-            <h3 id="settings-speech-rate" class="text-title-small" i18n="@@settings.voice.rate">
-              Velocidad
-            </h3>
-            <div class="max-w-full overflow-x-auto">
-              <mat-button-toggle-group
-                aria-labelledby="settings-speech-rate"
-                hideSingleSelectionIndicator
-                [value]="settings.speechRate()"
-                (change)="settings.setSpeechRate($event.value)"
-              >
-                @for (choice of rateChoices; track choice.rate) {
-                  <mat-button-toggle [value]="choice.rate">{{ choice.label }}</mat-button-toggle>
-                }
-              </mat-button-toggle-group>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1">
-            <mat-slide-toggle
-              aria-describedby="settings-read-aloud-hint"
-              [checked]="settings.readAloud()"
-              (change)="settings.setReadAloud($event.checked)"
-              i18n="@@settings.voice.readAloud"
-            >
-              Leer las respuestas en voz alta
-            </mat-slide-toggle>
-            <p
-              id="settings-read-aloud-hint"
-              class="ps-14 text-body-small text-on-surface-variant"
-              i18n="@@settings.voice.readAloud.hint"
-            >
-              Las respuestas nuevas suenan solas. Si no, pulsa «Escuchar» bajo la que quieras oír.
-            </p>
-          </div>
-          <!-- Only where a call can listen (6.1c) -->
-          @if (voice.canDictate()) {
-            <div class="flex flex-col gap-1">
-              <mat-slide-toggle
-                aria-describedby="settings-interrupt-hint"
-                [checked]="settings.interruptBySpeaking()"
-                (change)="settings.setInterruptBySpeaking($event.checked)"
-                i18n="@@settings.voice.interruptBySpeaking"
-              >
-                Interrumpir al tutor hablando
-              </mat-slide-toggle>
-              <p
-                id="settings-interrupt-hint"
-                class="ps-14 text-body-small text-on-surface-variant"
-                i18n="@@settings.voice.interruptBySpeaking.hint"
-              >
-                En una llamada, el micrófono sigue abierto mientras te habla. Mejor con auriculares:
-                con altavoces, puede oír al tutor y cortarle sin querer.
-              </p>
-            </div>
-          }
-          @if (voice.recognition(); as place) {
-            <div class="flex flex-col gap-2">
-              <h3
-                #whereHeading
-                tabindex="-1"
-                class="text-title-small outline-none"
-                i18n="@@settings.voice.where"
-              >
-                Dónde se transcribe tu voz
+          <div class="flex flex-col gap-5">
+            <div class="flex flex-col gap-2" [appGuideAnchor]="anchors.settingsSpeechRate">
+              <h3 id="settings-speech-rate" class="text-title-small" i18n="@@settings.voice.rate">
+                Velocidad
               </h3>
-              <!-- Polite: once the pack is downloaded, the new line is said -->
-              <div class="flex flex-col gap-2" aria-live="polite">
-                @switch (place) {
-                  @case ('device') {
-                    <p
-                      class="text-body-small text-on-surface-variant"
-                      i18n="@@settings.voice.where.device"
-                    >
-                      En este equipo: el audio no sale de él.
-                    </p>
+              <div class="max-w-full overflow-x-auto">
+                <mat-button-toggle-group
+                  aria-labelledby="settings-speech-rate"
+                  hideSingleSelectionIndicator
+                  [value]="settings.speechRate()"
+                  (change)="settings.setSpeechRate($event.value)"
+                >
+                  @for (choice of rateChoices; track choice.rate) {
+                    <mat-button-toggle [value]="choice.rate">{{ choice.label }}</mat-button-toggle>
                   }
-                  @case ('none') {
-                    <p
-                      class="text-body-small text-on-surface-variant"
-                      i18n="@@settings.voice.where.none"
-                    >
-                      Tu navegador no reconoce la voz: puedes escuchar al tutor y escribirle.
-                    </p>
-                  }
-                  @default {
-                    <!-- Only the pack is missing: it dictates through the service until it is there -->
-                    <p
-                      class="text-body-small text-on-surface-variant"
-                      i18n="@@settings.voice.where.server"
-                    >
-                      En el servicio de tu navegador, que recibe el audio para transcribirlo.
-                    </p>
-                    @if (place === 'downloadable') {
-                      <button
-                        matButton="tonal"
-                        type="button"
-                        class="self-start"
-                        disabledInteractive
-                        [disabled]="voice.installing()"
-                        (click)="installRecognition(whereHeading)"
-                      >
-                        <mat-icon>download</mat-icon>
-                        @if (voice.installing()) {
-                          <span i18n="@@settings.voice.installing">Descargando…</span>
-                        } @else {
-                          <span i18n="@@settings.voice.install"
-                            >Reconocer la voz en este equipo</span
-                          >
-                        }
-                      </button>
-                    }
-                  }
-                }
+                </mat-button-toggle-group>
               </div>
             </div>
-          }
-          <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.screenReader">
-            Si usas un lector de pantalla, no necesitas activar la voz: ya te lee las respuestas.
-          </p>
+            <div class="flex flex-col gap-1" [appGuideAnchor]="anchors.settingsReadAloud">
+              <mat-slide-toggle
+                aria-describedby="settings-read-aloud-hint"
+                [checked]="settings.readAloud()"
+                (change)="settings.setReadAloud($event.checked)"
+                i18n="@@settings.voice.readAloud"
+              >
+                Leer las respuestas en voz alta
+              </mat-slide-toggle>
+              <p
+                id="settings-read-aloud-hint"
+                class="ps-14 text-body-small text-on-surface-variant"
+                i18n="@@settings.voice.readAloud.hint"
+              >
+                Las respuestas nuevas suenan solas. Si no, pulsa «Escuchar» bajo la que quieras oír.
+              </p>
+            </div>
+            <!-- Only where a call can listen (6.1c) -->
+            @if (voice.canDictate()) {
+              <div class="flex flex-col gap-1" [appGuideAnchor]="anchors.settingsInterrupt">
+                <mat-slide-toggle
+                  aria-describedby="settings-interrupt-hint"
+                  [checked]="settings.interruptBySpeaking()"
+                  (change)="settings.setInterruptBySpeaking($event.checked)"
+                  i18n="@@settings.voice.interruptBySpeaking"
+                >
+                  Interrumpir al tutor hablando
+                </mat-slide-toggle>
+                <p
+                  id="settings-interrupt-hint"
+                  class="ps-14 text-body-small text-on-surface-variant"
+                  i18n="@@settings.voice.interruptBySpeaking.hint"
+                >
+                  En una llamada, el micrófono sigue abierto mientras te habla. Mejor con
+                  auriculares: con altavoces, puede oír al tutor y cortarle sin querer.
+                </p>
+              </div>
+            }
+            @if (voice.recognition(); as place) {
+              <div class="flex flex-col gap-2" [appGuideAnchor]="anchors.settingsRecognition">
+                <h3
+                  #whereHeading
+                  tabindex="-1"
+                  class="text-title-small outline-none"
+                  i18n="@@settings.voice.where"
+                >
+                  Dónde se transcribe tu voz
+                </h3>
+                <!-- Polite: once the pack is downloaded, the new line is said -->
+                <div class="flex flex-col gap-2" aria-live="polite">
+                  @switch (place) {
+                    @case ('device') {
+                      <p
+                        class="text-body-small text-on-surface-variant"
+                        i18n="@@settings.voice.where.device"
+                      >
+                        En este equipo: el audio no sale de él.
+                      </p>
+                    }
+                    @case ('none') {
+                      <p
+                        class="text-body-small text-on-surface-variant"
+                        i18n="@@settings.voice.where.none"
+                      >
+                        Tu navegador no reconoce la voz: puedes escuchar al tutor y escribirle.
+                      </p>
+                    }
+                    @default {
+                      <!-- Only the pack is missing: it dictates through the service until it is there -->
+                      <p
+                        class="text-body-small text-on-surface-variant"
+                        i18n="@@settings.voice.where.server"
+                      >
+                        En el servicio de tu navegador, que recibe el audio para transcribirlo.
+                      </p>
+                      @if (place === 'downloadable') {
+                        <button
+                          matButton="tonal"
+                          type="button"
+                          class="self-start"
+                          disabledInteractive
+                          [disabled]="voice.installing()"
+                          (click)="installRecognition(whereHeading)"
+                        >
+                          <mat-icon>download</mat-icon>
+                          @if (voice.installing()) {
+                            <span i18n="@@settings.voice.installing">Descargando…</span>
+                          } @else {
+                            <span i18n="@@settings.voice.install"
+                              >Reconocer la voz en este equipo</span
+                            >
+                          }
+                        </button>
+                      }
+                    }
+                  }
+                </div>
+              </div>
+            }
+            <p class="text-body-small text-on-surface-variant" i18n="@@settings.voice.screenReader">
+              Si usas un lector de pantalla, no necesitas activar la voz: ya te lee las respuestas.
+            </p>
+          </div>
         </div>
-      }
-    </section>
+      </section>
+    }
   </div>
 
   <!-- Privacy (RF-07) -->
   <section
     aria-labelledby="settings-privacy"
+    [appGuideAnchor]="anchors.settingsPrivacy"
     class="flex flex-col items-start gap-3 rounded-2xl bg-panel p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6"
   >
     <div class="flex flex-col gap-1">

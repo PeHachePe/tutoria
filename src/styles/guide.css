@@ -1,0 +1,190 @@
+/* ── Guided help (2.12, D-080) ───────────────────────────────────────────────────────────────────────
+   The globes and beacons of driver.js, which TourRunner draws outside Angular, with the look of the
+   app: the colours, corners, type and buttons of Material, from the theme tokens, in light and dark.
+   driver.js brings its own layout (driver.css, hints.css, imported before this file); here only its
+   look changes. In CSS and not Tailwind because the elements are driver.js's, not our templates. */
+
+/* The layer of the dialogs and menus of Material stays over the dark one (allowedElements), but it
+   covers the whole screen: taking the clicks as driver.js makes it would leave the piece of the step
+   unclickable. Its panes take their own clicks, as always. */
+.driver-active .cdk-overlay-container.driver-allowed-element {
+  pointer-events: none;
+}
+
+/* The dark layer: the scrim of the theme instead of plain black */
+.driver-overlay path {
+  fill: var(--mat-sys-scrim);
+}
+
+/* The surface that stands out the most in each theme: white on the light one, the lightest on the
+   dark one; a thin line and a soft shadow lift it over cards of the same colour */
+.app-guide-popover.driver-popover {
+  --app-guide-surface: var(--mat-sys-surface-bright);
+
+  min-width: min(16rem, calc(100vw - 2rem));
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem 1.25rem 1.25rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-large);
+  background-color: var(--app-guide-surface);
+  color: var(--mat-sys-on-surface);
+  box-shadow: var(--mat-sys-level2);
+  font-family: var(--font-sans);
+}
+
+/* The arrow is a triangle of borders: only the side that points at the piece takes the colour, as
+   driver.js leaves the other three transparent */
+.app-guide-popover .driver-popover-arrow-side-left {
+  border-left-color: var(--app-guide-surface);
+}
+
+.app-guide-popover .driver-popover-arrow-side-right {
+  border-right-color: var(--app-guide-surface);
+}
+
+.app-guide-popover .driver-popover-arrow-side-top {
+  border-top-color: var(--app-guide-surface);
+}
+
+.app-guide-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--app-guide-surface);
+}
+
+/* The title, with the mascot before it */
+.app-guide-popover .driver-popover-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-inline-end: 2rem;
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-on-surface);
+}
+
+.app-guide-mascot {
+  display: block;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.app-guide-mascot > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.app-guide-popover .driver-popover-description {
+  margin-top: 0.5rem;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* What to do in an action step, with the dot that beats until it is done */
+.app-guide-popover {
+  --driver-instruction-background: var(--mat-sys-secondary-container);
+  --driver-instruction-color: var(--mat-sys-on-secondary-container);
+  --driver-instruction-indicator-color: var(--mat-sys-primary);
+  --driver-instruction-radius: var(--mat-sys-corner-small);
+  --driver-instruction-padding: 0.5rem 0.75rem;
+  --driver-instruction-done-background: var(--app-success-container);
+  --driver-instruction-done-color: var(--app-on-success-container);
+}
+
+.app-guide-popover .driver-popover-instruction {
+  font: var(--mat-sys-label-large);
+}
+
+/* The footer always at full strength: its buttons and the step must keep their contrast */
+.app-guide-popover .driver-popover-footer {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  opacity: 1;
+}
+
+.app-guide-popover .driver-popover-progress-text {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.app-guide-popover .driver-popover-navigation-btns {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The buttons, as those of Material: text for «Anterior», filled for the one that goes on */
+.app-guide-popover .driver-popover-footer button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 2.5rem;
+  padding-inline: 1rem;
+  border-radius: var(--mat-sys-corner-full);
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+  text-shadow: none;
+}
+
+.app-guide-popover .driver-popover-footer button:hover {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+}
+
+.app-guide-popover .driver-popover-footer .driver-popover-next-btn,
+.app-guide-popover .driver-popover-footer .app-guide-primary {
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+.app-guide-popover .driver-popover-footer .driver-popover-next-btn:hover,
+.app-guide-popover .driver-popover-footer .app-guide-primary:hover {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 88%, var(--mat-sys-on-primary));
+}
+
+/* A button that cannot be used here («Anterior» on the first step) is not shown */
+.app-guide-popover .driver-popover-footer .driver-popover-btn-disabled {
+  display: none;
+}
+
+/* «Terminar» beside «Siguiente: …»: outlined, as the second choice */
+.app-guide-popover .driver-popover-footer .driver-popover-next-btn.app-guide-secondary {
+  border: 1px solid var(--mat-sys-outline);
+  background-color: transparent;
+  color: var(--mat-sys-primary);
+}
+
+.app-guide-popover .driver-popover-close-btn {
+  display: grid;
+  place-items: center;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--mat-sys-corner-full);
+  font-size: 1.375rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.app-guide-popover .driver-popover-close-btn:hover {
+  background-color: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
+  color: var(--mat-sys-on-surface);
+}
+
+.app-guide-popover button:focus-visible,
+.app-guide-beacon:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}
+
+/* Beacons: a dot of the primary colour that beats, big enough to press (WCAG 2.5.8), with a ring of
+   the surface colour so it shows on any background, the bar of the primary colour included */
+.app-guide-beacon {
+  --driver-hint-color: var(--mat-sys-primary);
+  --driver-hint-size: 1.75rem;
+  border-radius: var(--mat-sys-corner-full);
+}
+
+.app-guide-beacon .driver-hint-dot {
+  box-shadow: 0 0 0 2px var(--mat-sys-surface);
+}

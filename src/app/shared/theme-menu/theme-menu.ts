@@ -5,6 +5,7 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 
 import { THEME_OPTIONS, ThemeMode, ThemeService } from '../../core/theme-service';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 const ICON_BY_MODE = new Map(THEME_OPTIONS.map((option) => [option.mode, option.icon]));
 
@@ -15,7 +16,7 @@ const ICON_BY_MODE = new Map(THEME_OPTIONS.map((option) => [option.mode, option.
  */
 @Component({
   selector: 'app-theme-menu',
-  imports: [MatIconButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger, MatTooltip],
+  imports: [GuideAnchor, MatIconButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger, MatTooltip],
   template: `
     <button
       matIconButton
@@ -25,6 +26,7 @@ const ICON_BY_MODE = new Map(THEME_OPTIONS.map((option) => [option.mode, option.
       matTooltip="Tema"
       i18n-matTooltip="@@theme.group"
       [matMenuTriggerFor]="menu"
+      [appGuideAnchor]="anchors.themeMenu"
     >
       <mat-icon>{{ currentIcon() }}</mat-icon>
     </button>
@@ -50,6 +52,7 @@ const ICON_BY_MODE = new Map(THEME_OPTIONS.map((option) => [option.mode, option.
   `,
 })
 export class ThemeMenu {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly theme = inject(ThemeService);
 
   protected readonly options = THEME_OPTIONS;

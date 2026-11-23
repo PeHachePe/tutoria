@@ -51,6 +51,7 @@ import { TutorPanel } from './tutor/tutor-panel';
 import { TutorSpeaker } from './tutor-speaker';
 import { type Pointer, TutorStore } from './tutor-store';
 import { VoiceCall } from './voice-call';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /**
  * With Ctrl, pausing or resuming a call (6.1c): Ctrl also on macOS, where ⌘ + . cancels. Neither
@@ -94,6 +95,7 @@ const TUTOR_TAB = TABS.indexOf('tutor');
 @Component({
   selector: 'app-workspace-layout',
   imports: [
+    GuideAnchor,
     ReactionOverlay,
     MatIcon,
     MatIconButton,
@@ -118,6 +120,7 @@ const TUTOR_TAB = TABS.indexOf('tutor');
   },
 })
 export class WorkspaceLayout {
+  protected readonly anchors = GUIDE_ANCHORS;
   /** What the statement shows, once it is there. */
   readonly detail = input<StatementContent>();
   /** The language to read it in; by default, that of the interface (a teacher's try, 4.3e). */

@@ -304,6 +304,31 @@ body {
   }
 }
 
+// The help panel (step 7.0a): a side sheet on the right at full height, as Material 3's modal side
+// sheet, with the corners rounded only on the side of the content; the whole screen on phones. Its
+// content takes the room under the header and scrolls inside.
+.app-side-panel {
+  @include mat.dialog-overrides(
+    (
+      container-shape: 0,
+      container-max-width: 100vw,
+      container-small-max-width: 100vw,
+      container-min-width: 0,
+    )
+  );
+
+  .mat-mdc-dialog-surface {
+    border-start-start-radius: var(--mat-sys-corner-large);
+    border-end-start-radius: var(--mat-sys-corner-large);
+  }
+
+  .mat-mdc-dialog-content {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+  }
+}
+
 // A small segmented choice inside a row of a list, as «Toda la clase / Desdoble» (step 5.2d).
 .app-dense-toggle {
   @include mat.button-toggle-density(-3);

@@ -5,6 +5,7 @@ import { AuthStore } from '../../auth/auth-store';
 import { homeOrLogin } from '../../auth/home-path';
 import { APP_NAME } from '../../core/app-title-strategy';
 import { Mascot } from '../mascot/mascot';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /**
  * Brand of the app bars (step 1.1d): the mascot and the name, as a link to the home of the role.
@@ -13,10 +14,11 @@ import { Mascot } from '../mascot/mascot';
  */
 @Component({
   selector: 'app-brand',
-  imports: [RouterLink, Mascot],
+  imports: [GuideAnchor, RouterLink, Mascot],
   template: `
     <a
       [routerLink]="home()"
+      [appGuideAnchor]="anchors.brand"
       class="flex items-center gap-2 rounded-md pe-1 text-title-large font-bold"
     >
       <app-mascot class="size-10" />
@@ -26,6 +28,7 @@ import { Mascot } from '../mascot/mascot';
   `,
 })
 export class Brand {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly role = inject(AuthStore).role;
 
   protected readonly appName = APP_NAME;

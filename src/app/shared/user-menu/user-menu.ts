@@ -8,6 +8,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 import type { NavLink } from '../nav-link';
 
 /**
@@ -26,6 +27,7 @@ import type { NavLink } from '../nav-link';
     MatDivider,
     MatTooltip,
     RouterLink,
+    GuideAnchor,
   ],
   templateUrl: './user-menu.html',
 })
@@ -36,6 +38,8 @@ export class UserMenu {
   readonly links = input<readonly NavLink[]>([]);
 
   protected readonly user = this.auth.user;
+  protected readonly anchor = GUIDE_ANCHORS.userMenu;
+  protected readonly signOutAnchor = GUIDE_ANCHORS.menuSignOut;
 
   protected async signOut(): Promise<void> {
     await this.auth.signOut();

@@ -7,6 +7,7 @@ import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
 import type { RecognitionPlace } from '../../core/speech/speech-service';
 import { StudentVoice } from '../settings/student-voice';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** An item of the lists of the page: an icon, what it is and a line of detail. */
 interface DataItem {
@@ -52,6 +53,12 @@ const RECORDED: readonly DataItem[] = [
     title: $localize`:@@myData.recorded.away:Cuándo sales de la pantalla de trabajo`,
     detail: $localize`:@@myData.recorded.away.detail:Cuándo cambias de pestaña o de ventana y cuánto tiempo estás fuera, pero no adónde vas.`,
   },
+  {
+    // The guided help (2.12): only its owner reads it, unlike everything above
+    icon: 'help',
+    title: $localize`:@@myData.recorded.guide:Qué ayuda has visto`,
+    detail: $localize`:@@myData.recorded.guide.detail:Solo para no repetírtela. Tu docente no lo ve.`,
+  },
 ];
 
 /** The model of the tutor, the first external service that takes part. */
@@ -82,10 +89,11 @@ const VOICE_TITLE = $localize`:@@myData.services.voice.title:El reconocimiento d
  */
 @Component({
   selector: 'app-registered-data-page',
-  imports: [MatAnchor, MatIcon, RouterLink],
+  imports: [GuideAnchor, MatAnchor, MatIcon, RouterLink],
   templateUrl: './registered-data-page.html',
 })
 export class RegisteredDataPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly recorded = RECORDED;
   private readonly recognition = inject(StudentVoice).recognition;
   /** The external services that take part, and what each one receives. */

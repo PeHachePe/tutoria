@@ -18,6 +18,7 @@ import { LoadingSkeleton } from '../../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { splitInlineCode } from '../../../shared/split-inline-code';
 import type { Pointer } from '../tutor-store';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../../core/guide/guide-anchor';
 
 /** Id of the zone, which the splitter under it controls. */
 export const STATEMENT_ZONE_ID = 'statement-zone';
@@ -38,7 +39,7 @@ const SKELETON_EXAMPLES = [1, 2, 3];
  */
 @Component({
   selector: 'app-statement-zone',
-  imports: [MatIcon, LoadingSkeleton, Skeleton],
+  imports: [GuideAnchor, MatIcon, LoadingSkeleton, Skeleton],
   templateUrl: './statement-zone.html',
   host: {
     role: 'region',
@@ -52,6 +53,7 @@ const SKELETON_EXAMPLES = [1, 2, 3];
   },
 })
 export class StatementZone {
+  protected readonly anchors = GUIDE_ANCHORS;
   /** The exercise, once it is there. */
   readonly detail = input<StatementContent>();
   /** The language to read it in; by default, the one of the interface. */

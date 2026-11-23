@@ -25,6 +25,7 @@ import { BrowserSignals } from './browser-signals';
 import { ProactivityMonitor } from './proactivity-monitor';
 import { VoiceCall } from './voice-call';
 import { WorkspaceLayout } from './workspace-layout';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /**
  * The workspace (/alumno/ejercicio/:id, ficha 03): the statement and its examples, the code and the
@@ -36,6 +37,7 @@ import { WorkspaceLayout } from './workspace-layout';
 @Component({
   selector: 'app-workspace-page',
   imports: [
+    GuideAnchor,
     RouterLink,
     MatAnchor,
     MatButton,
@@ -68,6 +70,7 @@ import { WorkspaceLayout } from './workspace-layout';
   },
 })
 export class WorkspacePage {
+  protected readonly anchors = GUIDE_ANCHORS;
   /** Assignment id, from the `:id` of the route (withComponentInputBinding). */
   readonly id = input.required<string>();
 

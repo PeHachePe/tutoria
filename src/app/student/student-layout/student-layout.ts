@@ -5,6 +5,9 @@ import { isActive, Router, RouterLink, RouterOutlet } from '@angular/router';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS, SEGMENTS } from '../../core/app-paths';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
+import { GuideStore } from '../../core/guide/guide-store';
+import { HelpButton } from '../../core/guide/help-button/help-button';
 import { Brand } from '../../shared/brand/brand';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
 import type { NavLink } from '../../shared/nav-link';
@@ -12,14 +15,21 @@ import { SkipLink } from '../../shared/skip-link/skip-link';
 import { ThemeMenu } from '../../shared/theme-menu/theme-menu';
 import { UserMenu } from '../../shared/user-menu/user-menu';
 import { DataNoticeDialog } from '../registered-data/data-notice-dialog';
+import { studentGuide } from '../student-guide';
 
 /** Settings and registered data live in the user menu: the bar keeps room for the exercise. */
 const ACCOUNT_LINKS: readonly NavLink[] = [
-  { path: APP_PATHS.student.settings, label: $localize`:@@nav.settings:Ajustes`, icon: 'settings' },
+  {
+    path: APP_PATHS.student.settings,
+    label: $localize`:@@nav.settings:Ajustes`,
+    icon: 'settings',
+    guideAnchor: GUIDE_ANCHORS.menuSettings,
+  },
   {
     path: APP_PATHS.student.data,
     label: $localize`:@@nav.myData:Datos registrados`,
     icon: 'shield_person',
+    guideAnchor: GUIDE_ANCHORS.menuRegisteredData,
   },
 ];
 
@@ -37,6 +47,8 @@ export const WIDE_PAGE_CLASS = 'max-w-[100rem]';
     RouterLink,
     RouterOutlet,
     Brand,
+    GuideAnchor,
+    HelpButton,
     LanguageMenu,
     ThemeMenu,
     SkipLink,
@@ -48,6 +60,7 @@ export class StudentLayout {
   private readonly router = inject(Router);
 
   protected readonly catalogPath = APP_PATHS.student.catalog;
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly readingPageClass = READING_PAGE_CLASS;
   protected readonly widePageClass = WIDE_PAGE_CLASS;
 
@@ -75,6 +88,8 @@ export class StudentLayout {
   protected readonly accountLinks = ACCOUNT_LINKS;
 
   constructor() {
+    // The guided help of the student: its tasks, welcome and beacons (2.12)
+    inject(GuideStore).use(studentGuide());
     const auth = inject(AuthStore);
     const dialog = inject(MatDialog);
     const destroyRef = inject(DestroyRef);

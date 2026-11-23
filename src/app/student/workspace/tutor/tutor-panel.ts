@@ -38,6 +38,7 @@ import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { listenErrorMessage } from './listen-error-message';
 import { tutorErrorMessage } from './tutor-error-message';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../../core/guide/guide-anchor';
 
 /** Questions the empty chat suggests, so nobody has to think how to start. */
 const SUGGESTIONS = {
@@ -59,6 +60,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
 @Component({
   selector: 'app-tutor-panel',
   imports: [
+    GuideAnchor,
     DatePipe,
     MatButton,
     RetryButton,
@@ -85,6 +87,7 @@ const SKELETON_BUBBLES = ['w-3/4 self-start', 'w-1/2 self-end', 'w-2/3 self-star
   },
 })
 export class TutorPanel {
+  protected readonly anchors = GUIDE_ANCHORS;
   /** Phones: a tab of its own, which names it. */
   readonly compact = input(false);
   /**

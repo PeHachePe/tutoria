@@ -22,7 +22,7 @@
       </p>
     </div>
   }
-  <mat-form-field class="w-full">
+  <mat-form-field class="w-full" [appGuideAnchor]="anchors.tutorQuestion">
     <mat-label i18n="@@tutor.question">Pregunta al tutor</mat-label>
     <textarea
       matInput
@@ -41,6 +41,7 @@
           type="button"
           aria-label="Dictar"
           i18n-aria-label="@@tutor.dictate"
+          [appGuideAnchor]="anchors.tutorDictate"
           [attr.aria-pressed]="dictating()"
           [matTooltip]="dictating() ? stopDictatingTooltip : dictateTooltip"
           disabledInteractive
@@ -55,6 +56,7 @@
         type="submit"
         aria-label="Enviar la pregunta"
         i18n-aria-label="@@tutor.send"
+        [appGuideAnchor]="anchors.tutorSend"
         matTooltip="Enviar"
         i18n-matTooltip="@@tutor.sendTooltip"
         disabledInteractive
