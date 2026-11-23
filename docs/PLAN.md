@@ -369,7 +369,7 @@ El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en
   - en la comprobación de cada 15 s, los fallos de otra visita: solo saca los que esperaban en esta.
   - Al llegar las primeras palabras de la intervención se vuelven a mirar estos silencios; si alguno se cumple, se descarta.
   - Lo que queda esperando se vuelve a mirar en la siguiente comprobación. El logro no espera: si no puede salir al momento, se pierde, porque una felicitación tardía no se entiende.
-- **El servidor comprueba el motivo** (D-065): `kind: 'proactive'` lo elige el navegador, así que `tutor` vuelve a calcular `proactiveReason()` con sus eventos y la última actividad del intento, con holgura por los relojes (cooldown de 2 minutos y 30 segundos menos de inactividad). Si no sale el mismo motivo, responde `silent` sin llamar al modelo. La petición cuenta su turno como cualquier otra (D-063), usa el nivel actual y no lo sube.
+- **El servidor comprueba el motivo** (D-065 y D-090): `kind: 'proactive'` lo elige el navegador, así que `tutor` vuelve a calcular `proactiveReason()` con sus eventos y la última actividad del intento, con holgura por los relojes (cooldown de 2 minutos y 30 segundos menos de inactividad). Si no sale el mismo motivo, responde `silent` sin llamar al modelo. La petición cuenta su turno como cualquier otra (D-063), usa el nivel actual y no lo sube. Los eventos del servidor se leen aparte de los del navegador, para que estos no tapen las intervenciones, y el evento de una intervención toma la hora en que llegó la petición.
 - **Prompt** (v7, en `docs/prompt-history.md` desde el paso 6.2c): el servidor dice al modelo el motivo y sus hechos, y qué se espera en cada uno:
   - `failures`: qué prueba y cuántas ejecuciones lleva fallando. Una o dos frases en el nivel actual sobre esa prueba, que acaban ofreciendo seguir. Si la última ejecución no cargó por un despiste de escritura, lo dice y propone el arreglo (2.5f, D-052), la única herramienta de una intervención;
   - `idle`: cuántos minutos y cómo está el intento (código vacío, pruebas que fallan). Una o dos frases que preguntan qué le frena u ofrecen por dónde seguir;
@@ -385,7 +385,7 @@ El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en
 | ------------------------ | --------------------------- | -------------------------------------------------------------------------- |
 | `run`                    | Servidor (`execute`)        | Número de pruebas superadas y falladas; identificadores de las que fallan  |
 | `submit`                 | Servidor (`submit_attempt`) | —                                                                          |
-| `hint_requested`         | Servidor (`tutor`)          | Nivel                                                                      |
+| `hint_requested`         | Servidor (`tutor`)          | Nivel (la hora, la de la petición, D-090)                                  |
 | `proactive_intervention` | Servidor (`tutor`)          | El motivo (`reason`, 2.7) y si el modelo calló                             |
 | `paste`                  | Cliente                     | Longitud del texto pegado de fuera del código                              |
 | `focus_lost`             | Cliente                     | — (la hora es la de salida; solo ausencias de 2 s o más, o pestaña oculta) |
@@ -4267,6 +4267,8 @@ Tests, en este orden:
 
 🧪 Deno: cada motivo aceptado con los datos que lo sostienen y callado sin ellos (sin llamada al modelo); el cooldown y el tope en el servidor; el nivel no sube; el modelo que calla y el que falla dos veces (calla, D-043); el despiste que deja su arreglo; la nota del prompt de cada motivo. pgTAP si hay migración. Con el modelo real, un caso por motivo en la batería de elusión cuando se pase la de la v6.
 Commit: `feat(tutor): the server checks why the tutor approaches (step 6.2c)`.
+
+**Hecho (23/11/2026, D-090).** Cambios sobre el plan de abajo: la migración es `20261122100000_proactive_reason.sql` (una anterior a la última no se publica con `db push`); `record_tutor_interaction` gana también `asked_at`, y los eventos de la petición toman su hora de llegada en lugar de la de la respuesta del modelo; `findActivity()` lee aparte los eventos del servidor y solo el último de actividad del navegador, que no puede tapar las intervenciones; `checkReason()` recibe el estado del intento en lugar del intento entero; la prueba se nombra sin comillas invertidas; y una intervención descartada en el navegador se queda guardada. La v6 del prompt, que faltaba, entra en `docs/prompt-history.md` junto a la v7.
 
 **Plan de implementación del 6.2c** (17/11/2026; necesita el 6.2b hecho)
 

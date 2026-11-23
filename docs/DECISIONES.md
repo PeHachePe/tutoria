@@ -1918,6 +1918,8 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - La vista previa del docente no admite intervenciones.
 - Cierra la fila de la auditoría en `PENDIENTES.md`. El prompt v7 queda sin probar con el modelo real hasta que se pase la batería de elusión, como la v6.
 
+**Implementación:** en el paso 6.2c (23/11/2026), con los cambios de D-090: los eventos se leen de forma que el navegador no pueda tapar las intervenciones, los eventos toman la hora de la petición y una intervención descartada se queda guardada.
+
 **Aprobación:** propuesta, a revisión del autor.
 
 ## D-066 · La voz en tres piezas, y una llamada por turnos sobre el mismo `TutorStore` (16/11/2026)
@@ -2676,3 +2678,40 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **Frases enteras por plataforma:** seis textos más por idioma en lugar de cuatro nombres de teclas.
 
 **Aprobación:** el autor pidió arreglar el atajo y hacer aquí la tarea de los nombres, por delegación en lo demás.
+
+## D-090 · El servidor comprueba el motivo del tutor proactivo: lecturas que no se pueden tapar y la hora de la petición (23/11/2026, propuesta)
+
+**Contexto:** el 6.2c pone en marcha D-065: la función `tutor` vuelve a calcular el motivo que envía el navegador (2.7) y se lo explica al modelo (prompt v7). El plan de implementación del 17/11 lo dejaba casi todo decidido; al leer el código salieron cinco huecos: el nombre de la migración no se habría podido publicar, la hora de los eventos descuadraba el episodio de fallos, una avalancha de eventos del navegador tapaba las intervenciones, quedaba por decidir qué hacer con una intervención descartada y la prueba se nombraba en el prompt con comillas invertidas.
+
+**Decisión (cómo se usa):**
+
+- **Con el servidor real, el tutor se acerca como con datos simulados** (D-088). Además, el servidor vuelve a comprobar el motivo con sus datos y algo de holgura (2 minutos de cooldown en lugar de 3, y el parón 30 segundos antes). Si no cuadra, el tutor calla sin llamar al modelo; el turno sí cuenta (D-063).
+- **Lo que dice el tutor depende del motivo:** ante fallos repetidos, una o dos frases sobre la prueba que se resiste, en el nivel alcanzado, ofreciendo seguir; ante un parón, pregunta qué le frena o le ofrece por dónde seguir; ante un logro, una sola frase que lo celebra, sin pistas. Si su última respuesta trataba de lo mismo o no tiene nada nuevo, calla. Una intervención nunca sube el nivel de pista.
+- **Una intervención por fallos puede traer «Aplicar»** si el código no se ejecuta por un despiste de escritura (2.5f, D-052). Ninguna otra intervención trae botones, esqueleto ni ejemplos de sintaxis: nadie ha pedido nada.
+- **La vista previa del docente no admite intervenciones** (D-061): no tiene proceso del que leer un motivo.
+- **Una intervención que el navegador descartó se queda guardada** (la pisó una pregunta, el alumno empezó a escribir o cambió de ejercicio mientras viajaba) y aparece al recargar, en su sitio: es lo que el tutor dijo, el docente lo ve, y evitarlo costaría otra petición por cada descarte.
+- **Una diferencia aceptada:** abrir el ejercicio cuenta como actividad en el navegador (D-088), pero el servidor no se entera. Tras un «¿Sigues ahí?» sin respuesta, quien vuelve otro día y pasa 4 minutos sin tocar nada no recibe otro: el servidor calla y se gasta un turno. Para que el servidor lo supiera haría falta un tipo de evento nuevo (migración, límites de los eventos del navegador, línea temporal, panel en vivo, seed y fixtures), y no compensa para un caso que cuesta un turno.
+
+**Decisión (técnica):**
+
+- **`checkReason()`** (`supabase/functions/tutor/proactive.ts`) llama tal cual a `proactiveReasons()` de `shared/proactive-reason.ts` con `SERVER_PROACTIVE_LIMITS` y devuelve los hechos del motivo: la prueba y sus ejecuciones fallando (`currentFailure()`), los minutos del parón (redondeados, como mínimo 1) o la prueba superada y sus fallos (`lastBreakthrough()`). `lastTurnAt` es la última interacción que no es proactiva, como en el navegador.
+- **Lecturas que no se pueden tapar:** `findActivity()` lee, solo para una intervención, los eventos que escribe el servidor (ejecuciones, intervenciones, pistas y entrega, hasta 1000) y, aparte, solo el último evento de actividad del navegador (pegar o volver a la pestaña). El plan leía los últimos 1000 de todos, pero un navegador puede escribir hasta 3000 por intento (D-063) y habría dejado fuera las intervenciones anteriores, y con ellas el tope de 5 y el cooldown. De los del navegador solo cuenta la hora más reciente, que además solo puede hacer parecer más activo al alumno (se acota entre la apertura del intento y su llegada).
+- **La hora de la petición:** `record_tutor_interaction` gana `answer_reason` (obligatorio en una intervención y prohibido en lo demás, `22023`) y `asked_at`. Los eventos `hint_requested` y `proactive_intervention` toman la hora en que llegó la petición, nunca posterior a `now()`, y no la de la respuesta del modelo, que puede llegar hasta 30 segundos después. Así, una ejecución hecha mientras viaja la intervención cuenta para el siguiente episodio en los dos lados. Antes, a los 6 fallos el servidor callaba y la ayuda llegaba a los 9.
+- **La migración se llama `20261122100000_proactive_reason.sql`,** no `20261117…` como decía el plan: `db push` no publica en la nube una migración más antigua que la última aplicada.
+- **Orden en `tutor`:** intento y permisos, respuesta ya guardada, turno contado y, en una intervención, el motivo. Si no cuadra, 200 con solo `done` callado: sin modelo, sin evento y sin interacción. En una intervención, el servidor descarta toda acción del modelo salvo `proposeFix` en `failures` y no le da el esqueleto (sin él, el validador no deja pasar ni la función vacía).
+- **La prueba se nombra en el prompt sin comillas invertidas** («el ejemplo sum([1,2,3])», como el resto de la petición), para que el modelo no las copie y el validador no lo tome por código. Una prueba oculta es «una comprobación oculta», sin sus valores.
+- **La v6 del prompt,** que subió la auditoría (D-063) sin anotarla, queda en `docs/prompt-history.md` junto a la v7.
+
+**Alternativas:**
+
+- **Los últimos 1000 eventos de todos los tipos** (el plan): una consulta menos, pero un navegador podía saltarse el tope.
+- **Marcar en el servidor las intervenciones descartadas:** una petición más por descarte, para esconder algo que el tutor sí dijo.
+- **Registrar la apertura del ejercicio en el servidor:** ver arriba.
+- **Guardar el evento con la hora de la respuesta** y cambiar la del navegador para que coincida: la hora en que el tutor decidió acercarse es la de la petición.
+
+**Consecuencias:**
+
+- D-065 queda implementada.
+- La batería de elusión tendrá que preparar los eventos del intento para que el servidor acepte cada motivo (`PENDIENTES.md`).
+
+**Aprobación:** el autor aprobó el plan con los cinco cambios y pidió aplicarlos todos. Preguntó por qué no compensaba registrar la apertura del ejercicio y aceptó dejarlo si complica más de lo que aporta.
