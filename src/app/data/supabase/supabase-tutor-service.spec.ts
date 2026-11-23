@@ -103,11 +103,14 @@ describe('SupabaseTutorService', () => {
     expect(await collect(service().ask(REQUEST))).toEqual(ANSWER);
   });
 
-  it('passes on an intervention the tutor chose not to make', async () => {
+  it('sends an intervention with its reason, and passes on one the tutor chose not to make', async () => {
     const silent: TutorEvent[] = [{ type: 'done', interactionId: null, silent: true }];
     server.on('POST', TUTOR, { body: { events: silent } });
+    const intervention = { ...REQUEST, kind: 'proactive', reason: 'failures' } as const;
 
-    expect(await collect(service().ask({ ...REQUEST, kind: 'proactive' }))).toEqual(silent);
+    expect(await collect(service().ask(intervention))).toEqual(silent);
+    // The server checks the reason against the attempt (6.2c, D-065)
+    expect(server.sentTo('POST', TUTOR)[0].body).toEqual(intervention);
   });
 
   it('says how long to wait when the student asked too many times', async () => {

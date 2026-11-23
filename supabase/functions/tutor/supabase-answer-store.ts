@@ -7,16 +7,28 @@ import type {
   Intensity,
   ToolRequest,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
+import type { AttemptEvent } from '../../../src/app/shared/proactive-reason.ts';
 import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import { readProviderSetting } from '../_shared/supabase-provider-setting.ts';
 import type {
   AnswerStore,
+  AttemptActivity,
   LastRun,
   NewAnswer,
   RecordedAnswer,
   RecordOutcome,
   TutorAttempt,
 } from './answer-store.ts';
+
+/**
+ * The events the server records, which the browser cannot write: what the reasons of the tutor are
+ * read from. Enough for any attempt; the limit of the API is 1000 rows (`max_rows`).
+ */
+const SERVER_EVENTS = ['run', 'proactive_intervention', 'hint_requested', 'submit'] as const;
+const MAX_SERVER_EVENTS = 1000;
+
+/** The events of the browser that are activity: only the latest one counts (2.7). */
+const BROWSER_ACTIVITY = ['paste', 'focus_gained'] as const;
 
 /** The tables and the functions of step 2.4, with `service_role`, which skips the RLS. */
 export class SupabaseAnswerStore implements AnswerStore {
@@ -92,6 +104,51 @@ export class SupabaseAnswerStore implements AnswerStore {
     };
   }
 
+  async findActivity(attemptId: string): Promise<AttemptActivity | null> {
+    const [attempt, events, browser] = await Promise.all([
+      this.admin
+        .from('attempt')
+        .select(
+          'updated_at, exercise(max_repeated_failures, max_idle_minutes), tutor_interaction(created_at, trigger)',
+        )
+        .eq('id', attemptId)
+        .maybeSingle(),
+      this.admin
+        .from('process_event')
+        .select('type, timestamp, detail')
+        .eq('attempt_id', attemptId)
+        .in('type', SERVER_EVENTS)
+        .order('timestamp', { ascending: false })
+        .limit(MAX_SERVER_EVENTS),
+      this.admin
+        .from('process_event')
+        .select('type, timestamp')
+        .eq('attempt_id', attemptId)
+        .in('type', BROWSER_ACTIVITY)
+        .order('timestamp', { ascending: false })
+        .limit(1),
+    ]);
+    if (attempt.error) throw new Error(`Reading the activity failed: ${attempt.error.message}`);
+    if (events.error) throw new Error(`Reading the events failed: ${events.error.message}`);
+    if (browser.error) throw new Error(`Reading the events failed: ${browser.error.message}`);
+    const data = attempt.data;
+    if (!data?.exercise) return null;
+    const asked = data.tutor_interaction
+      .filter((turn) => turn.trigger !== 'proactive')
+      .map((turn) => turn.created_at)
+      .toSorted();
+    return {
+      updatedAt: data.updated_at,
+      thresholds: {
+        maxRepeatedFailures: data.exercise.max_repeated_failures,
+        maxIdleMinutes: data.exercise.max_idle_minutes,
+      },
+      // In any order: the reasons sort them. The server wrote their detail (2.8), read as it is
+      events: [...events.data, ...browser.data] as unknown as AttemptEvent[],
+      lastTurnAt: asked.at(-1) ?? null,
+    };
+  }
+
   async findAnswer(requestId: string): Promise<RecordedAnswer | null> {
     const { data, error } = await this.admin
       .from('tutor_interaction')
@@ -157,8 +214,12 @@ export class SupabaseAnswerStore implements AnswerStore {
       answer_silent: answer.answer === null,
       answer_rejected: answer.rejected,
       answer_actions: (answer.answer?.actions ?? []) as unknown as Json,
+      // The generated types do not know SQL arguments may be null: only an intervention has one
+      answer_reason: answer.reason as string,
+      asked_at: answer.askedAt,
     });
-    // Raised by record_tutor_interaction (20261110100600_tutor.sql) and its unique request id
+    // Raised by record_tutor_interaction (20261122100000_proactive_reason.sql) and its unique
+    // request id
     if (error?.code === '23505') return { status: 'duplicate' };
     if (error?.code === 'P0001') return { status: 'submitted' };
     if (error?.code === 'P0002') return { status: 'not_found' };

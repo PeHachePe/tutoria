@@ -1112,9 +1112,11 @@ export type Database = {
           answer_intensity: number;
           answer_model: string;
           answer_prompt_version: string;
+          answer_reason?: string;
           answer_rejected?: number;
           answer_silent: boolean;
           answer_transcript: string;
+          asked_at?: string;
           asked_message: string;
           asked_trigger: Database['public']['Enums']['tutor_trigger'];
           target_attempt_id: string;

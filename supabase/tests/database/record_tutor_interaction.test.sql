@@ -2,7 +2,7 @@
 -- with tests failed (attempt ...012); Lucía (...011) has exercise 8 passed (attempt ...008).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(23);
 
 set local role service_role;
 
@@ -87,11 +87,11 @@ select throws_ok(
   'a request is answered once'
 );
 
--- An intervention the model chose not to make keeps only its event
+-- An intervention the model chose not to make keeps only its event, with its reason (6.2c)
 select is(
   record_tutor_interaction('70000000-0000-4000-8000-000000000012',
     'a0000000-0000-4000-8000-000000000003', 'proactive', 2::smallint, null, '', 'encouragement',
-    1::smallint, false, 'v1', 'gemini-test', true),
+    1::smallint, false, 'v1', 'gemini-test', true, answer_reason => 'idle'),
   null,
   'a silent intervention has no answer'
 );
@@ -99,8 +99,68 @@ select is(
   (select detail from process_event
    where attempt_id = '70000000-0000-4000-8000-000000000012' and type = 'proactive_intervention'
    order by received_at desc, timestamp desc limit 1),
-  '{"silent": true}'::jsonb,
-  'a silent intervention records its event'
+  '{"silent": true, "reason": "idle"}'::jsonb,
+  'a silent intervention records its event with its reason'
+);
+
+-- An intervention the model made keeps its answer, and its event the reason (6.2c)
+select isnt(
+  record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+    'a0000000-0000-4000-8000-00000000000b', 'proactive', 2::smallint, null,
+    '¡Esa prueba se te resistía!', 'celebration', 3::smallint, false, 'v7', 'gemini-test', false,
+    answer_reason => 'achievement'),
+  null,
+  'an intervention the tutor made returns the id of its answer'
+);
+-- In a transaction every event arrives at the same time: they are told apart by their detail
+select ok(
+  exists (select from process_event
+          where attempt_id = '70000000-0000-4000-8000-000000000012'
+            and type = 'proactive_intervention'
+            and detail = '{"silent": false, "reason": "achievement"}'::jsonb),
+  'an intervention records its reason'
+);
+select throws_ok(
+  $$ select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+       'a0000000-0000-4000-8000-00000000000c', 'proactive', 1::smallint, null, '', 'joy',
+       1::smallint, false, 'v7', 'm', true) $$,
+  '22023', null,
+  'an intervention needs a reason'
+);
+select throws_ok(
+  $$ select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+       'a0000000-0000-4000-8000-00000000000d', 'hint', 1::smallint, null, 'x', 'joy',
+       1::smallint, false, 'v7', 'm', false, answer_reason => 'failures') $$,
+  '22023', null,
+  'only an intervention has a reason'
+);
+select throws_ok(
+  $$ select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+       'a0000000-0000-4000-8000-00000000000e', 'proactive', 1::smallint, null, '', 'joy',
+       1::smallint, false, 'v7', 'm', true, answer_reason => 'boredom') $$,
+  '22023', null,
+  'an unknown reason is turned down'
+);
+
+-- The events take the time the request arrived, never a later one (D-090)
+select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+  'a0000000-0000-4000-8000-00000000000f', 'hint', 1::smallint, null, 'Mira el total.', 'joy',
+  1::smallint, false, 'v7', 'gemini-test', false, asked_at => now() - interval '20 seconds');
+select ok(
+  exists (select from process_event
+          where attempt_id = '70000000-0000-4000-8000-000000000012' and type = 'hint_requested'
+            and timestamp = now() - interval '20 seconds'),
+  'the event of a request takes the time it arrived'
+);
+select record_tutor_interaction('70000000-0000-4000-8000-000000000012',
+  'a0000000-0000-4000-8000-000000000010', 'proactive', 1::smallint, null, '', 'joy',
+  1::smallint, false, 'v7', 'gemini-test', true, answer_reason => 'failures',
+  asked_at => now() + interval '1 hour');
+select ok(
+  (select bool_and(timestamp = now()) from process_event
+   where attempt_id = '70000000-0000-4000-8000-000000000012' and type = 'proactive_intervention'
+     and received_at = now()),
+  'an event is never later than now'
 );
 select throws_ok(
   $$ select record_tutor_interaction('70000000-0000-4000-8000-000000000012',

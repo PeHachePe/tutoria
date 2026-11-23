@@ -3,6 +3,7 @@ import { assertEquals, assertStringIncludes } from '@std/assert';
 import type { ModelEndpoint, ProviderSetting } from '../_shared/provider-setting.ts';
 import type {
   AnswerStore,
+  AttemptActivity,
   NewAnswer,
   RecordedAnswer,
   RecordOutcome,
@@ -56,6 +57,26 @@ const ATTEMPT: TutorAttempt = {
   previous: [],
 };
 
+/** A moment `ms` before now, as the database gives it. */
+function ago(ms: number): string {
+  return new Date(Date.now() - ms).toISOString();
+}
+
+/** The test `t1` failing in the last three runs, with the code saved a while ago. */
+const FAILING: AttemptActivity = {
+  updatedAt: ago(60_000),
+  thresholds: { maxRepeatedFailures: 3, maxIdleMinutes: 4 },
+  events: [40_000, 30_000, 20_000].map((ms) => ({
+    type: 'run' as const,
+    timestamp: ago(ms),
+    detail: { failedTestIds: ['t1'] },
+  })),
+  lastTurnAt: null,
+};
+
+/** An intervention for repeated failures, which `FAILING` holds. */
+const PROACTIVE = { kind: 'proactive', reason: 'failures' };
+
 const GOOD = JSON.stringify({
   message: '¿Qué valor tiene el total antes del bucle?',
   emotion: 'encouragement',
@@ -67,6 +88,8 @@ const GOOD = JSON.stringify({
 /** A store in memory: Hugo signs in with `token-hugo`. */
 class FakeStore implements AnswerStore {
   attempt: TutorAttempt | null = ATTEMPT;
+  /** What the reason of an intervention is checked against: repeated failures by default. */
+  activity: AttemptActivity | null = FAILING;
   answers: RecordedAnswer[] = [];
   /** The queries each request waits for, by request and user. */
   readonly waiting = new Map<string, readonly ToolRequest[]>();
@@ -79,6 +102,9 @@ class FakeStore implements AnswerStore {
   }
   findAttempt(attemptId: string) {
     return Promise.resolve(attemptId === ATTEMPT_ID ? this.attempt : null);
+  }
+  findActivity(attemptId: string) {
+    return Promise.resolve(attemptId === ATTEMPT_ID ? this.activity : null);
   }
   findAnswer(requestId: string) {
     return Promise.resolve(this.answers.find((answer) => answer.id === `i-${requestId}`) ?? null);
@@ -201,6 +227,7 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
     ],
   };
 
+  const before = Date.now();
   const response = await handle(post());
 
   assertEquals(response.status, 200);
@@ -220,25 +247,26 @@ Deno.test('a hint asks the model at the next level and answers meta, delta and d
   });
   assertEquals(settings, [{ models: [FLASH] }]);
   assertStringIncludes(llm.requests[0].at(-1)!.content, 'Usa el nivel 2.');
-  assertEquals(store.recorded, [
-    {
-      attemptId: ATTEMPT_ID,
-      requestId: REQUEST_ID,
-      trigger: 'hint',
-      hintLevel: 2,
-      studentMessage: null,
-      answer: {
-        message: '¿Qué valor tiene el total antes del bucle?',
-        emotion: 'encouragement',
-        intensity: 2,
-        reaction: 'thinking',
-        elusion: false,
-      },
-      promptVersion: PROMPT_VERSION,
-      model: 'flash',
-      rejected: 0,
+  // Its event takes the time the request arrived, not that of the answer (D-090)
+  const [{ askedAt, ...recorded }] = store.recorded;
+  assertEquals(Date.parse(askedAt) >= before && Date.parse(askedAt) <= Date.now(), true);
+  assertEquals(recorded, {
+    attemptId: ATTEMPT_ID,
+    requestId: REQUEST_ID,
+    trigger: 'hint',
+    hintLevel: 2,
+    studentMessage: null,
+    answer: {
+      message: '¿Qué valor tiene el total antes del bucle?',
+      emotion: 'encouragement',
+      intensity: 2,
+      reaction: 'thinking',
+      elusion: false,
     },
-  ]);
+    promptVersion: PROMPT_VERSION,
+    model: 'flash',
+    rejected: 0,
+  });
 });
 
 Deno.test(
@@ -384,14 +412,17 @@ Deno.test(
     const quiet = JSON.stringify({ ...JSON.parse(GOOD), message: '' });
     const { handle, store } = setup([quiet, 'nope', 'nope again']);
 
-    const first = await (await handle(post({ kind: 'proactive' }))).json();
+    const first = await (await handle(post(PROACTIVE))).json();
     assertEquals(first.events, [{ type: 'done', interactionId: null, silent: true }]);
     assertEquals(store.recorded[0].answer, null);
+    // Kept quiet, with its reason: its event says the tutor stepped in (2.8)
+    assertEquals(store.recorded[0].reason, 'failures');
 
     const second = await (
-      await handle(post({ kind: 'proactive', requestId: 'a0000000-0000-4000-8000-000000000002' }))
+      await handle(post({ ...PROACTIVE, requestId: 'a0000000-0000-4000-8000-000000000002' }))
     ).json();
     assertEquals(second.events, [{ type: 'done', interactionId: null, silent: true }]);
+    assertEquals(store.recorded[1].answer, null);
   },
 );
 
@@ -942,4 +973,164 @@ Deno.test('a preview that needs data asks for them before answering', async () =
     events: [{ type: 'query', calls: [{ name: 'getMyProgress', arguments: {} }] }],
   });
   assertEquals(store.recorded, []);
+});
+
+// Interventions (6.2c, D-065) -----------------------------------------------------------------------
+
+/** What the model answers, with some actions. */
+function answering(fields: Record<string, unknown>): string {
+  return JSON.stringify({ ...JSON.parse(GOOD), ...fields });
+}
+
+Deno.test('only an intervention carries a reason, and it needs one', async () => {
+  const { handle, students, llm } = setup();
+
+  assertEquals((await handle(post({ kind: 'proactive' }))).status, 400);
+  assertEquals((await handle(post({ reason: 'failures' }))).status, 400);
+  assertEquals(
+    (await handle(post({ kind: 'question', message: '¿Y ahora?', reason: 'idle' }))).status,
+    400,
+  );
+  assertEquals((await handle(post({ ...PROACTIVE, reason: 'boredom' }))).status, 400);
+  const body = await (await handle(post({ kind: 'proactive' }))).json();
+  assertStringIncludes(body.message, 'reason?');
+  assertEquals(students.claims, []);
+  assertEquals(llm.requests.length, 0);
+});
+
+Deno.test('the tutor never steps in on its own in a preview', async () => {
+  const { handle, staff, llm } = setup();
+
+  assertEquals((await handle(postPreview(PROACTIVE))).status, 400);
+  assertEquals((await handle(postPreview({ kind: 'proactive' }))).status, 400);
+  assertEquals(staff.claims, []);
+  assertEquals(llm.requests.length, 0);
+});
+
+Deno.test('a reason the data hold is answered with its facts and kept with it', async () => {
+  const { handle, store, llm } = setup();
+
+  const { events } = await (await handle(post(PROACTIVE))).json();
+
+  assertEquals(events[1], { type: 'delta', text: '¿Qué valor tiene el total antes del bucle?' });
+  assertEquals(store.recorded[0].trigger, 'proactive');
+  assertEquals(store.recorded[0].reason, 'failures');
+  const request = llm.requests[0].at(-1)!.content;
+  assertStringIncludes(
+    request,
+    'porque el ejemplo sum([1,2,3]) lleva 3 ejecuciones seguidas fallando',
+  );
+});
+
+Deno.test(
+  'a reason the data do not hold keeps quiet, without the model, but counts the turn',
+  async () => {
+    const { handle, store, students, llm } = setup();
+    // Two failures: one short of the threshold
+    store.activity = { ...FAILING, events: FAILING.events.slice(1) };
+
+    const response = await handle(post(PROACTIVE));
+
+    assertEquals(response.status, 200);
+    assertEquals(await response.json(), {
+      events: [{ type: 'done', interactionId: null, silent: true }],
+    });
+    assertEquals(llm.requests.length, 0);
+    assertEquals(store.recorded, []);
+    assertEquals(students.claims.length, 1);
+
+    // Another reason than the one that holds, and an attempt gone meanwhile
+    store.activity = FAILING;
+    await handle(post({ ...PROACTIVE, reason: 'achievement' }));
+    store.activity = null;
+    await handle(post(PROACTIVE));
+    assertEquals(llm.requests.length, 0);
+    assertEquals(store.recorded, []);
+  },
+);
+
+Deno.test('the cooldown of the server ends 2 minutes after a question', async () => {
+  const { handle, store, llm } = setup();
+
+  store.activity = { ...FAILING, lastTurnAt: ago(100_000) };
+  await handle(post(PROACTIVE));
+  assertEquals(llm.requests.length, 0);
+
+  store.activity = { ...FAILING, lastTurnAt: ago(130_000) };
+  await handle(post(PROACTIVE));
+  assertEquals(llm.requests.length, 1);
+});
+
+Deno.test('an intervention uses the level reached and never raises it', async () => {
+  const { handle, store, llm } = setup();
+  store.attempt = {
+    ...ATTEMPT,
+    previous: [
+      {
+        trigger: 'hint',
+        hintLevel: 2,
+        studentMessage: null,
+        transcript: 'Mira el bucle.',
+        emotion: 'encouragement',
+        intensity: 2,
+        elusion: false,
+        actions: [],
+      },
+    ],
+  };
+
+  const { events } = await (await handle(post(PROACTIVE))).json();
+
+  assertEquals(events[0].hintLevel, 2);
+  assertEquals(store.recorded[0].hintLevel, 2);
+  assertStringIncludes(llm.requests[0].at(-1)!.content, 'en el nivel 2');
+});
+
+Deno.test('an intervention does nothing but talk: no actions, no skeleton', async () => {
+  const { handle, store } = setup([
+    answering({
+      actions: { highlightLines: { lines: [{ line: 1 }] }, runTests: {} },
+      skeleton: ['values'],
+    }),
+  ]);
+
+  const { events } = await (await handle(post(PROACTIVE))).json();
+
+  assertEquals(events[0].actions, undefined);
+  assertEquals(events[1].text.includes('```'), false);
+  assertEquals(store.recorded[0].answer?.actions, undefined);
+});
+
+Deno.test('a slip of writing gets its fix in an intervention for failures only', async () => {
+  const slipped = 'function sum(v) { retrun 0; }';
+  const fix = { proposeFix: { line: 1, code: 'function sum(v) { return 0; }' } };
+  const { handle, store, sandbox, llm } = setup([answering({ actions: fix }), answering({})]);
+  sandbox.outcome = { outcomes: [], loadError: { kind: 'invalid_code', message: 'SyntaxError' } };
+  const loads = { outcomes: [{ ok: true as const, value: 6 }] };
+  sandbox.run = (request) => {
+    sandbox.requests.push(request);
+    return Promise.resolve(request.code.includes('retrun') ? sandbox.outcome : loads);
+  };
+
+  const failures = await (await handle(post({ ...PROACTIVE, code: slipped }))).json();
+  assertEquals(
+    failures.events[0].actions.map((action: { name: string }) => action.name),
+    ['proposeFix'],
+  );
+  assertStringIncludes(llm.requests[0].at(-1)!.content, 'propón además el arreglo con proposeFix');
+
+  // A pause: the slip is not what brought the tutor, and it offers no fix, not even the server's
+  store.activity = { ...FAILING, events: [], updatedAt: ago(5 * 60_000) };
+  const idle = await (
+    await handle(
+      post({
+        kind: 'proactive',
+        reason: 'idle',
+        code: slipped,
+        requestId: REQUEST_ID.replace('1', '2'),
+      }),
+    )
+  ).json();
+  assertEquals(idle.events[0].actions, undefined);
+  assertEquals(llm.requests[1].at(-1)!.content.includes('proposeFix'), false);
 });

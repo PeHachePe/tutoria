@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertStringIncludes } from '@std/assert';
+import { assert, assertEquals, assertStringIncludes, assertThrows } from '@std/assert';
 
 import type { RunResult } from '../../../src/app/data/code-runner/run-result.ts';
 import { SYNTAX_TOPICS } from '../../../src/app/data/tutor/syntax-examples.ts';
@@ -6,6 +6,7 @@ import { REACTION_KINDS } from '../../../src/app/data/tutor/tutor-contract.ts';
 import type { PreviousTurn, TutorAttempt } from './answer-store.ts';
 import {
   buildMessages,
+  PROMPT_VERSION,
   type PromptInput,
   RECENT_TURNS,
   retryMessages,
@@ -291,7 +292,8 @@ Deno.test('a question carries the message of the student; an empty code says so'
   assertStringIncludes(prompt, '<mensaje_alumno>\n¿Qué es un vector?\n</mensaje_alumno>');
   assertStringIncludes(prompt, '(vacío: todavía no ha escrito nada)');
   assert(!userPrompt(input()).includes('<mensaje_alumno>'));
-  assertStringIncludes(userPrompt(input({ kind: 'proactive' })), 'Decide si intervenir.');
+  // The server always gives an intervention the facts of its reason (6.2c)
+  assertThrows(() => userPrompt(input({ kind: 'proactive' })));
 });
 
 Deno.test('the student cannot close the tags of the data early', () => {
@@ -535,3 +537,127 @@ Deno.test('the conversation recalls what the tutor did with its tools', () => {
     false,
   );
 });
+
+// Interventions (prompt v7, 6.2c) -------------------------------------------------------------------
+
+/** An intervention for a reason, with its facts. */
+function stepsIn(
+  proactive: PromptInput['proactive'],
+  overrides: Partial<PromptInput> = {},
+): PromptInput {
+  return input({ kind: 'proactive', proactive, ...overrides });
+}
+
+/** The code does not load because of a slip of writing. */
+const SLIPPED: RunResult = {
+  status: 'tests_failed',
+  results: [],
+  loadError: { kind: 'invalid_code', message: 'SyntaxError: unexpected token', line: 2 },
+};
+
+Deno.test('the prompt is v7', () => {
+  assertEquals(PROMPT_VERSION, 'v7');
+});
+
+Deno.test('repeated failures name the test, its runs and the level', () => {
+  const prompt = userPrompt(stepsIn({ reason: 'failures', testId: 't1', runs: 4 }));
+  assertStringIncludes(
+    prompt,
+    'Petición: te acercas tú, sin que el alumno pregunte, porque el ejemplo sum([1,2,3]) lleva 4 ejecuciones seguidas fallando. Una o dos frases en el nivel 2 sobre esa prueba, que acaben ofreciéndole seguir.',
+  );
+});
+
+Deno.test('a hidden test is never shown by its values, and a test gone is just a test', () => {
+  const hidden = userPrompt(stepsIn({ reason: 'failures', testId: 't3', runs: 3 }));
+  assertStringIncludes(hidden, 'porque una comprobación oculta lleva 3 ejecuciones');
+  assert(!hidden.includes('7,-3,1'));
+  const gone = userPrompt(stepsIn({ reason: 'achievement', testId: 'old', failures: 3 }));
+  assertStringIncludes(gone, 'acaba de superar una prueba, que llevaba 3 ejecuciones');
+});
+
+Deno.test('a pause says how long and how the attempt is', () => {
+  const failed = userPrompt(stepsIn({ reason: 'idle', minutes: 5 }));
+  assertStringIncludes(
+    failed,
+    'porque lleva unos 5 minutos sin actividad (su última ejecución dejó 2 pruebas sin superar). Una o dos frases, como mucho en el nivel 2, que le pregunten qué le frena o le ofrezcan por dónde seguir.',
+  );
+  const empty = userPrompt(stepsIn({ reason: 'idle', minutes: 1 }, { code: ' ' }));
+  assertStringIncludes(empty, 'lleva unos 1 minuto sin actividad (todavía no ha escrito nada)');
+  // Edited since the last run, or never run
+  const edited = userPrompt(
+    stepsIn(
+      { reason: 'idle', minutes: 4 },
+      {
+        code: `${CODE}
+// y`,
+      },
+    ),
+  );
+  assertStringIncludes(edited, '(tiene código sin ejecutar)');
+  const neverRun = userPrompt(
+    stepsIn(
+      { reason: 'idle', minutes: 4 },
+      { attempt: { ...ATTEMPT, status: 'in_progress', lastRun: null } },
+    ),
+  );
+  assertStringIncludes(neverRun, '(tiene código sin ejecutar)');
+  const one = userPrompt(
+    stepsIn(
+      { reason: 'idle', minutes: 4 },
+      { attempt: { ...ATTEMPT, lastRun: { passed: 2, failed: 1, failedTestIds: ['t3'] } } },
+    ),
+  );
+  assertStringIncludes(one, 'dejó 1 prueba sin superar');
+});
+
+Deno.test('an achievement is celebrated in one sentence, without hints', () => {
+  const prompt = userPrompt(
+    stepsIn({ reason: 'achievement', testId: 't1', failures: 3 }, { attempt: ATTEMPT }),
+  );
+  assertStringIncludes(
+    prompt,
+    'Petición: te acercas tú, sin que el alumno pregunte, para felicitarle: acaba de superar el ejemplo sum([1,2,3]), que llevaba 3 ejecuciones seguidas fallando. Una sola frase que celebre su esfuerzo y nombre lo conseguido, sin pistas ni peros.',
+  );
+});
+
+Deno.test('the slip that keeps the code from running is told only with repeated failures', () => {
+  const note = 'Nota: su código no se ejecuta (SyntaxError: unexpected token en la línea 2)';
+  const failures = stepsIn({ reason: 'failures', testId: 't1', runs: 3 }, { tried: SLIPPED });
+  assertStringIncludes(userPrompt(failures), note);
+  const idle = stepsIn({ reason: 'idle', minutes: 4 }, { tried: SLIPPED });
+  assert(!userPrompt(idle).includes(note));
+  const achievement = stepsIn(
+    { reason: 'achievement', testId: 't1', failures: 3 },
+    { tried: SLIPPED },
+  );
+  assert(!userPrompt(achievement).includes(note));
+  assertStringIncludes(userPrompt(input({ tried: SLIPPED })), note);
+});
+
+Deno.test(
+  'the system prompt says how to step in, when to keep quiet and with which reactions',
+  () => {
+    const instruction = systemPrompt('es');
+    assertStringIncludes(
+      instruction,
+      'INTERVENCIONES. A veces te acercas tú, sin que el alumno pregunte',
+    );
+    assertStringIncludes(instruction, 'eres breve, sin bromas ni teatro, y no\nrepites');
+    assertStringIncludes(
+      instruction,
+      'Si tu última respuesta trataba de lo mismo o no tienes nada nuevo,\ncalla',
+    );
+    assertStringIncludes(instruction, 'reacción "eyes" o "empathy"');
+    assertStringIncludes(instruction, 'reacción "sleepy"');
+    assertStringIncludes(instruction, 'con emoción "celebration" y una reacción de celebración');
+    assertStringIncludes(
+      instruction,
+      'En una intervención no usas herramientas ni das el esqueleto, salvo proposeFix',
+    );
+    assertStringIncludes(
+      instruction,
+      'En una intervención en la que decidas\ncallar, devuelve "message" vacío.',
+    );
+    assert(!instruction.includes('proactiva'));
+  },
+);

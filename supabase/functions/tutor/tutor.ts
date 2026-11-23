@@ -12,6 +12,7 @@ import {
   toolCallsOf,
 } from '../../../src/app/data/tutor/tutor-tools.ts';
 import { outputsEqual } from '../../../src/app/data/code-runner/run-result.ts';
+import { PROACTIVE_REASONS } from '../../../src/app/shared/proactive-reason.ts';
 import type { CodeSandbox } from '../_shared/code-sandbox.ts';
 import type { StaffRequests } from '../_shared/staff-requests.ts';
 import type { StudentRequests } from '../_shared/student-requests.ts';
@@ -37,6 +38,7 @@ import {
   signatureOf,
 } from './model-answer.ts';
 import { previewAttempt, previewSchema } from './preview.ts';
+import { checkReason, type ProactiveFacts } from './proactive.ts';
 import {
   buildMessages,
   PROMPT_VERSION,
@@ -96,6 +98,8 @@ export const DEFAULT_ANSWERS: Record<TutorLanguage, string> = {
 const askFields = {
   requestId: z.uuid(),
   kind: z.enum(TUTOR_TRIGGERS),
+  // Why the tutor steps in (2.7): the server checks it (D-065)
+  reason: z.enum(PROACTIVE_REASONS).optional(),
   message: z.string().trim().max(MAX_MESSAGE_LENGTH).optional(),
   code: z.string().max(MAX_CODE_LENGTH),
   language: z.enum(TUTOR_LANGUAGES),
@@ -122,17 +126,29 @@ const askFields = {
     .optional(),
 };
 
-// Only a question carries a message, and it needs one (2.6)
-const asksRight = ({ kind, message }: { kind: string; message?: string }) =>
-  (kind === 'question') === Boolean(message);
+// Only a question carries a message, and it needs one; only an intervention a reason (2.6, 2.7)
+const asksRight = ({
+  kind,
+  message,
+  reason,
+}: {
+  kind: string;
+  message?: string;
+  reason?: string;
+}) =>
+  (kind === 'question') === Boolean(message) && (kind === 'proactive') === (reason !== undefined);
 
 const requestSchema = z.object({ ...askFields, attemptId: z.uuid() }).refine(asksRight);
 
-/** A teacher trying an exercise as a student (4.3e, D-061): the exercise instead of an attempt. */
+/**
+ * A teacher trying an exercise as a student (4.3e, D-061): the exercise instead of an attempt. The
+ * tutor never steps in on its own there: a preview has no process to read it from.
+ */
 const previewRequestSchema = z
   .object({ ...askFields, preview: previewSchema })
   .strict()
-  .refine(asksRight);
+  .refine(asksRight)
+  .refine(({ kind }) => kind !== 'proactive');
 
 type TutorRequestBody = z.infer<typeof requestSchema>;
 
@@ -172,6 +188,8 @@ export function createTutorHandler({
   return async (request) => {
     if (request.method === 'OPTIONS') return preflight();
     if (request.method !== 'POST') return failure(405, 'Only POST');
+    // The events of the request take this time, not that of the answer (D-090)
+    const askedAt = new Date();
     try {
       const token = bearerToken(request);
       const userId = token ? await store.userOf(token) : null;
@@ -182,7 +200,7 @@ export function createTutorHandler({
       if (!body.success) {
         return failure(
           400,
-          'Expected { requestId, attemptId, kind, message?, code, language, results? }',
+          'Expected { requestId, attemptId, kind, reason?, message?, code, language, results? }',
         );
       }
       const ask = body.data;
@@ -219,7 +237,18 @@ export function createTutorHandler({
         if (wait > 0) return failure(429, 'Too many questions', { 'Retry-After': String(wait) });
       }
 
-      const turn = await answerTurn(ask, attempt);
+      // The browser chose to step in: the data of the server must hold its reason, or the tutor
+      // keeps quiet without asking the model or keeping anything. The turn is counted (D-065)
+      let facts: ProactiveFacts | undefined;
+      if (ask.reason) {
+        const activity = await store.findActivity(ask.attemptId);
+        const held =
+          activity && checkReason(ask.reason, attempt.status, activity, askedAt.getTime());
+        if (!held) return json(200, { events: KEPT_QUIET });
+        facts = held;
+      }
+
+      const turn = await answerTurn(ask, attempt, facts);
       if (turn instanceof Response) return turn;
       if ('queries' in turn) {
         // Nothing of the answer is kept until the model gives it with the data (2.5e)
@@ -238,6 +267,8 @@ export function createTutorHandler({
         promptVersion: PROMPT_VERSION,
         model,
         rejected,
+        ...(ask.reason ? { reason: ask.reason } : {}),
+        askedAt: askedAt.toISOString(),
       });
       switch (outcome.status) {
         case 'recorded':
@@ -267,7 +298,7 @@ export function createTutorHandler({
     if (!body.success) {
       return failure(
         400,
-        'Expected { requestId, preview, kind, message?, code, language, results? }',
+        'Expected { requestId, preview, kind, message?, code, language, results? }, without interventions',
       );
     }
     const { preview, ...ask } = body.data;
@@ -290,10 +321,12 @@ export function createTutorHandler({
    * What the tutor answers to a turn about an attempt: the level, the code tried with the examples,
    * the model's answer checked (2.6) and its actions checked against the attempt (2.5f); the queries
    * the model needs answered first (2.5e); or the response to give at once, when there is no provider.
+   * An intervention comes with the facts of its reason (2.7).
    */
   async function answerTurn(
     ask: Ask,
     attempt: TutorAttempt,
+    proactive?: ProactiveFacts,
   ): Promise<AnsweredTurn | AskedQueries | Response> {
     const setting = await store.providerSetting();
     if (!setting) return failure(503, 'No AI provider is set');
@@ -309,17 +342,22 @@ export function createTutorHandler({
       attempt,
       tried,
       results: ask.results,
+      ...(proactive ? { proactive } : {}),
     });
     if ('queries' in asked) return asked;
     // What touches the code or the submission is checked against the attempt here, and a slip
-    // that keeps the code from running gets its fix, but not in an intervention (2.5f)
+    // that keeps the code from running gets its fix. Nobody asked for an intervention, so it does
+    // nothing but fix that slip, and only for repeated failures (D-065)
+    const fixes = !proactive || proactive.reason === 'failures';
     const answer = asked.answer
       ? withCheckedActions(
           asked.answer,
           await checkCodeActions(
-            asked.answer.actions ?? [],
+            (asked.answer.actions ?? []).filter(
+              (action) => !proactive || (fixes && action.name === 'proposeFix'),
+            ),
             { attempt, code: ask.code, tried, sandbox },
-            { offerFix: ask.kind !== 'proactive' },
+            { offerFix: fixes },
           ),
         )
       : null;
@@ -391,8 +429,9 @@ async function askModel(
   input: PromptInput,
 ): Promise<CheckedAnswer | AskedQueries> {
   const mayKeepQuiet = input.kind === 'proactive';
-  // The empty function of the exercise is the only code the tutor may write (2.5d)
-  const skeleton = signatureOf(input.attempt.exercise);
+  // The empty function of the exercise is the only code the tutor may write (2.5d), and nobody
+  // asked for it in an intervention: there, no code at all
+  const skeleton = mayKeepQuiet ? undefined : signatureOf(input.attempt.exercise);
   let messages = buildMessages(input);
   let elusion = false;
   for (let call = 1; call <= MODEL_CALLS; call++) {
@@ -427,13 +466,16 @@ async function askModel(
   };
 }
 
+/** An intervention the tutor did not make: only `done`, silent, and the app shows nothing. */
+const KEPT_QUIET: readonly TutorEvent[] = [{ type: 'done', interactionId: null, silent: true }];
+
 /** The events of an answer, all at once; an intervention the tutor did not make is only `done`. */
 function eventsOf(
   answer: ModelAnswer | null,
   hintLevel: HintLevel,
   interactionId: string | null,
 ): TutorEvent[] {
-  if (!answer) return [{ type: 'done', interactionId: null, silent: true }];
+  if (!answer) return [...KEPT_QUIET];
   const { emotion, intensity, reaction, message, elusion, actions } = answer;
   return [
     {

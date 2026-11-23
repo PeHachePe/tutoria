@@ -7,6 +7,11 @@ import type {
   ToolRequest,
   TutorTrigger,
 } from '../../../src/app/data/tutor/tutor-contract.ts';
+import type {
+  AttemptEvent,
+  ProactiveReason,
+  ReasonThresholds,
+} from '../../../src/app/shared/proactive-reason.ts';
 import type { ProviderSetting } from '../_shared/provider-setting.ts';
 import type { ModelAnswer } from './model-answer.ts';
 
@@ -53,6 +58,24 @@ export interface TutorAttempt {
   readonly previous: readonly PreviousTurn[];
 }
 
+/**
+ * What the reason of an intervention is checked against (2.7, D-065), read only for an intervention:
+ * the last change of the attempt, the thresholds of its exercise, its events and the last turn the
+ * student asked for.
+ */
+export interface AttemptActivity {
+  readonly updatedAt: string;
+  readonly thresholds: ReasonThresholds;
+  /**
+   * The events the server records (runs, interventions, hints and the submission) and the latest of
+   * the browser that is activity (a paste or a return to the tab): a flood of these must not hide
+   * the earlier interventions, and their times can only make the student look busier (D-090).
+   */
+  readonly events: readonly AttemptEvent[];
+  /** The last question or hint, as in the browser (D-088); null without one. */
+  readonly lastTurnAt: string | null;
+}
+
 /** An answer already recorded for a request, to give it back to a retry. */
 export interface RecordedAnswer {
   readonly id: string;
@@ -77,6 +100,10 @@ export interface NewAnswer {
   readonly model: string;
   /** Answers of the model the validator turned down before this one: 0 to 2 (D-044). */
   readonly rejected: number;
+  /** Why the tutor stepped in: only for an intervention, and required (2.7). */
+  readonly reason?: ProactiveReason;
+  /** When the request arrived: its process event takes this time, not that of the answer (D-090). */
+  readonly askedAt: string;
 }
 
 /**
@@ -92,6 +119,8 @@ export interface AnswerStore {
   /** The user of a session token, or `null` if it is not valid. */
   userOf(token: string): Promise<string | null>;
   findAttempt(attemptId: string): Promise<TutorAttempt | null>;
+  /** What the reason of an intervention is checked against; `null` if the attempt is gone. */
+  findActivity(attemptId: string): Promise<AttemptActivity | null>;
   findAnswer(requestId: string): Promise<RecordedAnswer | null>;
   /** Keeps the queries the model asked for in a request, until the app answers them (2.5e). */
   keepQueries(requestId: string, userId: string, queries: readonly ToolRequest[]): Promise<void>;
