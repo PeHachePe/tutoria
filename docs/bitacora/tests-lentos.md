@@ -1,6 +1,6 @@
 # Los unitarios que fallaban con el equipo cargado
 
-23/11/2026 · Sesión de Claude Code `6e570015` (`claude-opus-5-5`) · Commits: `8a8a442` test(blocks): look for the buttons of a block within the block (slow tests), `8320dcd` test: run the unit tests without Material animations, on half the cores (slow tests) y el de documentación
+23/11/2026 · Sesión de Claude Code `6e570015` (`claude-opus-5-5`) · Commits: `8a8a442` test(blocks): look for the buttons of a block within the block (slow tests), `8320dcd` test: run the unit tests without Material animations, on half the cores (slow tests) y `cff7319` docs: record the slow unit tests and close their pending row (slow tests)
 
 ## Objetivo
 
