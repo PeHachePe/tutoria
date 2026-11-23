@@ -6,6 +6,8 @@ Siguen valiendo las filas del 7.0a en `PENDIENTES.md` que dicen «7.0b» (el glo
 
 **Indicación del autor:** en el 7.0b se siguen las mismas decisiones que en el 7.0a, sin volver a plantearlas (bitácora del 7.0a, ficha 13 y D-080): balizas en cada pieza de cada pantalla y «Recorrer esta pantalla» hecho de ellas; la bienvenida, con la barra seguida y en su orden y «Siguiente: …» al final; menús y diálogos de Material resaltados enteros; los botones propios del globo con clases propias; pasos opcionales para lo que depende del ancho; aviso antes de crear algo de verdad; textos con `$localize` en los tres idiomas. Ante la duda, se hace como en el alumno. Las decisiones de abajo son solo las nuevas del docente y la administración.
 
+**Al cerrar el 7.0b, contar también esta revisión** (sesión del 23 y el 24/11/2026, sin código): su tiempo y sus tokens van en la bitácora y en la fila del registro del 7.0b, y en `npm run metrics -- 7.0b` con el `--session` de esta sesión además del de la que lo implemente (el autor da el id).
+
 ## Decisiones que tiene que tomar el autor (con la recomendación de Claude)
 
 Ninguna está tomada ni escrita en `DECISIONES.md`: al decidirlas, las técnicas se proponen allí (D-093 en adelante) y las de contenido van a la ficha 13 y a `PLAN.md`.
