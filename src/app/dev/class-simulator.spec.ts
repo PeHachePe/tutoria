@@ -46,6 +46,13 @@ describe('ClassSimulator', () => {
   }
 
   describe('targetFor', () => {
+    // The exam of the fixtures opens on its day, 23/11/2026: the class is seen the day before, as
+    // the test was written, so it does not depend on the date it runs
+    beforeEach(() => {
+      vi.useFakeTimers({ now: new Date('2026-11-22T10:00:00.000Z'), toFake: ['Date'] });
+    });
+    afterEach(() => vi.useRealTimers());
+
     const daw = (params: Record<string, string> = {}) =>
       convertToParamMap({ [TEACHER_PARAMS.group]: DAW_GROUP_ID, ...params });
     /** The blocks of 1.º DAW A the students see, in order. */
