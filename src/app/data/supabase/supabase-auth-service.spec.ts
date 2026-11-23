@@ -156,6 +156,52 @@ describe('SupabaseAuthService', () => {
     await expect(service.markPrivacyNoticeSeen()).rejects.toMatchObject({ kind: 'unauthorized' });
   });
 
+  describe('guide state', () => {
+    const GUIDE_STATES = '/rest/v1/user_guide_state';
+    const STATE = { welcome: 1, done: { 'run-tests': '2026-11-23T10:00:00.000Z' } };
+
+    it('reads the row of the signed-in user', async () => {
+      await signIn();
+      server.on('GET', GUIDE_STATES, { body: { state: STATE } });
+
+      await expect(service.guideState()).resolves.toEqual(STATE);
+      const [request] = server.sentTo('GET', GUIDE_STATES);
+      expect(request.params.get('user_id')).toBe('eq.lucia');
+      expect(request.params.get('select')).toBe('state');
+    });
+
+    it('is empty while the user has no row', async () => {
+      await signIn();
+      server.on('GET', GUIDE_STATES, { body: [] });
+
+      await expect(service.guideState()).resolves.toEqual({});
+    });
+
+    it('saves it whole, creating the row the first time', async () => {
+      await signIn();
+      server.on('POST', GUIDE_STATES, { status: 201, body: null });
+
+      await service.saveGuideState(STATE);
+
+      const [request] = server.sentTo('POST', GUIDE_STATES);
+      expect(request.body).toEqual({ user_id: 'lucia', state: STATE });
+      expect(request.params.get('on_conflict')).toBe('user_id');
+      expect(request.headers.get('Prefer')).toContain('resolution=merge-duplicates');
+    });
+
+    it('reports a state the table refuses', async () => {
+      await signIn();
+      server.on('POST', GUIDE_STATES, { status: 400, body: { message: 'No', code: '23514' } });
+
+      await expect(service.saveGuideState(STATE)).rejects.toMatchObject({ kind: 'invalid' });
+    });
+
+    it('needs a session', async () => {
+      await expect(service.guideState()).rejects.toMatchObject({ kind: 'unauthorized' });
+      await expect(service.saveGuideState(STATE)).rejects.toMatchObject({ kind: 'unauthorized' });
+    });
+  });
+
   it('translates the failures of PostgREST, such as a network down', async () => {
     await signIn();
     server.offline();

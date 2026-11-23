@@ -3,6 +3,7 @@ import { inject, Service } from '@angular/core';
 import { normalizeEmail } from '../admin/user-rules';
 import { AuthService, Credentials } from '../auth-service';
 import { DataError } from '../data-error';
+import type { GuideState } from '../guide-state';
 import type { AppUser } from '../user';
 import { MOCK_PASSWORD } from './fixtures/users';
 import { findRow, now } from './mock-access';
@@ -62,6 +63,20 @@ export class MockAuthService extends AuthService {
         ),
       );
       return findRow(this.db.tables().users, id);
+    });
+  }
+
+  guideState(): Promise<GuideState> {
+    return this.network.request(() => {
+      const { id } = this.db.requireUser();
+      return this.db.tables().guideStates[id] ?? {};
+    });
+  }
+
+  saveGuideState(state: GuideState): Promise<void> {
+    return this.network.request(() => {
+      const { id } = this.db.requireUser();
+      this.db.update('guideStates', (states) => ({ ...states, [id]: state }));
     });
   }
 }

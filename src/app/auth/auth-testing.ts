@@ -25,6 +25,8 @@ export class FakeAuthService extends AuthService {
   signOut = vi.fn<AuthService['signOut']>(() => Promise.resolve());
   currentUser = vi.fn<AuthService['currentUser']>(() => Promise.resolve(null));
   markPrivacyNoticeSeen = vi.fn<AuthService['markPrivacyNoticeSeen']>();
+  guideState = vi.fn<AuthService['guideState']>(() => Promise.resolve({}));
+  saveGuideState = vi.fn<AuthService['saveGuideState']>(() => Promise.resolve());
   /** The listener of watchSession(), for a test to announce a change of session. */
   sessionListener: ((userId: string | null) => void) | undefined;
   watchSession = vi.fn<AuthService['watchSession']>((listener) => {

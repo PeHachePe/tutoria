@@ -158,4 +158,29 @@ describe('MockAuthService', () => {
   it('needs a session to record the data notice', async () => {
     await expect(service.markPrivacyNoticeSeen()).rejects.toMatchObject({ kind: 'unauthorized' });
   });
+
+  describe('guide state', () => {
+    const STATE = { welcome: 1, done: { 'run-tests': '2026-11-23T10:00:00.000Z' } };
+
+    it('is empty until the user saves it', async () => {
+      db.setSession(DAW_STUDENT_IDS[0]);
+
+      await expect(service.guideState()).resolves.toEqual({});
+    });
+
+    it('keeps it whole for the signed-in user only', async () => {
+      db.setSession(DAW_STUDENT_IDS[0]);
+      await service.saveGuideState(STATE);
+      await service.saveGuideState({ ...STATE, firstStepsHidden: true });
+
+      await expect(service.guideState()).resolves.toEqual({ ...STATE, firstStepsHidden: true });
+      db.setSession(DAW_STUDENT_IDS[1]);
+      await expect(service.guideState()).resolves.toEqual({});
+    });
+
+    it('needs a session', async () => {
+      await expect(service.guideState()).rejects.toMatchObject({ kind: 'unauthorized' });
+      await expect(service.saveGuideState(STATE)).rejects.toMatchObject({ kind: 'unauthorized' });
+    });
+  });
 });

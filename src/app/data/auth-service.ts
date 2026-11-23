@@ -1,3 +1,4 @@
+import type { GuideState } from './guide-state';
 import type { AppUser } from './user';
 
 export interface Credentials {
@@ -30,4 +31,10 @@ export abstract class AuthService {
 
   /** Records that the signed-in user saw the notice on the registered data (RF-07). */
   abstract markPrivacyNoticeSeen(): Promise<AppUser>;
+
+  /** What the signed-in user saw and did of the guided help (2.12); empty before they save any. */
+  abstract guideState(): Promise<GuideState>;
+
+  /** Saves it whole for the signed-in user. */
+  abstract saveGuideState(state: GuideState): Promise<void>;
 }

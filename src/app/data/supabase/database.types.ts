@@ -734,6 +734,33 @@ export type Database = {
           },
         ];
       };
+      user_guide_state: {
+        Row: {
+          state: NonNullable<Json>;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          state?: NonNullable<Json>;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          state?: NonNullable<Json>;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_guide_state_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: true;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;

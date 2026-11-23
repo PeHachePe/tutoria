@@ -1,6 +1,7 @@
 import type { AiProviderSetting } from '../ai-provider-setting';
 import type { Attempt } from '../attempt';
 import type { ClassBlock, Exercise, ExerciseAssignment, Test } from '../exercise';
+import type { GuideState } from '../guide-state';
 import type { ProcessEvent } from '../process-event';
 import type { ExerciseSubject, Subject } from '../subject';
 import type { TutorInteraction } from '../tutor';
@@ -27,6 +28,8 @@ export interface MockTables {
    * them; the seed users have `MOCK_PASSWORD`.
    */
   readonly passwords: Readonly<Record<string, string>>;
+  /** Table `user_guide_state`: what each user saw and did of the guided help, by user id. */
+  readonly guideStates: Readonly<Record<string, GuideState>>;
   /** Row `ai_provider` of table `app_setting`. */
   readonly aiProvider: AiProviderSetting;
 }

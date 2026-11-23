@@ -2,9 +2,11 @@ import { inject, Service } from '@angular/core';
 
 import { AuthService, Credentials } from '../auth-service';
 import { DataError } from '../data-error';
+import type { GuideState } from '../guide-state';
 import type { AppUser } from '../user';
+import type { Json } from './database.types';
 import { SUPABASE_CLIENT } from './supabase-client';
-import { toDataError, unwrap } from './supabase-error';
+import { check, toDataError, unwrap } from './supabase-error';
 import { toAppUser } from './supabase-rows';
 
 /**
@@ -53,8 +55,7 @@ export class SupabaseAuthService extends AuthService {
   }
 
   async markPrivacyNoticeSeen(): Promise<AppUser> {
-    const userId = await this.sessionUserId();
-    if (!userId) throw new DataError('unauthorized');
+    const userId = await this.requireSessionUserId();
     // The only column of app_user its owner may change (2.1)
     const row = unwrap(
       await this.supabase
@@ -65,6 +66,37 @@ export class SupabaseAuthService extends AuthService {
         .single(),
     );
     return toAppUser(row);
+  }
+
+  async guideState(): Promise<GuideState> {
+    const userId = await this.requireSessionUserId();
+    const row = unwrap(
+      await this.supabase
+        .from('user_guide_state')
+        .select('state')
+        .eq('user_id', userId)
+        .maybeSingle(),
+    );
+    // The checks of the table give it this shape; without the row, nothing seen yet
+    return row === null ? {} : (row.state as unknown as GuideState);
+  }
+
+  async saveGuideState(state: GuideState): Promise<void> {
+    const userId = await this.requireSessionUserId();
+    check(
+      await this.supabase
+        .from('user_guide_state')
+        .upsert(
+          { user_id: userId, state: state as unknown as NonNullable<Json> },
+          { onConflict: 'user_id' },
+        ),
+    );
+  }
+
+  private async requireSessionUserId(): Promise<string> {
+    const userId = await this.sessionUserId();
+    if (!userId) throw new DataError('unauthorized');
+    return userId;
   }
 
   /** The user of the saved session, renewed first if it expired; undefined without one. */
