@@ -118,10 +118,33 @@ describe('BlocksPage', () => {
       .map((link) => text(link));
   }
 
-  /** Opens a menu of the page, or of one block, and chooses an item. */
-  async function menu(button: string, item: RegExp | string, inBlock?: string): Promise<void> {
-    const scope = inBlock ? within(block(inBlock)) : screen;
-    await userEvent.click(scope.getByRole('button', { name: button }));
+  /**
+   * A button of a block, or of one of its exercises, looked for within the block, as the teacher
+   * does. In the whole page, as `screen` does, the query works out the accessible name of each of
+   * its buttons (127 in 1.º DAW A), and so the styles of every element inside them, which jsdom
+   * computes afresh after any change of the page: half a second a query alone, enough for these
+   * tests to time out under load (D-091).
+   */
+  function blockButton(title: string, name: string | RegExp): HTMLElement {
+    return within(block(title)).getByRole('button', { name });
+  }
+
+  /** Opens the menu of a block and chooses an item. */
+  async function blockMenu(title: string, item: RegExp | string): Promise<void> {
+    await chooseFrom(blockButton(title, `Acciones del bloque «${title}»`), item);
+  }
+
+  /** Opens the menu of an exercise of a block and chooses an item. */
+  async function exerciseMenu(
+    exercise: string,
+    item: RegExp | string,
+    inBlock: string,
+  ): Promise<void> {
+    await chooseFrom(blockButton(inBlock, `Acciones de «${exercise}»`), item);
+  }
+
+  async function chooseFrom(button: HTMLElement, item: RegExp | string): Promise<void> {
+    await userEvent.click(button);
     await userEvent.click(await screen.findByRole('menuitem', { name: item }));
   }
 
@@ -315,7 +338,7 @@ describe('BlocksPage', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     await closed(harness);
 
-    await menu('Acciones del bloque «Tema 1: Bucles y condicionales»', 'Añadir ejercicios');
+    await blockMenu('Tema 1: Bucles y condicionales', 'Añadir ejercicios');
     dialog = await openDialog();
     await settle(harness);
     expect(
@@ -324,7 +347,7 @@ describe('BlocksPage', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     await closed(harness);
 
-    await menu('Acciones del bloque «Final review»', 'Editar el bloque');
+    await blockMenu('Final review', 'Editar el bloque');
     dialog = await openDialog();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     await closed(harness);
@@ -364,7 +387,7 @@ describe('BlocksPage', () => {
     it('changes the title of a block', async () => {
       const harness = await renderBlocks(DAW);
 
-      await menu('Acciones del bloque «Repaso final»', 'Editar el bloque');
+      await blockMenu('Repaso final', 'Editar el bloque');
       const dialog = await openDialog();
       const title = within(dialog).getByRole('textbox', { name: 'Título' });
       await userEvent.clear(title);
@@ -401,7 +424,7 @@ describe('BlocksPage', () => {
     it('schedules the opening of a block, at 0:00 without a time', async () => {
       const harness = await renderBlocks(DAW);
 
-      await menu('Acciones del bloque «Repaso final»', 'Editar el bloque');
+      await blockMenu('Repaso final', 'Editar el bloque');
       const dialog = await openDialog();
       expect(text(dialog)).toContain('Sin hora, a las 0:00');
       await userEvent.type(
@@ -441,7 +464,7 @@ describe('BlocksPage', () => {
       const harness = await renderBlocks(DAW);
       const announce = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce');
 
-      await menu('Acciones del bloque «Tema 2: Vectores»', 'Subir');
+      await blockMenu('Tema 2: Vectores', 'Subir');
       await settle(harness);
 
       const titles = blockHeadings().map((heading) => text(heading));
@@ -454,7 +477,7 @@ describe('BlocksPage', () => {
       expect(saved[0].title).toBe('Tema 2: Vectores');
 
       await userEvent.click(
-        screen.getByRole('button', { name: 'Acciones del bloque «Tema 2: Vectores»' }),
+        blockButton('Tema 2: Vectores', 'Acciones del bloque «Tema 2: Vectores»'),
       );
       const up = await screen.findByRole('menuitem', { name: 'Subir' });
       expect((up as HTMLButtonElement).disabled).toBe(true);
@@ -480,7 +503,7 @@ describe('BlocksPage', () => {
     it('deletes a block nobody started after asking, with its exercises', async () => {
       const harness = await renderBlocks(DAW);
 
-      await menu('Acciones del bloque «Repaso final»', 'Borrar');
+      await blockMenu('Repaso final', 'Borrar');
       const dialog = await openDialog();
       expect(text(dialog)).toContain('Se quitan también sus 2 ejercicios');
       await userEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
@@ -497,7 +520,7 @@ describe('BlocksPage', () => {
         ),
       );
 
-      await menu('Acciones del bloque «Repaso final»', 'Borrar');
+      await blockMenu('Repaso final', 'Borrar');
       const dialog = await openDialog();
       expect(text(dialog)).toContain('Se quita también su ejercicio, que sigue en el banco.');
       await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
@@ -511,7 +534,7 @@ describe('BlocksPage', () => {
         ),
       );
 
-      await menu('Acciones del bloque «Repaso final»', 'Borrar');
+      await blockMenu('Repaso final', 'Borrar');
       const dialog = await openDialog();
       expect(text(dialog)).toContain('Está vacío');
       await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
@@ -524,9 +547,10 @@ describe('BlocksPage', () => {
       const harness = await renderBlocks(DAW);
 
       await userEvent.click(
-        screen.getByRole('button', {
-          name: 'Acciones del bloque «Tema 1: Bucles y condicionales»',
-        }),
+        blockButton(
+          'Tema 1: Bucles y condicionales',
+          'Acciones del bloque «Tema 1: Bucles y condicionales»',
+        ),
       );
       const blocked = await screen.findByRole('menuitem', { name: 'Borrar (ya tiene intentos)' });
       expect((blocked as HTMLButtonElement).disabled).toBe(true);
@@ -534,7 +558,7 @@ describe('BlocksPage', () => {
 
       // Somebody started it while the page was open
       TestBed.inject(MockNetwork).failNextRequest('invalid');
-      await menu('Acciones del bloque «Repaso final»', 'Borrar');
+      await blockMenu('Repaso final', 'Borrar');
       await userEvent.click(within(await openDialog()).getByRole('button', { name: 'Borrar' }));
       await closed(harness);
       expect(snack).toHaveBeenCalledWith(
@@ -567,7 +591,7 @@ describe('BlocksPage', () => {
     it('says when one exercise is added, and when adding fails', async () => {
       const harness = await renderBlocks(DAW);
 
-      await menu('Acciones del bloque «Repaso final»', 'Añadir ejercicios');
+      await blockMenu('Repaso final', 'Añadir ejercicios');
       let dialog = await openDialog();
       await settle(harness);
       await userEvent.click(within(dialog).getByRole('option', { name: /Año bisiesto/ }));
@@ -575,7 +599,7 @@ describe('BlocksPage', () => {
       await closed(harness);
       expect(snack).toHaveBeenCalledWith('1 ejercicio añadido');
 
-      await menu('Acciones del bloque «Repaso final»', 'Añadir ejercicios');
+      await blockMenu('Repaso final', 'Añadir ejercicios');
       dialog = await openDialog();
       await settle(harness);
       await userEvent.click(within(dialog).getByRole('option', { name: /Factorial de un número/ }));
@@ -584,7 +608,7 @@ describe('BlocksPage', () => {
       await closed(harness);
       expect(snack).toHaveBeenCalledWith('No se ha podido guardar. Inténtalo de nuevo.');
 
-      await menu('Acciones del bloque «Repaso final»', 'Añadir ejercicios');
+      await blockMenu('Repaso final', 'Añadir ejercicios');
       await userEvent.click(within(await openDialog()).getByRole('button', { name: 'Cancelar' }));
       await closed(harness);
       expect(exercisesOf('Repaso final')).toHaveLength(3);
@@ -594,7 +618,11 @@ describe('BlocksPage', () => {
       const harness = await renderBlocks(DAW);
       const announce = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce');
 
-      await menu('Acciones de «Media de un vector con dos decimales»', 'Bajar');
+      await exerciseMenu(
+        'Media de un vector con dos decimales',
+        'Bajar',
+        'Tema 4: Cadenas y formato',
+      );
       await settle(harness);
       expect(exercisesOf('Tema 4: Cadenas y formato')).toEqual([
         'Contar vocales en una cadena',
@@ -605,7 +633,11 @@ describe('BlocksPage', () => {
         '«Media de un vector con dos decimales» en el lugar 3 de 3',
       );
 
-      await menu('Acciones de «Media de un vector con dos decimales»', 'Subir');
+      await exerciseMenu(
+        'Media de un vector con dos decimales',
+        'Subir',
+        'Tema 4: Cadenas y formato',
+      );
       await settle(harness);
       expect(exercisesOf('Tema 4: Cadenas y formato')[1]).toBe(
         'Media de un vector con dos decimales',
@@ -631,7 +663,7 @@ describe('BlocksPage', () => {
       const undo = undoable();
 
       await userEvent.click(
-        screen.getByRole('button', { name: 'Acciones de «Contar vocales en una cadena»' }),
+        blockButton('Tema 4: Cadenas y formato', 'Acciones de «Contar vocales en una cadena»'),
       );
       await userEvent.click(await screen.findByRole('menuitem', { name: 'Mover a otro bloque' }));
       const targets = await screen.findByRole('menu', {
@@ -674,8 +706,8 @@ describe('BlocksPage', () => {
     it('does not offer a block that has the exercise already', async () => {
       await renderBlocks(DAW);
 
-      await menu(
-        'Acciones de «Buscar la primera aparición de un valor»',
+      await exerciseMenu(
+        'Buscar la primera aparición de un valor',
         'Mover a otro bloque',
         'Tema 4: Cadenas y formato',
       );
@@ -773,26 +805,29 @@ describe('BlocksPage', () => {
 
     it('hides an exercise from the students, and goes back if the server says no', async () => {
       const harness = await renderBlocks(DAW);
-      const hide = 'Ocultar «Contar vocales en una cadena» a los alumnos';
+      const topic = 'Tema 4: Cadenas y formato';
 
-      await userEvent.click(screen.getByRole('button', { name: hide }));
+      await userEvent.click(
+        blockButton(topic, 'Ocultar «Contar vocales en una cadena» a los alumnos'),
+      );
       await settle(harness);
-      const show = screen.getByRole('button', {
-        name: 'Mostrar «Contar vocales en una cadena» a los alumnos',
-      });
+      const show = blockButton(topic, 'Mostrar «Contar vocales en una cadena» a los alumnos');
       expect(show.getAttribute('aria-pressed')).toBe('true');
 
       TestBed.inject(MockNetwork).failNextRequest('unknown');
       await userEvent.click(show);
       await settle(harness);
-      expect(screen.getByRole('button', { name: /Mostrar «Contar vocales/ })).toBeTruthy();
+      expect(blockButton(topic, /Mostrar «Contar vocales/)).toBeTruthy();
       expect(snack).toHaveBeenCalledWith('No se ha podido guardar. Inténtalo de nuevo.');
     });
 
     it('chooses, keeps and removes the due date of an exercise', async () => {
       const harness = await renderBlocks(DAW);
       const button = () =>
-        screen.getByRole('button', { name: /^Fecha de entrega de «Contar vocales en una cadena»/ });
+        blockButton(
+          'Tema 4: Cadenas y formato',
+          /^Fecha de entrega de «Contar vocales en una cadena»/,
+        );
 
       await userEvent.click(button());
       let dialog = await openDialog();
@@ -827,10 +862,7 @@ describe('BlocksPage', () => {
     it('gives every exercise of a block the same due date, or removes them all', async () => {
       const harness = await renderBlocks(DAW);
 
-      await menu(
-        'Acciones del bloque «Tema 4: Cadenas y formato»',
-        'Fecha de entrega para todo el bloque',
-      );
+      await blockMenu('Tema 4: Cadenas y formato', 'Fecha de entrega para todo el bloque');
       let dialog = await openDialog();
       expect(text(dialog)).toContain('Todos los ejercicios de «Tema 4: Cadenas y formato»');
       const day = within(dialog).getByRole('textbox', { name: 'Día' });
@@ -844,10 +876,7 @@ describe('BlocksPage', () => {
       expect(dates.every((date) => /1 dic/.test(date))).toBe(true);
       expect(snack).toHaveBeenCalledWith('Fecha de entrega guardada en todo el bloque');
 
-      await menu(
-        'Acciones del bloque «Tema 4: Cadenas y formato»',
-        'Fecha de entrega para todo el bloque',
-      );
+      await blockMenu('Tema 4: Cadenas y formato', 'Fecha de entrega para todo el bloque');
       dialog = await openDialog();
       await userEvent.click(within(dialog).getByRole('button', { name: 'Quitar la fecha' }));
       await closed(harness);
@@ -855,16 +884,16 @@ describe('BlocksPage', () => {
 
       // Mixed dates start the dialog empty, and cancelling changes nothing
       await userEvent.click(
-        screen.getByRole('button', { name: /^Fecha de entrega de «Contar vocales en una cadena»/ }),
+        blockButton(
+          'Tema 4: Cadenas y formato',
+          /^Fecha de entrega de «Contar vocales en una cadena»/,
+        ),
       );
       dialog = await openDialog();
       await userEvent.type(within(dialog).getByRole('textbox', { name: 'Día' }), '2/12/2026');
       await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }));
       await closed(harness);
-      await menu(
-        'Acciones del bloque «Tema 4: Cadenas y formato»',
-        'Fecha de entrega para todo el bloque',
-      );
+      await blockMenu('Tema 4: Cadenas y formato', 'Fecha de entrega para todo el bloque');
       dialog = await openDialog();
       expect((within(dialog).getByRole('textbox', { name: 'Día' }) as HTMLInputElement).value).toBe(
         '',
@@ -891,7 +920,7 @@ describe('BlocksPage', () => {
           }) as never,
       );
 
-      await menu('Acciones de «Invertir un vector»', 'Quitar del bloque', 'Repaso final');
+      await exerciseMenu('Invertir un vector', 'Quitar del bloque', 'Repaso final');
       await settle(harness);
       expect(exercisesOf('Repaso final')).toEqual(['Buscar la primera aparición de un valor']);
       expect(snack).toHaveBeenCalledWith('«Invertir un vector» quitado del bloque', 'Deshacer');
@@ -926,8 +955,8 @@ describe('BlocksPage', () => {
           }) as never,
       );
 
-      await menu(
-        'Acciones de «Buscar la primera aparición de un valor»',
+      await exerciseMenu(
+        'Buscar la primera aparición de un valor',
         'Quitar del bloque',
         'Repaso final',
       );
@@ -936,8 +965,8 @@ describe('BlocksPage', () => {
       await settle(harness);
       expect(exercisesOf('Repaso final')[1]).toBe('Buscar la primera aparición de un valor');
 
-      await menu(
-        'Acciones de «Buscar la primera aparición de un valor»',
+      await exerciseMenu(
+        'Buscar la primera aparición de un valor',
         'Quitar del bloque',
         'Repaso final',
       );
@@ -952,7 +981,7 @@ describe('BlocksPage', () => {
       const harness = await renderBlocks(DAW);
 
       await userEvent.click(
-        screen.getAllByRole('button', { name: 'Acciones de «Contar números pares»' })[0],
+        blockButton('Tema 1: Bucles y condicionales', 'Acciones de «Contar números pares»'),
       );
       const blocked = await screen.findByRole('menuitem', {
         name: 'Quitar (ya tiene intentos: ocúltalo)',
@@ -961,7 +990,7 @@ describe('BlocksPage', () => {
       await userEvent.keyboard('{Escape}');
 
       TestBed.inject(MockNetwork).failNextRequest('invalid');
-      await menu('Acciones de «Invertir un vector»', 'Quitar del bloque', 'Repaso final');
+      await exerciseMenu('Invertir un vector', 'Quitar del bloque', 'Repaso final');
       await settle(harness);
       expect(snack).toHaveBeenCalledWith(
         'No se ha podido quitar: puede que alguien acabe de empezarlo.',
@@ -984,7 +1013,7 @@ describe('BlocksPage', () => {
         ]),
       );
 
-      await menu('Acciones del bloque «Repaso final»', 'Añadir ejercicios');
+      await blockMenu('Repaso final', 'Añadir ejercicios');
       const dialog = await openDialog();
       await settle(harness);
       expect(text(dialog)).toContain('Ya está en el bloque');
@@ -1010,7 +1039,7 @@ describe('BlocksPage', () => {
       const harness = await renderBlocks(DAW);
 
       TestBed.inject(MockNetwork).failNextRequest('unknown');
-      await menu('Acciones del bloque «Repaso final»', 'Añadir ejercicios');
+      await blockMenu('Repaso final', 'Añadir ejercicios');
       const dialog = await openDialog();
       await settle(harness);
       await userEvent.click(within(dialog).getByRole('button', { name: 'Reintentar' }));
@@ -1044,7 +1073,7 @@ describe('BlocksPage', () => {
     it('asks for the day a block opens when only its time is given', async () => {
       const harness = await renderBlocks(DAW);
 
-      await menu('Acciones del bloque «Repaso final»', 'Editar el bloque');
+      await blockMenu('Repaso final', 'Editar el bloque');
       const dialog = await openDialog();
       // Typed without a click, which would open the list of times
       within(dialog).getByRole('combobox', { name: 'Hora' }).focus();
@@ -1061,7 +1090,10 @@ describe('BlocksPage', () => {
 
       // One without a date yet
       await userEvent.click(
-        screen.getAllByRole('button', { name: /^Fecha de entrega de «Contar números pares»/ })[0],
+        blockButton(
+          'Tema 1: Bucles y condicionales',
+          /^Fecha de entrega de «Contar números pares»/,
+        ),
       );
       const dialog = await openDialog();
       await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }));
@@ -1400,10 +1432,17 @@ describe('BlocksPage', () => {
       return screen.getByRole('checkbox', { name: `Marcar «${title}» para borrarlo` });
     }
 
+    /** The bar of the blocks marked, whose buttons are looked for there, as in blockButton(). */
+    function toolbar(): HTMLElement {
+      return screen.getByRole('toolbar', { name: 'Borrar varios bloques' });
+    }
+
+    function toolbarButton(name: string): HTMLElement {
+      return within(toolbar()).getByRole('button', { name });
+    }
+
     function marked(): string {
-      return text(
-        screen.getByRole('toolbar', { name: 'Borrar varios bloques' }).querySelector('span'),
-      );
+      return text(toolbar().querySelector('span'));
     }
 
     it('marks only what nobody started, and deletes it after asking', async () => {
@@ -1412,15 +1451,15 @@ describe('BlocksPage', () => {
 
       expect(screen.queryByRole('button', { name: 'Nuevo bloque' })).toBeNull();
       expect(marked()).toBe('Marca los bloques que quieras borrar');
-      expect(screen.getByRole('button', { name: 'Borrar' }).hasAttribute('disabled')).toBe(true);
+      expect(toolbarButton('Borrar').hasAttribute('disabled')).toBe(true);
       expect(box('Tema 1: Bucles y condicionales').disabled).toBe(true);
       const free = screen
         .getAllByRole('checkbox')
         .filter((input) => !(input as HTMLInputElement).disabled);
 
-      await userEvent.click(screen.getByRole('button', { name: 'Marcar los no empezados' }));
+      await userEvent.click(toolbarButton('Marcar los no empezados'));
       expect(marked()).toBe(`${free.length} bloques marcados`);
-      await userEvent.click(screen.getByRole('button', { name: 'Desmarcar todos' }));
+      await userEvent.click(toolbarButton('Desmarcar todos'));
       expect(marked()).toBe('Marca los bloques que quieras borrar');
 
       await userEvent.click(box('Repaso final'));
@@ -1429,7 +1468,7 @@ describe('BlocksPage', () => {
       await userEvent.click(free.find((input) => input !== box('Repaso final'))!);
       expect(marked()).toBe('1 bloque marcado');
 
-      await userEvent.click(screen.getByRole('button', { name: 'Borrar 1' }));
+      await userEvent.click(toolbarButton('Borrar 1'));
       const dialog = await openDialog();
       expect(text(within(dialog).getByRole('heading'))).toBe('¿Borrar 1 bloque?');
       await userEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
@@ -1444,10 +1483,10 @@ describe('BlocksPage', () => {
     it('asks for several, keeps what somebody started meanwhile, and says when it fails', async () => {
       const harness = await renderBlocks(DAW);
       await userEvent.click(screen.getByRole('button', { name: 'Seleccionar' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Marcar los no empezados' }));
+      await userEvent.click(toolbarButton('Marcar los no empezados'));
       const count = Number(marked().split(' ')[0]);
 
-      await userEvent.click(screen.getByRole('button', { name: `Borrar ${count}` }));
+      await userEvent.click(toolbarButton(`Borrar ${count}`));
       let dialog = await openDialog();
       expect(text(within(dialog).getByRole('heading'))).toBe(`¿Borrar ${count} bloques?`);
       await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
@@ -1455,7 +1494,7 @@ describe('BlocksPage', () => {
       expect(marked()).toBe(`${count} bloques marcados`);
 
       startAssignment(db, blockAssignmentId(DAW_HIDDEN_BLOCK, 5));
-      await userEvent.click(screen.getByRole('button', { name: `Borrar ${count}` }));
+      await userEvent.click(toolbarButton(`Borrar ${count}`));
       dialog = await openDialog();
       await userEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
       await closed(harness);
@@ -1465,9 +1504,9 @@ describe('BlocksPage', () => {
       expect(screen.getByRole('heading', { level: 2, name: 'Repaso final' })).toBeTruthy();
 
       await userEvent.click(screen.getByRole('button', { name: 'Seleccionar' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Marcar los no empezados' }));
+      await userEvent.click(toolbarButton('Marcar los no empezados'));
       expect(marked()).toBe('Marca los bloques que quieras borrar');
-      await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      await userEvent.click(toolbarButton('Cancelar'));
       expect(screen.getByRole('button', { name: 'Seleccionar' })).toBeTruthy();
     });
 
@@ -1475,7 +1514,7 @@ describe('BlocksPage', () => {
       const harness = await renderBlocks(DAW);
       await userEvent.click(screen.getByRole('button', { name: 'Seleccionar' }));
       await userEvent.click(box('Repaso final'));
-      await userEvent.click(screen.getByRole('button', { name: 'Borrar 1' }));
+      await userEvent.click(toolbarButton('Borrar 1'));
       const dialog = await openDialog();
       TestBed.inject(MockNetwork).failNextRequest('network');
       await userEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
