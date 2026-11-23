@@ -141,7 +141,8 @@ Detalle por pantalla:
 
 En **negrita**, lo que cambia respecto al modelo de la memoria.
 
-- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), **guide_state** (`jsonb`: la versión de la bienvenida que vio, las tareas guiadas hechas y si ocultó los primeros pasos; solo de cada usuario, 2.12, D-080), created_at, updated_at). El nombre evita la palabra reservada `user`.
+- `app_user` (id = `auth.users.id`, name, **email**, role `student`/`teacher`/**`admin`**, **status `active`/`disabled`**, **privacy_notice_seen_at** (cuándo vio el aviso de datos, D-040), created_at, updated_at). El nombre evita la palabra reservada `user`.
+- **`user_guide_state`** (user_id → app_user, state `jsonb`, updated_at; 2.12, D-080): la versión de la bienvenida que vio, las tareas guiadas hechas y si ocultó los primeros pasos. Solo la lee y escribe su dueño; por eso es una tabla aparte y no una columna de `app_user`, que leen su docente y la administración.
 - **`subject`** (id, name, source_locale, translations `jsonb` con el nombre en los otros idiomas, D-046): la asignatura («Programación básica»), que gestiona el administrador. No supone programación: el editor y la corrección son del ejercicio según su `kind` (D-029).
 - **`school_class`** (id, name, school_year, created_by → app_user, created_at; única por nombre sin mayúsculas y curso, D-081): la clase del centro («1.º DAW A · 2026/27»), una sola vez, compartida por los docentes que dan clase en ella.
 - **`class_member`** (class_id → school_class, user_id → app_user; clave por pareja, D-081): el alumnado de la clase, que toman sus grupos al crearse y al matricular en la clase.
@@ -538,20 +539,19 @@ abstract class SpeechService {
 
 Cada perfil aprende a usar la aplicación sobre la propia aplicación: la ayuda señala cada pieza en la pantalla real y acompaña al usuario mientras hace las tareas, con sus propios datos (pasos 7.0a, 7.0b y 7.0c; D-080). Las mismas tareas generan el manual de usuario (7.0c), así que la ayuda y el manual no se separan nunca.
 
-**Un único punto de entrada: el botón «Ayuda»** («?», solo icono, con su etiqueta y su _tooltip_) en la barra superior de los dos _layouts_, a la derecha, junto al menú del tema. Mientras quedan primeros pasos, lleva un punto de aviso, y su nombre accesible lo dice («Ayuda: 2 de 4 primeros pasos hechos»). No hay atajo de teclado global (D-080).
+**Un único punto de entrada: el botón «Ayuda»** («?», solo icono, con su etiqueta y su _tooltip_) en la barra superior de los dos _layouts_, a la derecha, el primero de sus botones (Ayuda, Tema, Idioma y el menú). Mientras quedan primeros pasos, lleva un punto de aviso, y su nombre accesible lo dice («Ayuda: 2 de 4 primeros pasos hechos»). No hay atajo de teclado global (D-080).
 
-**Bienvenida.** La primera vez que un usuario entra en su área (el alumno, después del aviso de datos), un recorrido de cinco pasos como mucho, que presenta la mascota, enseña dónde está cada cosa y acaba señalando el botón «Ayuda»: «Aquí tienes la ayuda siempre que la necesites». Se puede saltar en cualquier paso, y saltarla cuenta como vista.
+**Bienvenida.** La primera vez que un usuario entra en su área (el alumno, después del aviso de datos), un recorrido corto que presenta la mascota, enseña los botones de la barra seguidos y en su orden (Ayuda, Tema, Idioma y el menú; el tema y el idioma se pueden cambiar ahí mismo) y acaba donde empieza el trabajo, ofreciendo el primer paso pendiente («Siguiente: Empezar un ejercicio»). Se puede saltar en cualquier paso; cuenta como vista al acabar o al saltarla, así que quien cambia de idioma a mitad la vuelve a ver en el suyo (7.0a).
 
-- **Alumno:** el catálogo y sus pestañas, un ejercicio y su botón, los ajustes, «Ayuda».
-- **Docente:** el menú lateral, la sesión en vivo, los ejercicios, los grupos, «Ayuda».
-- **Administración** (también la cuenta del tribunal): usuarios, sistema, que entra además en todas las pantallas del docente, «Ayuda».
+- **Alumno** (siete pasos): saludo, la barra, sus asignaturas y por dónde seguir.
+- **Docente:** la barra, el menú lateral, la sesión en vivo, los ejercicios, los grupos.
+- **Administración** (también la cuenta del tribunal): además usuarios y sistema, y que entra en todas las pantallas del docente.
 
 **El panel de ayuda,** que abre el botón: un diálogo lateral (a pantalla completa en el móvil) que guarda el foco, se cierra con Esc y lo devuelve al botón. De arriba abajo:
 
-1. **Primeros pasos,** mientras no estén todos hechos: las tareas básicas del perfil con su estado y una barra de progreso («2 de 4»). Al terminarlas, la mascota lo celebra y la sección se recoge. También se puede ocultar con «Ya sé usarla».
-2. **¿Cómo se hace…?:** todas las tareas guiadas del perfil, primeros pasos incluidos, con un campo para filtrar (por título y palabras clave, sin distinguir acentos ni mayúsculas, en el idioma de la interfaz). Las de la pantalla abierta salen primero. Cada una lleva su título, una línea que dice qué consigue y una marca si ya se hizo; cualquiera se puede repetir.
-3. **Ayuda de esta pantalla:** enciende las balizas. Solo sale en las pantallas que las tienen.
-4. **Ver la bienvenida.**
+1. **Esta pantalla,** arriba: «Recorrer esta pantalla» (cada pieza, una a una, con los textos de sus balizas) y «Ayuda de esta pantalla» (las balizas), y «Ver la bienvenida».
+2. **Primeros pasos,** mientras no estén todos hechos: las tareas básicas del perfil con su estado y una barra de progreso («2 de 4»). Al terminarlas, la mascota lo celebra y la sección se recoge. También se puede ocultar con «Ya sé usarla».
+3. **¿Cómo se hace…?:** todas las tareas guiadas del perfil, con un campo para filtrar (por título y palabras clave, sin distinguir acentos ni mayúsculas, en el idioma de la interfaz). Las de la pantalla abierta salen primero. Cada una lleva su título, una línea que dice qué consigue y una marca si ya se hizo; cualquiera se puede repetir, y las que aún no se pueden hacer dicen por qué.
 
 **Tareas guiadas.** Una tarea es una secuencia de pasos sobre las pantallas reales:
 
@@ -570,7 +570,7 @@ Cada perfil aprende a usar la aplicación sobre la propia aplicación: la ayuda 
 | Docente        | Crear un grupo y matricular a su alumnado · Crear un bloque · Añadir un ejercicio al banco · Asignarlo al bloque · Seguir la clase en vivo | Preparar un curso nuevo (D-079) · Copiar los bloques de otro grupo · Poner una fecha de entrega · Ocultar un bloque o un ejercicio · Comprobar la solución de un ejercicio · Traducir un ejercicio · Probar un ejercicio como alumno · Ver el detalle de un intento · Leer el histórico de un bloque |
 | Administración | Dar de alta un usuario · Crear un grupo y matricular · Probar el proveedor de IA · Seguir la clase en vivo                                 | Cambiar el rol de una cuenta o desactivarla · Gestionar las asignaturas · Añadir un proveedor de respaldo · y todas las del docente                                                                                                                                                                  |
 
-**Balizas** («Ayuda de esta pantalla»): puntos animados junto a las piezas de la pantalla. Cada una es un botón («Ayuda: Ejecutar las pruebas») que abre la explicación de su pieza; la del editor explica también su atajo para ejecutar (Ctrl+Enter o ⌘+Enter). Se apagan con Esc, con «Ocultar la ayuda» o al cambiar de pantalla. Las llevan las pantallas con más piezas: catálogo, trabajo, en vivo, detalle del intento, ejercicios, grupos, histórico y sistema. Acceso, ajustes y datos registrados se explican solas.
+**Balizas** («Ayuda de esta pantalla»): puntos animados junto a las piezas de la pantalla. Cada una es un botón («Ayuda: Ejecutar las pruebas») que abre la explicación de su pieza; la del editor explica también su atajo para ejecutar (Ctrl+Enter o ⌘+Enter). Se apagan con Esc, con «Ocultar la ayuda» o al cambiar de pantalla. Todas las pantallas las llevan, en cada pieza (la barra incluida), salvo el acceso: lo que no se explica no se ve (7.0a, a petición del autor). No oscurecen la pantalla: es ayuda sobre la marcha, que deja verla entera y usarla.
 
 **Para todos:**
 
@@ -579,7 +579,7 @@ Cada perfil aprende a usar la aplicación sobre la propia aplicación: la ayuda 
 - **Sin animaciones** si el usuario las ha reducido (ajustes o `prefers-reduced-motion`): sin transiciones entre pasos ni pulso en las balizas.
 - **Tres idiomas,** como el resto de la interfaz, y con los colores del tema en claro y oscuro.
 
-**Lo que se guarda,** en `app_user.guide_state` (`jsonb`, solo de cada usuario, que su docente no lee): la versión de la bienvenida que vio, las tareas hechas con su fecha, por un identificador estable, y si ocultó los primeros pasos. Sirve para no repetir la ayuda, también en otro equipo. Una tarea nueva o renombrada no necesita migración: los identificadores que no se conocen se ignoran, y una bienvenida rehecha sube su versión y vuelve a salir una vez. La pantalla de datos registrados lo cuenta en una línea: «Qué ayuda has visto, solo para no repetírtela. Tu docente no lo ve».
+**Lo que se guarda,** en `user_guide_state` (`jsonb`, solo de cada usuario, que ni su docente ni la administración leen): la versión de la bienvenida que vio, las tareas hechas con su fecha, por un identificador estable, y si ocultó los primeros pasos. Sirve para no repetir la ayuda, también en otro equipo. Una tarea nueva o renombrada no necesita migración: los identificadores que no se conocen se ignoran, y una bienvenida rehecha sube su versión y vuelve a salir una vez. La pantalla de datos registrados lo cuenta en una línea: «Qué ayuda has visto, solo para no repetírtela. Tu docente no lo ve».
 
 ---
 
@@ -4420,8 +4420,8 @@ La ayuda guiada (7.0a, 7.0b y 7.0c) va antes del 7.1, para que sus e2e y axe ya 
   - **Su CSS,** con los tokens del tema, en `src/styles/guide.css` (D-039).
 - **Las tareas, como datos** (`GuideTask`: id estable, perfil, título, descripción y palabras clave con `$localize`, la pantalla donde empieza, los pasos y, si la hay, la condición de hecha por los datos). Las piezas se marcan con la directiva `GuideAnchor` (`[appGuideAnchor]="GUIDE_ANCHORS.newBlock"`), con los ids en una constante tipada, no con clases de estilo ni `data-testid`.
 - **`guide-progress.ts`,** funciones puras con TDD: el progreso de los primeros pasos, el orden del panel (las de la pantalla abierta primero), el filtro sin acentos y la mezcla de lo guardado con lo que dicen los datos.
-- **`GuideStore`** (en `core/guide/`, global): lee `guide_state` del usuario de `AuthStore` y lo escribe con `AuthService.saveGuideState()`, en las dos versiones, como el aviso de datos.
-- **Migración:** la columna `app_user.guide_state` (`jsonb`, por defecto `{}`, con una comprobación de forma y tamaño), que el usuario solo puede actualizar en su propia fila (privilegio por columna). Tests de pgTAP. Regenerar los tipos y la semilla.
+- **`GuideStore`** (en `core/guide/`, global): lee lo guardado con `AuthService.guideState()` y lo escribe con `AuthService.saveGuideState()`, en las dos versiones.
+- **Migración:** la tabla `user_guide_state` (`jsonb`, con una comprobación de forma y tamaño), que solo lee y escribe su dueño (hecho: una tabla y no una columna de `app_user`, que leen su docente y la administración; D-080). Tests de pgTAP. Regenerar los tipos.
 - **Botón «Ayuda» y panel** en los dos _layouts_, y la línea nueva en la pantalla de datos registrados. Al muestrario `/dev/ui`: el botón con y sin aviso, el panel sin empezar, a medias y terminado, un globo y una baliza abierta.
 - **Alumno:** la bienvenida (después del aviso de datos), sus primeros pasos, sus tareas de «¿Cómo se hace…?» y las balizas del catálogo y de la pantalla de trabajo.
 - **Textos** en los tres idiomas (`npm run i18n`).

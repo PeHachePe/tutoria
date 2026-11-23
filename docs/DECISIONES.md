@@ -2292,9 +2292,9 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
   - las etiquetas de dos de sus botones para el lector de pantalla están fijas en inglés y no se configuran;
   - no tiene filtro ni secciones;
   - su aspecto no es el de la aplicación.
-- **Lo visto y lo hecho, en el perfil** (`app_user.guide_state`, `jsonb`), no en `localStorage`:
+- **Lo visto y lo hecho, en el servidor** (`user_guide_state`, `jsonb`), no en `localStorage`:
   - la ayuda no se repite en otro equipo;
-  - una columna basta (no hace falta tabla nueva);
+  - una tabla de una fila por usuario, que solo lee y escribe su dueño. El plan decía una columna de `app_user`, pero esa fila la leen su docente y la administración (el `select *` de usuarios), y la pantalla de datos registrados dice «Tu docente no lo ve»: en el 7.0a se cambió a una tabla propia, con el visto bueno del autor;
   - `jsonb` con identificadores estables admite tareas nuevas sin migraciones, y una versión de la bienvenida permite volver a enseñarla si se rehace;
   - las tareas con datos se dan por hechas por esos datos, no por lo guardado.
 - **El manual sale de las tareas** (`npm run manual`, 7.0c): Playwright hace cada tarea y guarda el texto de cada globo con su captura. Así el manual no se desfasa de la aplicación, y de paso comprueba que todas las tareas siguen funcionando.
@@ -2316,7 +2316,17 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
   - Ctrl+K ya es un atajo del navegador (la barra de búsqueda en Chrome, Edge y Firefox), y quitárselo al usuario rompe un hábito suyo;
   - el filtro de «¿Cómo se hace…?» cubre lo que aportaría.
 
-**Por comprobar al empezar el 7.0a:** driver.js con los diálogos de Material, que tienen su propia trampa de foco y viven en `.cdk-overlay-container`: el foco, Esc y el orden de capas. Si no encajan, los pasos dentro de un diálogo se explican con un globo propio dentro del diálogo, y el resto no cambia.
+**Comprobado al empezar el 7.0a** (detalle en la ficha 13): driver.js encaja con los diálogos de Material y no hace falta el globo propio. Dos trampas de foco a la vez atascaban el tabulador, así que en los pasos dentro de un diálogo manda la del diálogo (`allowPageInteraction`) y driver.js lee el globo en su región `aria-live`; si el diálogo se cierra con Esc, la tarea vuelve al paso que lo abrió. Al construir salieron tres cosas más de driver.js: su contenedor de capas permitido tapaba los clics, se queda con los clics de los botones con sus clases (los propios llevan clases propias) y bloquea la pieza en los pasos que solo explican (los que la dejan usar lo dicen).
+
+**Lo que cambió en el 7.0a, a petición del autor al probarlo:**
+
+- **Todo explicado:** balizas en cada pieza de cada pantalla del alumno (la barra, los ajustes y los datos registrados incluidos) y «Recorrer esta pantalla», que pasa por todas ellas con los mismos textos; muchas más tareas en «¿Cómo se hace…?» (cada ajuste, la voz completa con su reconocimiento en el equipo, por qué falla una prueba, preguntar, ajustar la pantalla, cerrar sesión…). Los recorridos de pantalla, hechos de las balizas, también entran en el manual del 7.0c.
+- **La bienvenida enseña la barra seguida y en su orden** (Ayuda, Tema, Idioma, menú), con el tema y el idioma que se pueden cambiar ahí mismo, y acaba en «Por dónde seguir» con «Siguiente: Empezar un ejercicio». Tiene siete pasos, no cinco: los de la barra son cortos. Cuenta como vista al acabar, no al empezar, para que quien cambia de idioma la vea en el suyo.
+- **«Esta pantalla», arriba del panel:** el recorrido y las balizas son lo más útil donde se está.
+- **Menús y diálogos:** se resalta el menú o el diálogo entero, para que el globo no tape sus otras opciones (los intentos), y solo cuenta el clic en la opción de la tarea.
+- **Un interruptor que muestra más opciones** (la voz): el globo ofrece «Activar la voz» y sigue por ellas.
+- **Las balizas no oscurecen:** son ayuda sobre la marcha; van en la esquina donde empieza cada pieza, con un aro claro.
+- **El botón del docente y la administración,** con sus tareas en el 7.0b: con el panel vacío no serviría.
 
 **Consecuencias:**
 
