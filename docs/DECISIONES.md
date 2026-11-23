@@ -2760,3 +2760,40 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 **Aprobación:** propuesta. El autor pidió diagnosticar primero por qué eran lentos, arreglar la causa y subir el límite solo donde la espera fuera legítima. En la iteración 2 preguntó qué ganaba el CI con 2 workers en lugar de 3: nada, y vuelve a los de Vitest; aceptó también cerrar la fila del 1.10.
 
 ---
+
+## D-092 · El bocadillo y el atajo «Pregúntale al tutor»: junto a la llamada, lo visto por respuesta y el foco en la pestaña del móvil (23/11/2026, propuesta)
+
+**Contexto:** el 6.2d pone en pantalla lo que D-064 decidió para el tutor plegado: el bocadillo de dos estados y el atajo junto a los ejemplos que fallan. El plan de implementación del 17/11 lo dejaba casi todo atado; al leer el código y probarlo en el navegador salieron cinco cosas: el atajo al final de la fila quedaba bajo la mascota flotante, el foco no podía quedarse en el botón en el móvil, lo visto se contaba por número y fallaba al cambiar de ejercicio, la pregunta llevaba código que la burbuja del alumno enseñaba con sus comillas invertidas, y el bocadillo enseñaba la respuesta en bruto, bloques de código incluidos.
+
+**Decisión (cómo se usa):**
+
+- **El atajo va junto a la llamada** de cada ejemplo visible que falla (valor erróneo, error o tiempo agotado), no al final de la fila: ahí quedaba en la esquina de la mascota flotante y el bocadillo lo tapaba justo cuando el alumno querría preguntar por el ejemplo siguiente.
+- **La pregunta lleva la llamada y los valores como código:** «¿Por qué falla `sum([])`? Devuelve `NaN` y se espera `0`.». Si no cabe en una pregunta (500 caracteres), «¿Por qué falla el ejemplo N?»: el tutor ya tiene el código y la última ejecución.
+- **Las burbujas del alumno enseñan su código en monoespaciada,** como las respuestas, también en lo que escribe a mano.
+- **En el móvil, el foco pasa a la pestaña «Tutor»,** la que el alumno habría pulsado: Material deja inerte la pestaña del código, y un foco en un elemento inerte se pierde. En el escritorio se queda en el botón.
+- **El bocadillo enseña el texto de la respuesta sin sus bloques de código,** que no caben en dos líneas, y el error, en rojo y con su icono.
+- **«El tutor te escribe»** sustituye a «El tutor se acerca» en la etiqueta de las intervenciones (en inglés, «The tutor reaches out»; en catalán, «El tutor t'escriu»): se entiende leída en un chat y va en la línea del ajuste «El tutor puede escribirme por iniciativa propia».
+
+**Decisión (técnica):**
+
+- **`TutorBubble`** (`student/workspace/tutor/`) dibuja los tres estados y no anuncia nada: la región `aria-live` de `WorkspaceLayout` dice cada estado una vez. Su botón lleva el nombre explícito («Abrir el tutor: » y todo lo que dice), porque armado desde las piezas en línea del texto y del código perdía los espacios entre ellas en algunas herramientas de accesibilidad.
+- **Lo visto y lo cerrado, por el id de la respuesta** (`TutorStore.latestAnswerId`), no por cuántas han llegado: la pantalla se reutiliza al pasar de un ejercicio a otro, y con el número el punto y el bocadillo no salían en el siguiente hasta superar las respuestas vistas en el anterior. Era un fallo anterior al paso; un test lo confirmó con el código de antes.
+- **La pregunta del atajo deja su propio estado** (`foldedAsk`), que se olvida al cambiar de ejercicio y al ver el tutor; solo la respuesta de esa pregunta puede cambiarlo.
+- **`ask()` y `requestHint()` devuelven si la respuesta llegó entera** a la conversación (`false` si no se envió, falló, el tutor calló o se abrió otro ejercicio).
+- **`Reaction.reduced`:** `TutorStore` lo pone en la reacción de una intervención que no es un logro, y `ReactionOverlay` la dibuja reducida si el ajuste es «completas»; desactivadas, nada.
+- **`failureQuestion()`** (`code-zone/failure-question.ts`), una función pura con sus textos en los tres idiomas, que podrá reutilizar el atajo de la línea del error (fase 7).
+
+**Alternativas:**
+
+- **El atajo al final de la fila** (el plan): todos alineados, pero bajo la mascota flotante.
+- **Un botón con texto en cada fila:** más visible, pero con varios ejemplos fallando llena los resultados de botones iguales.
+- **Dejar el foco donde estaba en el móvil:** se perdía en un elemento inerte.
+- **Seguir contando las respuestas vistas** y reiniciar el número al cambiar de ejercicio: un estado más que sincronizar a mano, cuando el id ya distingue cada respuesta.
+
+**Consecuencias:**
+
+- D-064 queda implementada.
+- Ficha 04 (bocadillo, atajo, etiqueta y accesibilidad) y ficha 05 (el interruptor ya no dice «desde el paso 6.2»).
+- El atajo de la línea del error (fase 7) y las capturas del bocadillo (fila del 6.1a) siguen en `PENDIENTES.md`; el e2e, en `E2E-PENDIENTES.md`.
+
+**Aprobación:** el autor aprobó el plan con las cinco mejoras propuestas («Sí, adelante») y, tras verlo en el navegador con el atajo ya junto a la llamada y los valores como código, dio el visto bueno («Sí, sigue»). Lo técnico, por delegación del autor.

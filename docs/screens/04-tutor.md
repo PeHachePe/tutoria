@@ -1,6 +1,6 @@
 # 04 · Tutor
 
-Zona del tutor de `/alumno/ejercicio/:id` · Alumno · Capa 1 (las capas 3 y 4 añaden la voz y las intervenciones proactivas) · 3 h (paso 1.7), 1,5 h las reacciones (1.8), 6,5 h la voz (6.1a a 6.1c) y 4,5 h el tutor proactivo (6.2b y 6.2d) · D-033, D-035 y D-064 a D-067
+Zona del tutor de `/alumno/ejercicio/:id` · Alumno · Capa 1 (las capas 3 y 4 añaden la voz y las intervenciones proactivas) · 3 h (paso 1.7), 1,5 h las reacciones (1.8), 6,5 h la voz (6.1a a 6.1c) y 4,5 h el tutor proactivo (6.2b y 6.2d) · D-033, D-035, D-064 a D-067, D-088 y D-092
 
 ## Objetivo
 
@@ -25,8 +25,8 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - Referencia: prototipo (figura 17), donde el tutor ocupa la columna derecha con la mascota arriba; la voz llega en la capa 3 (6.1).
 - **Cabecera:** la mascota pequeña (en cuanto hay conversación), «Tutor» y el nivel de pista: tres escalones que se llenan y su nombre («Pista nivel 2 de 3 · Concepto», o «Sin pistas pedidas»).
 - **Conversación:**
-  - las preguntas del alumno a la derecha y las respuestas del tutor a la izquierda, cada una con su hora;
-  - antes de cada pista, la etiqueta «Pista · nivel N»; antes de una intervención por iniciativa del tutor, «El tutor se acerca»; cuando el alumno dice otra vez que está atascado («no sé», «no me acuerdo») y el servidor sube el nivel sin que pulse «Pedir pista», «Más ayuda · nivel N» (2.5d);
+  - las preguntas del alumno a la derecha y las respuestas del tutor a la izquierda, cada una con su hora; las dos con el código en línea en monoespaciada (6.2d);
+  - antes de cada pista, la etiqueta «Pista · nivel N»; antes de una intervención por iniciativa del tutor, «El tutor te escribe» (6.2d); cuando el alumno dice otra vez que está atascado («no sé», «no me acuerdo») y el servidor sube el nivel sin que pulse «Pedir pista», «Más ayuda · nivel N» (2.5d);
   - un separador con el día («Hoy» o la fecha) cuando cambia;
   - el código en línea de las respuestas, en monoespaciada, y los bloques de código aparte, con los colores del editor, su lenguaje y «Copiar» («Copiado» durante dos segundos, anunciado a los lectores de pantalla): el esqueleto vacío de la función y los ejemplos genéricos de sintaxis del catálogo, que escribe el servidor (2.5d). Cada línea se ve entera; si no cabe, el bloque se desplaza de lado, también con el teclado;
   - bajo una respuesta, lo que el tutor ha hecho con sus herramientas (2.5e, D-051): «Ha consultado tu progreso» si leyó datos del alumno antes de responder; lo que hizo al momento («He marcado la línea 3 del código», «Te señalo el ejemplo 2», «Tema oscuro» con «Deshacer»); y, para lo que cambia de página o la recarga, un botón («Abrir el siguiente ejercicio», «Ir a los ajustes», «Cambiar el idioma a inglés» con «La página se vuelve a cargar»). En el historial, lo que propuso («Te propuso: …»), sin volver a hacerlo;
@@ -37,10 +37,11 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Flotante** (con el código ampliado, en la tableta o por elección del alumno, D-033): la mascota abajo a la derecha. Al pulsarla, el tutor se abre en un panel sobre la esquina del código (24rem de ancho) y la mascota saca la lengua; en su cabecera están «Fijar el tutor a la derecha» (no en la tableta) y «Minimizar el tutor». Plegado, una respuesta nueva asoma en un bocadillo junto a la mascota, con un punto.
 - **Bocadillo de dos estados** (6.2d, D-064), solo con el tutor plegado:
   - **Pensando:** tres puntos y la mascota pensativa, al instante. Solo cuando el alumno ha preguntado sin abrir el tutor, con el atajo «Pregúntale al tutor»;
-  - **Respuesta:** las primeras palabras (dos líneas como mucho), con el punto en la mascota y «Cerrar el aviso». Se queda hasta que el alumno lo abre o lo cierra, o llega otra respuesta; cerrarlo deja el punto;
+  - **Respuesta:** las primeras palabras (dos líneas como mucho), sin los bloques de código y con el código en línea en monoespaciada, con el punto en la mascota y «Cerrar el aviso». Se queda hasta que el alumno lo abre o lo cierra, o llega otra respuesta; cerrarlo deja el punto;
   - una intervención del tutor por iniciativa propia entra directamente en «Respuesta»: si el tutor decide callar, un «pensando» sería una promesa sin cumplir;
-  - si la respuesta no llega, «No he podido responder. Ábreme para reintentar», que abre el tutor con su «Reintentar». Una intervención que falla no enseña nada.
-- **Atajo «Pregúntale al tutor»** (6.2d): un botón junto a cada ejemplo visible que falla en los resultados de la ejecución (ficha 03). Envía la pregunta de un clic con sus datos («¿Por qué falla `suma([1,2,3])`? Devuelve 5 y se espera 6»), en el nivel actual. Nunca hay avisos sueltos dentro del editor.
+  - si la respuesta no llega, «No he podido responder. Ábreme para reintentar» en rojo, con su icono, que abre el tutor con su «Reintentar». Una intervención que falla no enseña nada;
+  - con una llamada en marcha, la línea de la llamada ocupa su sitio, como antes.
+- **Atajo «Pregúntale al tutor»** (6.2d, D-092): un botón de icono junto a la llamada de cada ejemplo visible que falla en los resultados de la ejecución (ficha 03), por un valor erróneo, un error o tiempo agotado; no al final de la fila, donde quedaría bajo la mascota flotante. Envía la pregunta de un clic con sus datos como código («¿Por qué falla `sum([1, 2, 3])`? Devuelve `5` y se espera `6`.», «… Lanza el error «…» y se espera `0`.», «¿Por qué `sum([9])` no termina a tiempo? Se espera `9`.»), en el nivel actual. Si no cabe en una pregunta (500 caracteres), «¿Por qué falla el ejemplo N?». Nunca hay avisos sueltos dentro del editor.
 - **Móvil:** la pestaña «Tutor», a pantalla completa.
 - **Voz** (6.1, §2.11, D-066), solo con la voz activada en los ajustes:
   - **Escuchar** (6.1a): bajo cada respuesta del tutor, «Escuchar», que pasa a «Parar» mientras suena. Con «Leer las respuestas en voz alta» en los ajustes, las respuestas nuevas suenan solas. Mientras habla, la mascota mueve la lengua (también plegada) y la cabecera enseña «Hablando» con «Parar», para que se vea aunque la respuesta quede fuera de la vista. Sin voz elegida, habla con la más natural del navegador (D-078);
@@ -73,7 +74,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Abrir y minimizar** (flotante): la mascota lo abre con el foco en la pregunta; «Minimizar el tutor», la mascota o Esc lo pliegan y el foco vuelve a la mascota. El bocadillo de una respuesta nueva también lo abre.
 - **Móvil:** si llega una respuesta mientras el alumno está en otra pestaña, la pestaña «Tutor» muestra un punto hasta que la abre.
 - **El tutor se acerca** (6.2, §2.7): tras una ejecución en la que la misma prueba lleva tres fallos seguidos, tras cuatro minutos sin actividad o cuando el alumno supera una prueba que se le resistía (los umbrales son los del ejercicio). Con el tutor a la vista, el turno entra en la conversación con «El tutor se acerca»; plegado, asoma en el bocadillo; en el móvil, el punto de la pestaña. Nunca mueve el foco ni abre el tutor. No se acerca mientras el alumno escribe una pregunta, el tutor responde o hay una ejecución en curso, ni con el alumno fuera de la pestaña, ni antes de tres minutos desde su último turno, ni más de cinco veces por ejercicio para ayudar.
-- **Pregúntale al tutor** (atajo): con el tutor a la vista, la pregunta entra en la conversación como cualquier otra; plegado, el bocadillo pasa por «pensando» y después por la respuesta, y pulsarlo abre el tutor; en el móvil, cambia a la pestaña «Tutor», porque lo ha pedido el alumno. El foco se queda en el botón.
+- **Pregúntale al tutor** (atajo): con el tutor a la vista, la pregunta entra en la conversación como cualquier otra; plegado, el bocadillo pasa por «pensando» y después por la respuesta, y pulsarlo abre el tutor. El foco se queda en el botón. En el móvil, cambia a la pestaña «Tutor», porque lo ha pedido el alumno, y el foco pasa a esa pestaña: la del código queda inerte y no puede guardarlo.
 - **Cerrar el aviso:** quita el bocadillo y deja el punto en la mascota; el foco pasa a la mascota.
 - **Escuchar y Parar** (6.1a): una sola respuesta suena cada vez. Se calla con «Parar», al enviar otra pregunta, al cambiar de ejercicio y al ocultar la pestaña. El código de una respuesta no se lee: el tutor acaba diciendo qué deja en el chat, el botón por su nombre («Te dejo en el chat el botón Ejecutar las pruebas») o que hay código, con frases que se turnan (6.1c, iteración 2).
 - **Dictar** (6.1b): pulsar empieza y pulsar otra vez acaba; también Esc (que no pliega el tutor flotante), escribir en el campo, enviar, ocultar la pestaña, salir de la pantalla u 8 segundos de silencio. Empezar calla al tutor si estaba hablando, para que el micrófono no recoja su voz. Lo dictado se añade a lo ya escrito y nunca se envía solo: el alumno lo revisa y pulsa enviar (RF-08). Lo que se estaba entendiendo al parar se queda en el campo. El foco se queda en el campo.
@@ -96,7 +97,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - **Respondiendo:** tres puntos hasta que llega el texto y un cursor al final mientras sigue llegando; «Pedir pista» y enviar, deshabilitados (enfocables).
 - **Respuesta fallida:** aviso según el tipo de error (sin conexión, demasiadas preguntas, sesión caducada) con «Reintentar». Una intervención por iniciativa del tutor que falla, o que el tutor calla, no deja turno ni aviso.
 - **Proactividad desactivada** (ajustes): el tutor solo habla cuando le preguntan; apagarla tiene efecto al momento. El atajo y el bocadillo siguen igual.
-- **Atajo deshabilitado** (enfocable) mientras el tutor responde; no aparece con el intento entregado ni en las pruebas ocultas.
+- **Atajo deshabilitado** (enfocable) mientras el tutor responde; no aparece con el intento entregado, en las pruebas ocultas, en los ejemplos superados o sin ejecutar, ni con resultados de una versión anterior del código (sus datos ya no lo describen).
 - **Voz desactivada** (por defecto): ni «Escuchar», ni «Dictar», ni «Llamar al tutor»; la zona es la de siempre y no se carga nada de voz.
 - **Sin reconocimiento en el navegador:** solo «Escuchar». **Sin voces del idioma:** solo «Dictar», y la llamada no se ofrece.
 - **Micrófono sin permiso, sin micrófono o servicio caído:** un aviso junto al campo, con qué hacer, y lo escrito intacto. En una llamada, además, cuelga.
@@ -115,7 +116,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - Los botones deshabilitados siguen enfocables (`disabledInteractive`).
 - La pestaña con aviso se llama «Tutor, respuesta nueva».
 - La mascota flotante es un botón «Abrir el tutor» / «Cerrar el tutor» con `aria-expanded` y `aria-controls` al panel. Plegado, la respuesta nueva se anuncia con su propia región `aria-live`, porque la del panel no está en la página.
-- El bocadillo no roba el foco en ninguno de sus estados. «Pensando» se anuncia una vez («El tutor está pensando…») y la respuesta, una vez y completa, en esa misma región (`polite`): una intervención nunca interrumpe al lector de pantalla. El bocadillo es un botón «Abrir el tutor: » seguido de sus primeras palabras, y «Cerrar el aviso», otro botón, los dos alcanzables con el teclado después de la mascota.
+- El bocadillo no roba el foco en ninguno de sus estados. «Pensando» se anuncia una vez («El tutor está pensando…») y la respuesta, una vez y completa, en esa misma región (`polite`): una intervención nunca interrumpe al lector de pantalla. El bocadillo es un botón «Abrir el tutor: » seguido de lo que dice (su nombre va explícito, para que no se pierdan los espacios entre el texto y el código), y «Cerrar el aviso», otro botón, los dos alcanzables con el teclado después de la mascota. «Pensando» no tiene botones: la mascota abre el tutor.
 - El atajo se llama «Pregúntale al tutor por qué falla el ejemplo N», para distinguir los de cada fila.
 - La voz no sustituye a nada: todo lo que el tutor dice está escrito y todo lo que se puede hacer hablando se puede hacer con el teclado (RF-08). Las regiones `aria-live` siguen igual con la voz activada; los ajustes avisan de que con un lector de pantalla no hace falta activarla.
 - «Dictar» es un botón conmutador (`aria-pressed`) y «Te escucho…» se anuncia una vez. El micrófono abierto se ve siempre con icono y texto, no solo con color.
@@ -138,14 +139,14 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 - [ ] axe sin infracciones en claro y oscuro, con conversación, vacía, cargando, con error y entregada.
 - [x] «¿Cuántos me quedan?» responde con los datos del alumno y dice «Ha consultado tu progreso»; «pon el modo oscuro» lo aplica con «Deshacer»; «ponme el siguiente» deja el botón (2.5e).
 - [x] «Arréglame el código» con un `retrun` deja «Aplicar la corrección» con «Línea 5: retrun → return»; «formatéalo», «ejecuta las pruebas» y «entrégalo» dejan su botón y dicen qué pasó; sin despiste, no hay arreglo (2.5f, con datos simulados).
-- [x] Tres ejecuciones seguidas con la misma prueba fallando traen una intervención con «El tutor se acerca»; no se repite hasta otros tres fallos ni antes de tres minutos, y recargar no la repite (6.2b).
+- [x] Tres ejecuciones seguidas con la misma prueba fallando traen una intervención con «El tutor te escribe»; no se repite hasta otros tres fallos ni antes de tres minutos, y recargar no la repite (6.2b).
 - [x] Cuatro minutos sin actividad traen una sola intervención, y ninguna con el alumno fuera de la pestaña, con una pregunta a medio escribir o con la proactividad desactivada (6.2b).
 - [x] Superar una prueba que llevaba tres fallos trae una felicitación, sin esperar al cooldown (6.2b).
 - [x] Una intervención que el tutor calla o que falla no deja turno, aviso ni reacción (6.2b).
 - [ ] Una petición proactiva sin motivo real recibe silencio del servidor, sin llamada al modelo (6.2c).
-- [ ] Plegado, «Pregúntale al tutor» enseña «pensando» y después la respuesta sin mover el foco; una intervención entra sin «pensando»; «Cerrar el aviso» deja el punto (6.2d).
-- [ ] El atajo sale solo en los ejemplos visibles que fallan y en el móvil cambia a la pestaña «Tutor» (6.2d).
-- [ ] Una intervención de ayuda reacciona en reducido y un logro, completo (6.2d).
+- [x] Plegado, «Pregúntale al tutor» enseña «pensando» y después la respuesta sin mover el foco; una intervención entra sin «pensando»; «Cerrar el aviso» deja el punto (6.2d).
+- [x] El atajo sale solo en los ejemplos visibles que fallan y en el móvil cambia a la pestaña «Tutor» (6.2d).
+- [x] Una intervención de ayuda reacciona en reducido y un logro, completo (6.2d).
 - [ ] axe sin infracciones en claro y oscuro con el bocadillo en «pensando», con respuesta y con error (6.2d).
 - [x] Con la voz activada, «Escuchar» dice la respuesta frase a frase sin leer el código, con la voz elegida o la más natural, y «Parar» (bajo la respuesta o en la cabecera) la calla (6.1a).
 - [x] Con la voz desactivada no aparece ningún control de voz ni se descarga su código (6.1a).
@@ -159,6 +160,7 @@ Que el alumno pida ayuda al tutor por escrito y reciba pistas graduadas en tres 
 ## Fuera de alcance
 
 - Los ajustes de las reacciones (modo y emojis 3D) en la pantalla de ajustes (1.9): hasta entonces se cambian en el muestrario.
+- Las capturas del bocadillo en sus estados: el script de capturas solo carga la página (`PENDIENTES.md`, fila del 6.1a). Están en el muestrario (`/dev/ui`, «Bocadillo del tutor»).
 - La voz llega en el 6.1a (escuchar), el 6.1b (dictar) y el 6.1c (llamada); las órdenes de voz («cuelga», «repite») y resaltar la frase que se está diciendo quedan en `PENDIENTES.md`. Las intervenciones proactivas llegan en el 6.2b (lógica), el 6.2c (servidor) y el 6.2d (bocadillo y atajo). La conversación ya muestra las de las fixtures.
 - El atajo «Pregúntale al tutor» en la línea del error del editor: fase 7 (`PENDIENTES.md`).
 - El streaming real (2.4, D-017): el tutor simulado ya escribe poco a poco y el cliente no cambiará.

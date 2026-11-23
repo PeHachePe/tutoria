@@ -376,7 +376,7 @@ El tutor se acerca sin que se lo pidan cuando hay una señal clara, y siempre en
   - `achievement`: qué prueba y tras cuántos fallos. Una frase que celebra el esfuerzo y nombra lo conseguido, sin pistas ni peros, con emoción `celebration`;
   - en todas: nadie le ha preguntado, así que es breve, no repite lo que ya dijo y calla (`message` vacío) si su última respuesta trataba de lo mismo o no tiene nada nuevo. Sin bromas. Reacciones: `eyes` o `empathy` ante los fallos, `sleepy` ante el parón y las de celebración en el logro.
 - **Silencio:** si el modelo calla (`silent`), el servidor rechaza el motivo o la petición falla (también con 429), la aplicación no muestra nada.
-- **En pantalla** (ficha 04): con el tutor a la vista, el turno entra en la conversación con «El tutor se acerca»; plegado, asoma en el bocadillo de la mascota, sin mover el foco. La reacción de una intervención de ayuda sale reducida; la de un logro, completa.
+- **En pantalla** (ficha 04): con el tutor a la vista, el turno entra en la conversación con «El tutor te escribe»; plegado, asoma en el bocadillo de la mascota, sin mover el foco. La reacción de una intervención de ayuda sale reducida; la de un logro, completa.
 - El alumno puede desactivar la proactividad en sus ajustes, con efecto al momento.
 
 ### 2.8 Eventos de proceso
@@ -4336,6 +4336,8 @@ Tests, en este orden:
 🧪 Por rol y texto: los dos estados del bocadillo y su anuncio único; la intervención que entra sin «pensando»; el foco que no se mueve; cerrar el aviso; el error; el atajo solo en ejemplos visibles que fallan, deshabilitado mientras el tutor responde y ausente con el intento entregado; la reacción reducida. axe en claro y oscuro con el bocadillo en cada estado. Capturas con `npm run screenshots -- 6.2d tutor`.
 🧪 e2e (a `E2E-PENDIENTES.md`): tres ejecuciones fallidas seguidas con el tutor plegado hacen asomar el bocadillo, y con la proactividad desactivada no.
 Commit: `feat(tutor): two-state bubble and ask-the-tutor shortcut (step 6.2d)`.
+
+**Hecho (23/11/2026, D-092).** Cambios sobre el plan de abajo: el atajo va junto a la llamada y no al final de la fila (ahí quedaba bajo la mascota flotante y el bocadillo lo tapaba); la pregunta lleva también los valores como código, y las burbujas del alumno enseñan el código en monoespaciada; en el móvil, el foco pasa a la pestaña «Tutor», porque la del código queda inerte; lo visto y lo cerrado se guardan por el id de la respuesta (con el número, el punto no salía en el ejercicio siguiente, un fallo anterior); la pregunta del atajo se olvida al cambiar de ejercicio; el bocadillo enseña la respuesta sin sus bloques de código y su botón lleva el nombre explícito; «El tutor se acerca» pasa a «El tutor te escribe» (fila del 6.2c de `PENDIENTES.md`). El motivo en la línea temporal del docente sigue en `PENDIENTES.md` (fase 7).
 
 **Plan de implementación del 6.2d** (17/11/2026; necesita el 6.2b hecho)
 
