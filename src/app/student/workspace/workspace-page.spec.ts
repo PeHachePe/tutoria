@@ -1005,6 +1005,31 @@ describe('WorkspacePage', () => {
       expect(text(tutorTab())).toBe('Tutor');
     });
 
+    it('marks the answers of the next exercise too, as the screen stays when it opens (6.2d)', async () => {
+      const next = detailOf(1);
+      const isNext = (assignmentId: string) => assignmentId === next.assignmentId;
+      const { fixture } = await renderPage({
+        compact: true,
+        getDetail: (assignmentId) => Promise.resolve(isNext(assignmentId) ? next : SUM),
+        openOrCreate: (assignmentId) =>
+          Promise.resolve(attemptOf(isNext(assignmentId) ? next.exercise.id : SUM.exercise.id)),
+      });
+      const user = userEvent.setup();
+      const tutor = TestBed.inject(TutorStore);
+      await user.click(tutorTab());
+      await tutor.requestHint();
+      await fixture.whenStable();
+      await user.click(screen.getByRole('tab', { name: 'Código' }));
+
+      fixture.componentRef.setInput('id', next.assignmentId);
+      await fixture.whenStable();
+      await vi.waitFor(() => expect(tutor.canAsk()).toBe(true));
+      await tutor.requestHint();
+      await fixture.whenStable();
+
+      expect(screen.getByRole('tab', { name: 'Tutor, respuesta nueva' })).toBe(tutorTab());
+    });
+
     it('does not mark the answers read in the tab itself', async () => {
       const { fixture } = await renderPage({ compact: true });
       await userEvent.setup().click(tutorTab());
@@ -1119,7 +1144,7 @@ describe('WorkspacePage', () => {
 
       await TestBed.inject(TutorStore).requestHint();
       await fixture.whenStable();
-      const bubble = screen.getByRole('button', { name: 'Mira el bucle.' });
+      const bubble = screen.getByRole('button', { name: 'Abrir el tutor: Mira el bucle.' });
       const announced = [...document.querySelectorAll('[aria-live="polite"]')].map((live) =>
         live.textContent?.trim(),
       );
@@ -1128,7 +1153,7 @@ describe('WorkspacePage', () => {
       await userEvent.setup().click(bubble);
       await fixture.whenStable();
       expect(screen.getByRole('region', { name: 'Tutor' })).toBeTruthy();
-      expect(screen.queryByRole('button', { name: 'Mira el bucle.' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /^Abrir el tutor: / })).toBeNull();
     });
 
     it('moves the tongue of the folded mascot while the tutor speaks', async () => {
@@ -1222,7 +1247,193 @@ describe('WorkspacePage', () => {
 
       await expand();
 
-      expect(screen.queryByRole('button', { name: 'Mira el bucle.' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /^Abrir el tutor: / })).toBeNull();
+    });
+
+    describe('its bubble and «Pregúntale al tutor» (6.2d)', () => {
+      const QUESTION = '¿Por qué falla `sum([])`? Devuelve `NaN` y se espera `0`.';
+      const shortcut = () =>
+        screen.getByRole('button', { name: 'Pregúntale al tutor por qué falla el ejemplo 3' });
+      const announced = () =>
+        [...document.querySelectorAll('[aria-live="polite"]')].map((live) =>
+          live.textContent?.trim(),
+        );
+      const dot = () => mascot().querySelector('.bg-primary');
+
+      /** The tutor's answer waits for the test: the bubble can be seen thinking. */
+      function answerLater(answer: () => AsyncIterable<TutorEvent> = tutorAnswer) {
+        let release!: () => void;
+        const released = new Promise<void>((resolve) => (release = resolve));
+        const ask = vi.spyOn(TestBed.inject(TutorService), 'ask');
+        ask.mockImplementationOnce(async function* () {
+          await released;
+          yield* answer();
+        });
+        return { ask, release };
+      }
+
+      async function runFolded() {
+        const page = await renderPage();
+        await expand();
+        await userEvent.setup().click(screen.getByRole('button', { name: /Ejecutar pruebas/ }));
+        await page.fixture.whenStable();
+        return page;
+      }
+
+      it('thinks from the moment it asks and then shows the answer, never moving the focus', async () => {
+        const { fixture } = await runFolded();
+        const { ask, release } = answerLater();
+
+        await userEvent.setup().click(shortcut());
+        await fixture.whenStable();
+        expect(ask).toHaveBeenCalledWith(
+          expect.objectContaining({ kind: 'question', message: QUESTION }),
+        );
+        expect(announced()).toContain('El tutor está pensando…');
+        expect(screen.queryByRole('button', { name: /^Abrir el tutor: / })).toBeNull();
+        expect(mascot().querySelector('app-mascot')?.classList).toContain('mascot-thinking');
+        expect(document.activeElement).toBe(shortcut());
+        // While the tutor answers, in reach but not pressable
+        expect(shortcut().getAttribute('aria-disabled')).toBe('true');
+
+        release();
+        await vi.waitFor(() => expect(announced()).toContain('Mira el bucle.'));
+        expect(announced()).not.toContain('El tutor está pensando…');
+        expect(screen.getByRole('button', { name: 'Abrir el tutor: Mira el bucle.' })).toBeTruthy();
+        expect(dot()).toBeTruthy();
+        expect(document.activeElement).toBe(shortcut());
+      });
+
+      it('lets the tutor step in with its answer alone, reacting in reduced', async () => {
+        const { fixture } = await renderPage();
+        await expand();
+        const { release } = answerLater();
+        const pieces = () =>
+          screen.getByTestId('reaction-overlay').querySelectorAll('.reaction-piece').length;
+
+        const stepping = TestBed.inject(TutorStore).intervene('failures');
+        await fixture.whenStable();
+        expect(announced()).not.toContain('El tutor está pensando…');
+        release();
+        await stepping;
+        await fixture.whenStable();
+
+        expect(screen.getByRole('button', { name: 'Abrir el tutor: Mira el bucle.' })).toBeTruthy();
+        expect(pieces()).toBe(1);
+      });
+
+      it('closes the notice, keeping the dot, and shows the next answer again', async () => {
+        const { fixture } = await renderPage();
+        await expand();
+        const user = userEvent.setup();
+        const tutor = TestBed.inject(TutorStore);
+        await tutor.requestHint();
+        await fixture.whenStable();
+
+        await user.click(screen.getByRole('button', { name: 'Cerrar el aviso' }));
+        await fixture.whenStable();
+        expect(screen.queryByRole('button', { name: /^Abrir el tutor: / })).toBeNull();
+        expect(announced()).not.toContain('Mira el bucle.');
+        expect(dot()).toBeTruthy();
+        expect(document.activeElement).toBe(mascot());
+
+        await tutor.requestHint();
+        await fixture.whenStable();
+        expect(screen.getByRole('button', { name: 'Abrir el tutor: Mira el bucle.' })).toBeTruthy();
+      });
+
+      it('says the answer did not arrive, and opens the tutor where it can be retried', async () => {
+        const { fixture } = await runFolded();
+        answerLater(() => ({
+          [Symbol.asyncIterator]: () => ({
+            next: () => Promise.reject(new DataError('network')),
+          }),
+        })).release();
+        const user = userEvent.setup();
+
+        await user.click(shortcut());
+        await vi.waitFor(() =>
+          expect(announced()).toContain('No he podido responder. Ábreme para reintentar'),
+        );
+
+        await user.click(
+          screen.getByRole('button', {
+            name: 'Abrir el tutor: No he podido responder. Ábreme para reintentar',
+          }),
+        );
+        await fixture.whenStable();
+        const tutor = screen.getByRole('region', { name: 'Tutor' });
+        expect(within(tutor).getByRole('button', { name: /Reintentar/ })).toBeTruthy();
+        // The question keeps its code as code
+        expect(text(tutor)).toContain(QUESTION.replaceAll('`', ''));
+        expect(within(tutor).getByText('sum([])').tagName).toBe('CODE');
+      });
+
+      it('leaves the bubble of the other exercise behind', async () => {
+        const next = detailOf(1);
+        const isNext = (assignmentId: string) => assignmentId === next.assignmentId;
+        const { fixture } = await renderPage({
+          getDetail: (assignmentId) => Promise.resolve(isNext(assignmentId) ? next : SUM),
+          openOrCreate: (assignmentId) =>
+            Promise.resolve(attemptOf(isNext(assignmentId) ? next.exercise.id : SUM.exercise.id)),
+        });
+        await expand();
+        await userEvent.setup().click(screen.getByRole('button', { name: /Ejecutar pruebas/ }));
+        await fixture.whenStable();
+        const { release } = answerLater(() => ({
+          [Symbol.asyncIterator]: () => ({
+            next: () => Promise.reject(new DataError('network')),
+          }),
+        }));
+        await userEvent.setup().click(shortcut());
+        await fixture.whenStable();
+
+        fixture.componentRef.setInput('id', next.assignmentId);
+        await fixture.whenStable();
+        release();
+        await fixture.whenStable();
+
+        expect(announced()).not.toContain('El tutor está pensando…');
+        expect(announced()).not.toContain('No he podido responder. Ábreme para reintentar');
+      });
+
+      it('asks in the conversation, with no bubble, when the tutor is in sight', async () => {
+        const { fixture } = await renderPage();
+        await userEvent.setup().click(screen.getByRole('button', { name: /Ejecutar pruebas/ }));
+        await fixture.whenStable();
+
+        await userEvent.setup().click(shortcut());
+        await fixture.whenStable();
+
+        const tutor = screen.getByRole('region', { name: 'Tutor' });
+        await vi.waitFor(() => expect(text(tutor)).toContain('Mira el bucle.'));
+        expect(within(tutor).getByText('NaN').tagName).toBe('CODE');
+        expect(screen.queryByRole('button', { name: /^Abrir el tutor: / })).toBeNull();
+        expect(document.activeElement).toBe(shortcut());
+      });
+
+      it('opens the tab of the tutor on a phone, with the focus on it', async () => {
+        const { fixture } = await renderPage({ compact: true });
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('tab', { name: 'Código' }));
+        await user.click(screen.getByRole('button', { name: /Ejecutar pruebas/ }));
+        await fixture.whenStable();
+
+        await user.click(shortcut());
+        await fixture.whenStable();
+
+        const tutorTab = screen.getByRole('tab', { name: 'Tutor' });
+        expect(tutorTab.getAttribute('aria-selected')).toBe('true');
+        expect(document.activeElement).toBe(tutorTab);
+      });
+
+      it('is not there once the attempt is submitted', async () => {
+        await renderPage({
+          openOrCreate: () => Promise.resolve(attemptOf(SUM.exercise.id, 'submitted')),
+        });
+
+        expect(screen.queryAllByRole('button', { name: /^Pregúntale al tutor/ })).toEqual([]);
+      });
     });
   });
 
@@ -1735,6 +1946,33 @@ describe('WorkspacePage', () => {
       await user.keyboard('{Escape}');
       await fixture.whenStable();
       expect(screen.queryByRole('region', { name: 'Tutor' })).toBeNull();
+    });
+
+    it('lets the line of the call say it is thinking, once, when the shortcut asks (6.2d)', async () => {
+      const { fixture } = await renderCalling();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Ampliar el código' }));
+      await user.click(screen.getByRole('button', { name: /Ejecutar pruebas/ }));
+      await fixture.whenStable();
+      let release!: () => void;
+      const released = new Promise<void>((resolve) => (release = resolve));
+      vi.spyOn(TestBed.inject(TutorService), 'ask').mockImplementationOnce(async function* () {
+        await released;
+        yield* tutorAnswer();
+      });
+
+      await user.click(
+        screen.getByRole('button', { name: 'Pregúntale al tutor por qué falla el ejemplo 3' }),
+      );
+      await fixture.whenStable();
+
+      const announced = [...document.querySelectorAll('[aria-live="polite"]')].map((live) =>
+        text(live),
+      );
+      expect(announced).toContain('Pensando…');
+      expect(announced).not.toContain('El tutor está pensando…');
+      release();
+      await fixture.whenStable();
     });
 
     it('says where the call is over the folded mascot, and hangs up from there', async () => {

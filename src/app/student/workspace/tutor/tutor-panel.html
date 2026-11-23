@@ -170,12 +170,13 @@
         <div class="flex animate-tutor-turn-in flex-col gap-1 motion-reduce:animate-none">
           @if (turn.studentMessage !== null) {
             <div class="flex max-w-[85%] flex-col items-end gap-0.5 self-end">
-              <p
-                class="rounded-2xl rounded-ee-sm bg-primary-container px-3 py-2 text-body-medium text-on-primary-container"
+              <!-- With its code as code, as the answers: «Pregúntale al tutor» names the call (6.2d) -->
+              <div
+                class="min-w-0 max-w-full rounded-2xl rounded-ee-sm bg-primary-container px-3 py-2 text-body-medium text-on-primary-container"
               >
                 <span class="sr-only" i18n="@@tutor.you">Tú:</span>
-                <span class="whitespace-pre-line">{{ turn.studentMessage }}</span>
-              </p>
+                <app-tutor-message [text]="turn.studentMessage" />
+              </div>
               <time
                 class="text-label-small text-on-surface-variant"
                 [attr.datetime]="turn.createdAt"
@@ -210,7 +211,7 @@
                 class="mt-1 inline-flex items-center gap-1 self-center rounded-full bg-secondary-container px-2.5 py-0.5 text-label-medium text-on-secondary-container"
               >
                 <mat-icon class="size-4! text-[1rem]!">waving_hand</mat-icon>
-                <span i18n="@@tutor.proactive">El tutor se acerca</span>
+                <span i18n="@@tutor.proactive">El tutor te escribe</span>
               </p>
             }
           }

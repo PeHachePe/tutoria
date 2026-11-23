@@ -46,6 +46,7 @@ import {
   StatementZone,
 } from './statement-zone/statement-zone';
 import { callMood, callShown } from './tutor/call-bar';
+import { TUTOR_BUBBLE_ERROR, TutorBubble, type TutorBubbleState } from './tutor/tutor-bubble';
 import { TutorPanel } from './tutor/tutor-panel';
 import { TutorSpeaker } from './tutor-speaker';
 import { type Pointer, TutorStore } from './tutor-store';
@@ -105,6 +106,7 @@ const TUTOR_TAB = TABS.indexOf('tutor');
     StatementZone,
     CodeZone,
     TutorPanel,
+    TutorBubble,
   ],
   templateUrl: './workspace-layout.html',
   host: {
@@ -226,6 +228,7 @@ export class WorkspaceLayout {
   /** The open floating tutor; the column one is not there while the tutor floats. */
   private readonly floatingPanel = viewChild<TutorPanel>('floatingPanel');
   private readonly injector = inject(Injector);
+  private readonly host: HTMLElement = inject(ElementRef).nativeElement;
 
   /**
    * Open, it sticks its tongue out, and pulls it back on closing (1.1b); it tilts its head while the
@@ -238,9 +241,6 @@ export class WorkspaceLayout {
     if (this.speaker?.speakingTurnId()) return 'speaking';
     return this.tutor.answering() ? 'thinking' : 'idle';
   });
-
-  /** The first words of the last answer, shown beside the folded mascot. */
-  protected readonly latestAnswer = this.tutor.announcement;
 
   /**
    * Folded, a line over the mascot says where the call is (2.11): what is being understood, the
@@ -261,10 +261,6 @@ export class WorkspaceLayout {
   });
 
   /**
-   * A dot (and, folded, a bubble) when an answer arrives while the tutor is out of sight: another
-   * tab on a phone, or the folded mascot. The student may look at the code while the tutor writes.
-   */
-  /**
    * On a phone, what the tutor marks or points at is shown: the code tab for its marks and the
    * failing test, the exercise for an example or the hidden checks (2.5e).
    */
@@ -283,17 +279,102 @@ export class WorkspaceLayout {
   });
   /** Where the tutor points, for the statement. */
   protected readonly pointer = this.tutor.pointer;
-  private readonly seenAnswers = signal(0);
+  /** The last answer the student had in sight, by its id: each exercise has its own (6.2d). */
+  private readonly seenAnswerId = signal<string | null>(null);
   private readonly tutorVisible = computed(() => {
     if (this.compact()) return this.selectedTab() === TUTOR_TAB;
     return !this.floatingTutor() || this.tutorOpen();
   });
-  protected readonly tutorUnread = computed(
-    () => !this.tutorVisible() && this.tutor.answerCount() > this.seenAnswers(),
-  );
+  /**
+   * A dot (and, folded, a bubble) when an answer arrives while the tutor is out of sight: another
+   * tab on a phone, or the folded mascot. The student may look at the code while the tutor writes.
+   */
+  protected readonly tutorUnread = computed(() => {
+    const latest = this.tutor.latestAnswerId();
+    return !this.tutorVisible() && latest !== null && latest !== this.seenAnswerId();
+  });
 
+  /**
+   * A question «Pregúntale al tutor» sent with the tutor folded (6.2d): thinking until its answer is
+   * whole, or failed. Another exercise, or the tutor in sight, leave it behind. Each question has its
+   * own, so a late answer only changes the state of the question it answers.
+   */
+  private readonly foldedAsk = linkedSignal<
+    string | undefined,
+    { readonly state: 'thinking' | 'failed' } | null
+  >({
+    source: () => this.store.attempt()?.id,
+    computation: () => null,
+  });
+  /** The answer whose bubble the student closed: its dot stays, and the next answer shows again. */
+  private readonly closedAnswerId = signal<string | null>(null);
+
+  /**
+   * The bubble beside the folded mascot (ficha 04, D-064): «pensando» from the moment the shortcut
+   * asks until the answer is whole, then the answer, or why it did not arrive. An intervention of the
+   * tutor goes straight to its answer: if it kept quiet, «pensando» would be a broken promise.
+   */
+  protected readonly bubble = computed<{
+    readonly state: TutorBubbleState;
+    readonly text: string;
+  } | null>(() => {
+    if (this.tutorVisible()) return null;
+    switch (this.foldedAsk()?.state) {
+      case 'thinking':
+        return { state: 'thinking', text: '' };
+      case 'failed':
+        return { state: 'error', text: '' };
+    }
+    return this.tutorUnread() && this.tutor.latestAnswerId() !== this.closedAnswerId()
+      ? { state: 'answer', text: this.tutor.announcement() }
+      : null;
+  });
+
+  /** What the folded tutor says to screen readers, once for each state of its bubble. */
+  protected readonly bubbleAnnouncement = computed(() => {
+    switch (this.bubble()?.state) {
+      case 'thinking':
+        // In a call, its line already says «Pensando…»
+        return this.callLine() ? '' : $localize`:@@tutor.bubble.thinking:El tutor está pensando…`;
+      case 'error':
+        return TUTOR_BUBBLE_ERROR;
+      case 'answer':
+        return this.tutor.announcement();
+      default:
+        return '';
+    }
+  });
+
+  /** The tutor came into sight, or went out of it: what it had is seen, and the bubble goes. */
   protected markAnswersSeen(): void {
-    this.seenAnswers.set(this.tutor.answerCount());
+    this.seenAnswerId.set(this.tutor.latestAnswerId());
+    this.foldedAsk.set(null);
+  }
+
+  /**
+   * «Pregúntale al tutor» (6.2d): the question goes in one click. On a phone, the student asked, so
+   * the tutor's tab opens, with the focus on it: the code tab goes inert and keeps no focus. Folded,
+   * the bubble thinks until the answer is whole. Otherwise the focus stays on the button.
+   */
+  protected async askFromResults(question: string): Promise<void> {
+    if (this.compact()) {
+      this.selectTab(TUTOR_TAB);
+      afterNextRender(
+        () => this.host.querySelectorAll<HTMLElement>('[role="tab"]')[TUTOR_TAB].focus(),
+        { injector: this.injector },
+      );
+    }
+    const asked = { state: 'thinking' } as const;
+    if (!this.tutorVisible()) this.foldedAsk.set(asked);
+    const answered = await this.tutor.ask(question);
+    if (this.foldedAsk() === asked) this.foldedAsk.set(answered ? null : { state: 'failed' });
+  }
+
+  /** «Cerrar el aviso»: the bubble goes, its dot stays, and the focus goes to the mascot. */
+  protected closeBubble(): void {
+    this.closedAnswerId.set(this.tutor.latestAnswerId());
+    this.foldedAsk.set(null);
+    afterNextRender(() => this.tutorToggle()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected selectTab(index: number): void {

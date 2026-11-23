@@ -237,6 +237,8 @@
     [functionName]="exercise()?.functionName ?? ''"
     [outdated]="store.runOutdated()"
     [pointer]="tutor.pointer()"
+    [tutorShortcut]="tutorShortcut()"
+    (askTutor)="askTutor.emit($event)"
   />
 } @else if (store.attempt() && !store.readonly()) {
   <p class="flex items-center gap-2 text-body-small text-on-surface-variant">

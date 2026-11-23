@@ -35,6 +35,7 @@ import { RunResults } from '../../student/workspace/code-zone/run-results';
 import { SaveIndicator } from '../../student/workspace/code-zone/save-indicator';
 import { AudioNotice } from '../../student/workspace/tutor/audio-notice';
 import { CallBar } from '../../student/workspace/tutor/call-bar';
+import { TutorBubble, type TutorBubbleState } from '../../student/workspace/tutor/tutor-bubble';
 import type { CallState } from '../../student/workspace/voice-call';
 import { TutorActions } from '../../student/workspace/tutor/tutor-actions';
 import { TutorMessage } from '../../shared/tutor-message/tutor-message';
@@ -123,6 +124,7 @@ import { ShowcaseTable } from './showcase-table';
     TutorMessage,
     TutorActions,
     AudioNotice,
+    TutorBubble,
     CallBar,
     RunResults,
     Splitter,
@@ -396,6 +398,26 @@ export class ShowcasePage {
   protected react(kind: ReactionKind): void {
     this.reaction.set({ id: crypto.randomUUID(), kind, intensity: this.reactionIntensity() });
   }
+
+  /** The tutor stepping in to help (6.2d): small, even at the top intensity. */
+  protected reactAsHelp(): void {
+    this.reaction.set({ id: crypto.randomUUID(), kind: 'eyes', intensity: 3, reduced: true });
+  }
+
+  /** The bubble of the folded tutor in each of its states (6.2d). */
+  protected readonly bubbleSamples: {
+    readonly name: string;
+    readonly state: TutorBubbleState;
+    readonly text: string;
+  }[] = [
+    { name: 'Pensando', state: 'thinking', text: '' },
+    {
+      name: 'Respuesta',
+      state: 'answer',
+      text: 'Fíjate en qué devuelve `fizzBuzz(0)`: ¿cuántas vueltas da tu bucle cuando `n` vale 0? Prueba a recorrerlo a mano.\n\n```js\nfor (let i = 1; i <= n; i++) {}\n```',
+    },
+    { name: 'Error', state: 'error', text: '' },
+  ];
 
   protected readonly dialogResult = signal<string | undefined>(undefined);
 

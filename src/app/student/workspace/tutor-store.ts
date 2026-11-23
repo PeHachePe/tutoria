@@ -174,8 +174,11 @@ export class TutorStore {
   private readonly freshAnswers = computed(() =>
     this.turnsState().filter((turn) => turn.fresh && turn.status === 'done'),
   );
-  /** Answers that arrived in this visit, so a tab can say there is a new one. */
-  readonly answerCount = computed(() => this.freshAnswers().length);
+  /**
+   * The last answer that arrived whole in this visit, so a tab or the folded mascot can say there is
+   * a new one: by its id, as each exercise has a conversation of its own (6.2d).
+   */
+  readonly latestAnswerId = computed(() => this.freshAnswers().at(-1)?.id ?? null);
   /** The last answer that arrived whole, read aloud once: never the chunks while they arrive. */
   readonly announcement = computed(() => this.freshAnswers().at(-1)?.answer ?? '');
   /**
@@ -205,27 +208,33 @@ export class TutorStore {
   /**
    * The emotion of the last answer that arrived whole, for the floating reactions (1.8). Its `meta`
    * comes first, but it plays at the end: an answer lost halfway or an intervention the tutor keeps
-   * to itself must not react. The past turns never do.
+   * to itself must not react. The past turns never do. The tutor stepping in to help, which the
+   * student did not ask for, reacts in reduced, so the screen does not fill up; an achievement, in
+   * full (6.2d).
    */
   readonly reaction = computed<Reaction | null>(
     () => {
       const last = this.freshAnswers().at(-1);
-      return last?.reaction && last.intensity
-        ? { id: last.id, kind: last.reaction, intensity: last.intensity }
-        : null;
+      if (!last?.reaction || !last.intensity) return null;
+      const reaction = { id: last.id, kind: last.reaction, intensity: last.intensity };
+      const helping = last.trigger === 'proactive' && last.reason !== 'achievement';
+      return helping ? { ...reaction, reduced: true } : reaction;
     },
     // The same answer is the same reaction: a new object for it would play it again
     { equal: (a, b) => a?.id === b?.id },
   );
 
-  /** Asks a question in the student's words. */
-  ask(message: string): Promise<void> {
+  /**
+   * Asks a question in the student's words. True once its answer is whole in the conversation; false
+   * if it was not sent, failed, the tutor kept quiet or another exercise was opened meanwhile.
+   */
+  ask(message: string): Promise<boolean> {
     const question = message.trim();
-    return question ? this.send('question', question) : Promise.resolve();
+    return question ? this.send('question', question) : Promise.resolve(false);
   }
 
-  /** Asks for a hint: the server raises the level (2.6). */
-  requestHint(): Promise<void> {
+  /** Asks for a hint: the server raises the level (2.6). True once its answer is whole, as `ask()`. */
+  requestHint(): Promise<boolean> {
     return this.send('hint');
   }
 
@@ -302,8 +311,7 @@ export class TutorStore {
     }
     if (!shown) return false;
     this.patch(id, () => ({ status: 'done' }));
-    await this.runWithoutWaiting(id);
-    return true;
+    return this.finish(id);
   }
 
   /** Marks lines of the code with a note, or clears them with none (2.5e). */
@@ -384,14 +392,15 @@ export class TutorStore {
    * Sends the request with the code as it is now, unsaved changes included, and writes the answer as
    * it arrives. Another exercise opened meanwhile has a conversation of its own, where this turn no
    * longer exists, so its late events change nothing. The id of the turn is the id of the request.
+   * True once the answer is whole in the conversation.
    */
   private async send(
     kind: TutorTrigger,
     message?: string,
     id: string = crypto.randomUUID(),
-  ): Promise<void> {
+  ): Promise<boolean> {
     const attempt = this.attemptStore.attempt();
-    if (!attempt || !this.canAsk()) return;
+    if (!attempt || !this.canAsk()) return false;
     this.turnsState.update((turns) => [...turns, newTurn(id, kind, message ?? null)]);
     const patch = (change: (turn: TutorTurn) => Partial<TutorTurn>) => this.patch(id, change);
 
@@ -437,9 +446,9 @@ export class TutorStore {
     } catch (error) {
       // What arrived of the answer is dropped: retrying asks again from the start
       patch(() => ({ status: 'failed', answer: '', error, actions: [], queried: [] }));
-      return;
+      return false;
     }
-    await this.runWithoutWaiting(id);
+    return this.finish(id);
   }
 
   /** Changes a turn, if it is still in the conversation: another exercise has its own. */
@@ -449,12 +458,18 @@ export class TutorStore {
     );
   }
 
-  /** Once the answer is whole, the actions that only change the screen run by themselves (2.5e). */
-  private async runWithoutWaiting(turnId: string): Promise<void> {
-    const actions = this.turnsState().find((turn) => turn.id === turnId)?.actions ?? [];
-    for (const [index, action] of actions.entries()) {
+  /**
+   * Once the answer is whole, the actions that only change the screen run by themselves (2.5e). True
+   * if the turn is in the conversation: not if the tutor kept quiet, or if another exercise has its
+   * own conversation now.
+   */
+  private async finish(turnId: string): Promise<boolean> {
+    const turn = this.turnsState().find(({ id }) => id === turnId);
+    if (!turn) return false;
+    for (const [index, action] of turn.actions.entries()) {
       if (!waitsForStudent(action.call)) await this.run(turnId, index, action.call);
     }
+    return true;
   }
 }
 

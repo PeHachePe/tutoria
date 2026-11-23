@@ -480,14 +480,16 @@ describe('TutorPanel', () => {
         interactionOf('proactive', 'Te veo atascado', { createdAt: LONG_AGO }),
         interactionOf('question', 'Piensa en el bucle', {
           createdAt: LONG_AGO,
-          studentMessage: '¿Qué falla?',
+          studentMessage: '¿Qué falla en `sum([])`?',
         }),
         interactionOf('hint', 'Revisa el acumulador', { hintLevel: 2 }),
       ],
     });
     const chat = within(conversation());
 
-    expect(chat.getByText('El tutor se acerca')).toBeTruthy();
+    expect(chat.getByText('El tutor te escribe')).toBeTruthy();
+    // The student's code shows as code too, as «Pregúntale al tutor» writes it (6.2d)
+    expect(chat.getByText('sum([])').tagName).toBe('CODE');
     expect(chat.getByText('Hoy')).toBeTruthy();
     expect(chat.getAllByText(/2026/)).toHaveLength(1);
     expect(chat.getAllByText('Tú:')).toHaveLength(1);

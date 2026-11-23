@@ -266,6 +266,18 @@ describe('ReactionOverlay', () => {
     expect(pieces()).toHaveLength(1);
   });
 
+  it('shows a single piece for a reaction that asks to be reduced, and none when turned off', async () => {
+    const { fixture, play } = await renderOverlay({ mode: 'full' });
+
+    await play({ ...party, reduced: true });
+    expect(pieces()).toHaveLength(1);
+    expect(pieces()[0].classList).toContain('reaction-beat');
+
+    fixture.componentRef.setInput('mode', 'off');
+    await play({ ...party, id: 'r2', reduced: true });
+    expect(pieces()).toHaveLength(1);
+  });
+
   it('only fades a single piece with reduced motion', async () => {
     reducedMotion = true;
     const { play } = await renderOverlay();

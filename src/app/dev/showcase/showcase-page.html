@@ -421,6 +421,40 @@
     </div>
   </section>
 
+  <section aria-labelledby="bubble-title" class="flex flex-col gap-3">
+    <h2 id="bubble-title" class="text-title-large">Bocadillo del tutor</h2>
+    <p class="text-body-medium text-on-surface-variant">
+      Con el tutor plegado (6.2d): «pensando» mientras responde a «Pregúntale al tutor», las
+      primeras palabras de una respuesta nueva (sin sus bloques de código) y el error, que abre el
+      tutor con «Reintentar». Una intervención de ayuda reacciona en reducido, sea cual sea su
+      intensidad.
+    </p>
+    <div class="grid gap-4 md:grid-cols-3">
+      @for (sample of bubbleSamples; track sample.state) {
+        <div class="flex flex-col gap-3 rounded-xl bg-panel p-4 shadow-sm">
+          <p class="text-label-large text-on-surface-variant">{{ sample.name }}</p>
+          <div class="flex flex-1 flex-col items-end justify-end gap-3">
+            <app-tutor-bubble [state]="sample.state" [text]="sample.text" />
+            <div
+              class="grid size-16 place-items-center rounded-full bg-primary-container shadow-lg"
+            >
+              <app-mascot
+                class="size-14"
+                [mood]="sample.state === 'thinking' ? 'thinking' : 'idle'"
+              />
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+    <div>
+      <button matButton="tonal" type="button" (click)="reactAsHelp()">
+        <mat-icon>visibility</mat-icon>
+        Intervención de ayuda: reacción reducida
+      </button>
+    </div>
+  </section>
+
   <section aria-labelledby="results-title" class="flex flex-col gap-3">
     <h2 id="results-title" class="text-title-large">Resultados de las pruebas</h2>
     <div class="flex flex-wrap items-center gap-2">
@@ -435,7 +469,8 @@
             class="rounded-lg border border-outline-variant p-3"
             [result]="sample.result"
             functionName="sum"
-            [outdated]="$first"
+            [outdated]="$index === 1"
+            tutorShortcut="enabled"
           />
         </div>
       }

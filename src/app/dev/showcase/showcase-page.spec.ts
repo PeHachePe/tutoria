@@ -63,6 +63,7 @@ describe('ShowcasePage', () => {
       'Progreso, avisos y diálogos',
       'Editor de código',
       'Llamada con el tutor',
+      'Bocadillo del tutor',
       'Resultados de las pruebas',
       'Panel en vivo',
       'Dónde está la clase',
@@ -257,6 +258,42 @@ describe('ShowcasePage', () => {
     ]);
     expect(cards[1].textContent).toContain('¿Por qué me da undefined');
     expect(cards[3].textContent).toContain('Fíjate en qué devuelve');
+  });
+
+  it('shows the bubble of the folded tutor in its three states, and a help reaction (6.2d)', async () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const section = within(
+      element.querySelector('[aria-labelledby="bubble-title"]') as HTMLElement,
+    );
+    const pieces = () =>
+      element.querySelectorAll('[data-testid="reaction-overlay"] .reaction-piece').length;
+
+    expect(element.querySelectorAll('app-tutor-bubble')).toHaveLength(3);
+    expect(
+      section.getByRole('button', {
+        name: /^Abrir el tutor: Fíjate en qué devuelve fizzBuzz\(0\)/,
+      }),
+    ).toBeTruthy();
+    expect(
+      section.getByRole('button', {
+        name: 'Abrir el tutor: No he podido responder. Ábreme para reintentar',
+      }),
+    ).toBeTruthy();
+    expect(section.getAllByRole('button', { name: 'Cerrar el aviso' })).toHaveLength(2);
+
+    // Small whatever the intensity, as the tutor stepping in to help
+    await (await loader.getHarness(MatButtonHarness.with({ text: /reacción reducida/ }))).click();
+    await fixture.whenStable();
+    expect(pieces()).toBe(1);
+  });
+
+  it('shows «Pregúntale al tutor» beside the examples that fail (6.2d)', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const section = within(
+      element.querySelector('[aria-labelledby="results-title"]') as HTMLElement,
+    );
+
+    expect(section.getAllByRole('button', { name: /^Pregúntale al tutor/ })).toHaveLength(3);
   });
 
   it('shows the pieces of the history', () => {

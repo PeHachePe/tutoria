@@ -34,7 +34,7 @@ import { BrowserSignals } from '../browser-signals';
 import { RetryButton } from '../../../shared/retry-button/retry-button';
 import { isSessionExpired, SignInAgain } from '../../../shared/sign-in-again/sign-in-again';
 import { actionErrorMessage } from './action-error-message';
-import { RunResults } from './run-results';
+import { RunResults, type TutorShortcut } from './run-results';
 import { SaveIndicator } from './save-indicator';
 import { SubmitDialog } from './submit-dialog';
 import { TutorStore } from '../tutor-store';
@@ -111,6 +111,8 @@ export class CodeZone {
   readonly preview = input(false);
   /** «Practicar de nuevo» opened a new attempt here: the page drops the number from the URL. */
   readonly practised = output<void>();
+  /** «Pregúntale al tutor» beside a failing example (6.2d): the layout knows where the tutor is. */
+  readonly askTutor = output<string>();
 
   protected readonly store = inject(AttemptStore);
   /** The names of the shortcuts of the editor, for the tooltips: ⌘ and ⌥ on a Mac. */
@@ -190,6 +192,12 @@ export class CodeZone {
     return passed === total
       ? $localize`:@@workspace.runAnnouncement.allPassed:Todas las pruebas superadas. Ya puedes entregar.`
       : $localize`:@@workspace.runAnnouncement.somePassed:${passed}:passed: de ${total}:total: pruebas superadas.`;
+  });
+
+  /** Not once submitted; while the tutor answers, there but not pressable (6.2d). */
+  protected readonly tutorShortcut = computed<TutorShortcut>(() => {
+    if (this.tutor.readonly()) return 'hidden';
+    return this.tutor.canAsk() ? 'enabled' : 'disabled';
   });
 
   protected toggleExpanded(): void {

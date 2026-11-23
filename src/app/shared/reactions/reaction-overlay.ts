@@ -210,10 +210,14 @@ export class ReactionOverlay {
     if (id) this.playing.update((playing) => playing.filter((reaction) => reaction.id !== id));
   }
 
-  /** The pieces of a reaction, once: the settings and reduced motion count from the next one. */
+  /**
+   * The pieces of a reaction, once: the settings and reduced motion count from the next one. A
+   * reaction that asks to be reduced (the tutor stepping in to help, 6.2d) is, unless turned off.
+   */
   private draw(reaction: Reaction): PlayingReaction['pieces'] {
     const reducedMotion = this.media.matchMedia(REDUCED_MOTION_QUERY).matches;
-    const options = { mode: this.mode(), reducedMotion, emoji: this.emojis() };
+    const mode = reaction.reduced && this.mode() === 'full' ? 'reduced' : this.mode();
+    const options = { mode, reducedMotion, emoji: this.emojis() };
     return reactionParticles(reaction, options, Math.random).map((particle) => ({
       ...particle,
       fallback: particle.image ? stillEmojiOf(particle.image) : null,

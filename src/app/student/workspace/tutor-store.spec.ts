@@ -139,7 +139,7 @@ describe('TutorStore', () => {
     expect(store.canAsk()).toBe(true);
     // The past is not read aloud again, nor counted as new
     expect(store.announcement()).toBe('');
-    expect(store.answerCount()).toBe(0);
+    expect(store.latestAnswerId()).toBeNull();
     expect(store.reaction()).toBeNull();
   });
 
@@ -164,7 +164,7 @@ describe('TutorStore', () => {
   it('asks a question with the current code and the language, and writes the answer as it arrives', async () => {
     await loaded();
 
-    await store.ask('  ¿Por dónde empiezo?  ');
+    expect(await store.ask('  ¿Por dónde empiezo?  ')).toBe(true);
 
     const request: TutorRequest = {
       requestId: store.turns()[0].id,
@@ -194,7 +194,7 @@ describe('TutorStore', () => {
       },
     ]);
     expect(store.announcement()).toBe('Hola, ¿qué tal?');
-    expect(store.answerCount()).toBe(1);
+    expect(store.latestAnswerId()).toBe(store.turns()[0].id);
   });
 
   it('reacts with each new answer once it is complete, as the tutor chose', async () => {
@@ -306,15 +306,16 @@ describe('TutorStore', () => {
     await loaded();
     ask.mockImplementationOnce(() => failing(new DataError('network')));
 
-    await store.ask('¿Qué falla?');
+    expect(await store.ask('¿Qué falla?')).toBe(false);
 
     expect(store.reaction()).toBeNull();
+    expect(store.latestAnswerId()).toBeNull();
   });
 
   it('ignores an empty question', async () => {
     await loaded();
 
-    await store.ask('   ');
+    expect(await store.ask('   ')).toBe(false);
 
     expect(ask).not.toHaveBeenCalled();
   });
@@ -323,7 +324,7 @@ describe('TutorStore', () => {
     await loaded();
     ask.mockImplementation(() => answer(['Mira el bucle.'], 1));
 
-    await store.requestHint();
+    expect(await store.requestHint()).toBe(true);
 
     expect(ask).toHaveBeenCalledWith(expect.objectContaining({ kind: 'hint', message: undefined }));
     expect(store.turns()[0]).toMatchObject({ trigger: 'hint', studentMessage: null, hintLevel: 1 });
@@ -408,7 +409,7 @@ describe('TutorStore', () => {
     await loaded();
     ask.mockImplementation(() => answer([], 1, { silent: true }));
 
-    await store.ask('…');
+    expect(await store.ask('…')).toBe(false);
 
     expect(store.turns()).toEqual([]);
     expect(store.reaction()).toBeNull();
@@ -436,8 +437,9 @@ describe('TutorStore', () => {
     attempt.set(attemptOf('a2'));
     await loaded();
     rest.resolve();
-    await asking;
 
+    // It arrived whole, but in a conversation that is no longer on the screen
+    expect(await asking).toBe(false);
     expect(history).toHaveBeenLastCalledWith('a2');
     expect(store.turns()).toEqual([]);
   });
@@ -448,7 +450,7 @@ describe('TutorStore', () => {
 
     expect(store.readonly()).toBe(true);
     expect(store.canAsk()).toBe(false);
-    await store.requestHint();
+    expect(await store.requestHint()).toBe(false);
     expect(ask).not.toHaveBeenCalled();
   });
 
@@ -628,6 +630,53 @@ describe('TutorStore', () => {
 
       expect(mark).toHaveBeenCalled();
       expect(store.turns()[0].actions[0].status).toBe('done');
+    });
+
+    it.each(['failures', 'idle'] as const)(
+      'reacts in reduced to help for %s, whatever its intensity: the student asked for nothing',
+      async (reason) => {
+        await loaded();
+        ask.mockImplementation(async function* () {
+          yield {
+            type: 'meta',
+            emotion: 'encouragement',
+            intensity: 3,
+            hintLevel: 1,
+            reaction: 'eyes',
+          };
+          yield { type: 'delta', text: 'Llevas un rato.' };
+        });
+
+        await store.intervene(reason);
+
+        const [turn] = store.turns();
+        expect(store.reaction()).toEqual({
+          id: turn.id,
+          kind: 'eyes',
+          intensity: 3,
+          reduced: true,
+        });
+      },
+    );
+
+    it('reacts in full to an achievement, and to what the student asked', async () => {
+      await loaded();
+      ask.mockImplementation(async function* () {
+        yield {
+          type: 'meta',
+          emotion: 'celebration',
+          intensity: 3,
+          hintLevel: 1,
+          reaction: 'party',
+        };
+        yield { type: 'delta', text: '¡Lo tienes!' };
+      });
+
+      await store.intervene('achievement');
+      expect(store.reaction()).toEqual({ id: store.turns()[0].id, kind: 'party', intensity: 3 });
+
+      await store.ask('¿Y ahora?');
+      expect(store.reaction()).toEqual({ id: store.turns()[1].id, kind: 'party', intensity: 3 });
     });
   });
 

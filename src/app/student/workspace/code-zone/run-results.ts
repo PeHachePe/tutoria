@@ -7,12 +7,16 @@ import {
   inject,
   input,
   linkedSignal,
+  output,
 } from '@angular/core';
+import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
+import { MatTooltip } from '@angular/material/tooltip';
 
 import type { RunResult, TestResult } from '../../../data/attempt';
 import { formatCall, formatValue, isMultilineText } from '../../../shared/format-value';
 import type { Pointer } from '../tutor-store';
+import { type FailingExample, failureQuestion } from './failure-question';
 
 /**
  * How a test ended: passed, a wrong value, an error thrown, out of time, or never started because
@@ -74,6 +78,17 @@ export function testStates(results: readonly TestResult[]): TestState[] {
   });
 }
 
+/**
+ * «Pregúntale al tutor» beside each failing example (6.2d): not there with the attempt submitted,
+ * and not pressable while the tutor answers.
+ */
+export type TutorShortcut = 'hidden' | 'disabled' | 'enabled';
+
+/** The states of an example the tutor can be asked about: those that ran and failed. */
+function isFailing(state: TestState): state is FailingExample['state'] {
+  return state === 'failed' || state === 'error' || state === 'timeout';
+}
+
 /** A value as the student would write it; a text with line breaks, as a block (exercise 2). */
 function shown(value: unknown): { readonly text: string; readonly block: boolean } {
   return isMultilineText(value)
@@ -89,7 +104,7 @@ function shown(value: unknown): { readonly text: string; readonly block: boolean
  */
 @Component({
   selector: 'app-run-results',
-  imports: [NgTemplateOutlet, MatIcon],
+  imports: [NgTemplateOutlet, MatIcon, MatIconButton, MatTooltip],
   templateUrl: './run-results.html',
   host: { class: 'flex flex-col gap-3' },
 })
@@ -101,6 +116,10 @@ export class RunResults {
   readonly outdated = input(false);
   /** Where the tutor points: the first test that fails, or the hidden checks (2.5e). */
   readonly pointer = input<Pointer | null>(null);
+  /** «Pregúntale al tutor» beside each visible example that fails (6.2d). */
+  readonly tutorShortcut = input<TutorShortcut>('hidden');
+  /** The question of the shortcut pressed, ready to send. */
+  readonly askTutor = output<string>();
 
   protected readonly states = STATES;
   protected readonly bodyId = `app-run-results-body-${nextId++}`;
@@ -136,6 +155,18 @@ export class RunResults {
     this.open.update((open) => !open);
   }
 
+  /**
+   * The shortcut shows beside the examples that ran and failed, while the results describe the code
+   * as it is: once it changes, what they say is about an earlier version.
+   */
+  protected readonly showsShortcut = computed(
+    () => this.tutorShortcut() !== 'hidden' && !this.outdated(),
+  );
+
+  protected ask(question: string): void {
+    if (this.tutorShortcut() === 'enabled') this.askTutor.emit(question);
+  }
+
   protected readonly summary = computed(() => {
     const { results, loadError } = this.result();
     const passed = results.filter((result) => result.passed).length;
@@ -156,20 +187,39 @@ export class RunResults {
 
   /** Visible tests carry their input; hidden ones only say whether they passed. */
   protected readonly examples = computed(() =>
-    this.entries().flatMap(({ result, state }) =>
-      result.input === undefined
-        ? []
-        : [
-            {
-              key: result.testId,
-              state,
-              call: formatCall(this.functionName(), result.input),
-              expected: shown(result.expected),
-              actual: shown(result.actual),
-              error: result.error,
-            },
-          ],
-    ),
+    this.entries()
+      .flatMap(({ result, state }) =>
+        result.input === undefined ? [] : [{ result, state, input: result.input }],
+      )
+      .map(({ result, state, input }, index) => {
+        const call = formatCall(this.functionName(), input);
+        const number = index + 1;
+        return {
+          key: result.testId,
+          state,
+          call,
+          expected: shown(result.expected),
+          actual: shown(result.actual),
+          error: result.error,
+          // «Pregúntale al tutor», only for an example that ran and failed: what it asks, and a name
+          // that tells its row apart («… por qué falla el ejemplo 2»)
+          shortcut: isFailing(state)
+            ? {
+                question: failureQuestion(
+                  {
+                    state,
+                    call,
+                    expected: result.expected,
+                    actual: result.actual,
+                    error: result.error,
+                  },
+                  number,
+                ),
+                label: $localize`:@@runResults.askTutorLabel:Pregúntale al tutor por qué falla el ejemplo ${number}:n:`,
+              }
+            : null,
+        };
+      }),
   );
 
   protected readonly hiddenChecks = computed(() =>

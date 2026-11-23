@@ -22,6 +22,7 @@
         [nextPath]="nextPath()"
         [preview]="preview()"
         (practised)="practised.emit()"
+        (askTutor)="askFromResults($event)"
       />
     </mat-tab>
     <mat-tab>
@@ -97,6 +98,7 @@
         [(expanded)]="codeExpanded"
         (expandedChange)="markAnswersSeen()"
         (practised)="practised.emit()"
+        (askTutor)="askFromResults($event)"
       />
     </div>
     @if (!floatingTutor()) {
@@ -120,8 +122,9 @@
        the focus back to the mascot. -->
   @if (floatingTutor()) {
     <div class="fixed end-6 bottom-6 z-20 flex flex-col items-end gap-3">
-      <!-- Folded, the tutor's own announcer is not in the page: this one reads the new answer -->
-      <p class="sr-only" aria-live="polite">{{ tutorUnread() ? latestAnswer() : '' }}</p>
+      <!-- Folded, the tutor's own announcer is not in the page: this one says each state of the
+           bubble once, «pensando» and then the answer whole, never interrupting (6.2d) -->
+      <p class="sr-only" aria-live="polite">{{ bubbleAnnouncement() }}</p>
       @if (tutorOpen()) {
         <app-tutor-panel
           #floatingPanel
@@ -160,15 +163,6 @@
         </div>
         <!-- The card of the call is not in the page while folded: this one says each state -->
         <p class="sr-only" aria-live="polite">{{ line.label }}</p>
-      } @else if (tutorUnread()) {
-        <!-- A new answer while folded: its first words, in a bubble that opens the tutor -->
-        <button
-          type="button"
-          class="max-w-72 animate-tutor-turn-in motion-reduce:animate-none rounded-2xl rounded-ee-sm border border-outline-variant bg-surface-container-high px-3 py-2 text-start text-body-medium text-on-surface shadow-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-          (click)="toggleTutor()"
-        >
-          <span class="line-clamp-3">{{ latestAnswer() }}</span>
-        </button>
       }
       <button
         #tutorToggle
@@ -196,6 +190,18 @@
           ></span>
         }
       </button>
+      @if (!callLine()) {
+        @if (bubble(); as shown) {
+          <!-- After the mascot for the keyboard, over it on the screen (D-064) -->
+          <app-tutor-bubble
+            class="order-first"
+            [state]="shown.state"
+            [text]="shown.text"
+            (opened)="toggleTutor()"
+            (dismissed)="closeBubble()"
+          />
+        }
+      }
     </div>
   }
 }

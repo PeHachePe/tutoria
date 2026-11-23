@@ -206,7 +206,7 @@
     "tutor.you": "You:",
     "tutor.hintOfLevel": "Hint · level {$INTERPOLATION}",
     "tutor.hintAsked": "Hint",
-    "tutor.proactive": "The tutor drops by",
+    "tutor.proactive": "The tutor reaches out",
     "tutor.tutorSays": "Tutor:",
     "tutor.typing": "The tutor is typing…",
     "tutor.submitted": "Exercise submitted: you can review the conversation, but the tutor gives no more hints.",
@@ -1513,6 +1513,16 @@
     "codeEditor.keys.format": "Shift + Alt + F",
     "codeEditor.keys.format.mac": "Shift + ⌥ + F",
     "codeEditor.keys.run": "Ctrl + Enter",
-    "codeEditor.keys.run.mac": "⌘ + Enter"
+    "codeEditor.keys.run.mac": "⌘ + Enter",
+    "runResults.question.failed": "Why does `{$call}` fail? It returns `{$actual}` and `{$expected}` is expected.",
+    "runResults.question.error": "Why does `{$call}` fail? It throws the error “{$error}” and `{$expected}` is expected.",
+    "runResults.question.timeout": "Why does `{$call}` not finish in time? `{$expected}` is expected.",
+    "runResults.question.short": "Why does example {$n} fail?",
+    "runResults.askTutor": "Ask the tutor",
+    "runResults.askTutorLabel": "Ask the tutor why example {$n} fails",
+    "tutor.bubble.open": "Open the tutor:",
+    "tutor.bubble.error": "I couldn't answer. Open me to try again",
+    "tutor.bubble.close": "Close the notice",
+    "tutor.bubble.thinking": "The tutor is thinking…"
   }
 }

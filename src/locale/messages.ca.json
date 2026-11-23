@@ -206,7 +206,7 @@
     "tutor.you": "Tu:",
     "tutor.hintOfLevel": "Pista · nivell {$INTERPOLATION}",
     "tutor.hintAsked": "Pista",
-    "tutor.proactive": "El tutor s'hi acosta",
+    "tutor.proactive": "El tutor t'escriu",
     "tutor.tutorSays": "Tutor:",
     "tutor.typing": "El tutor està escrivint…",
     "tutor.submitted": "Exercici lliurat: pots repassar la conversa, però el tutor ja no dona més pistes.",
@@ -1513,6 +1513,16 @@
     "codeEditor.keys.format": "Maj + Alt + F",
     "codeEditor.keys.format.mac": "Maj + ⌥ + F",
     "codeEditor.keys.run": "Ctrl + Retorn",
-    "codeEditor.keys.run.mac": "⌘ + Retorn"
+    "codeEditor.keys.run.mac": "⌘ + Retorn",
+    "runResults.question.failed": "Per què falla `{$call}`? Retorna `{$actual}` i s'espera `{$expected}`.",
+    "runResults.question.error": "Per què falla `{$call}`? Llança l'error «{$error}» i s'espera `{$expected}`.",
+    "runResults.question.timeout": "Per què `{$call}` no acaba a temps? S'espera `{$expected}`.",
+    "runResults.question.short": "Per què falla l'exemple {$n}?",
+    "runResults.askTutor": "Pregunta-ho al tutor",
+    "runResults.askTutorLabel": "Pregunta al tutor per què falla l'exemple {$n}",
+    "tutor.bubble.open": "Obre el tutor:",
+    "tutor.bubble.error": "No he pogut respondre. Obre'm per tornar-ho a provar",
+    "tutor.bubble.close": "Tanca l'avís",
+    "tutor.bubble.thinking": "El tutor està pensant…"
   }
 }

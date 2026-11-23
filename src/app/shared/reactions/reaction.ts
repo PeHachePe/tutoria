@@ -5,6 +5,11 @@ export interface Reaction {
   readonly id: string;
   readonly kind: ReactionKind;
   readonly intensity: Intensity;
+  /**
+   * Small whatever the student chose, unless turned off: the tutor stepping in to help, which the
+   * student did not ask for (6.2d).
+   */
+  readonly reduced?: boolean;
 }
 
 /** How much the reactions show, as the student chooses (RF-10, CU-03 4a). */

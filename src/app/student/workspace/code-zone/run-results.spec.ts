@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 
 import type { RunResult } from '../../../data/attempt';
-import { RunResults, testStates } from './run-results';
+import { RunResults, testStates, type TutorShortcut } from './run-results';
 
 function text(element: Element | null): string {
   return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -200,5 +201,76 @@ describe('testStates', () => {
       partialUpdate: true,
     });
     expect(screen.getByRole('button', { expanded: true })).toBeTruthy();
+  });
+});
+
+describe('RunResults «Pregúntale al tutor» (6.2d)', () => {
+  /** Each way a visible example ends, after a hidden check, and one that never started. */
+  const MIXED: RunResult = {
+    status: 'tests_failed',
+    results: [
+      { testId: 't1', passed: true, timeout: false, input: [[1]], expected: 1, actual: 1 },
+      { testId: 'h1', passed: false, timeout: false },
+      { testId: 't2', passed: false, timeout: false, input: [[1, 2]], expected: 3, actual: 1 },
+      { testId: 't3', passed: false, timeout: false, input: [[]], expected: 0, error: 'Boom' },
+      { testId: 't4', passed: false, timeout: true, input: [[9]], expected: 9 },
+      { testId: 't5', passed: false, timeout: true, input: [[8]], expected: 8 },
+    ],
+  };
+
+  async function renderShortcut(
+    tutorShortcut: TutorShortcut,
+    { result = MIXED, outdated = false }: { result?: RunResult; outdated?: boolean } = {},
+  ) {
+    const askTutor = vi.fn<(question: string) => void>();
+    await render(RunResults, {
+      inputs: { result, functionName: 'sum', outdated, tutorShortcut },
+      on: { askTutor },
+    });
+    const shortcuts = () => screen.queryAllByRole('button', { name: /^Pregúntale al tutor/ });
+    return { askTutor, shortcuts };
+  }
+
+  it('is beside each visible example that ran and failed, named by its row', async () => {
+    const { shortcuts } = await renderShortcut('enabled');
+
+    // Not the one passed, the hidden check or the one that never started
+    expect(shortcuts().map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Pregúntale al tutor por qué falla el ejemplo 2',
+      'Pregúntale al tutor por qué falla el ejemplo 3',
+      'Pregúntale al tutor por qué falla el ejemplo 4',
+    ]);
+  });
+
+  it('sends the question of its example, with what the row says', async () => {
+    const { askTutor, shortcuts } = await renderShortcut('enabled');
+    const user = userEvent.setup();
+
+    for (const button of shortcuts()) await user.click(button);
+
+    expect(askTutor.mock.calls.map(([question]) => question)).toEqual([
+      '¿Por qué falla `sum([1, 2])`? Devuelve `1` y se espera `3`.',
+      '¿Por qué falla `sum([])`? Lanza el error «Boom» y se espera `0`.',
+      '¿Por qué `sum([9])` no termina a tiempo? Se espera `9`.',
+    ]);
+  });
+
+  it('stays in reach while the tutor answers, but sends nothing', async () => {
+    const { askTutor, shortcuts } = await renderShortcut('disabled');
+    const [first] = shortcuts();
+
+    expect(first.getAttribute('aria-disabled')).toBe('true');
+    first.focus();
+    expect(document.activeElement).toBe(first);
+    await userEvent.setup().click(first);
+    expect(askTutor).not.toHaveBeenCalled();
+  });
+
+  it('is not there when hidden, as with the attempt submitted', async () => {
+    expect((await renderShortcut('hidden')).shortcuts()).toEqual([]);
+  });
+
+  it('is not there with results of an earlier version of the code', async () => {
+    expect((await renderShortcut('enabled', { outdated: true })).shortcuts()).toEqual([]);
   });
 });
