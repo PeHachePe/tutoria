@@ -9,6 +9,17 @@ export function isTaskDone(task: GuideTask, state: GuideState, facts: GuideFacts
   return (task.doneBy !== undefined && facts.known.has(task.doneBy)) || !!state.done?.[task.id];
 }
 
+/**
+ * The first steps of a profile: the tasks it names, in its order (D-093). An id it does not know is
+ * left out, so a task can leave a profile without breaking it.
+ */
+export function firstStepsOf(
+  tasks: readonly GuideTask[],
+  ids: readonly string[],
+): readonly GuideTask[] {
+  return ids.flatMap((id) => tasks.filter((task) => task.id === id));
+}
+
 export interface FirstStepsProgress {
   readonly done: number;
   readonly total: number;
@@ -17,50 +28,50 @@ export interface FirstStepsProgress {
 }
 
 export function firstStepsProgress(
-  tasks: readonly GuideTask[],
+  firstSteps: readonly GuideTask[],
   state: GuideState,
   facts: GuideFacts,
 ): FirstStepsProgress {
-  const firstSteps = tasks.filter((task) => task.firstStep);
   const pending = firstSteps.filter((task) => !isTaskDone(task, state, facts));
   return { done: firstSteps.length - pending.length, total: firstSteps.length, next: pending[0] };
 }
 
 /** The section of the first steps shows while some is pending, unless the user hid it. */
 export function showFirstSteps(
-  tasks: readonly GuideTask[],
+  firstSteps: readonly GuideTask[],
   state: GuideState,
   facts: GuideFacts,
 ): boolean {
-  return !state.firstStepsHidden && firstStepsProgress(tasks, state, facts).next !== undefined;
+  return !state.firstStepsHidden && firstStepsProgress(firstSteps, state, facts).next !== undefined;
 }
 
 /**
  * The first step to offer after finishing `finishedId`: the next pending one in the order of the
- * profile, going round to the first. Never the one just finished, whose data may not be read yet.
+ * profile, going round to the first. Never the one just finished, whose data may not be read yet,
+ * and none after a task that is not a first step.
  */
 export function nextFirstStep(
-  tasks: readonly GuideTask[],
+  firstSteps: readonly GuideTask[],
   state: GuideState,
   facts: GuideFacts,
   finishedId: string,
 ): GuideTask | undefined {
-  const firstSteps = tasks.filter((task) => task.firstStep);
   const finished = firstSteps.findIndex((task) => task.id === finishedId);
+  if (finished < 0) return undefined;
   const roundFromNext = [...firstSteps.slice(finished + 1), ...firstSteps.slice(0, finished + 1)];
   return roundFromNext.find((task) => task.id !== finishedId && !isTaskDone(task, state, facts));
 }
 
 /**
  * «¿Cómo se hace…?»: the tasks of the open screen first, each group in the order of the profile;
- * without the first steps while their own section shows them.
+ * without `leftOut`: the first steps, while their own section shows them.
  */
 export function orderTasks(
   tasks: readonly GuideTask[],
   screen: GuideScreen | undefined,
-  firstStepsShown: boolean,
+  leftOut: readonly GuideTask[],
 ): readonly GuideTask[] {
-  const listed = firstStepsShown ? tasks.filter((task) => !task.firstStep) : tasks;
+  const listed = tasks.filter((task) => !leftOut.includes(task));
   return [
     ...listed.filter((task) => task.screen === screen),
     ...listed.filter((task) => task.screen !== screen),

@@ -7,7 +7,9 @@ import {
   DAW_STUDENT_IDS,
   DISABLED_STUDENT_ID,
   CLASSES,
+  FRESH_STUDENT_ID,
   MOCK_PASSWORD,
+  NEW_TEACHER_ID,
   TEACHER_ID,
   USERS,
 } from '../data/mock/fixtures/users';
@@ -17,7 +19,8 @@ const [DAW_CLASS, DAM_CLASS] = CLASSES;
 /**
  * One seed account per role, plus the disabled one to see how the login rejects it. Two students,
  * as their classes study different subjects (2.5c): Lucía, basic programming and web development;
- * Elena, basic and advanced programming. Their labels
+ * Elena, basic and advanced programming. And a student and a teacher who start from scratch, to
+ * try the guided help (7.0b1). Their labels
  * are translated: they show on the login, unlike the rest of the dev tools (D-023).
  */
 const ACCOUNTS: readonly (readonly [
@@ -28,7 +31,9 @@ const ACCOUNTS: readonly (readonly [
 ])[] = [
   [$localize`:@@demo.student:Alumna`, 'school', DAW_STUDENT_IDS[0], DAW_CLASS.name],
   [$localize`:@@demo.student:Alumna`, 'school', DAM_STUDENT_IDS[0], DAM_CLASS.name],
+  [$localize`:@@demo.freshStudent:Alumno sin empezar`, 'school', FRESH_STUDENT_ID, DAM_CLASS.name],
   [$localize`:@@demo.teacher:Docente`, 'co_present', TEACHER_ID, DAW_CLASS.name],
+  [$localize`:@@demo.newTeacher:Docente sin clases`, 'co_present', NEW_TEACHER_ID],
   [$localize`:@@demo.admin:Administración`, 'admin_panel_settings', ADMIN_ID],
   [$localize`:@@demo.disabled:Cuenta desactivada`, 'person_off', DISABLED_STUDENT_ID],
 ];

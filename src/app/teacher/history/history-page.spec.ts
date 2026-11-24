@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { GuideStore } from '../../core/guide/guide-store';
+import { FakeGuideStore } from '../../core/guide/guide-testing';
 import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { screen, within } from '@testing-library/angular';
@@ -361,11 +363,13 @@ describe('HistoryPage', () => {
       expect(blockHeading()).toBe('Tema 3');
     });
 
-    it('says when the teacher has no groups', async () => {
+    it('says when the teacher has no groups, with the way to create their class', async () => {
       groups = () => Promise.resolve([]);
+      TestBed.overrideProvider(GuideStore, { useValue: new FakeGuideStore() });
       await renderHistory();
 
       expect(screen.getByText('Aún no tienes grupos')).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Crear tu clase' })).toBeTruthy();
     });
 
     it('says when the group has no activity', async () => {

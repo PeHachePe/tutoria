@@ -47,6 +47,7 @@ import { Brand } from '../../shared/brand/brand';
 import { CodeEditor } from '../../shared/code-editor/code-editor';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
 import { EmptyState } from '../../shared/empty-state/empty-state';
+import { CreateClassButton } from '../../teacher/teacher-guide/create-class-button';
 import { LanguageMenu } from '../../shared/language-menu/language-menu';
 import { LoadError } from '../../shared/load-error/load-error';
 import { Mascot, MascotMood } from '../../shared/mascot/mascot';
@@ -86,6 +87,7 @@ import { ShowcaseTable } from './showcase-table';
   selector: 'app-showcase-page',
   imports: [
     ShowcaseGuide,
+    CreateClassButton,
     RouterLink,
     MatToolbar,
     MatButton,

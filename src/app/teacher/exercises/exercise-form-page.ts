@@ -55,6 +55,7 @@ import { openTryout } from './tryout/exercise-tryout-dialog';
 import { ExerciseTestList } from './exercise-test-list';
 import { ExerciseTexts } from './exercise-texts';
 import { type CheckRun, type CheckTarget, SolutionCheck } from './solution-check';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** What the form does with the exercise it shows. */
 export type FormMode = 'new' | 'copy' | 'edit' | 'view';
@@ -85,6 +86,7 @@ const SKELETON_BLOCKS = [1, 2];
 @Component({
   selector: 'app-exercise-form-page',
   imports: [
+    GuideAnchor,
     RouterLink,
     FormRoot,
     FormField,
@@ -117,6 +119,7 @@ const SKELETON_BLOCKS = [1, 2];
   },
 })
 export class ExerciseFormPage implements WithUnsavedChanges {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly exercises = inject(ExerciseService);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);

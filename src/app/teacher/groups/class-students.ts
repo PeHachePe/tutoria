@@ -54,6 +54,7 @@ import { inBatches } from './enroll-choice';
 import { EnrollDialog, type EnrollDialogData, type EnrollSource } from './enroll-dialog';
 import { type GroupAction, groupActionMessage } from './group-action-message';
 import { filterStudents, STUDENT_FILTER_THRESHOLD } from './student-filter';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 const SKELETON_ROWS = [1, 2, 3, 4];
 /** The enrollment dialog: as wide as a page of the app reads well, never wider than the window. */
@@ -109,6 +110,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
   // As tall as its panel: the table takes what the bar leaves and scrolls inside
   host: { class: 'flex min-h-0 flex-1 flex-col' },
   imports: [
+    GuideAnchor,
     MatButton,
     MatIconButton,
     MatCheckbox,
@@ -136,7 +138,11 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
       <div class="flex flex-wrap items-center gap-3">
         <h2 class="text-title-medium" i18n="@@classStudents.heading">Alumnado ({{ members() }})</h2>
         @if (showFilter()) {
-          <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-64">
+          <mat-form-field
+            subscriptSizing="dynamic"
+            class="w-full sm:w-64"
+            [appGuideAnchor]="anchors.groupsFilter"
+          >
             <mat-label i18n="@@groups.filter">Filtrar alumnos</mat-label>
             <mat-icon matPrefix aria-hidden="true">search</mat-icon>
             <input
@@ -154,6 +160,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
             <button
               matButton="tonal"
               type="button"
+              [appGuideAnchor]="anchors.groupsOutcomes"
               [disabled]="members() === 0"
               (click)="outcomesShown.set(true)"
             >
@@ -165,6 +172,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
             <button
               matButton="tonal"
               type="button"
+              [appGuideAnchor]="anchors.groupsEnroll"
               [disabled]="!students.hasValue()"
               (click)="enrollInClass()"
             >
@@ -174,6 +182,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
             <button
               matButton="tonal"
               type="button"
+              [appGuideAnchor]="anchors.groupsAddSubject"
               [disabled]="!canAddGroup()"
               (click)="addGroup.emit()"
             >
@@ -186,6 +195,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
             type="button"
             [disabled]="rows().length === 0"
             [matMenuTriggerFor]="exportMenu"
+            [appGuideAnchor]="anchors.groupsExport"
             aria-label="Exportar el alumnado"
             i18n-aria-label="@@classStudents.export"
           >
@@ -275,7 +285,10 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
       } @else {
         <!-- Also without students: the heads of the columns hold the menus of the subjects -->
         <!-- It scrolls in its own zone, both ways, with all the height the panel has; the names stay -->
-        <div class="min-h-0 flex-1 overflow-auto scroll-shadows">
+        <div
+          class="min-h-0 flex-1 overflow-auto scroll-shadows"
+          [appGuideAnchor]="anchors.groupsTable"
+        >
           <!-- The whole width: the names take what is left, each subject a column of its own width -->
           <table class="w-full border-collapse text-body-medium">
             <caption class="sr-only" i18n="@@classStudents.caption">
@@ -298,7 +311,11 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                     <span i18n="@@classStudents.outcome">Evaluación</span>
                   </th>
                 }
-                @for (column of columns(); track column.managed.group.id) {
+                @for (
+                  column of columns();
+                  track column.managed.group.id;
+                  let firstColumn = $first
+                ) {
                   <th
                     scope="col"
                     class="min-w-28 px-3 py-1 text-center align-bottom whitespace-nowrap"
@@ -312,6 +329,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                           matIconButton
                           type="button"
                           [matMenuTriggerFor]="groupMenu"
+                          [appGuideAnchor]="firstColumn ? anchors.groupsSubjectMenu : null"
                           [attr.aria-label]="column.actionsLabel"
                         >
                           <mat-icon aria-hidden="true">more_vert</mat-icon>
@@ -390,7 +408,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
               </tr>
             </thead>
             <tbody>
-              @for (row of shown(); track row.entry.student.id) {
+              @for (row of shown(); track row.entry.student.id; let firstRow = $first) {
                 <tr class="border-b border-outline-variant last:border-b-0">
                   <th
                     scope="row"
@@ -504,6 +522,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                         matIconButton
                         type="button"
                         [matMenuTriggerFor]="studentMenu"
+                        [appGuideAnchor]="firstRow ? anchors.groupsStudentMenu : null"
                         [attr.aria-label]="row.actionsLabel"
                         [title]="row.actionsLabel"
                       >
@@ -559,6 +578,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
   `,
 })
 export class ClassStudents {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly service = inject(GroupService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);

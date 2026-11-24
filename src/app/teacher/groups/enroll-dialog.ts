@@ -30,6 +30,7 @@ import { searchable } from '../../shared/searchable';
 import { type CandidateSection, candidateSections } from '../../shared/class-outcome';
 import { addToChoice, blockerLine, enrollBlocker, sortOutCandidates } from './enroll-choice';
 import { groupActionMessage } from './group-action-message';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** How long the search waits after the last key before asking the server. */
 export const SEARCH_DELAY_MS = 300;
@@ -96,6 +97,7 @@ interface PastedResult {
 @Component({
   selector: 'app-enroll-dialog',
   imports: [
+    GuideAnchor,
     MatDialogTitle,
     MatDialogContent,
     MatDialogActions,
@@ -441,6 +443,7 @@ interface PastedResult {
       <button
         matButton="filled"
         type="button"
+        [appGuideAnchor]="anchors.enrollDialogSave"
         [disabled]="chosen().length === 0 || saving()"
         (click)="submit()"
       >
@@ -483,6 +486,7 @@ interface PastedResult {
   `,
 })
 export class EnrollDialog {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly data = inject<EnrollDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<EnrollDialog, boolean>>(MatDialogRef);
   private readonly announcer = inject(LiveAnnouncer);

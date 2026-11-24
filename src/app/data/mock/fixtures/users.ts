@@ -23,6 +23,8 @@ export const ADMIN_ID = fixtureId('user', 1);
 export const TEACHER_ID = fixtureId('user', 2);
 /** Teacher of 1.º DAM B and of a split of 1.º DAW A. */
 export const OTHER_TEACHER_ID = fixtureId('user', 3);
+/** A teacher without classes yet, to try the empty screens and the guided help from scratch (7.0b1). */
+export const NEW_TEACHER_ID = fixtureId('user', 4);
 export const DISABLED_STUDENT_ID = fixtureId('user', 50);
 
 /** 1.º DAW A, shared by both teachers (5.2d). */
@@ -89,6 +91,11 @@ const NEW_STUDENTS: readonly (readonly [name: string, email: string])[] = [
 export const DAW_STUDENT_IDS = DAW_STUDENTS.map((_, index) => fixtureId('user', 11 + index));
 export const DAM_STUDENT_IDS = DAM_STUDENTS.map((_, index) => fixtureId('user', 41 + index));
 export const NEW_STUDENT_IDS = NEW_STUDENTS.map((_, index) => fixtureId('user', 51 + index));
+/**
+ * A student of 1.º DAM B who has not opened any exercise yet, to try the guided help from scratch
+ * (7.0b1). Apart from the class list, so the attempts of the others keep their ids (pgTAP).
+ */
+export const FRESH_STUDENT_ID = fixtureId('user', 60);
 
 function user(
   id: string,
@@ -125,6 +132,9 @@ export const USERS: readonly AppUser[] = [
   ),
   // Left the course: cannot sign in and belongs to no group.
   user(DISABLED_STUDENT_ID, 'Raúl Medina Cortés', 'raul.medina', 'student', 'disabled'),
+  // To try the guided help from scratch (7.0b1), at the end so the others keep their place
+  user(NEW_TEACHER_ID, 'Nuria Peña Gallego', 'nuria.pena', 'teacher'),
+  user(FRESH_STUDENT_ID, 'Tomás Rivas León', 'tomas.rivas', 'student'),
 ];
 
 export const CLASSES: readonly SchoolClass[] = [
@@ -149,6 +159,7 @@ export const CLASSES: readonly SchoolClass[] = [
 export const CLASS_MEMBERS: readonly ClassMember[] = [
   ...DAW_STUDENT_IDS.map((userId) => ({ classId: DAW_CLASS_ID, userId, outcome: null })),
   ...DAM_STUDENT_IDS.map((userId) => ({ classId: DAM_CLASS_ID, userId, outcome: null })),
+  { classId: DAM_CLASS_ID, userId: FRESH_STUDENT_ID, outcome: null },
 ];
 
 export const GROUPS: readonly ClassGroup[] = [
@@ -194,4 +205,7 @@ export const ENROLLMENTS: readonly Enrollment[] = [
   ...DAM_STUDENT_IDS.map((userId) => ({ groupId: DAM_GROUP_ID, userId })),
   ...DAW_STUDENT_IDS.map((userId) => ({ groupId: DAW_WEB_GROUP_ID, userId })),
   ...DAM_STUDENT_IDS.map((userId) => ({ groupId: DAM_ADVANCED_GROUP_ID, userId })),
+  // At the end, so the enrollments of the others keep their ids
+  { groupId: DAM_GROUP_ID, userId: FRESH_STUDENT_ID },
+  { groupId: DAM_ADVANCED_GROUP_ID, userId: FRESH_STUDENT_ID },
 ].map((enrollment, index) => ({ id: fixtureId('enrollment', index + 1), ...enrollment }));

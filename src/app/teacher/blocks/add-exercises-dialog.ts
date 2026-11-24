@@ -22,6 +22,7 @@ import { LoadError } from '../../shared/load-error/load-error';
 import { LoadingSkeleton } from '../../shared/skeleton/loading-skeleton';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { filterBank, NO_FILTERS } from '../exercises/bank-filter';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** Where the exercises go: the block, the subject of its group and what it already has. */
 export interface AddExercisesData {
@@ -51,6 +52,7 @@ const SKELETON_ROWS = [1, 2, 3, 4];
 @Component({
   selector: 'app-add-exercises-dialog',
   imports: [
+    GuideAnchor,
     MatDialogTitle,
     MatDialogContent,
     MatDialogActions,
@@ -154,7 +156,13 @@ const SKELETON_ROWS = [1, 2, 3, 4];
       <button matButton type="button" mat-dialog-close i18n="@@addExercises.cancel">
         Cancelar
       </button>
-      <button matButton="filled" type="button" [disabled]="chosen().size === 0" (click)="add()">
+      <button
+        matButton="filled"
+        type="button"
+        [appGuideAnchor]="anchors.addExercisesSave"
+        [disabled]="chosen().size === 0"
+        (click)="add()"
+      >
         <span i18n="@@addExercises.add">{chosen().size, plural,
           =0 {Añadir}
           =1 {Añadir 1 ejercicio}
@@ -165,6 +173,7 @@ const SKELETON_ROWS = [1, 2, 3, 4];
   `,
 })
 export class AddExercisesDialog {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly data = inject<AddExercisesData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<AddExercisesDialog, AddExercisesResult>>(MatDialogRef);
   private readonly exercises = inject(ExerciseService);

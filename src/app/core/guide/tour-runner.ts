@@ -19,7 +19,7 @@ import { filter, firstValueFrom } from 'rxjs';
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
 import { prefersReducedMotion } from '../../shared/reduced-motion';
 import { type GuideAnchorId, guideAnchorSelector } from './guide-anchor';
-import type { GuideBeacon, GuideStep } from './guide-task';
+import type { GuideBeacon, GuideSideMenu, GuideStep } from './guide-task';
 
 /**
  * How a tour ended: finished, finished choosing the next first step («Siguiente: …»), closed by the
@@ -32,6 +32,8 @@ export interface TourOptions {
   readonly next?: string;
   /** Name of the button that closes it: «Saltar la bienvenida» in the welcome. */
   readonly closeLabel?: string;
+  /** The side menu of the area, for the steps that point at its entries (D-094). */
+  readonly sideMenu?: GuideSideMenu;
 }
 
 /** driver.js and its beacons, downloaded apart and only the first time the help is used (2.12). */
@@ -60,6 +62,8 @@ const MATERIAL_SURFACES = '[role="menu"], .mat-mdc-dialog-surface';
 /** The look of the globes and the beacons, in src/styles/guide.css. */
 const POPOVER_CLASS = 'app-guide-popover';
 const BEACON_CLASS = 'app-guide-beacon';
+/** The globe of a step inside a dialog or a menu of Material. */
+const IN_OVERLAY_CLASS = 'app-guide-in-overlay';
 /**
  * driver.js tells assistive technology that the piece opens the globe, unless it has these already;
  * only some roles admit them (axe, `aria-allowed-attr`), so the others lose them again.
@@ -79,8 +83,9 @@ const TEXTS = {
   previous: $localize`:@@guide.previous:Anterior`,
   finish: $localize`:@@guide.finish:Terminar`,
   close: $localize`:@@guide.close:Cerrar`,
-  /** driver.js puts the numbers in place of {{current}} and {{total}}. */
-  progress: $localize`:@@guide.progress:Paso {{current}} de {{total}}`,
+  /** Counting only the steps that show at this width (D-093). */
+  progress: (current: number, total: number) =>
+    $localize`:@@guide.progress:Paso ${current}:current: de ${total}:total:`,
   gotIt: $localize`:@@guide.gotIt:Entendido`,
   hideBeacons: $localize`:@@guide.hideBeacons:Ocultar la ayuda`,
   nextTask: (title: string) => $localize`:@@guide.nextTask:Siguiente: ${title}:title:`,
@@ -93,7 +98,8 @@ const TEXTS = {
  *
  * A tour waits for each piece (after a navigation, or a dialog that opens), skips the optional ones
  * that do not show at this width, goes on by itself when an action is done, and ends if the user
- * leaves the page, unless the step itself leads there. In a dialog of Material, the dialog keeps the
+ * leaves the page, unless the step itself leads there. The side menu of the staff opens for the
+ * steps on its entries, also if it closes in the middle, and closes after them (D-094). In a dialog of Material, the dialog keeps the
  * focus and driver.js says the globe aloud; if the dialog closes, the tour goes back to the step that
  * opened it (ficha 13, 7.0a).
  */
@@ -157,7 +163,8 @@ export class TourRunner {
         });
 
       const tour = createDriver({
-        steps: steps.map((step) => this.toDriveStep(step)),
+        // The entry is measured again once the menu has slid in, not halfway
+        steps: steps.map((step) => this.toDriveStep(step, options.sideMenu, () => tour.refresh())),
         animate: !reducedMotion,
         smoothScroll: !reducedMotion,
         allowedElements: MATERIAL_OVERLAYS,
@@ -166,7 +173,6 @@ export class TourRunner {
         stageRadius: STAGE_RADIUS,
         popoverClass: POPOVER_CLASS,
         showProgress: steps.length > 1,
-        progressText: TEXTS.progress,
         nextBtnText: TEXTS.next,
         prevBtnText: TEXTS.previous,
         doneBtnText: TEXTS.finish,
@@ -174,14 +180,28 @@ export class TourRunner {
         onPopoverRender: (popover) => {
           const step = activeStep(tour);
           if (step) {
+            raiseToTopLayer(popover.wrapper);
+            // Over a tall dialog, guide.css moves it out of the way of its buttons
+            popover.wrapper.classList.toggle(IN_OVERLAY_CLASS, !!step.inOverlay);
+            popover.progress.textContent = this.progressOf(steps, tour.getActiveIndex()!);
+            if (!step.inSideMenu) options.sideMenu?.close();
             this.decorate(popover, step, tour.isLastStep(), options, finish, () => tour.moveNext());
           }
         },
-        onHighlighted: (element) => {
+        onHighlighted: (element, driveStep) => {
           if (element) dropPopupAttributes(element);
+          const step = driveStep.data?.['step'] as GuideStep | undefined;
+          const sideMenu = options.sideMenu;
+          // driver.js does not notice that Esc or the backdrop closed the menu under its entry
+          if (step?.inSideMenu && sideMenu) {
+            void sideMenu.closed().then(() => {
+              if (activeStep(tour) === step) void sideMenu.open()?.then(() => tour.refresh());
+            });
+          }
         },
         onDestroyed: (_element, _step, { reason }) => {
           leaving.unsubscribe();
+          options.sideMenu?.close();
           this.dropMascot();
           this.tour = undefined;
           const how = end ?? endOf(reason);
@@ -271,10 +291,23 @@ export class TourRunner {
     }
   }
 
-  private toDriveStep(step: GuideStep): DriveStep {
+  private toDriveStep(
+    step: GuideStep,
+    sideMenu: GuideSideMenu | undefined,
+    refresh: () => void,
+  ): DriveStep {
     const anchor = step.anchor;
+    const find = anchor ? this.findLater(anchor, !!step.inOverlay) : undefined;
     return {
-      element: anchor ? this.findLater(anchor, !!step.inOverlay) : undefined,
+      // driver.js looks for the piece again whenever the page changes: if Esc closed the side menu,
+      // it opens once more
+      element:
+        find && step.inSideMenu
+          ? () => {
+              void sideMenu?.open()?.then(refresh);
+              return find();
+            }
+          : find,
       data: { step },
       popover: {
         title: step.title,
@@ -299,6 +332,19 @@ export class TourRunner {
       // A dialog closed with Esc: back to the step that opens it, as the task is not over
       onElementMissing: step.inOverlay ? 'previousAction' : 'stay',
     };
+  }
+
+  /**
+   * «Paso 2 de 5», counting the steps that show: an optional one counts only if its piece is here,
+   * so the count may grow on the next page, never end before its total.
+   */
+  private progressOf(steps: readonly GuideStep[], active: number): string {
+    const counted = steps.map(
+      (step, index) =>
+        index === active || !step.optional || (!!step.anchor && !!this.find(step.anchor)),
+    );
+    const current = counted.slice(0, active + 1).filter(Boolean).length;
+    return TEXTS.progress(current, counted.filter(Boolean).length);
   }
 
   /** The globe of the app: the mascot, «Siguiente: …» on the last one, and a disabled action. */
@@ -416,6 +462,18 @@ function endOf(reason: DestroyReason | undefined): TourEnd {
       // Replaced by another tour or destroyed from code (leaving the page)
       return 'interrupted';
   }
+}
+
+/**
+ * Material opens its dialogs and menus in the top layer of the browser (`popover`), over any
+ * z-index: a dialog as tall as the screen covered the globe (7.0b1). The globe goes up there too,
+ * after them, each time it is drawn. Where the browser has no top layer, as in the tests, it stays.
+ */
+function raiseToTopLayer(globe: HTMLElement): void {
+  if (!('togglePopover' in globe)) return;
+  globe.setAttribute('popover', 'manual');
+  globe.togglePopover(false);
+  globe.togglePopover(true);
 }
 
 function isDisabled(element: Element): boolean {

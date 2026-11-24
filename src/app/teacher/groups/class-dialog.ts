@@ -20,6 +20,7 @@ import type { SchoolClass } from '../../data/user';
 import { type ClassFormModel, classSchema, existingEntry, toClassFormModel } from './class-form';
 import { groupActionMessage } from './group-action-message';
 import { shiftSchoolYear } from '../../data/school-year';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** Suggestions under the name: enough to find a class, not the whole school. */
 const MAX_SUGGESTIONS = 8;
@@ -44,6 +45,7 @@ export interface ClassDialogData {
 @Component({
   selector: 'app-class-dialog',
   imports: [
+    GuideAnchor,
     FormRoot,
     FormField,
     MatDialogTitle,
@@ -138,7 +140,12 @@ export interface ClassDialogData {
         <button matButton type="button" mat-dialog-close i18n="@@groupDialog.cancel">
           Cancelar
         </button>
-        <button matButton="filled" type="submit" [disabled]="classForm().submitting()">
+        <button
+          matButton="filled"
+          type="submit"
+          [appGuideAnchor]="anchors.classDialogSave"
+          [disabled]="classForm().submitting()"
+        >
           @if (classForm().submitting()) {
             <span i18n="@@groupDialog.saving">Guardando…</span>
           } @else if (data.schoolClass) {
@@ -154,6 +161,7 @@ export interface ClassDialogData {
   `,
 })
 export class ClassDialog {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly data = inject<ClassDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<ClassDialog, SchoolClassEntry | true>>(MatDialogRef);
 

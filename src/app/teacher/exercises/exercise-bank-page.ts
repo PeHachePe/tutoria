@@ -50,6 +50,7 @@ import {
 } from '../blocks/assign-dialog';
 import { BANK_PAGE_SIZE, type BankFilters, filterBank } from './bank-filter';
 import { canEditExercise } from './can-edit-exercise';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** The option of the subject select for those of the user's groups, which has no parameter. */
 const MY_SUBJECTS = 'mine';
@@ -76,6 +77,7 @@ const DIFFICULTIES: readonly { readonly value: Difficulty; readonly label: strin
 @Component({
   selector: 'app-exercise-bank-page',
   imports: [
+    GuideAnchor,
     RouterLink,
     NgTemplateOutlet,
     MatFabAnchor,
@@ -103,6 +105,7 @@ const DIFFICULTIES: readonly { readonly value: Difficulty; readonly label: strin
   templateUrl: './exercise-bank-page.html',
 })
 export class ExerciseBankPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly exercises = inject(ExerciseService);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);

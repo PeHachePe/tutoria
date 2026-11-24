@@ -13,6 +13,7 @@
       </h1>
     </div>
     <app-group-picker
+      [appGuideAnchor]="anchors.historyGroup"
       [groups]="groupOptions()"
       [selectedId]="group()?.id"
       [nameAlone]="false"
@@ -28,16 +29,24 @@
     <app-empty-state
       heading="Aún no tienes grupos"
       i18n-heading="@@history.empty.groups.heading"
-      text="Cuando tengas un grupo con ejercicios, aquí verás cómo evoluciona."
+      text="Crea tu clase en Grupos, o únete a la de otro docente; cuando trabaje sus ejercicios, aquí verás cómo evoluciona."
       i18n-text="@@history.empty.groups.text"
-    />
+    >
+      <div class="mt-2 flex justify-center" emptyStateAction>
+        <app-create-class-button />
+      </div>
+    </app-empty-state>
   } @else if (history.error(); as error) {
     <app-load-error [error]="error" (retry)="history.reload()" />
   } @else if (history.isLoading()) {
     <ng-container [ngTemplateOutlet]="skeleton" />
   } @else {
     @if (selected(); as selected) {
-      <section aria-labelledby="history-chart-heading" class="flex flex-col gap-2">
+      <section
+        aria-labelledby="history-chart-heading"
+        class="flex flex-col gap-2"
+        [appGuideAnchor]="anchors.historyEvolution"
+      >
         <h2 id="history-chart-heading" class="text-title-large" i18n="@@history.evolution.heading">
           Evolución del grupo
         </h2>
@@ -64,6 +73,7 @@
       </section>
 
       <app-block-detail
+        [appGuideAnchor]="anchors.historyBlock"
         [stats]="selected"
         [deadlines]="selectedDeadlines()"
         [students]="students()"

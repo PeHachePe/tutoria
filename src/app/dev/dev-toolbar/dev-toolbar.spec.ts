@@ -145,7 +145,7 @@ describe('DevToolbar', () => {
         'Alumnado de 1.º DAM B',
       ]);
       const options = await users.getOptions();
-      expect(options).toHaveLength(1 + 1 + 2 + 24 + 6);
+      expect(options).toHaveLength(1 + 1 + 3 + 24 + 7);
       expect(await options[0].getText()).toBe('Sin sesión');
       const names = await Promise.all(options.map((option) => option.getText()));
       expect(names).not.toContain('Raúl Medina Cortés');

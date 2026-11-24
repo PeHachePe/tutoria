@@ -8,12 +8,11 @@ import type { GuideTask } from '../guide-task';
 import { HelpPanel } from './help-panel';
 
 const START = guideTask('Empezar un ejercicio', {
-  firstStep: true,
   doneBy: 'started',
   screen: 'catalog',
   place: 'catalog',
 });
-const RUN = guideTask('Ejecutar las pruebas', { firstStep: true, screen: 'workspace' });
+const RUN = guideTask('Ejecutar las pruebas', { screen: 'workspace' });
 const THEME = guideTask('Cambiar el tema', { keywords: ['oscuro'], screen: 'catalog' });
 const PRACTISE = guideTask('Practicar de nuevo', {
   screen: 'workspace',
@@ -26,8 +25,12 @@ describe('HelpPanel', () => {
   let guide: FakeGuideStore;
   let close: ReturnType<typeof vi.fn>;
 
-  async function renderPanel(tasks: readonly GuideTask[] = [START, RUN, THEME, PRACTISE]) {
+  async function renderPanel(
+    tasks: readonly GuideTask[] = [START, RUN, THEME, PRACTISE],
+    firstStepIds: readonly string[] = [START.id, RUN.id],
+  ) {
     guide.tasks.set(tasks);
+    guide.firstStepIds.set(firstStepIds);
     close = vi.fn();
     await render(HelpPanel, {
       providers: [
@@ -144,14 +147,10 @@ describe('HelpPanel', () => {
     it('marks a task done, and says why a first step cannot start yet', async () => {
       guide.state.set({ firstStepsHidden: true, done: { [THEME.id]: 'ayer' } });
       guide.facts.set({ known: new Set(), places: {} });
-      await renderPanel([
-        guideTask('Entregar', {
-          firstStep: true,
-          place: 'openExercise',
-          unavailable: 'Sin ejercicios',
-        }),
-        THEME,
-      ]);
+      await renderPanel(
+        [guideTask('Entregar', { place: 'openExercise', unavailable: 'Sin ejercicios' }), THEME],
+        ['Entregar'],
+      );
 
       expect(screen.getByRole('button', { name: 'Cambiar el tema , hecha' })).toBeTruthy();
       expect(screen.getByText('No disponible: Sin ejercicios')).toBeTruthy();

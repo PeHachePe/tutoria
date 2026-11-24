@@ -40,6 +40,7 @@ import {
   timelineCategory,
 } from './attempt-timeline';
 import { AttemptTimelineList } from './attempt-timeline-list';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** An attempt as the detail shows it: what was loaded joined with what arrived live since. */
 export interface AttemptView extends LiveAttemptDetail {
@@ -72,6 +73,7 @@ function codeOf(attempt: Attempt): string {
 @Component({
   selector: 'app-attempt-detail-view',
   imports: [
+    GuideAnchor,
     MatButton,
     MatButtonToggle,
     MatButtonToggleGroup,
@@ -90,6 +92,7 @@ function codeOf(attempt: Attempt): string {
   host: { class: 'flex flex-col gap-5' },
 })
 export class AttemptDetailView {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly store = inject(LiveStore);
   private readonly pageReloader = inject(PageReloader);
   private readonly locale = inject(LanguageService).locale;

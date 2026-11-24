@@ -8,6 +8,10 @@ import { BehaviorSubject, map } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 
 import { provideSessionOf, restoreSession } from '../../auth/auth-testing';
+import { GuideStore } from '../../core/guide/guide-store';
+import type { GuideProfile, GuideSideMenu } from '../../core/guide/guide-task';
+import { FakeGuideStore } from '../../core/guide/guide-testing';
+import { STAFF_GUIDE } from '../../core/guide/staff-guide-token';
 import type { Role } from '../../data/user';
 import { SIDE_MENU_FOLDED_KEY, StaffLayout } from './staff-layout';
 
@@ -29,11 +33,17 @@ describe('StaffLayout', () => {
     vi.restoreAllMocks();
   });
 
-  async function renderAs(role: Role, wide = true, url = '/docente/en-vivo') {
+  async function renderAs(
+    role: Role,
+    wide = true,
+    url = '/docente/en-vivo',
+    guide: Partial<Record<'staffGuide', unknown>> = {},
+  ) {
     breakpoints = new FakeBreakpoints();
     breakpoints.wide.next(wide);
     TestBed.configureTestingModule({
       providers: [
+        ...('staffGuide' in guide ? [{ provide: STAFF_GUIDE, useValue: guide.staffGuide }] : []),
         provideSessionOf(role),
         { provide: BreakpointObserver, useValue: breakpoints },
         provideRouter([
@@ -243,5 +253,93 @@ describe('StaffLayout', () => {
 
     expect(screen.getByRole('button', { name: 'Menú de navegación' }).ariaExpanded).toBe('false');
     expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
+  });
+
+  describe('the guided help', () => {
+    let store: FakeGuideStore & { use: ReturnType<typeof vi.fn> };
+    let sideMenu: GuideSideMenu | undefined;
+    const profile = { id: 'teacher' } as GuideProfile;
+
+    /** The layout with the guided help of the role, as the routes of the area give it. */
+    async function renderGuided(wide: boolean, chosen: GuideProfile | null = profile) {
+      store = Object.assign(new FakeGuideStore(), { use: vi.fn() });
+      TestBed.overrideProvider(GuideStore, { useValue: store });
+      const rendered = await renderAs('teacher', wide, '/docente/en-vivo', {
+        staffGuide: (menu: GuideSideMenu) => {
+          sideMenu = menu;
+          return chosen ?? undefined;
+        },
+      });
+      return rendered;
+    }
+
+    it('has no help button where the routes give no guided help', async () => {
+      await renderAs('teacher');
+
+      expect(screen.queryByRole('button', { name: 'Ayuda' })).toBeNull();
+    });
+
+    it('has none either for a role without its guided help yet', async () => {
+      await renderGuided(true, null);
+
+      expect(screen.queryByRole('button', { name: 'Ayuda' })).toBeNull();
+      expect(store.use).not.toHaveBeenCalled();
+    });
+
+    it('gives the guided help of the role to the store, with the help button and the pieces marked', async () => {
+      await renderGuided(true);
+
+      expect(store.use).toHaveBeenCalledExactlyOnceWith(profile);
+      expect(screen.getByRole('button', { name: 'Ayuda' })).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Menú de navegación' }).getAttribute('data-guide'),
+      ).toBe('menu-button');
+      expect(
+        within(menu())
+          .getByRole('link', { name: /Grupos/ })
+          .getAttribute('data-guide'),
+      ).toBe('nav-groups');
+      expect(document.querySelector('mat-sidenav')?.getAttribute('data-guide')).toBe('side-menu');
+    });
+
+    it('opens the menu over the content for a tour once it has slid in, and closes it after', async () => {
+      const { harness } = await renderGuided(false);
+      const button = screen.getByRole('button', { name: 'Menú de navegación' });
+
+      await sideMenu?.open();
+      await harness.fixture.whenStable();
+      expect(button.ariaExpanded).toBe('true');
+      expect(sideMenu?.open()).toBeUndefined();
+
+      const closed = sideMenu?.closed();
+      sideMenu?.close();
+      await harness.fixture.whenStable();
+      await closed;
+      expect(button.ariaExpanded).toBe('false');
+    });
+
+    it('opens it again right after Escape closed it', async () => {
+      const { harness } = await renderGuided(false);
+      await sideMenu?.open();
+      await harness.fixture.whenStable();
+
+      const closed = sideMenu?.closed();
+      // Material reads the old keyCode, which user-event does not set
+      fireEvent.keyDown(within(menu()).getByRole('link', { name: /En vivo/ }), {
+        key: 'Escape',
+        keyCode: 27,
+      });
+      await closed;
+      await sideMenu?.open();
+      await harness.fixture.whenStable();
+
+      expect(screen.getByRole('button', { name: 'Menú de navegación' }).ariaExpanded).toBe('true');
+    });
+
+    it('has nothing to open where the menu is docked', async () => {
+      await renderGuided(true);
+
+      expect(sideMenu?.open()).toBeUndefined();
+    });
   });
 });

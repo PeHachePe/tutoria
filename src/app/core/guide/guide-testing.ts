@@ -1,7 +1,7 @@
 import { computed, signal } from '@angular/core';
 
 import type { GuideState } from '../../data/guide-state';
-import { firstStepsProgress, showFirstSteps } from './guide-progress';
+import { firstStepsOf, firstStepsProgress, showFirstSteps } from './guide-progress';
 import type { GuideFacts, GuideScreen, GuideTask } from './guide-task';
 
 /**
@@ -12,6 +12,9 @@ export class FakeGuideStore {
   readonly state = signal<GuideState>({});
   readonly facts = signal<GuideFacts>({ known: new Set(), places: {} });
   readonly tasks = signal<readonly GuideTask[]>([]);
+  /** The ids of the first steps of the profile, in its order. */
+  readonly firstStepIds = signal<readonly string[]>([]);
+  readonly firstStepTasks = computed(() => firstStepsOf(this.tasks(), this.firstStepIds()));
   readonly screen = signal<GuideScreen | undefined>(undefined);
   readonly screenTour = signal<GuideTask | undefined>(undefined);
   readonly hasBeacons = signal(false);
@@ -19,10 +22,10 @@ export class FakeGuideStore {
   readonly welcomeDue = signal(false);
 
   readonly firstSteps = computed(() =>
-    firstStepsProgress(this.tasks(), this.state(), this.facts()),
+    firstStepsProgress(this.firstStepTasks(), this.state(), this.facts()),
   );
   readonly firstStepsShown = computed(() =>
-    showFirstSteps(this.tasks(), this.state(), this.facts()),
+    showFirstSteps(this.firstStepTasks(), this.state(), this.facts()),
   );
   readonly pendingFirstSteps = computed(() => {
     const { done, total } = this.firstSteps();

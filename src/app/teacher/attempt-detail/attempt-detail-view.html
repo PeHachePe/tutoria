@@ -1,4 +1,4 @@
-<header class="flex flex-col gap-2">
+<header class="flex flex-col gap-2" [appGuideAnchor]="anchors.detailHeader">
   <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
     <h1 class="text-headline-medium">{{ view().student.name }}</h1>
     <app-status-chip [status]="view().attempt.status" [testCount]="now().lastRun ?? undefined" />
@@ -35,6 +35,7 @@
   @if (view().attempts.length > 1) {
     <nav
       class="flex flex-wrap items-center gap-2"
+      [appGuideAnchor]="anchors.detailAttempts"
       aria-label="Intentos del alumno en este ejercicio"
       i18n-aria-label="@@detail.attempts"
     >
@@ -71,6 +72,7 @@
     <button
       matButton="outlined"
       type="button"
+      [appGuideAnchor]="anchors.detailAttend"
       [attr.aria-label]="attendedLabel(row.student.name)"
       (click)="attend(row.student.id)"
       i18n="@@live.queue.attend"
@@ -81,6 +83,7 @@
 }
 
 <app-attempt-now-card
+  [appGuideAnchor]="anchors.detailNow"
   [now]="now()"
   [summary]="summary()"
   [clock]="clock()"
@@ -89,6 +92,7 @@
 
 @if (runs().items.length > 0) {
   <app-attempt-evolution
+    [appGuideAnchor]="anchors.detailEvolution"
     [runs]="runs()"
     [liveSince]="view().loadedAt"
     (chosen)="goToEntry($event)"
@@ -99,6 +103,7 @@
      In one column the code goes up, as ficha 07 asks -->
 <div class="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
   <section
+    [appGuideAnchor]="anchors.detailTimeline"
     aria-labelledby="detail-timeline-title"
     class="flex max-h-144 min-h-0 flex-col overflow-hidden rounded-2xl bg-panel @4xl:h-144"
   >
@@ -112,6 +117,7 @@
         <!-- On a phone the filters do not fit: they scroll sideways in their own zone -->
         <div class="max-w-full overflow-x-auto">
           <mat-button-toggle-group
+            [appGuideAnchor]="anchors.detailTimelineFilter"
             aria-label="Filtrar la línea temporal"
             i18n-aria-label="@@detail.filter.label"
             hideSingleSelectionIndicator
@@ -148,6 +154,7 @@
   </section>
 
   <section
+    [appGuideAnchor]="anchors.detailCode"
     aria-labelledby="detail-code-title"
     class="order-first flex min-h-80 flex-col gap-3 rounded-2xl bg-panel p-4 @4xl:order-none @4xl:h-144"
   >

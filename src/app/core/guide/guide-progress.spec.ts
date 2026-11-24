@@ -1,6 +1,7 @@
 import type { GuideState } from '../../data/guide-state';
 import {
   filterTasks,
+  firstStepsOf,
   firstStepsProgress,
   isTaskDone,
   nextFirstStep,
@@ -32,9 +33,9 @@ function facts(known: readonly GuideFact[] = [], places: GuideFacts['places'] = 
   return { known: new Set(known), places };
 }
 
-const START = task('start-exercise', { firstStep: true, doneBy: 'started', screen: 'catalog' });
-const RUN = task('run-tests', { firstStep: true, doneBy: 'ran' });
-const HINT = task('ask-hint', { firstStep: true, doneBy: 'askedHint' });
+const START = task('start-exercise', { doneBy: 'started', screen: 'catalog' });
+const RUN = task('run-tests', { doneBy: 'ran' });
+const HINT = task('ask-hint', { doneBy: 'askedHint' });
 const SETTINGS = task('settings', { screen: 'settings', place: 'settings' });
 const DATA = task('registered-data', {
   title: 'Ver qué datos se registran',
@@ -43,6 +44,8 @@ const DATA = task('registered-data', {
   place: 'catalog',
 });
 const TASKS = [START, RUN, HINT, SETTINGS, DATA];
+/** The first steps of the profile, in its order. */
+const FIRST = [START, RUN, HINT];
 const NOTHING: GuideState = {};
 
 describe('guide progress', () => {
@@ -61,8 +64,13 @@ describe('guide progress', () => {
   });
 
   describe('first steps', () => {
+    it('are the tasks the profile names, in its order, leaving out the ids it does not know', () => {
+      expect(firstStepsOf(TASKS, ['run-tests', 'nope', 'start-exercise'])).toEqual([RUN, START]);
+      expect(firstStepsOf(TASKS, [])).toEqual([]);
+    });
+
     it('counts the first steps done, with the next one pending', () => {
-      expect(firstStepsProgress(TASKS, NOTHING, facts(['started']))).toEqual({
+      expect(firstStepsProgress(FIRST, NOTHING, facts(['started']))).toEqual({
         done: 1,
         total: 3,
         next: RUN,
@@ -70,7 +78,7 @@ describe('guide progress', () => {
     });
 
     it('has no next one once all are done', () => {
-      expect(firstStepsProgress(TASKS, NOTHING, facts(['started', 'ran', 'askedHint']))).toEqual({
+      expect(firstStepsProgress(FIRST, NOTHING, facts(['started', 'ran', 'askedHint']))).toEqual({
         done: 3,
         total: 3,
         next: undefined,
@@ -78,39 +86,43 @@ describe('guide progress', () => {
     });
 
     it('shows them while some is pending and the user did not hide them', () => {
-      expect(showFirstSteps(TASKS, NOTHING, facts())).toBe(true);
-      expect(showFirstSteps(TASKS, { firstStepsHidden: true }, facts())).toBe(false);
-      expect(showFirstSteps(TASKS, NOTHING, facts(['started', 'ran', 'askedHint']))).toBe(false);
+      expect(showFirstSteps(FIRST, NOTHING, facts())).toBe(true);
+      expect(showFirstSteps(FIRST, { firstStepsHidden: true }, facts())).toBe(false);
+      expect(showFirstSteps(FIRST, NOTHING, facts(['started', 'ran', 'askedHint']))).toBe(false);
     });
 
     it('offers the next pending one after finishing one, going round to the first', () => {
-      expect(nextFirstStep(TASKS, NOTHING, facts(['started']), 'run-tests')).toBe(HINT);
-      expect(nextFirstStep(TASKS, NOTHING, facts(['ran', 'askedHint']), 'ask-hint')).toBe(START);
+      expect(nextFirstStep(FIRST, NOTHING, facts(['started']), 'run-tests')).toBe(HINT);
+      expect(nextFirstStep(FIRST, NOTHING, facts(['ran', 'askedHint']), 'ask-hint')).toBe(START);
     });
 
     it('offers none when the one finished was the last pending', () => {
       expect(
-        nextFirstStep(TASKS, NOTHING, facts(['started', 'ran', 'askedHint']), 'ask-hint'),
+        nextFirstStep(FIRST, NOTHING, facts(['started', 'ran', 'askedHint']), 'ask-hint'),
       ).toBeUndefined();
     });
 
+    it('offers none after a task that is not a first step', () => {
+      expect(nextFirstStep(FIRST, NOTHING, facts(), 'settings')).toBeUndefined();
+    });
+
     it('does not offer the one just finished while its data is not read yet', () => {
-      expect(nextFirstStep(TASKS, NOTHING, facts(['started', 'ran']), 'ask-hint')).toBeUndefined();
+      expect(nextFirstStep(FIRST, NOTHING, facts(['started', 'ran']), 'ask-hint')).toBeUndefined();
     });
   });
 
   describe('the list of the panel', () => {
     it('puts first the tasks of the open screen, keeping their order', () => {
-      expect(orderTasks(TASKS, 'settings', false)).toEqual([SETTINGS, START, RUN, HINT, DATA]);
-      expect(orderTasks(TASKS, 'workspace', false)).toEqual([RUN, HINT, START, SETTINGS, DATA]);
+      expect(orderTasks(TASKS, 'settings', [])).toEqual([SETTINGS, START, RUN, HINT, DATA]);
+      expect(orderTasks(TASKS, 'workspace', [])).toEqual([RUN, HINT, START, SETTINGS, DATA]);
     });
 
     it('keeps the order on a screen without tasks', () => {
-      expect(orderTasks(TASKS, undefined, false)).toEqual(TASKS);
+      expect(orderTasks(TASKS, undefined, [])).toEqual(TASKS);
     });
 
-    it('does not repeat the first steps while they show above', () => {
-      expect(orderTasks(TASKS, 'catalog', true)).toEqual([SETTINGS, DATA]);
+    it('leaves out the first steps while they show above', () => {
+      expect(orderTasks(TASKS, 'catalog', FIRST)).toEqual([SETTINGS, DATA]);
     });
 
     it('filters by title and keywords, without accents nor capitals', () => {

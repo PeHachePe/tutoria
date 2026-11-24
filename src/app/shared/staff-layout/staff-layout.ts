@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatIconButton } from '@angular/material/button';
 import { MatDivider } from '@angular/material/divider';
@@ -9,10 +9,14 @@ import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/mat
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { map } from 'rxjs';
+import { filter, firstValueFrom, map } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
 import { APP_PATHS } from '../../core/app-paths';
+import { GUIDE_ANCHORS, GuideAnchor, type GuideAnchorId } from '../../core/guide/guide-anchor';
+import { GuideStore } from '../../core/guide/guide-store';
+import { HelpButton } from '../../core/guide/help-button/help-button';
+import { STAFF_GUIDE } from '../../core/guide/staff-guide-token';
 import { DEV_PATHS } from '../../dev/dev-paths';
 import { Brand } from '../brand/brand';
 import { LanguageMenu } from '../language-menu/language-menu';
@@ -21,31 +25,51 @@ import { SkipLink } from '../skip-link/skip-link';
 import { ThemeMenu } from '../theme-menu/theme-menu';
 import { UserMenu } from '../user-menu/user-menu';
 
+/** An entry of the menu, with the id the guided help points it at. */
+interface StaffLink extends NavLink {
+  readonly anchor?: GuideAnchorId;
+}
+
 interface NavSection {
   readonly label: string;
-  readonly links: readonly NavLink[];
+  readonly links: readonly StaffLink[];
 }
+
+const A = GUIDE_ANCHORS;
 
 const TEACHING: NavSection = {
   label: $localize`:@@staff.teaching:Docencia`,
   links: [
-    { path: APP_PATHS.teacher.live, label: $localize`:@@nav.live:En vivo`, icon: 'sensors' },
+    {
+      path: APP_PATHS.teacher.live,
+      label: $localize`:@@nav.live:En vivo`,
+      icon: 'sensors',
+      anchor: A.navLive,
+    },
     {
       path: APP_PATHS.teacher.history,
       label: $localize`:@@nav.history:Histórico`,
       icon: 'insights',
+      anchor: A.navHistory,
     },
     {
       path: APP_PATHS.teacher.exercises,
       label: $localize`:@@nav.exercises:Ejercicios`,
       icon: 'assignment',
+      anchor: A.navBank,
     },
     {
       path: APP_PATHS.teacher.blocks,
       label: $localize`:@@nav.blocks:Bloques`,
       icon: 'view_agenda',
+      anchor: A.navBlocks,
     },
-    { path: APP_PATHS.teacher.groups, label: $localize`:@@nav.groups:Grupos`, icon: 'groups' },
+    {
+      path: APP_PATHS.teacher.groups,
+      label: $localize`:@@nav.groups:Grupos`,
+      icon: 'groups',
+      anchor: A.navGroups,
+    },
   ],
 };
 
@@ -95,6 +119,8 @@ export const SIDE_MENU_FOLDED_KEY = 'tutoria.side-menu-folded';
     RouterLinkActive,
     RouterOutlet,
     Brand,
+    GuideAnchor,
+    HelpButton,
     LanguageMenu,
     ThemeMenu,
     SkipLink,
@@ -105,6 +131,9 @@ export const SIDE_MENU_FOLDED_KEY = 'tutoria.side-menu-folded';
 export class StaffLayout {
   private readonly auth = inject(AuthStore);
   private readonly breakpoints = inject(BreakpointObserver);
+
+  protected readonly anchors = GUIDE_ANCHORS;
+  private readonly sidenav = viewChild.required<MatSidenav>('sidenav');
 
   /** BreakpointObserver only offers an Observable: it is turned into a signal at once. */
   protected readonly wide = toSignal(
@@ -132,6 +161,12 @@ export class StaffLayout {
   /** Whether the menu shows its names, for the button that folds it or opens it. */
   protected readonly expanded = computed(() => (this.wide() ? !this.folded() : this.openOver()));
 
+  /**
+   * The guided help of the role, if it has one yet (2.12, D-093): its tours open the menu over the
+   * content to point at an entry, and close it after (D-094).
+   */
+  protected readonly guided = this.useGuide();
+
   protected toggleMenu(): void {
     if (this.wide()) {
       this.folded.update((folded) => !folded);
@@ -154,6 +189,28 @@ export class StaffLayout {
   /** On small screens the menu covers the content, so it closes once a page is chosen. */
   protected closeIfOver(): void {
     this.openOver.set(false);
+  }
+
+  private useGuide(): boolean {
+    const profile = inject(STAFF_GUIDE, { optional: true })?.({
+      open: () => this.openForGuide(),
+      close: () => this.closeIfOver(),
+      closed: () => firstValueFrom(this.sidenav().openedChange.pipe(filter((open) => !open))),
+    });
+    if (profile) inject(GuideStore).use(profile);
+    return !!profile;
+  }
+
+  /**
+   * For a tour, over the content: once it has slid in, so the globe measures the entry where it
+   * stays. Docked it is open already, and a folded menu shows its icons, which the globe names.
+   */
+  private openForGuide(): Promise<unknown> | undefined {
+    const sidenav = this.sidenav();
+    if (this.wide() || sidenav.opened) return undefined;
+    // Opened by hand: right after Esc closed it, the binding would not see the flag change back
+    this.openOver.set(true);
+    return sidenav.open();
   }
 }
 

@@ -45,7 +45,6 @@ const RUN: GuideTask = {
   keywords: [],
   screen: 'catalog',
   steps: STEPS,
-  firstStep: true,
   doneBy: 'ran',
 };
 
@@ -100,6 +99,8 @@ export class ShowcaseGuide {
 
   constructor() {
     const profile: GuideProfile = {
+      id: 'student',
+      firstSteps: ['sample-run', 'sample-submit'],
       tasks: [
         RUN,
         { ...RUN, id: 'sample-submit', title: 'Entregar', doneBy: 'submitted' },
@@ -107,7 +108,6 @@ export class ShowcaseGuide {
           ...RUN,
           id: 'sample-tour',
           title: 'Recorrer esta pantalla',
-          firstStep: false,
           tourOf: 'catalog',
           doneBy: undefined,
         },
@@ -115,7 +115,6 @@ export class ShowcaseGuide {
           ...RUN,
           id: 'sample-theme',
           title: 'Cambiar el tema',
-          firstStep: false,
           doneBy: undefined,
         },
       ],

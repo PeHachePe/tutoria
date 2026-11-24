@@ -55,10 +55,7 @@ export class HelpPanel {
 
   protected readonly firstSteps = this.guide.firstSteps;
   protected readonly firstStepRows = computed(() =>
-    this.guide
-      .tasks()
-      .filter((task) => task.firstStep)
-      .map((task) => this.row(task)),
+    this.guide.firstStepTasks().map((task) => this.row(task)),
   );
   /** All done and not acknowledged yet: the mascot celebrates once, instead of the list. */
   protected readonly celebrating = computed(() => {
@@ -74,8 +71,12 @@ export class HelpPanel {
   protected readonly howToRows = computed(() => {
     const query = this.query().trim();
     const tasks = query
-      ? orderTasks(filterTasks(this.guide.tasks(), query), this.guide.screen(), false)
-      : orderTasks(this.guide.tasks(), this.guide.screen(), this.guide.firstStepsShown());
+      ? orderTasks(filterTasks(this.guide.tasks(), query), this.guide.screen(), [])
+      : orderTasks(
+          this.guide.tasks(),
+          this.guide.screen(),
+          this.guide.firstStepsShown() ? this.guide.firstStepTasks() : [],
+        );
     return tasks.map((task) => this.row(task));
   });
 

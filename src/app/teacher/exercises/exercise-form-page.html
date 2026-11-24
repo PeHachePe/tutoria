@@ -3,6 +3,7 @@
     <a
       matButton
       class="self-start"
+      [appGuideAnchor]="anchors.formBack"
       [routerLink]="paths.exercises"
       i18n-aria-label="@@exerciseForm.back"
       aria-label="Volver a los ejercicios"
@@ -19,6 +20,7 @@
           matButton="tonal"
           type="button"
           disabledInteractive
+          [appGuideAnchor]="anchors.formTryout"
           [disabled]="!checkTarget()"
           [matTooltip]="checkTarget() ? '' : tryoutWaits"
           (click)="tryOut()"
@@ -120,6 +122,7 @@
           <section
             class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
             aria-labelledby="statement-heading"
+            [appGuideAnchor]="anchors.formStatement"
           >
             <h2 id="statement-heading" class="text-title-large" i18n="@@exerciseForm.statement">
               Título y enunciado
@@ -137,6 +140,7 @@
           <section
             class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
             aria-labelledby="classification-heading"
+            [appGuideAnchor]="anchors.formClassification"
           >
             <h2
               id="classification-heading"
@@ -180,6 +184,7 @@
           <section
             class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
             aria-labelledby="thresholds-heading"
+            [appGuideAnchor]="anchors.formThresholds"
           >
             <div class="flex flex-col gap-1">
               <h2 id="thresholds-heading" class="text-title-large" i18n="@@exerciseForm.thresholds">
@@ -242,6 +247,7 @@
           <section
             class="flex flex-col gap-3 rounded-2xl bg-panel p-4 sm:p-6"
             aria-labelledby="function-heading"
+            [appGuideAnchor]="anchors.formFunction"
           >
             <div class="flex flex-col gap-1">
               <h2 id="function-heading" class="text-title-large" i18n="@@exerciseForm.function">
@@ -308,12 +314,14 @@
               </p>
             </div>
             <app-exercise-test-list
+              [appGuideAnchor]="anchors.formTests"
               [tests]="exerciseForm.tests"
               [functionName]="model().functionName"
               [results]="testResults()"
             />
             <app-solution-check
               class="border-t border-outline-variant pt-3"
+              [appGuideAnchor]="anchors.formCheck"
               [target]="checkTarget()"
               [skeleton]="solutionSkeleton()"
               [(lastRun)]="lastCheck"
@@ -327,6 +335,7 @@
         <div class="pointer-events-none sticky bottom-4 z-10 flex justify-end">
           <div
             class="pointer-events-auto flex max-w-full flex-wrap items-center justify-end gap-2 rounded-2xl border border-outline-variant bg-panel p-2 ps-4 shadow-lg"
+            [appGuideAnchor]="anchors.formSave"
           >
             @if (exerciseForm().errors()[0]; as error) {
               <p class="text-body-medium text-error" role="alert">{{ error.message }}</p>

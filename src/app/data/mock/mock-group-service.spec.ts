@@ -20,6 +20,7 @@ import {
   DAM_CLASS_ID,
   DAM_GROUP_ID,
   DAM_STUDENT_IDS,
+  FRESH_STUDENT_ID,
   DAW_CLASS_ID,
   DAW_ENGLISH_GROUP_ID,
   DAW_GROUP_ID,
@@ -27,6 +28,7 @@ import {
   DAW_WEB_GROUP_ID,
   DISABLED_STUDENT_ID,
   NEW_STUDENT_IDS,
+  NEW_TEACHER_ID,
   OTHER_TEACHER_ID,
   TEACHER_ID,
 } from './fixtures/users';
@@ -307,7 +309,7 @@ describe('MockGroupService', () => {
       expect(db.tables().classes).toHaveLength(start.classes.length);
       const [web] = groupsOf(DAM_CLASS_ID).filter((group) => group.subjectId === WEB_CLIENT_ID);
       expect(web.teacherId).toBe(TEACHER_ID);
-      expect(studentsOf(web.id)).toEqual(sorted(DAM_STUDENT_IDS));
+      expect(studentsOf(web.id)).toEqual(sorted([...DAM_STUDENT_IDS, FRESH_STUDENT_ID]));
       const classes = await service.listClasses();
       expect(classes.map((row) => [row.schoolClass.id, row.canEdit])).toEqual([
         [DAM_CLASS_ID, false],
@@ -488,7 +490,7 @@ describe('MockGroupService', () => {
         label: null,
         teacherId: TEACHER_ID,
       });
-      expect(studentsOf(groupId)).toEqual(sorted(DAM_STUDENT_IDS));
+      expect(studentsOf(groupId)).toEqual(sorted([...DAM_STUDENT_IDS, FRESH_STUDENT_ID]));
     });
 
     it('adds a split of a subject the class has, with the label trimmed and nobody in it', async () => {
@@ -1535,10 +1537,12 @@ describe('MockGroupService', () => {
       await expect(service.listTeachers()).resolves.toEqual([
         { id: OTHER_TEACHER_ID, name: 'Javier Ortega Ruiz', email: 'javier.ortega@tutoria.test' },
         { id: TEACHER_ID, name: 'Marta Ibáñez Soler', email: 'marta.ibanez@tutoria.test' },
+        { id: NEW_TEACHER_ID, name: 'Nuria Peña Gallego', email: 'nuria.pena@tutoria.test' },
       ]);
       disable(OTHER_TEACHER_ID);
       await expect(service.listTeachers()).resolves.toEqual([
         expect.objectContaining({ id: TEACHER_ID }),
+        expect.objectContaining({ id: NEW_TEACHER_ID }),
       ]);
     });
 

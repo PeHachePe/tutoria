@@ -32,6 +32,13 @@
   font-family: var(--font-sans);
 }
 
+/* A dialog as tall as the screen leaves the globe no room beside it: driver.js puts it over the
+   dialog, without an arrow, in the middle of its bottom edge, where the buttons are. Down in the
+   corner where reading starts, it leaves them free (7.0b1). */
+.app-guide-popover.app-guide-in-overlay:has(.driver-popover-arrow-none) {
+  inset: auto auto 1rem 1rem !important;
+}
+
 /* The arrow is a triangle of borders: only the side that points at the piece takes the colour, as
    driver.js leaves the other three transparent */
 .app-guide-popover .driver-popover-arrow-side-left {

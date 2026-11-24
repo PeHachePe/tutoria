@@ -596,6 +596,15 @@
       >
         <app-mascot class="size-28" />
       </app-empty-state>
+      <!-- A teacher without classes (7.0b1): its way out starts the guided task, or leads to Grupos -->
+      <app-empty-state
+        heading="Todavía no tienes grupos"
+        text="Crea tu clase en Grupos, o únete a la de otro docente, y aquí organizarás los bloques de cada asignatura."
+      >
+        <div class="mt-2 flex justify-center" emptyStateAction>
+          <app-create-class-button />
+        </div>
+      </app-empty-state>
       <app-load-error [error]="sampleError" (retry)="retries.update((n) => n + 1)" />
       <p role="status" class="text-body-medium text-on-surface-variant">
         Reintentos: {{ retries() }}

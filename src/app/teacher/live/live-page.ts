@@ -36,6 +36,8 @@ import { LiveRhythm } from './live-rhythm';
 import { exercisePosition } from './live-state';
 import { LiveStore } from './live-store';
 import { LiveTable } from './live-table';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
+import { CreateClassButton } from '../teacher-guide/create-class-button';
 
 const ALL_BLOCKS_LABEL = $localize`:@@live.block.all:Toda la clase`;
 const FILTER_ACTION = $localize`:@@live.figure.filter:Filtrar el alumnado`;
@@ -76,6 +78,8 @@ interface FilterTab {
 @Component({
   selector: 'app-live-page',
   imports: [
+    GuideAnchor,
+    CreateClassButton,
     DatePipe,
     MatFormField,
     MatLabel,
@@ -102,6 +106,7 @@ interface FilterTab {
   host: { class: '@container block' },
 })
 export class LivePage {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly store = inject(LiveStore);
   private readonly router = inject(Router);
   private readonly locale = inject(LanguageService).locale;

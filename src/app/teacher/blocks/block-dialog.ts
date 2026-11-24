@@ -32,6 +32,7 @@ import type { ClassBlock } from '../../data/exercise';
 import type { ContentLocale } from '../../data/localized-text';
 import { DEFAULT_OPENING_TIME } from '../../shared/due-date';
 import { blockSchema, toBlockDraft, toBlockFormModel } from './block-form';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** The block to edit, or null for a new one, and the language of the interface. */
 export interface BlockDialogData {
@@ -51,6 +52,7 @@ export interface BlockDialogData {
   // The adapter takes the language of the build (LOCALE_ID)
   providers: [provideLocalizedDateAdapter()],
   imports: [
+    GuideAnchor,
     FormRoot,
     FormField,
     MatDialogTitle,
@@ -155,7 +157,12 @@ export interface BlockDialogData {
         <button matButton type="button" mat-dialog-close i18n="@@blockDialog.cancel">
           Cancelar
         </button>
-        <button matButton="filled" type="submit" [disabled]="blockForm().submitting()">
+        <button
+          matButton="filled"
+          type="submit"
+          [appGuideAnchor]="anchors.blockDialogSave"
+          [disabled]="blockForm().submitting()"
+        >
           @if (blockForm().submitting()) {
             <span i18n="@@blockDialog.saving">Guardando…</span>
           } @else if (data.block) {
@@ -169,6 +176,7 @@ export interface BlockDialogData {
   `,
 })
 export class BlockDialog {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly data = inject<BlockDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<BlockDialog, boolean>>(MatDialogRef);
 

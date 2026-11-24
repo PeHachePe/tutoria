@@ -11,6 +11,7 @@
         matTooltip="Menú de navegación"
         i18n-matTooltip="@@staff.menuTooltip"
         aria-controls="menu-principal"
+        [appGuideAnchor]="anchors.menuButton"
         [attr.aria-expanded]="expanded()"
         (click)="toggleMenu()"
       >
@@ -23,6 +24,9 @@
       </button>
       <app-brand />
       <span class="flex-1"></span>
+      @if (guided) {
+        <app-help-button />
+      }
       <app-theme-menu />
       <app-language-menu />
       <app-user-menu />
@@ -32,8 +36,10 @@
   <!-- autosize: the content follows the width of the menu when it folds to its icons -->
   <mat-sidenav-container class="min-h-0 flex-1" autosize>
     <mat-sidenav
+      #sidenav
       id="menu-principal"
       class="app-side-menu"
+      [appGuideAnchor]="anchors.sideMenu"
       [class.app-side-menu-rail]="rail()"
       [autoFocus]="menuFocus()"
       [mode]="wide() ? 'side' : 'over'"
@@ -57,6 +63,7 @@
               #active="routerLinkActive"
               [activated]="active.isActive"
               ariaCurrentWhenActive="page"
+              [appGuideAnchor]="link.anchor ?? null"
               [attr.aria-label]="link.label"
               [matTooltip]="link.label"
               matTooltipPosition="after"

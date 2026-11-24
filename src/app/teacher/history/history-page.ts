@@ -17,6 +17,8 @@ import { BlockDetail } from './block-detail';
 import { HintChart } from './hint-chart';
 import { hintTrend } from './hint-trend';
 import { averageHints, formatAverage, isStarted, pickBlock } from './history-figures';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
+import { CreateClassButton } from '../teacher-guide/create-class-button';
 
 const EMPTY_HISTORY: GroupHistory = { students: 0, blocks: [], deadlines: [] };
 
@@ -31,6 +33,8 @@ const EMPTY_HISTORY: GroupHistory = { students: 0, blocks: [], deadlines: [] };
 @Component({
   selector: 'app-history-page',
   imports: [
+    GuideAnchor,
+    CreateClassButton,
     NgTemplateOutlet,
     GroupPicker,
     BlockDetail,
@@ -43,6 +47,7 @@ const EMPTY_HISTORY: GroupHistory = { students: 0, blocks: [], deadlines: [] };
   templateUrl: './history-page.html',
 })
 export class HistoryPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly blockService = inject(BlockService);
   private readonly statsService = inject(StatsService);
   private readonly router = inject(Router);

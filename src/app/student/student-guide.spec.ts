@@ -251,11 +251,12 @@ describe('student guide', () => {
     });
 
     it('lists the first steps, then the tours of the screens, then the rest', () => {
-      const { tasks, beacons, screenOf } = guide(true);
+      const { id, tasks, firstSteps, beacons, screenOf } = guide(true);
       const ids = tasks.map((task) => task.id);
 
-      expect(ids.slice(0, 4)).toEqual(['start-exercise', 'run-tests', 'ask-hint', 'submit']);
-      expect(tasks.slice(0, 4).every((task) => task.firstStep)).toBe(true);
+      expect(id).toBe('student');
+      expect(firstSteps).toEqual(['start-exercise', 'run-tests', 'ask-hint', 'submit']);
+      expect(ids.slice(0, 4)).toEqual(firstSteps);
       expect(ids.slice(4, 8)).toEqual([
         'tour-catalog',
         'tour-workspace',

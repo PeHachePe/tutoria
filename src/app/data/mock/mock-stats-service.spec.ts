@@ -38,7 +38,7 @@ describe('MockStatsService', () => {
   it('gives the administration the history of any group', async () => {
     db.setSession(ADMIN_ID);
 
-    await expect(service.groupHistory(DAM_GROUP_ID)).resolves.toMatchObject({ students: 6 });
+    await expect(service.groupHistory(DAM_GROUP_ID)).resolves.toMatchObject({ students: 7 });
   });
 
   it('hides the groups of other teachers and those that do not exist', async () => {

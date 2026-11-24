@@ -40,10 +40,8 @@ describe('HelpButton', () => {
   });
 
   it('says how many first steps are done, with a dot, while some is left', async () => {
-    guide.tasks.set([
-      guideTask('a', { firstStep: true, doneBy: 'started' }),
-      guideTask('b', { firstStep: true }),
-    ]);
+    guide.tasks.set([guideTask('a', { doneBy: 'started' }), guideTask('b')]);
+    guide.firstStepIds.set(['a', 'b']);
     guide.facts.set({ known: new Set(['started']), places: {} });
 
     await renderButton();

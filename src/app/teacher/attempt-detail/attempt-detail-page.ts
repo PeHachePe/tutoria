@@ -16,6 +16,7 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LiveStore } from '../live/live-store';
 import { latestAttempt, mergeById } from './attempt-timeline';
 import { AttemptDetailView, type AttemptView } from './attempt-detail-view';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /**
  * The detail of an attempt (/docente/en-vivo/:attemptId, ficha 07): how the student got here
@@ -27,6 +28,7 @@ import { AttemptDetailView, type AttemptView } from './attempt-detail-view';
 @Component({
   selector: 'app-attempt-detail-page',
   imports: [
+    GuideAnchor,
     MatButton,
     MatIcon,
     RouterLink,
@@ -39,6 +41,7 @@ import { AttemptDetailView, type AttemptView } from './attempt-detail-view';
   templateUrl: './attempt-detail-page.html',
 })
 export class AttemptDetailPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly live = inject(LiveService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

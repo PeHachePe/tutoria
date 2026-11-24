@@ -45,6 +45,7 @@ function popoverDom(): PopoverDOM {
 class FakeDriver {
   index = 0;
   popover: PopoverDOM | undefined;
+  readonly refresh = vi.fn();
   readonly moveNext = vi.fn(() => {
     this.index++;
     this.render();
@@ -66,6 +67,10 @@ class FakeDriver {
     const step = this.steps[this.index];
     const target = typeof step.element === 'function' ? step.element() : undefined;
     this.config.onHighlighted?.(target, step, {} as never);
+  }
+
+  getActiveIndex(): number {
+    return this.index;
   }
 
   getActiveStep(): DriveStep | undefined {
@@ -201,7 +206,6 @@ describe('TourRunner', () => {
         allowedElements: '.cdk-overlay-container',
         overlayClickBehavior: 'none',
         showProgress: true,
-        progressText: 'Paso {{current}} de {{total}}',
         nextBtnText: 'Siguiente',
         prevBtnText: 'Anterior',
         doneBtnText: 'Terminar',
@@ -356,6 +360,123 @@ describe('TourRunner', () => {
       await Promise.resolve();
       tour.destroy('done');
       await expect(end).resolves.toBe('done');
+    });
+
+    it('counts in its progress only the steps that show: not the optional ones missing', async () => {
+      piece('help');
+      void (await start([
+        STEP,
+        { anchor: 'hint', ...STEP, optional: true },
+        { anchor: 'run-tests', ...STEP },
+        { anchor: 'help', ...STEP, optional: true },
+        { ...STEP, optional: true },
+      ]));
+      const progress = () => tour.popover?.progress.textContent;
+
+      expect(progress()).toBe('Paso 1 de 3');
+      tour.index = 2;
+      tour.render();
+      expect(progress()).toBe('Paso 2 de 3');
+      tour.index = 1;
+      tour.render();
+      expect(progress()).toBe('Paso 2 de 4');
+    });
+
+    it('opens the side menu for its entries, again if it closes, and closes it after them', async () => {
+      const sideMenu = {
+        open: vi.fn(() => undefined),
+        close: vi.fn(),
+        closed: () => new Promise(() => undefined),
+      };
+      const entry = piece('help');
+      const { end } = await start(
+        [
+          { anchor: 'help', ...STEP, inSideMenu: true },
+          { anchor: 'hint', ...STEP },
+        ],
+        { sideMenu },
+      );
+      const find = (index: number) => (tour.steps[index].element as () => Element)();
+
+      // driver.js looked for it when drawing the step, and looks again whenever the page changes
+      expect(sideMenu.open).toHaveBeenCalledOnce();
+      sideMenu.open.mockClear();
+      expect(find(0)).toBe(entry);
+      expect(find(0)).toBe(entry);
+      expect(sideMenu.open).toHaveBeenCalledTimes(2);
+      expect(sideMenu.close).not.toHaveBeenCalled();
+      expect(tour.steps[0]).toMatchObject({
+        allowPageInteraction: false,
+        onElementMissing: 'stay',
+      });
+
+      tour.moveNext();
+      void find(1);
+      expect(sideMenu.open).toHaveBeenCalledTimes(2);
+      expect(sideMenu.close).toHaveBeenCalledOnce();
+      tour.destroy('close');
+      await end;
+      expect(sideMenu.close).toHaveBeenCalledTimes(2);
+    });
+
+    it('puts the globe in the top layer, over the dialogs of Material, each time it is drawn', async () => {
+      const toggle = vi.fn();
+      Object.defineProperty(HTMLElement.prototype, 'togglePopover', {
+        value: toggle,
+        configurable: true,
+      });
+      try {
+        void (await start([STEP]));
+
+        expect(tour.popover?.wrapper.getAttribute('popover')).toBe('manual');
+        expect(toggle.mock.calls).toEqual([[false], [true]]);
+      } finally {
+        delete (HTMLElement.prototype as Partial<HTMLElement>).togglePopover;
+      }
+    });
+
+    it('marks the globe of a step inside a dialog, so it moves out of the way of its buttons', async () => {
+      void (await start([STEP, { anchor: 'submit-dialog', ...STEP, inOverlay: true }]));
+
+      expect(tour.popover?.wrapper.classList).not.toContain('app-guide-in-overlay');
+      tour.moveNext();
+      expect(tour.popover?.wrapper.classList).toContain('app-guide-in-overlay');
+    });
+
+    it('measures the entry again once the side menu has slid in', async () => {
+      piece('help');
+      const sideMenu = {
+        open: vi.fn(() => Promise.resolve()),
+        close: vi.fn(),
+        closed: () => new Promise(() => undefined),
+      };
+      void (await start([{ anchor: 'help', ...STEP, inSideMenu: true }], { sideMenu }));
+
+      await vi.waitFor(() => expect(tour.refresh).toHaveBeenCalled());
+    });
+
+    it('opens the side menu again if Esc closes it under its entry, not once the tour left it', async () => {
+      piece('help');
+      const closings: (() => void)[] = [];
+      const sideMenu = {
+        open: vi.fn(() => Promise.resolve()),
+        close: vi.fn(),
+        closed: () => new Promise<void>((resolve) => closings.push(resolve)),
+      };
+      void (await start([{ anchor: 'help', ...STEP, inSideMenu: true }, STEP], { sideMenu }));
+      sideMenu.open.mockClear();
+
+      closings[0]();
+      await vi.waitFor(() => expect(sideMenu.open).toHaveBeenCalledOnce());
+      await vi.waitFor(() => expect(tour.refresh).toHaveBeenCalled());
+
+      void (await start([{ anchor: 'help', ...STEP, inSideMenu: true }, STEP], { sideMenu }));
+      tour.moveNext();
+      sideMenu.open.mockClear();
+      closings[1]();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(sideMenu.open).not.toHaveBeenCalled();
     });
 
     it('leaves a globe as it is when driver.js has no step of ours in it', async () => {

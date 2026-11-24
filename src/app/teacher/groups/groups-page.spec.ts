@@ -303,8 +303,8 @@ describe('GroupsPage', () => {
 
     await choose(DAM_NAME);
     expect(url()).toBe(`${URL}?clase=${DAM_CLASS_ID}`);
-    expect(subjects()).toEqual([`${ADVANCED} (Javier · 6)`, `${BASIC} (Javier · 6)`]);
-    expect(text(studentsOf(DAM))).toContain('Alumnado (6)');
+    expect(subjects()).toEqual([`${ADVANCED} (Javier · 7)`, `${BASIC} (Javier · 7)`]);
+    expect(text(studentsOf(DAM))).toContain('Alumnado (7)');
   });
 
   it('shows the first class of the current year for an unknown one in the URL', async () => {
@@ -448,7 +448,7 @@ describe('GroupsPage', () => {
     expect(screen.getByText('Asignatura añadida')).toBeTruthy();
     expect(url()).toBe(`${URL}?clase=${DAM_CLASS_ID}`);
     // It takes the students of the class
-    expect(subjects()).toContain(`${WEB} (Marta · 6)`);
+    expect(subjects()).toContain(`${WEB} (Marta · 7)`);
     // Not their class: they only duplicate their subject
     await expectMenu(DAM, ['Duplicar…']);
   });

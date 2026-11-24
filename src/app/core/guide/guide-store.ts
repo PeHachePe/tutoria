@@ -7,6 +7,7 @@ import { AuthStore } from '../../auth/auth-store';
 import { AuthService } from '../../data/auth-service';
 import type { GuideState } from '../../data/guide-state';
 import {
+  firstStepsOf,
   firstStepsProgress,
   nextFirstStep,
   showFirstSteps,
@@ -46,12 +47,17 @@ export class GuideStore {
   private readonly stateState = linkedSignal<GuideState>(() =>
     this.saved.hasValue() ? this.saved.value() : {},
   );
+  /**
+   * The facts are read again only for another profile or user: the same profile comes again from
+   * the layout of another area, with its own side menu (D-093).
+   */
   private readonly factsResource = resource({
     params: () => {
       const profile = this.profileState();
-      return profile && this.auth.userId() ? profile : undefined;
+      const userId = this.auth.userId();
+      return profile && userId ? `${profile.id}:${userId}` : undefined;
     },
-    loader: ({ params: profile }) => profile.loadFacts(),
+    loader: () => this.profileState()!.loadFacts(),
   });
   private readonly runningState = signal(false);
   private readonly url = toSignal(
@@ -69,6 +75,10 @@ export class GuideStore {
     this.factsResource.hasValue() ? this.factsResource.value() : NO_FACTS,
   );
   readonly tasks = computed(() => this.profileState()?.tasks ?? []);
+  /** The first steps of the profile, in its order. */
+  readonly firstStepTasks = computed(() =>
+    firstStepsOf(this.tasks(), this.profileState()?.firstSteps ?? []),
+  );
   /** The screen open, if its area has guided help for it. */
   readonly screen = computed(() => this.profileState()?.screenOf(this.url()));
   /** A tour is running: no other starts meanwhile. */
@@ -80,10 +90,10 @@ export class GuideStore {
   );
 
   readonly firstSteps = computed(() =>
-    firstStepsProgress(this.tasks(), this.state(), this.facts()),
+    firstStepsProgress(this.firstStepTasks(), this.state(), this.facts()),
   );
   readonly firstStepsShown = computed(() =>
-    showFirstSteps(this.tasks(), this.state(), this.facts()),
+    showFirstSteps(this.firstStepTasks(), this.state(), this.facts()),
   );
   /** First steps left, for the dot of the help button; none once done or hidden. */
   readonly pendingFirstSteps = computed(() => {
@@ -127,7 +137,10 @@ export class GuideStore {
     ];
   });
 
-  /** The guided help of the area that starts: its layout gives it. */
+  /**
+   * The guided help of the area that starts: its layout gives it. The same profile again (the staff,
+   * crossing areas) only brings the side menu of the new layout: its facts stay.
+   */
   use(profile: GuideProfile): void {
     this.profileState.set(profile);
   }
@@ -160,11 +173,10 @@ export class GuideStore {
    * step on its last globe, that one starts at once.
    */
   async startTask(task: GuideTask): Promise<void> {
-    const profile = this.profileState();
-    if (!profile || this.runningState()) return;
-    const next = task.firstStep
-      ? this.possible(nextFirstStep(profile.tasks, this.state(), this.facts(), task.id))
-      : undefined;
+    if (!this.profileState() || this.runningState()) return;
+    const next = this.possible(
+      nextFirstStep(this.firstStepTasks(), this.state(), this.facts(), task.id),
+    );
     const end = await this.runTour(task.place, task.steps, { next: next?.title });
     if (end === undefined) return;
     if (end === 'done' || end === 'next') {
@@ -203,7 +215,10 @@ export class GuideStore {
     this.runningState.set(true);
     try {
       if (path !== this.router.url && !(await this.router.navigateByUrl(path))) return undefined;
-      return await this.runner.run(steps, options);
+      return await this.runner.run(steps, {
+        ...options,
+        sideMenu: this.profileState()?.sideMenu,
+      });
     } finally {
       this.runningState.set(false);
     }

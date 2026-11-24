@@ -8,6 +8,7 @@
       </p>
     </div>
     <app-group-picker
+      [appGuideAnchor]="anchors.blocksGroup"
       [groups]="pickerGroups()"
       [selectedId]="group()?.id"
       (choose)="selectGroup($event)"
@@ -39,6 +40,7 @@
         <!-- A class of a year that is over: why nothing can be changed, and what is left to do -->
         <p
           class="-mt-3 flex items-start gap-3 rounded-xl bg-surface-container-high px-4 py-3 text-body-medium"
+          [appGuideAnchor]="anchors.blocksClosed"
         >
           <mat-icon class="shrink-0 text-on-surface-variant" aria-hidden="true">{{
             editable ? 'lock_open' : 'lock'
@@ -79,7 +81,13 @@
           i18n-text="@@blocks.empty.text"
         >
           <div class="mt-2 flex flex-wrap justify-center gap-2" emptyStateAction>
-            <button matButton="filled" type="button" (click)="newBlock(group)" i18n="@@blocks.new">
+            <button
+              matButton="filled"
+              type="button"
+              [appGuideAnchor]="anchors.blocksNew"
+              (click)="newBlock(group)"
+              i18n="@@blocks.new"
+            >
               Nuevo bloque
             </button>
             @if (groupOptions().length > 1) {
@@ -143,12 +151,22 @@
                background appears, and «Cancelar» takes the place of «Seleccionar» -->
           <div class="-mt-3 flex flex-wrap items-center justify-end gap-2 rounded-xl px-4 py-2">
             @if (groupOptions().length > 1) {
-              <button matButton type="button" (click)="copyBlocks(group)">
+              <button
+                matButton
+                type="button"
+                [appGuideAnchor]="anchors.blocksCopy"
+                (click)="copyBlocks(group)"
+              >
                 <mat-icon aria-hidden="true">content_copy</mat-icon>
                 <span i18n="@@blocks.copy">Copiar de otro grupo</span>
               </button>
             }
-            <button matButton type="button" (click)="selecting.set(true)">
+            <button
+              matButton
+              type="button"
+              [appGuideAnchor]="anchors.blocksSelect"
+              (click)="selecting.set(true)"
+            >
               <mat-icon aria-hidden="true">checklist</mat-icon>
               <span i18n="@@blocks.select">Seleccionar</span>
             </button>
@@ -156,6 +174,7 @@
         }
         <ol
           class="flex flex-col gap-4"
+          [appGuideAnchor]="anchors.blocksList"
           cdkDropList
           [cdkDropListDisabled]="!editable"
           [cdkDropListLockAxis]="'y'"
@@ -163,7 +182,7 @@
           aria-label="Bloques del grupo"
           i18n-aria-label="@@blocks.list"
         >
-          @for (row of rows(); track row.id) {
+          @for (row of rows(); track row.id; let firstRow = $first) {
             <li
               cdkDrag
               class="flex scroll-mt-4 flex-col rounded-2xl bg-panel"
@@ -186,6 +205,7 @@
                       type="button"
                       cdkDragHandle
                       class="cursor-grab"
+                      [appGuideAnchor]="firstRow ? anchors.blocksDrag : null"
                       [attr.aria-label]="row.dragLabel"
                       matTooltip="Arrastra para cambiar el orden, o usa «Subir» y «Bajar» del menú"
                       i18n-matTooltip="@@blocks.drag.tooltip"
@@ -231,6 +251,7 @@
                 </div>
                 @if (editable) {
                   <mat-slide-toggle
+                    [appGuideAnchor]="firstRow ? anchors.blocksVisible : null"
                     [checked]="!row.planned.block.isHidden"
                     (change)="setBlockHidden(row.planned, !$event.checked)"
                     i18n="@@blocks.visible"
@@ -240,6 +261,7 @@
                     matIconButton
                     type="button"
                     [matMenuTriggerFor]="blockActions"
+                    [appGuideAnchor]="firstRow ? anchors.blocksMenu : null"
                     [attr.aria-label]="row.actionsLabel"
                   >
                     <mat-icon aria-hidden="true">more_vert</mat-icon>
@@ -312,8 +334,9 @@
                 (cdkDropListDropped)="dropAssignment($event)"
                 [attr.aria-label]="row.title"
               >
-                @for (item of row.assignments; track item.id) {
+                @for (item of row.assignments; track item.id; let firstItem = $first) {
                   <li
+                    [appGuideAnchor]="firstRow && firstItem ? anchors.blocksExercise : null"
                     cdkDrag
                     [cdkDragData]="item.entry"
                     class="flex items-start gap-2 bg-panel px-4 py-2 sm:gap-3 md:items-center"
@@ -382,7 +405,12 @@
                           [difficulty]="item.entry.exercise.difficulty"
                         />
                         @if (editable) {
-                          <button matButton type="button" (click)="chooseDueDate(item.entry)">
+                          <button
+                            matButton
+                            type="button"
+                            [appGuideAnchor]="firstRow && firstItem ? anchors.blocksDue : null"
+                            (click)="chooseDueDate(item.entry)"
+                          >
                             <mat-icon aria-hidden="true">event</mat-icon>
                             <span class="sr-only">{{ item.dueLabel }}:</span>
                             @if (item.due; as due) {
@@ -394,6 +422,7 @@
                           <button
                             matIconButton
                             type="button"
+                            [appGuideAnchor]="firstRow && firstItem ? anchors.blocksHide : null"
                             [attr.aria-label]="item.visibilityLabel"
                             [attr.aria-pressed]="item.entry.assignment.isHidden"
                             [matTooltip]="item.visibilityLabel"
@@ -426,6 +455,7 @@
                         matIconButton
                         type="button"
                         [matMenuTriggerFor]="exerciseActions"
+                        [appGuideAnchor]="firstRow && firstItem ? anchors.blocksExerciseMenu : null"
                         [attr.aria-label]="item.actionsLabel"
                       >
                         <mat-icon aria-hidden="true">more_vert</mat-icon>
@@ -494,7 +524,12 @@
 
               @if (editable) {
                 <div class="border-t border-outline-variant px-4 py-2">
-                  <button matButton type="button" (click)="addExercises(group, row.planned)">
+                  <button
+                    matButton
+                    type="button"
+                    [appGuideAnchor]="firstRow ? anchors.blocksAdd : null"
+                    (click)="addExercises(group, row.planned)"
+                  >
                     <mat-icon aria-hidden="true">add</mat-icon>
                     <span i18n="@@blocks.add">Añadir ejercicios</span>
                   </button>
@@ -513,7 +548,13 @@
            last box. Its room under the list stays, so nothing moves -->
       @if (editable && !selecting()) {
         <div class="fixed end-6 bottom-6 z-20">
-          <button matFab extended type="button" (click)="newBlock(group)">
+          <button
+            matFab
+            extended
+            type="button"
+            [appGuideAnchor]="anchors.blocksNew"
+            (click)="newBlock(group)"
+          >
             <mat-icon aria-hidden="true">add</mat-icon>
             <span i18n="@@blocks.newFab">Nuevo bloque</span>
           </button>
@@ -524,9 +565,13 @@
     <app-empty-state
       heading="Todavía no tienes grupos"
       i18n-heading="@@blocks.noGroups.heading"
-      text="Cuando la administración te asigne un grupo, aquí podrás organizar sus bloques."
+      text="Crea tu clase en Grupos, o únete a la de otro docente, y aquí organizarás los bloques de cada asignatura."
       i18n-text="@@blocks.noGroups.text"
-    />
+    >
+      <div class="mt-2 flex justify-center" emptyStateAction>
+        <app-create-class-button />
+      </div>
+    </app-empty-state>
   }
 </div>
 

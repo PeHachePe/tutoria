@@ -4,6 +4,7 @@
     <div class="flex min-w-0 flex-1 basis-96 flex-col gap-1">
       <p
         class="flex flex-wrap items-center gap-x-2 text-label-large text-on-surface-variant"
+        [appGuideAnchor]="anchors.liveState"
         ngPreserveWhitespaces
       >
         @if (ready()) {
@@ -46,7 +47,11 @@
 
     @if (groupOptions().length > 0) {
       <div class="flex w-full flex-wrap gap-3 sm:w-auto sm:shrink-0">
-        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-48">
+        <mat-form-field
+          subscriptSizing="dynamic"
+          class="w-full sm:w-48"
+          [appGuideAnchor]="anchors.liveGroup"
+        >
           <mat-label i18n="@@live.group">Grupo</mat-label>
           <mat-select
             [value]="store.group()?.id"
@@ -59,7 +64,11 @@
             }
           </mat-select>
         </mat-form-field>
-        <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-88">
+        <mat-form-field
+          subscriptSizing="dynamic"
+          class="w-full sm:w-88"
+          [appGuideAnchor]="anchors.liveBlock"
+        >
           <mat-label i18n="@@live.block">Bloque</mat-label>
           <mat-select
             [value]="blockValue()"
@@ -97,6 +106,7 @@
   @if (ready() && inClass()) {
     <app-live-rhythm
       class="rounded-2xl bg-panel px-4 py-3"
+      [appGuideAnchor]="anchors.liveRhythm"
       [minutes]="store.activity()"
       [reading]="store.rhythm()"
     />
@@ -108,9 +118,13 @@
     <app-empty-state
       heading="No tienes grupos este curso"
       i18n-heading="@@live.empty.groups.heading"
-      text="Cuando tengas un grupo este curso, podrás seguir aquí su trabajo en directo. Lo de cursos anteriores está en el histórico."
+      text="Crea tu clase en Grupos, o únete a la de otro docente, y podrás seguir aquí su trabajo en directo. Lo de cursos anteriores está en el histórico."
       i18n-text="@@live.empty.groups.text"
-    />
+    >
+      <div class="mt-2 flex justify-center" emptyStateAction>
+        <app-create-class-button />
+      </div>
+    </app-empty-state>
   } @else if (!ready()) {
     <app-loading-skeleton label="Cargando la sesión…" i18n-label="@@live.loading">
       <!-- The shape of the page: the pace, the class next to the queue, and the students -->
@@ -150,6 +164,7 @@
       @if (inClass()) {
         <app-live-queue
           class="@4xl:col-start-3 @4xl:row-start-1"
+          [appGuideAnchor]="anchors.liveQueue"
           [rows]="store.queue()"
           [blocks]="store.blocks()"
           [blockId]="blockId()"
@@ -159,6 +174,7 @@
       }
       <app-live-class
         class="min-w-0 @4xl:col-start-1 @4xl:row-start-1"
+        [appGuideAnchor]="anchors.liveClass"
         [class]="inClass() ? '@4xl:col-span-2' : '@4xl:col-span-3'"
         [overview]="store.overview()"
         [strip]="store.strip()"
@@ -189,6 +205,7 @@
           <nav
             mat-tab-nav-bar
             class="compact-tabs min-w-0 flex-auto"
+            [appGuideAnchor]="anchors.liveTabs"
             [tabPanel]="studentsPanel"
             [mat-stretch-tabs]="false"
             [attr.aria-label]="filterAction"
@@ -217,6 +234,7 @@
           </nav>
           <!-- A search bar of its own: the native clear button of type=search does not follow the theme -->
           <label
+            [appGuideAnchor]="anchors.liveSearch"
             class="mx-4 my-1 flex h-10 w-full items-center gap-2 rounded-full bg-surface-container-high ps-3 pe-1 text-on-surface-variant transition-colors focus-within:bg-surface-container-highest focus-within:ring-1 focus-within:ring-primary motion-reduce:transition-none sm:w-60"
           >
             <mat-icon class="shrink-0" aria-hidden="true">search</mat-icon>
@@ -265,6 +283,7 @@
             </span>
           }
           <app-live-table
+            [appGuideAnchor]="anchors.liveTable"
             [rows]="tableRows()"
             [caption]="caption()"
             [blocks]="store.blocks()"

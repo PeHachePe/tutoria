@@ -57,6 +57,8 @@ import { BlockDialog, type BlockDialogData } from './block-dialog';
 import { CopyBlocksDialog, type CopyBlocksDialogData } from './copy-blocks-dialog';
 import { moveItem } from './block-order';
 import { DueDateDialog, type DueDateDialogData, type DueDateDialogResult } from './due-date-dialog';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
+import { CreateClassButton } from '../teacher-guide/create-class-button';
 
 const SKELETON_BLOCKS = [1, 2, 3];
 
@@ -75,6 +77,8 @@ const EMPTY_SELECTION: ReadonlySet<string> = new Set();
 @Component({
   selector: 'app-blocks-page',
   imports: [
+    GuideAnchor,
+    CreateClassButton,
     RouterLink,
     NgTemplateOutlet,
     CdkDropList,
@@ -102,6 +106,7 @@ const EMPTY_SELECTION: ReadonlySet<string> = new Set();
   templateUrl: './blocks-page.html',
 })
 export class BlocksPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly service = inject(BlockService);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);

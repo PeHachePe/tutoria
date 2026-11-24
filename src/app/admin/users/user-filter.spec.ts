@@ -40,7 +40,7 @@ describe('filterUsers', () => {
   });
 
   it('filters by role', () => {
-    expect(emails({ role: 'teacher' })).toEqual(['marta.ibanez', 'javier.ortega']);
+    expect(emails({ role: 'teacher' })).toEqual(['marta.ibanez', 'javier.ortega', 'nuria.pena']);
     expect(emails({ role: 'admin' })).toEqual(['admin']);
   });
 

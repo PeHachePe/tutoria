@@ -1,4 +1,7 @@
 import { LOCALE_ID } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { GuideStore } from '../../core/guide/guide-store';
+import { FakeGuideStore } from '../../core/guide/guide-testing';
 import { provideRouter, Router } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -369,11 +372,13 @@ describe('LivePage', () => {
     expect(screen.getByText(GROUPS[0].subject.name).getAttribute('lang')).toBe('es');
   });
 
-  it('says so when the teacher has no groups', async () => {
+  it('says so when the teacher has no groups, with the way to create their class', async () => {
     service.groups = () => Promise.resolve([]);
+    TestBed.overrideProvider(GuideStore, { useValue: new FakeGuideStore() });
     await renderPage();
 
     expect(screen.getByText('No tienes grupos este curso')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Crear tu clase' })).toBeTruthy();
     expect(screen.queryByRole('combobox')).toBeNull();
     expect(text(screen.getByRole('heading', { level: 1 }))).toBe('Sesión en vivo');
   });

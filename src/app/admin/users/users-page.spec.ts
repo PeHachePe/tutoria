@@ -168,7 +168,7 @@ describe('UsersPage', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Profesorado' }));
     await settle(harness);
     expect(TestBed.inject(Router).url).toBe('/admin/usuarios?rol=teacher');
-    expect(rows().map((row) => text(row).split(' ')[0])).toEqual(['Javier', 'Marta']);
+    expect(rows().map((row) => text(row).split(' ')[0])).toEqual(['Javier', 'Marta', 'Nuria']);
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Rol' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Todos los roles' }));
@@ -621,7 +621,7 @@ describe('UsersPage', () => {
 
       await renderUsers('/admin/usuarios?estado=desactivadas&rol=teacher');
       expect(
-        screen.getByText('Ninguna cuenta desactivada coincide, pero 2 activas sí.'),
+        screen.getByText('Ninguna cuenta desactivada coincide, pero 3 activas sí.'),
       ).toBeTruthy();
       TestBed.resetTestingModule();
 

@@ -22,6 +22,11 @@ import { type EditorKeys, editorKeys } from '../shared/code-editor/editor-keys';
 import { currentAttempt, nextExercise } from './catalog/catalog-blocks';
 
 const A = GUIDE_ANCHORS;
+/** The first steps of the student, in their order (D-093). */
+const FIRST_STEPS = ['start-exercise', 'run-tests', 'ask-hint', 'submit'];
+
+/** The screens of the student, the only ones its tours go through. */
+type StudentScreen = Extract<GuideScreen, 'catalog' | 'workspace' | 'settings' | 'registered-data'>;
 const NO_EXERCISE = $localize`:@@guide.student.unavailable.noExercise:Cuando tu docente te asigne un ejercicio`;
 /** Turns the voice on from the globe, to see its choices (2.11). */
 const TURN_VOICE_ON = $localize`:@@guide.student.voice.turnOn:Activar la voz`;
@@ -563,7 +568,7 @@ export function studentBeacons(keys: EditorKeys): readonly GuideBeacon[] {
 }
 
 /** Where the tour of each screen starts. */
-const SCREEN_PLACES: Readonly<Record<GuideScreen, GuidePlace>> = {
+const SCREEN_PLACES: Readonly<Record<StudentScreen, GuidePlace>> = {
   catalog: 'catalog',
   workspace: 'openExercise',
   settings: 'settings',
@@ -576,7 +581,7 @@ const SCREEN_PLACES: Readonly<Record<GuideScreen, GuidePlace>> = {
  * and the folded tutor are opened on the way.
  */
 export function screenTours(beacons: readonly GuideBeacon[]): readonly GuideTask[] {
-  const stepsOf = (screen: GuideScreen): GuideStep[] => {
+  const stepsOf = (screen: StudentScreen): GuideStep[] => {
     const own = beacons.filter((beacon) => beacon.screen === screen);
     const bars = screen === 'catalog' ? beacons.filter((beacon) => !beacon.screen) : [];
     const steps: GuideStep[] = [...own, ...bars].map(({ anchor, title, text, turnOn }) => ({
@@ -594,7 +599,7 @@ export function screenTours(beacons: readonly GuideBeacon[]): readonly GuideTask
     return steps;
   };
   const tour = (
-    screen: GuideScreen,
+    screen: StudentScreen,
     title: string,
     summary: string,
     unavailable?: string,
@@ -639,7 +644,6 @@ function studentTasks(keys: EditorKeys): readonly GuideTask[] {
   return [
     {
       id: 'start-exercise',
-      firstStep: true,
       doneBy: 'started',
       needs: 'hasOpenExercise',
       unavailable: NO_EXERCISE,
@@ -671,7 +675,6 @@ function studentTasks(keys: EditorKeys): readonly GuideTask[] {
     },
     {
       id: 'run-tests',
-      firstStep: true,
       doneBy: 'ran',
       unavailable: NO_EXERCISE,
       screen: 'workspace',
@@ -700,7 +703,6 @@ function studentTasks(keys: EditorKeys): readonly GuideTask[] {
     },
     {
       id: 'ask-hint',
-      firstStep: true,
       doneBy: 'askedHint',
       unavailable: NO_EXERCISE,
       screen: 'workspace',
@@ -731,7 +733,6 @@ function studentTasks(keys: EditorKeys): readonly GuideTask[] {
     },
     {
       id: 'submit',
-      firstStep: true,
       doneBy: 'submitted',
       unavailable: NO_EXERCISE,
       screen: 'workspace',
@@ -1251,8 +1252,8 @@ export function studentGuide(): GuideProfile {
   const beacons = studentBeacons(keys);
   const tasks = studentTasks(keys);
   const [firstSteps, howTo] = [
-    tasks.filter((task) => task.firstStep),
-    tasks.filter((task) => !task.firstStep),
+    tasks.filter((task) => FIRST_STEPS.includes(task.id)),
+    tasks.filter((task) => !FIRST_STEPS.includes(task.id)),
   ];
 
   const welcome: GuideWelcome = {
@@ -1308,7 +1309,9 @@ export function studentGuide(): GuideProfile {
   };
 
   return {
+    id: 'student',
     tasks: [...firstSteps, ...screenTours(beacons), ...howTo],
+    firstSteps: FIRST_STEPS,
     welcome,
     beacons,
     screenOf: studentScreen,

@@ -270,6 +270,7 @@ describe('BlocksPage', () => {
       await renderBlocks('/docente/bloques', (mock) => mock.update('groups', () => []));
 
       expect(screen.getByText('Todavía no tienes grupos')).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Crear tu clase' })).toBeTruthy();
     });
 
     it('offers to create the first block of an empty group', async () => {

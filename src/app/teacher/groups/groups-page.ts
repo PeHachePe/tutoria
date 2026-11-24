@@ -56,6 +56,7 @@ import { toGroupChanges } from './group-form';
 import { SubjectsDialog, type SubjectsDialogData } from './subjects-dialog';
 import { sortSubjects } from './subjects-form';
 import { isPastSchoolYear, schoolYearOf } from '../../data/school-year';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** The dialogs of a class and of its subjects: their texts and lists fit, never wider than the window. */
 const CLASS_DIALOG_WIDTH = '32rem';
@@ -77,6 +78,7 @@ const SUBJECTS_DIALOG_SIZE = {
 @Component({
   selector: 'app-groups-page',
   imports: [
+    GuideAnchor,
     MatButton,
     MatIconButton,
     MatIcon,
@@ -98,6 +100,7 @@ const SUBJECTS_DIALOG_SIZE = {
   templateUrl: './groups-page.html',
 })
 export class GroupsPage {
+  protected readonly anchors = GUIDE_ANCHORS;
   private readonly service = inject(GroupService);
   private readonly exercises = inject(ExerciseService);
   private readonly auth = inject(AuthStore);

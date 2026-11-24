@@ -30,7 +30,6 @@ const START: GuideTask = {
   screen: 'catalog',
   place: 'catalog',
   steps: [STEP],
-  firstStep: true,
   doneBy: 'started',
 };
 const RUN: GuideTask = {
@@ -46,7 +45,6 @@ const SETTINGS: GuideTask = {
   id: 'settings',
   screen: 'settings',
   place: 'settings',
-  firstStep: false,
   doneBy: undefined,
 };
 
@@ -76,7 +74,9 @@ describe('GuideStore', () => {
     noticeSeen = signal(true);
     loadFacts = vi.fn<GuideProfile['loadFacts']>(() => Promise.resolve(FACTS));
     profile = {
+      id: 'student',
       tasks: [START, RUN, SETTINGS],
+      firstSteps: ['start-exercise', 'run-tests'],
       welcome: { version: 1, screen: 'catalog', place: 'catalog', steps: [STEP], when: noticeSeen },
       beacons: [
         { screen: 'catalog', anchor: 'catalog-next', title: 'Siguiente', text: '' },
@@ -138,6 +138,35 @@ describe('GuideStore', () => {
       expect(store.loaded()).toBe(false);
     });
 
+    it('takes the first steps the profile names, in its order', async () => {
+      await useProfile();
+      store.use({ ...profile, firstSteps: ['run-tests'] });
+
+      expect(store.firstSteps()).toEqual({ done: 0, total: 1, next: RUN });
+    });
+
+    it('keeps the facts read when the same profile comes again, as from another area', async () => {
+      await useProfile();
+      const sideMenu = { open: vi.fn(), close: vi.fn(), closed: vi.fn() };
+
+      store.use({ ...profile, sideMenu });
+      await settle();
+
+      expect(loadFacts).toHaveBeenCalledOnce();
+      await store.startTask(SETTINGS);
+      expect(runner.run).toHaveBeenCalledWith(SETTINGS.steps, { next: undefined, sideMenu });
+    });
+
+    it('reads the facts of another profile', async () => {
+      await useProfile();
+      const teacherFacts = vi.fn(() => Promise.resolve(FACTS));
+
+      store.use({ ...profile, id: 'teacher', loadFacts: teacherFacts });
+      await settle();
+
+      expect(teacherFacts).toHaveBeenCalledOnce();
+    });
+
     it('counts no first step pending once they are hidden', async () => {
       await useProfile({ firstStepsHidden: true });
 
@@ -191,8 +220,9 @@ describe('GuideStore', () => {
       expect(store.screenTour()).toBeUndefined();
     });
 
-    it('has no tasks, beacons nor tour before an area gives its profile', () => {
+    it('has no tasks, first steps, beacons nor tour before an area gives its profile', () => {
       expect(store.tasks()).toEqual([]);
+      expect(store.firstStepTasks()).toEqual([]);
       expect(store.screen()).toBeUndefined();
       expect(store.hasBeacons()).toBe(false);
       expect(store.screenTour()).toBeUndefined();

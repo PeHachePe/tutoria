@@ -10,8 +10,15 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const APP = path.join(ROOT, 'src', 'app');
 const ANCHORS_FILE = path.join(APP, 'core', 'guide', 'guide-anchor.ts');
-/** The profiles of the guided help: they name the pieces with `A.<key>`. */
-const PROFILES = [path.join(APP, 'student', 'student-guide.ts')];
+const TEACHER_GUIDE = path.join(APP, 'teacher', 'teacher-guide');
+/** The profiles of the guided help, each in one or more files: they name the pieces with `A.<key>`. */
+const PROFILES = {
+  student: [path.join(APP, 'student', 'student-guide.ts')],
+  teacher: ['teacher-beacons.ts', 'teacher-tasks.ts', 'teacher-guide.ts'].map((file) =>
+    path.join(TEACHER_GUIDE, file),
+  ),
+};
+const PROFILE_FILES = Object.values(PROFILES).flat();
 
 /** Every .ts and .html of the app, without the tests. */
 function sources(directory) {
@@ -31,18 +38,25 @@ function anchorKeys() {
   return [...block.matchAll(/^\s+(\w+): '/gm)].map(([, key]) => key);
 }
 
-/** The keys a profile points at. */
-function keysNamedBy(file) {
-  return new Set([...readFileSync(file, 'utf8').matchAll(/\bA\.(\w+)/g)].map(([, key]) => key));
+/** The keys the files of a profile point at. */
+function keysNamedBy(files) {
+  return new Set(
+    files.flatMap((file) =>
+      [...readFileSync(file, 'utf8').matchAll(/\bA\.(\w+)/g)].map(([, key]) => key),
+    ),
+  );
 }
 
-/** The keys some template or component marks, with `anchors.<key>` or `GUIDE_ANCHORS.<key>`. */
+/**
+ * The keys some template or component marks, with `anchors.<key>`, `GUIDE_ANCHORS.<key>` or, in a
+ * list of entries such as the side menu of the staff, `A.<key>`.
+ */
 function markedKeys() {
   const marked = new Set();
   for (const file of sources(APP)) {
-    if (file === ANCHORS_FILE || PROFILES.includes(file)) continue;
+    if (file === ANCHORS_FILE || PROFILE_FILES.includes(file)) continue;
     const text = readFileSync(file, 'utf8');
-    for (const [, key] of text.matchAll(/\b(?:anchors|GUIDE_ANCHORS)\.(\w+)/g)) marked.add(key);
+    for (const [, key] of text.matchAll(/\b(?:anchors|GUIDE_ANCHORS|A)\.(\w+)/g)) marked.add(key);
   }
   return marked;
 }
@@ -56,9 +70,18 @@ describe('the pieces of the guided help', () => {
     assert.equal(new Set(keys).size, keys.length);
   });
 
-  for (const profile of PROFILES) {
-    it(`are all marked in some template: ${path.basename(profile)}`, () => {
-      const named = [...keysNamedBy(profile)];
+  it('are all named by some profile, or marked for one', () => {
+    const named = keysNamedBy(PROFILE_FILES);
+    assert.deepEqual(
+      keys.filter((key) => !named.has(key) && !marked.has(key)),
+      [],
+      'pieces GUIDE_ANCHORS declares that nobody uses',
+    );
+  });
+
+  for (const [profile, files] of Object.entries(PROFILES)) {
+    it(`are all marked in some template: ${profile}`, () => {
+      const named = [...keysNamedBy(files)];
       assert.ok(named.length > 50);
       assert.deepEqual(
         named.filter((key) => !keys.includes(key)),

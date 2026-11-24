@@ -19,6 +19,8 @@ import {
   DAM_ADVANCED_GROUP_ID,
   DAW_WEB_GROUP_ID,
   DISABLED_STUDENT_ID,
+  FRESH_STUDENT_ID,
+  NEW_TEACHER_ID,
   GROUPS,
 } from './users';
 
@@ -58,12 +60,12 @@ describe('seed fixtures', () => {
     }
   });
 
-  it('has one admin, two teachers, this year five groups and a disabled student outside them', () => {
+  it('has one admin, three teachers (one without classes), this year five groups and a disabled student outside them', () => {
     const roles = SEED.users.map((user) => user.role);
     const emails = SEED.users.map((user) => user.email);
 
     expect(roles.filter((role) => role === 'admin')).toHaveLength(1);
-    expect(roles.filter((role) => role === 'teacher')).toHaveLength(2);
+    expect(roles.filter((role) => role === 'teacher')).toHaveLength(3);
     expect(new Set(emails).size).toBe(emails.length);
     expect(CLASSES.map(({ name }) => name)).toEqual(['1.º DAW A', '1.º DAM B']);
     expect(GROUPS.map(({ classId, label }) => [classId, label])).toEqual([
@@ -75,10 +77,14 @@ describe('seed fixtures', () => {
     ]);
     expect(SEED.enrollments.filter((e) => e.groupId === DAW_GROUP_ID)).toHaveLength(24);
     expect(SEED.enrollments.filter((e) => e.groupId === DAW_WEB_GROUP_ID)).toHaveLength(24);
-    expect(SEED.enrollments.filter((e) => e.groupId === DAM_ADVANCED_GROUP_ID)).toHaveLength(6);
-    expect(SEED.enrollments.filter((e) => e.groupId === DAM_GROUP_ID)).toHaveLength(6);
+    // 1.º DAM B also has the student who has not started (7.0b1)
+    expect(SEED.enrollments.filter((e) => e.groupId === DAM_ADVANCED_GROUP_ID)).toHaveLength(7);
+    expect(SEED.enrollments.filter((e) => e.groupId === DAM_GROUP_ID)).toHaveLength(7);
     expect(SEED.users.find((user) => user.id === DISABLED_STUDENT_ID)?.status).toBe('disabled');
     expect(SEED.enrollments.some((e) => e.userId === DISABLED_STUDENT_ID)).toBe(false);
+    // To try the guided help from scratch: a student without attempts and a teacher without classes
+    expect(SEED.attempts.some((attempt) => attempt.userId === FRESH_STUDENT_ID)).toBe(false);
+    expect(SEED.groups.some((group) => group.teacherId === NEW_TEACHER_ID)).toBe(false);
   });
 
   it('has the subjects of DAW and DAM, each group in one, and the exercises of the bank in three (2.5c)', () => {

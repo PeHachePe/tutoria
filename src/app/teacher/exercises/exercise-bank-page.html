@@ -12,7 +12,13 @@
   <!-- The main action of the screen, floating where the tutor floats in the workspace: at hand at
        any point of a long bank. The list leaves room under its last row for it -->
   <div class="fixed end-6 bottom-6 z-20">
-    <a matFab extended [routerLink]="paths.newExercise" [queryParams]="newQuery()">
+    <a
+      matFab
+      extended
+      [appGuideAnchor]="anchors.bankNew"
+      [routerLink]="paths.newExercise"
+      [queryParams]="newQuery()"
+    >
       <mat-icon aria-hidden="true">add</mat-icon>
       <span i18n="@@bank.new">Nuevo ejercicio</span>
     </a>
@@ -31,7 +37,11 @@
     </app-loading-skeleton>
   } @else {
     <search class="flex flex-wrap items-center gap-3">
-      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-80">
+      <mat-form-field
+        subscriptSizing="dynamic"
+        class="w-full sm:w-80"
+        [appGuideAnchor]="anchors.bankSearch"
+      >
         <mat-label i18n="@@bank.search">Buscar</mat-label>
         <mat-icon matPrefix aria-hidden="true">search</mat-icon>
         <input
@@ -43,7 +53,11 @@
           (input)="onSearch($event)"
         />
       </mat-form-field>
-      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-64">
+      <mat-form-field
+        subscriptSizing="dynamic"
+        class="w-full sm:w-64"
+        [appGuideAnchor]="anchors.bankSubject"
+      >
         <mat-label i18n="@@bank.subject">Asignatura</mat-label>
         <mat-select [value]="subjectValue()" (selectionChange)="selectSubjects($event.value)">
           <mat-option [value]="mySubjects" i18n="@@bank.subject.mine">Mis asignaturas</mat-option>
@@ -53,7 +67,11 @@
           <mat-option [value]="allSubjects" i18n="@@bank.subject.all">Todas</mat-option>
         </mat-select>
       </mat-form-field>
-      <mat-form-field subscriptSizing="dynamic" class="w-full sm:w-44">
+      <mat-form-field
+        subscriptSizing="dynamic"
+        class="w-full sm:w-44"
+        [appGuideAnchor]="anchors.bankDifficulty"
+      >
         <mat-label i18n="@@bank.difficulty">Dificultad</mat-label>
         <mat-select
           [value]="filters().difficulty"
@@ -66,12 +84,14 @@
         </mat-select>
       </mat-form-field>
       <mat-slide-toggle
+        [appGuideAnchor]="anchors.bankMine"
         [checked]="filters().mine"
         (change)="setFilter(params.mine, $event.checked ? '1' : null)"
         i18n="@@bank.mine"
         >Solo los míos</mat-slide-toggle
       >
       <mat-slide-toggle
+        [appGuideAnchor]="anchors.bankArchived"
         [checked]="archived()"
         (change)="setFilter(params.archived, $event.checked ? '1' : null)"
         i18n="@@bank.archived"
@@ -88,7 +108,11 @@
       }
     </div>
 
-    <p class="text-body-medium text-on-surface-variant" aria-live="polite">
+    <p
+      class="text-body-medium text-on-surface-variant"
+      aria-live="polite"
+      [appGuideAnchor]="anchors.bankCount"
+    >
       @if (hasFilters()) {
         <span i18n="@@bank.count.filtered">{matching().length, plural,
           =0 {Ningún ejercicio de {{ total() }}}
@@ -159,7 +183,10 @@
         i18n-aria-label="@@bank.list"
       >
         @for (row of rows(); track row.id) {
-          <li class="flex items-start gap-3 rounded-2xl bg-panel p-4">
+          <li
+            class="flex items-start gap-3 rounded-2xl bg-panel p-4"
+            [appGuideAnchor]="$first ? anchors.bankExercise : null"
+          >
             <div class="flex min-w-0 grow flex-col gap-2">
               <div class="flex flex-col gap-0.5">
                 <a
@@ -220,6 +247,7 @@
               matIconButton
               type="button"
               [matMenuTriggerFor]="actions"
+              [appGuideAnchor]="$first ? anchors.bankActions : null"
               [attr.aria-label]="row.actionsLabel"
             >
               <mat-icon aria-hidden="true">more_vert</mat-icon>

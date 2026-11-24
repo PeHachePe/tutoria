@@ -10,26 +10,60 @@ import type { GuideAnchorId } from './guide-anchor';
 export type GuideSide = 'top' | 'right' | 'bottom' | 'left';
 
 /** A screen of the app, to put first the tasks of the open one and to know its beacons. */
-export type GuideScreen = 'catalog' | 'workspace' | 'settings' | 'registered-data';
+export type GuideScreen =
+  // The student
+  | 'catalog'
+  | 'workspace'
+  | 'settings'
+  | 'registered-data'
+  // The teacher, and the administration in the teacher's screens
+  | 'live'
+  | 'attempt'
+  | 'exercise-bank'
+  | 'exercise-form'
+  | 'blocks'
+  | 'groups'
+  | 'history';
 
 /**
  * Something the data says about the user, such as having submitted an exercise: it marks a task as
  * done, or makes it possible.
  */
 export type GuideFact =
-  'started' | 'ran' | 'askedHint' | 'submitted' | 'hasOpenExercise' | 'hasSeveralSubjects';
+  // The student
+  | 'started'
+  | 'ran'
+  | 'askedHint'
+  | 'submitted'
+  | 'hasOpenExercise'
+  | 'hasSeveralSubjects'
+  // The teacher, counting only what is theirs (D-093)
+  | 'hasClass'
+  | 'hasStudents'
+  | 'hasBlock'
+  | 'hasOwnExercise'
+  | 'hasAssignment';
 
 /**
  * Where a task starts: a fixed page or one the data gives (the next exercise, one already
  * submitted).
  */
 export type GuidePlace =
+  // The student
   | 'catalog'
   | 'settings'
   | 'registeredData'
   | 'openExercise'
   | 'submittedExercise'
-  | 'exerciseWithAttempts';
+  | 'exerciseWithAttempts'
+  // The teacher
+  | 'live'
+  | 'attempt'
+  | 'exercises'
+  | 'newExercise'
+  | 'blocks'
+  | 'groups'
+  | 'history';
 
 /** One step of a tour: a piece of the screen with its globe, or the globe alone in the middle. */
 export interface GuideStep {
@@ -55,6 +89,11 @@ export interface GuideStep {
    * whole dialog or menu is lit, and only the piece itself does the action.
    */
   readonly inOverlay?: boolean;
+  /**
+   * The piece is an entry of the side menu of the staff, which is closed on phones: the tour opens
+   * it first, and again if it closes in the middle (D-094).
+   */
+  readonly inSideMenu?: boolean;
   /** The piece can be used while it is explained, without waiting for it: a switch to try. */
   readonly interactive?: boolean;
   /**
@@ -86,8 +125,6 @@ export interface GuideTask {
    */
   readonly place?: GuidePlace;
   readonly steps: readonly GuideStep[];
-  /** One of the first steps of the profile. */
-  readonly firstStep?: boolean;
   /** Done according to the data, besides having finished its tour. */
   readonly doneBy?: GuideFact;
   /** Possible only with this fact, or with a page for its place; otherwise the panel says why. */
@@ -117,6 +154,8 @@ export interface GuideBeacon {
   readonly text: string;
   /** In the tour of the screen, the button that turns on its switch (GuideStep.turnOn). */
   readonly turnOn?: string;
+  /** An entry of the side menu of the staff: its step in the tour opens it (GuideStep.inSideMenu). */
+  readonly inSideMenu?: boolean;
 }
 
 /** What the data says about the user, read again when the panel opens and after each task. */
@@ -126,12 +165,36 @@ export interface GuideFacts {
   readonly places: Readonly<Partial<Record<GuidePlace, readonly string[]>>>;
 }
 
+/** The side menu of the staff, for the steps that point at its entries (D-094). */
+export interface GuideSideMenu {
+  /**
+   * Opens it where it slides over the content, resolving once its animation ends; nothing to wait
+   * for when it is open already, or docked.
+   */
+  readonly open: () => Promise<unknown> | undefined;
+  /** Closes it where it slides over the content, once the tour leaves it. */
+  readonly close: () => void;
+  /** Resolves the next time it closes over the content: with Esc, its backdrop or an entry. */
+  readonly closed: () => Promise<unknown>;
+}
+
+/** Who a profile is for: what is saved does not depend on it, only the facts read again. */
+export type GuideProfileId = 'student' | 'teacher' | 'admin';
+
 /** The guided help of an area, given to GuideStore by its layout. */
 export interface GuideProfile {
+  readonly id: GuideProfileId;
   readonly tasks: readonly GuideTask[];
+  /**
+   * The ids of its first steps, in their order (D-093): a task can be a first step of two profiles,
+   * in another order, and is done once.
+   */
+  readonly firstSteps: readonly string[];
   readonly welcome: GuideWelcome;
   readonly beacons: readonly GuideBeacon[];
   /** The screen a URL belongs to, if it has guided help. */
   readonly screenOf: (url: string) => GuideScreen | undefined;
   readonly loadFacts: () => Promise<GuideFacts>;
+  /** The side menu of its layout, if it has one. */
+  readonly sideMenu?: GuideSideMenu;
 }

@@ -24,6 +24,7 @@ import { nextSplitLabel } from './class-list';
 import { groupActionMessage } from './group-action-message';
 import { teacherChoices } from './group-form';
 import { hasWholeGroup, subjectsSchema, toGroupDrafts, toSubjectsFormModel } from './subjects-form';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 
 /** What «Añadir asignaturas» needs: the class, its groups, the subjects and how to add one. */
 export interface SubjectsDialogData {
@@ -52,6 +53,7 @@ export interface SubjectsDialogData {
 @Component({
   selector: 'app-subjects-dialog',
   imports: [
+    GuideAnchor,
     FormRoot,
     FormField,
     MatDialogTitle,
@@ -231,7 +233,12 @@ export interface SubjectsDialogData {
         <button matButton type="button" mat-dialog-close i18n="@@groupDialog.cancel">
           Cancelar
         </button>
-        <button matButton="filled" type="submit" [disabled]="subjectsForm().submitting()">
+        <button
+          matButton="filled"
+          type="submit"
+          [appGuideAnchor]="anchors.subjectsDialogSave"
+          [disabled]="subjectsForm().submitting()"
+        >
           @if (subjectsForm().submitting()) {
             <span i18n="@@groupDialog.saving">Guardando…</span>
           } @else {
@@ -243,6 +250,7 @@ export interface SubjectsDialogData {
   `,
 })
 export class SubjectsDialog {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly data = inject<SubjectsDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<SubjectsDialog, boolean>>(MatDialogRef);
   private readonly locale = inject(LanguageService).locale;

@@ -25,7 +25,11 @@
       @if (!loadError() && !firstLoad() && current(); as option) {
         <div class="flex min-w-0 items-center gap-2">
           <!-- Two levels: the year, always in sight, and its classes by name -->
-          <mat-form-field subscriptSizing="dynamic" class="w-36 shrink-0">
+          <mat-form-field
+            subscriptSizing="dynamic"
+            class="w-36 shrink-0"
+            [appGuideAnchor]="anchors.groupsYear"
+          >
             <mat-label i18n="@@groups.year">Curso</mat-label>
             <mat-select
               [panelWidth]="null"
@@ -51,6 +55,7 @@
             <mat-form-field
               subscriptSizing="dynamic"
               class="min-w-0 flex-1 sm:w-[20rem] sm:flex-none"
+              [appGuideAnchor]="anchors.groupsClass"
             >
               <mat-label i18n="@@groups.class">Clase</mat-label>
               <mat-select [value]="option.id" (selectionChange)="select($event.value)">
@@ -60,7 +65,9 @@
               </mat-select>
             </mat-form-field>
           } @else {
-            <p class="min-w-0 text-title-medium">{{ option.managed.schoolClass.name }}</p>
+            <p class="min-w-0 text-title-medium" [appGuideAnchor]="anchors.groupsClass">
+              {{ option.managed.schoolClass.name }}
+            </p>
           }
           <!-- Only its creator (while open), the administration or a teacher with a subject in it has something to do -->
           @if (
@@ -70,6 +77,7 @@
               matIconButton
               type="button"
               [matMenuTriggerFor]="classMenu"
+              [appGuideAnchor]="anchors.groupsClassMenu"
               [attr.aria-label]="option.actionsLabel"
             >
               <mat-icon aria-hidden="true">more_vert</mat-icon>
@@ -123,7 +131,13 @@
           </mat-menu>
         </div>
       }
-      <button matButton="filled" type="button" [disabled]="!ready()" (click)="createClass()">
+      <button
+        matButton="filled"
+        type="button"
+        [appGuideAnchor]="anchors.groupsAddClass"
+        [disabled]="!ready()"
+        (click)="createClass()"
+      >
         <mat-icon aria-hidden="true">add</mat-icon>
         <span i18n="@@groups.class.add">Añadir clase</span>
       </button>
@@ -178,6 +192,7 @@
       }
       <app-class-students
         #students
+        [appGuideAnchor]="anchors.groupsRoster"
         [classId]="option.id"
         [className]="option.label"
         [schoolClass]="option.managed.schoolClass"
@@ -198,7 +213,13 @@
       i18n-text="@@groups.empty.class.text"
     >
       <div class="mt-2 flex justify-center" emptyStateAction>
-        <button matButton="tonal" type="button" [disabled]="!ready()" (click)="createClass()">
+        <button
+          matButton="tonal"
+          type="button"
+          [appGuideAnchor]="anchors.groupsAddClass"
+          [disabled]="!ready()"
+          (click)="createClass()"
+        >
           <span i18n="@@groups.class.add">Añadir clase</span>
         </button>
       </div>
