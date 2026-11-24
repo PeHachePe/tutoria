@@ -2807,3 +2807,85 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 - El atajo de la línea del error (fase 7) y las capturas del bocadillo (fila del 6.1a) siguen en `PENDIENTES.md`; el e2e, en `E2E-PENDIENTES.md`.
 
 **Aprobación:** el autor aprobó el plan con las cinco mejoras propuestas («Sí, adelante») y, tras verlo en el navegador con el atajo ya junto a la llamada y los valores como código, dio el visto bueno («Sí, sigue»). Lo técnico, por delegación del autor.
+
+## D-093 · La ayuda guiada del personal: el perfil por el rol, los primeros pasos en el perfil y «hecha» solo con lo suyo (24/11/2026, propuesta)
+
+**Contexto:** el 7.0b lleva al personal la ayuda que el 7.0a construyó para el alumno (D-080). Al revisarlo salieron cuatro cosas: el docente y la administración tienen cada uno su `StaffLayout` (`teacher.routes.ts`, `admin.routes.ts`), así que el layout se recrea al cruzar de área; «Crear una clase y matricular» y «Seguir la clase en vivo» son primeros pasos de los dos perfiles, en otro orden, y la marca `firstStep` era de la tarea; con la semilla, la cuenta de demostración del docente y la de la administración ya tienen clases, bloques y ejercicios, así que sus primeros pasos saldrían hechos y el tribunal no los vería; y el paso no cabía en ≈ 4 h.
+
+**Decisión (cómo se usa):**
+
+- **El paso se parte:** 7.0b1 (la base del personal, el menú lateral y el docente) y 7.0b2 (la administración y el resto de «¿Cómo se hace…?»). Si falta tiempo, el 7.0b2 es lo primero que se recorta (§1).
+- **Del docente, «hecha» solo cuenta lo suyo:** sus clases (`ManagedGroup.mine`), los bloques y asignaciones de sus grupos y sus ejercicios (`createdBy`), no los de sus compañeros.
+- **Los primeros pasos de la administración, solo al terminar su recorrido** (sin condición de datos): la cuenta del tribunal los enseña aunque la semilla ya tenga de todo.
+- **Las palabras de las tareas, las de la interfaz:** clase, asignatura y matricular en la clase, no «grupo» (§2.12 y ficha 13).
+- **Las pantallas vacías llevan a la tarea:** Bloques, En vivo e Histórico sin clases dicen que el docente puede crear la suya (Bloques decía que la crea la administración) y llevan «Crear tu clase», que empieza su tarea guiada.
+
+**Decisión (técnica):**
+
+- **`GuideProfile.id` y `GuideProfile.firstSteps`:** el perfil dice sus primeros pasos en orden, por id, y desaparece `GuideTask.firstStep`. Una tarea con el mismo id en dos perfiles se hace una sola vez (lo hecho se guarda por id).
+- **El perfil del personal, por el rol:** `StaffLayout` da el del docente (y en el 7.0b2, el de la administración, que incluye las tareas del docente), y `GuideStore.use()` con un perfil del mismo id lo cambia, para que llegue el menú lateral del layout nuevo, pero no vuelve a leer sus hechos: solo los lee con otro perfil o con otro usuario. Al cruzar de área no se repiten las consultas ni se corta la tarea en marcha.
+- **Los hechos del docente sin consultas nuevas:** de `GroupService.listClasses()`, `ExerciseService.listBank()` y `BlockService.listBlocks()` de cada grupo suyo, en paralelo. Son pocas llamadas, pero se repiten al abrir el panel y tras cada tarea; si crecen, una consulta propia.
+- **Los textos, repartidos** en `teacher/teacher-guide/` (hechos, balizas, tareas, bienvenida y el perfil), en lugar de un fichero de 1300 líneas como `student/student-guide.ts`.
+- **«Paso N de M» cuenta solo los pasos que se ven** a ese ancho: los opcionales que no están no suman.
+- **Datos simulados:** un docente sin clases y un alumno sin empezar, para probar las pantallas vacías y los primeros pasos desde cero (`SEED_VERSION` sube).
+
+**Alternativas:**
+
+- **Un único `StaffLayout` padre de las dos áreas** en `app.routes.ts`: no hace falta mientras `use()` ignore el mismo perfil; queda si una tarea de la administración se corta al cruzar de área (7.0b2).
+- **Mantener `firstStep` en la tarea** y duplicar las compartidas con otro id: se harían dos veces.
+- **«Hecha» por cualquier dato del centro:** el docente de la semilla y la administración nunca verían sus primeros pasos pendientes.
+
+**Consecuencias:**
+
+- `guide-progress.ts`, `GuideStore`, la guía del alumno y sus tests cambian a la lista del perfil.
+- §2.12, el paso 7.0b del plan (ahora 7.0b1 y 7.0b2) y la ficha 13.
+
+**Aprobación:** el autor aceptó las ocho recomendaciones de la revisión («Sí, todas»), el plan del 7.0b1 («Sí, empieza») y dio el visto bueno tras verlo en el navegador («Sí, sigue»). Lo técnico, por delegación del autor.
+
+## D-094 · El menú lateral en las tareas guiadas: lo abre `TourRunner` en el móvil y el raíl no se despliega (24/11/2026, propuesta)
+
+**Contexto:** las tareas del personal señalan entradas del menú lateral (Grupos, Bloques…), que en el móvil está cerrado (`mat-sidenav` en modo `over`) y en el escritorio puede estar plegado a sus iconos (raíl). `TourRunner` no sabía abrirlo. Se probó en el navegador antes de construir (ficha 13).
+
+**Decisión (cómo se usa):**
+
+- **En el móvil,** la tarea abre el menú antes de señalar una entrada; si Esc o el fondo lo cierran a mitad, lo vuelve a abrir.
+- **En el raíl,** se señala el icono: el globo dice el nombre de la entrada. No se despliega ni se toca la preferencia guardada.
+
+**Decisión (técnica):**
+
+- **`GuideStep.inSideMenu`** y el menú en el perfil (`GuideProfile.sideMenu`), que le da `StaffLayout` al crearlo, con tres funciones. Sin servicio nuevo:
+  - `open()` lo abre si está en modo `over` y cerrado, con `MatSidenav.open()`, y resuelve cuando acaba la animación; si está fijo o ya abierto, no hace nada. Se abre a mano y no con la señal de la plantilla: justo después de que Esc lo cierre, la señal volvía a `true` sin que la detección de cambios viera el paso por `false`, y el menú no se abría (visto en el navegador).
+  - `close()` lo cierra en modo `over`.
+  - `closed()` resuelve la próxima vez que se cierra.
+- **`TourRunner`** abre el menú al buscar la pieza de un paso `inSideMenu` y, cuando acaba de abrirse, vuelve a medirla (`refresh()`): medida a mitad de la animación, el recuadro quedaba desplazado. Al resaltarla espera a `closed()` y, si el paso sigue activo, lo abre otra vez: driver.js no nota que la pieza deja de verse si sigue en la página. Lo cierra en el primer paso que no es del menú y al acabar.
+- **En el móvil manda el foco de driver.js:** no hace falta `allowPageInteraction`, a diferencia de los diálogos.
+- **El perfil llega a `StaffLayout` con un token** (`STAFF_GUIDE`, `core/guide/staff-guide-token.ts`) que dan las rutas del área: `shared/` no importa las áreas. La función elige el perfil por el rol (D-093).
+
+**Alternativas:**
+
+- **Un paso de acción «Abre el menú»** antes de cada entrada: un paso más en cada tarea, y Esc seguía dejando el globo en el aire.
+- **Desplegar el raíl mientras dura la tarea:** más código (guardar y devolver el estado) para nada: el icono con su globo se entiende.
+- **Un servicio del menú lateral:** solo `StaffLayout` lo abre, y el perfil ya viaja de él a `GuideStore`.
+
+**Consecuencias:** ficha 13 (la prueba del menú y la regla); `TourRunner` y `GuideProfile` crecen una opción cada uno.
+
+**Aprobación:** el autor aceptó las recomendaciones de la revisión, con la del menú lateral corregida tras la prueba («Sí, todas»), y dio el visto bueno tras verlo en el navegador, en el escritorio y en el móvil («Sí, sigue»). Lo técnico, por delegación del autor.
+
+## D-095 · El globo de las tareas, en la capa superior del navegador; sobre un diálogo alto, en la esquina (24/11/2026, propuesta)
+
+**Contexto:** al probar las tareas del docente en el navegador, el globo del diálogo de asignaturas no se veía. Material 22 abre sus diálogos y menús en la capa superior del navegador (el atributo `popover`), que queda por encima de cualquier `z-index`: el globo de driver.js, en la página, quedaba debajo cuando se solapaba con el diálogo. En el 7.0a no pasó porque el diálogo de entregar es pequeño y el globo cabía a su lado. Con el globo ya encima, en un diálogo tan alto como la pantalla driver.js lo coloca sobre el diálogo, en el centro de su borde de abajo, donde están sus botones.
+
+**Decisión:**
+
+- **El globo sube a la capa superior** cada vez que se dibuja (`popover="manual"` y `togglePopover`), después de los diálogos y menús que haya: nunca queda debajo de uno. Donde el navegador no tiene esa capa (los tests), se queda como estaba.
+- **En un paso dentro de un diálogo** (`inOverlay`), si no cabe a su lado (driver.js lo pone encima, sin flecha), el globo va a la esquina inferior izquierda de la pantalla: deja libres los botones del diálogo, que van a la derecha. Con una clase propia (`app-guide-in-overlay`) y CSS en `guide.css`: los globos centrados, sin pieza, no se mueven.
+
+**Alternativas:**
+
+- **Subir el `z-index` del globo:** no sirve contra la capa superior.
+- **Resaltar solo los botones del diálogo** en lugar del diálogo entero: contradice la regla del 7.0a (menús y diálogos resaltados enteros) y el globo seguiría tapando su contenido.
+- **Dejar que driver.js lo ponga sobre los botones:** se podía pulsar la parte que quedaba a la vista, pero no siempre.
+
+**Consecuencias:** ficha 13 (globo y prueba en el navegador); en el móvil, donde el diálogo ocupa la pantalla, el globo aún puede tapar una parte (`PENDIENTES.md`).
+
+**Aprobación:** el autor dio el visto bueno tras verlo en el navegador («Sí, sigue»). Lo técnico, por delegación del autor.

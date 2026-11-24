@@ -97,7 +97,7 @@ Reparto orientativo por semanas:
 | 5      | 30 nov–5 dic | Pasos 7.1–7.2 (accesibilidad, responsive y endurecimiento) y 3.2 (vídeo y memoria de la PEC3) |
 | 6–9    | 6 dic–5 ene  | Feedback de la PEC3, pasos 6.3 y 7.3 si hay tiempo, 7.4 (versión 1.0) y entrega final         |
 
-Quedan unas 90 h de pasos hasta la PEC3, unas 22 h por semana. El desarrollo debería acabar hacia el 2 de diciembre para dejar el 3.2 con margen. Si falta tiempo, se recorta en este orden: 6.3 y 7.3 (ya opcionales), las tareas guiadas que no son primeros pasos (7.0b, D-080), 6.2 (capa 4), 6.1 (capa 3) y 5.3 (sistema), y lo que quede fuera se justifica en la memoria y en el checklist y pasa a la PEC4. El despliegue en la nube (3.1) se hace en cuanto el núcleo funciona con back-end real, como recomienda el aula, y cada fase posterior se despliega en ella. Hasta entonces todo se hace en local; el front con datos simulados puede publicarse antes (paso 1.10) sin coste y sin back-end.
+Quedan unas 90 h de pasos hasta la PEC3, unas 22 h por semana. El desarrollo debería acabar hacia el 2 de diciembre para dejar el 3.2 con margen. Si falta tiempo, se recorta en este orden: 6.3 y 7.3 (ya opcionales), las tareas guiadas que no son primeros pasos (7.0b2, D-080), 6.2 (capa 4), 6.1 (capa 3) y 5.3 (sistema), y lo que quede fuera se justifica en la memoria y en el checklist y pasa a la PEC4. El despliegue en la nube (3.1) se hace en cuanto el núcleo funciona con back-end real, como recomienda el aula, y cada fase posterior se despliega en ella. Hasta entonces todo se hace en local; el front con datos simulados puede publicarse antes (paso 1.10) sin coste y sin back-end.
 
 ---
 
@@ -560,15 +560,15 @@ Cada perfil aprende a usar la aplicación sobre la propia aplicación: la ayuda 
 - **Los pasos de acción esperan a que el usuario la haga** (pulsar, escribir, elegir, guardar), lo dicen («Pulsa «Nuevo bloque»») y siguen solos. También dentro de los diálogos de Material que esa acción abre.
 - Las tareas trabajan con datos de verdad. Si una crea algo (un bloque, un usuario), el globo lo avisa antes y explica cómo deshacerlo.
 - Si el usuario cierra la tarea o se va a otra parte, la tarea acaba sin darse por hecha y vuelve a empezar desde el principio.
-- **Hecha:** por los datos cuando los hay (el docente ya tiene un bloque, el alumno ya ha entregado) y, si no, al terminar su recorrido.
+- **Hecha:** por los datos cuando los hay (el docente ya tiene un bloque, el alumno ya ha entregado) y, si no, al terminar su recorrido. Del docente solo cuenta lo suyo (sus clases y sus ejercicios, no los de sus compañeros); los primeros pasos de la administración, solo al terminar su recorrido, para que la cuenta del tribunal los enseñe aunque la semilla ya tenga datos (7.0b1, D-093).
 
-**Catálogo de tareas** (la lista definitiva y sus textos, en la ficha `13-ayuda`, contrastada con las pantallas):
+**Catálogo de tareas** (la lista definitiva y sus textos, en la ficha `13-ayuda`, contrastada con las pantallas). Con las palabras de la interfaz: el docente crea **clases** (con su curso), cada una con sus **asignaturas** (cada asignatura de una clase es un grupo, con sus desdobles), y matricula en la clase (7.0b1):
 
 | Perfil         | Primeros pasos                                                                                                                             | Además, en «¿Cómo se hace…?»                                                                                                                                                                                                                                                                         |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Alumno         | Empezar un ejercicio · Ejecutar las pruebas · Pedir una pista al tutor · Entregar                                                          | Practicar de nuevo un ejercicio entregado · Volver a un intento anterior · Hablar con el tutor por voz (si el navegador puede, 2.11) · Cambiar el tema, el idioma o las reacciones · Ver qué datos se registran                                                                                      |
-| Docente        | Crear un grupo y matricular a su alumnado · Crear un bloque · Añadir un ejercicio al banco · Asignarlo al bloque · Seguir la clase en vivo | Preparar un curso nuevo (D-079) · Copiar los bloques de otro grupo · Poner una fecha de entrega · Ocultar un bloque o un ejercicio · Comprobar la solución de un ejercicio · Traducir un ejercicio · Probar un ejercicio como alumno · Ver el detalle de un intento · Leer el histórico de un bloque |
-| Administración | Dar de alta un usuario · Crear un grupo y matricular · Probar el proveedor de IA · Seguir la clase en vivo                                 | Cambiar el rol de una cuenta o desactivarla · Gestionar las asignaturas · Añadir un proveedor de respaldo · y todas las del docente                                                                                                                                                                  |
+| Docente        | Crear tu clase y matricular a su alumnado · Crear un bloque · Añadir un ejercicio al banco · Asignarlo al bloque · Seguir la clase en vivo | Preparar un curso nuevo (D-079) · Copiar los bloques de otro grupo · Poner una fecha de entrega · Ocultar un bloque o un ejercicio · Comprobar la solución de un ejercicio · Traducir un ejercicio · Probar un ejercicio como alumno · Ver el detalle de un intento · Leer el histórico de un bloque |
+| Administración | Dar de alta un usuario · Crear una clase y matricular · Probar el proveedor de IA · Seguir la clase en vivo                                | Cambiar el rol de una cuenta o desactivarla · Gestionar las asignaturas · Añadir un proveedor de respaldo · y todas las del docente                                                                                                                                                                  |
 
 **Balizas** («Ayuda de esta pantalla»): puntos animados junto a las piezas de la pantalla. Cada una es un botón («Ayuda: Ejecutar las pruebas») que abre la explicación de su pieza; la del editor explica también su atajo para ejecutar (Ctrl+Enter o ⌘+Enter). Se apagan con Esc, con «Ocultar la ayuda» o al cambiar de pantalla. Todas las pantallas las llevan, en cada pieza (la barra incluida), salvo el acceso: lo que no se explica no se ve (7.0a, a petición del autor). No oscurecen la pantalla: es ayuda sobre la marcha, que deja verla entera y usarla.
 
@@ -1184,7 +1184,7 @@ Cada paso indica una estimación orientativa de horas, lo que se hace, cuándo e
 
 ### Bloque A · Hasta la PEC3 (la aplicación completa)
 
-Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b, 7.0c, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
+Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b1, 7.0b2, 7.0c, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
 
 #### Fase 0 · Cimientos (≈12 h)
 
@@ -4430,16 +4430,29 @@ La ayuda guiada (7.0a, 7.0b y 7.0c) va antes del 7.1, para que sus e2e y axe ya 
 🧪 `guide-progress.ts` (TDD); `GuideStore` (TDD); `TourRunner` con un driver falso; botón, panel y balizas; que cada pieza que nombra una tarea esté marcada en alguna plantilla (recorriendo los `.html`); pgTAP de la columna.
 Commit: `feat(guide): guided help and the student's tasks (step 7.0a)`.
 
-**7.0b · Ayuda guiada: docente y administración (≈4 h)** · ficha `13-ayuda` · §2.12 · D-080
+El 7.0b se partió en dos al revisarlo (24/11/2026): dos perfiles, nueve pantallas con baliza en cada pieza y una veintena de tareas no caben en ≈ 4 h. Se siguen las decisiones del 7.0a (ficha 13, D-080) y las del personal (D-093, D-094).
 
-- **Docente:** la bienvenida, sus primeros pasos y sus tareas de «¿Cómo se hace…?», con las condiciones de hecha por sus datos (tiene un grupo con alumnado, un bloque, un ejercicio propio en el banco, una asignación). Las balizas de en vivo, detalle del intento, ejercicios, grupos e histórico.
-- **Administración:** la bienvenida y sus primeros pasos, que son los de la cuenta del tribunal; sus tareas, y las del docente; las balizas de sistema.
-- **Pantallas vacías:** un docente sin grupos empieza por la tarea que crea el primero, y ninguna tarea da por hecho que hay datos.
-- **Menú lateral:** en el móvil y en modo raíl, las tareas lo abren antes de señalar una entrada suya.
+**7.0b1 · Ayuda guiada: la base del personal, el menú lateral y el docente (≈4 h)** · ficha `13-ayuda` · §2.12 · D-080, D-093, D-094
 
-✅ Un docente nuevo prepara su primera clase guiado de principio a fin, y la cuenta de administración enseña al tribunal la aplicación en sus primeros pasos. `npm run check` en verde.
-🧪 Las condiciones de hecha por los datos (TDD); las tareas del docente y de la administración, como en el 7.0a.
-Commit: `feat(guide): the teacher's and the admin's guided tasks (step 7.0b)`.
+- **La base:** cada perfil dice sus primeros pasos en orden (`GuideProfile.firstSteps`, en lugar de la marca de cada tarea) y tiene un id; el perfil del personal se elige por el rol, y `GuideStore.use()` con el mismo perfil trae el menú del layout nuevo sin volver a leer los hechos (D-093). «Paso N de M» cuenta solo los pasos que se ven a ese ancho.
+- **Menú lateral:** los pasos `inSideMenu` lo abren con la función que da `StaffLayout`; en el móvil se abre y se reabre si Esc lo cierra; en el raíl se señala el icono sin desplegarlo (D-094, probado en el navegador).
+- **Botón «Ayuda» y panel** en `StaffLayout`, con el perfil del docente (la administración, en el 7.0b2).
+- **Docente:** sus hechos, solo con lo suyo (TDD); la bienvenida, sus cinco primeros pasos, las balizas de cada pieza de en vivo, detalle del intento, ejercicios (banco y formulario), bloques, grupos, histórico, la barra y el menú, y «Recorrer esta pantalla» en cada una. Los textos, repartidos en `teacher/teacher-guide/`.
+- **Pantallas vacías:** Bloques, En vivo e Histórico sin clases llevan «Crear tu clase», que empieza esa tarea guiada; ninguna tarea da por hecho que hay datos.
+- **Datos simulados:** un docente sin clases y un alumno sin empezar (sube `SEED_VERSION`).
+
+✅ Un docente nuevo prepara su primera clase guiado de principio a fin, también en el móvil con el menú lateral. `npm run check` en verde.
+🧪 Los hechos del docente y los primeros pasos por perfil (TDD); las tareas, como en el 7.0a.
+Commit: `feat(guide): the staff's guided help and the teacher's tasks (step 7.0b1)`.
+
+**7.0b2 · Ayuda guiada: la administración y «¿Cómo se hace…?» del personal (≈3 h)** · ficha `13-ayuda` · §2.12 · D-080, D-093
+
+- **Administración:** la bienvenida y sus primeros pasos (los de la cuenta del tribunal, hechos solo al terminar su recorrido), sus tareas y las del docente; las balizas y los recorridos de usuarios y sistema; los avisos de lo que no se deshace (una cuenta se desactiva, no se borra; probar el proveedor gasta una llamada).
+- **«¿Cómo se hace…?» del docente:** las tareas de grupos, bloques, ejercicios, el detalle y el histórico del catálogo de la ficha 13.
+
+✅ La cuenta de administración enseña al tribunal la aplicación en sus primeros pasos. `npm run check` en verde.
+🧪 Las tareas de la administración, como en el 7.0a.
+Commit: `feat(guide): the admin's guided tasks and the staff's how-tos (step 7.0b2)`.
 
 **7.0c · Manual de usuario generado desde la ayuda (≈2 h)** · §2.12 · D-080
 
