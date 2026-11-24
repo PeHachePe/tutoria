@@ -2,7 +2,7 @@
 
 const DELIVERIES = ['pec3', 'pec4'];
 /** A plan step, such as 1.2, or one added between two others, such as 1.1b (D-022). */
-const STEP = /^\d+\.\d+[a-z]?$/;
+const STEP = /^\d+\.\d+(?:[a-z]\d?)?$/;
 const SCREEN = /^\d{2}[a-z]?-[a-z0-9-]+$/;
 const ITERATION = /^iteracion-\d+$/;
 
