@@ -138,7 +138,7 @@ export class SupabaseExerciseService extends ExerciseService {
       .from('exercise')
       .select(
         // `subjects` keeps them all for the chips; `scope`, inner, only filters
-        `*, test(count), subjects:exercise_subject(subject_id), exercise_assignment(class_group(id, label, school_class(name)))${wanted ? ', scope:exercise_subject!inner(subject_id)' : ''}`,
+        `*, test(count), subjects:exercise_subject(subject_id), exercise_assignment(class_group(id, label, subject_id, school_class(name, school_year)))${wanted ? ', scope:exercise_subject!inner(subject_id)' : ''}`,
       )
       .order('created_at', { ascending: false });
     if (wanted) query = query.in('scope.subject_id', [...wanted]);
@@ -177,7 +177,7 @@ export class SupabaseExerciseService extends ExerciseService {
       this.supabase
         .from('exercise')
         .select(
-          '*, test(*), exercise_subject(subject_id), exercise_assignment(class_group(id, label, school_class(name)))',
+          '*, test(*), exercise_subject(subject_id), exercise_assignment(class_group(id, label, subject_id, school_class(name, school_year)))',
         )
         .eq('id', exerciseId)
         .order('position', { referencedTable: 'test' })
@@ -291,7 +291,8 @@ function toAssignedGroup(row: {
 interface UsageGroupRow {
   id: string;
   label: string | null;
-  school_class: { name: string };
+  subject_id: string;
+  school_class: { name: string; school_year: string };
 }
 
 /** A row of the bank as the query of `listBank` brings it. */
@@ -306,7 +307,12 @@ type BankRow = Row<'exercise'> & {
 function groupsOf(assignments: readonly { class_group: UsageGroupRow }[]): ExerciseUsage['groups'] {
   const groups = new Map(assignments.map(({ class_group }) => [class_group.id, class_group]));
   return [...groups.values()]
-    .map(({ id, label, school_class }) => ({ id, name: groupName(school_class.name, label) }))
+    .map(({ id, label, subject_id, school_class }) => ({
+      id,
+      name: groupName(school_class.name, label),
+      subjectId: subject_id,
+      schoolYear: school_class.school_year,
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 

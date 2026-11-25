@@ -39,8 +39,16 @@ export interface TranslationRequest {
 export interface ExerciseUsage {
   /** Students who have started it, in any group: changing its tests changes what they did. */
   readonly studentCount: number;
-  /** The groups where it is assigned that the user manages, by name. */
-  readonly groups: readonly { readonly id: string; readonly name: string }[];
+  /**
+   * The groups where it is assigned that the user manages, by name, with their subject and their
+   * year: a class can have it in two of its subjects, or in two years (7.0b2).
+   */
+  readonly groups: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly subjectId: string;
+    readonly schoolYear: string;
+  }[];
 }
 
 /** Exercise with all its tests, hidden ones included: only for teachers. */

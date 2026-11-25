@@ -13,6 +13,7 @@ import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/for
 import { MatInput } from '@angular/material/input';
 import { MatOption, MatSelect } from '@angular/material/select';
 
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 import type { AppUser } from '../../data/user';
 import { PasswordField } from './password-field';
 import { ROLE_LABELS, ROLES } from './role-labels';
@@ -53,6 +54,7 @@ export interface UserDialogData {
     MatSelect,
     MatOption,
     PasswordField,
+    GuideAnchor,
   ],
   template: `
     <h2 mat-dialog-title>
@@ -123,7 +125,12 @@ export interface UserDialogData {
         <button matButton type="button" mat-dialog-close i18n="@@userDialog.cancel">
           Cancelar
         </button>
-        <button matButton="filled" type="submit" [disabled]="userForm().submitting()">
+        <button
+          matButton="filled"
+          type="submit"
+          [disabled]="userForm().submitting()"
+          [appGuideAnchor]="anchors.userDialogSave"
+        >
           @if (userForm().submitting()) {
             <span i18n="@@userDialog.saving">Guardando…</span>
           } @else if (data.user) {
@@ -137,6 +144,7 @@ export interface UserDialogData {
   `,
 })
 export class UserDialog {
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly data = inject<UserDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<UserDialog, boolean>>(MatDialogRef);
 

@@ -1,3 +1,5 @@
+import type { EnvironmentInjector } from '@angular/core';
+
 import type { GuideAnchorId } from './guide-anchor';
 
 /**
@@ -23,7 +25,10 @@ export type GuideScreen =
   | 'exercise-form'
   | 'blocks'
   | 'groups'
-  | 'history';
+  | 'history'
+  // The administration
+  | 'users'
+  | 'system';
 
 /**
  * Something the data says about the user, such as having submitted an exercise: it marks a task as
@@ -63,7 +68,10 @@ export type GuidePlace =
   | 'newExercise'
   | 'blocks'
   | 'groups'
-  | 'history';
+  | 'history'
+  // The administration
+  | 'users'
+  | 'system';
 
 /** One step of a tour: a piece of the screen with its globe, or the globe alone in the middle. */
 export interface GuideStep {
@@ -89,6 +97,12 @@ export interface GuideStep {
    * whole dialog or menu is lit, and only the piece itself does the action.
    */
   readonly inOverlay?: boolean;
+  /**
+   * The action is the button that saves a dialog («Crear», «Matricular»): the tour goes on when the
+   * dialog closes saving, not with the click, which may find an error and leave it open (7.0b2).
+   * Closed without saving, the tour goes back to the step that opened it, as any dialog.
+   */
+  readonly savesDialog?: boolean;
   /**
    * The piece is an entry of the side menu of the staff, which is closed on phones: the tour opens
    * it first, and again if it closes in the middle (D-094).
@@ -197,4 +211,9 @@ export interface GuideProfile {
   readonly loadFacts: () => Promise<GuideFacts>;
   /** The side menu of its layout, if it has one. */
   readonly sideMenu?: GuideSideMenu;
+  /**
+   * The injector of the routes of its area, for the mascot of the globes to wear what the area
+   * provides: the accessories the student chose (7.0b2).
+   */
+  readonly injector?: EnvironmentInjector;
 }

@@ -15,23 +15,35 @@ export const TEACHER_FIRST_STEPS = [
   'follow-live',
 ];
 
-const NO_CLASS = $localize`:@@guide.teacher.unavailable.noClass:Cuando tengas una clase con una asignatura tuya`;
-const NO_BLOCK = $localize`:@@guide.teacher.unavailable.noBlock:Cuando hayas creado un bloque`;
-const NO_ASSIGNMENT = $localize`:@@guide.teacher.unavailable.noAssignment:Cuando hayas asignado un ejercicio a un bloque`;
+/** Why a task of the teacher is not possible yet, for the panel to say it. */
+export const NO_CLASS = $localize`:@@guide.teacher.unavailable.noClass:Cuando tengas una clase con una asignatura tuya`;
+export const NO_STUDENTS = $localize`:@@guide.teacher.unavailable.noStudents:Cuando hayas matriculado a tu alumnado`;
+export const NO_BLOCK = $localize`:@@guide.teacher.unavailable.noBlock:Cuando hayas creado un bloque`;
+export const NO_ASSIGNMENT = $localize`:@@guide.teacher.unavailable.noAssignment:Cuando hayas asignado un ejercicio a un bloque`;
+export const NO_ATTEMPT = $localize`:@@guide.teacher.tour.attempt.unavailable:Abre el detalle de un alumno desde En vivo`;
+
+/** Who does the tasks: the administration chooses the teacher of each subject (7.0b2). */
+export type TaskAudience = 'teacher' | 'admin';
 
 /**
  * The first steps of the teacher (2.12, ficha 13): what a teacher who starts from scratch does to
  * prepare a class, on the real screens and with their own data. Each one that creates something
- * says so before, and how to undo it. Those that start from the side menu open it on phones.
+ * says so before, and how to undo it. Those that start from the side menu open it on phones. The
+ * administration has them too, with the same ids (D-093): creating the class, in its own words.
  */
-export function teacherFirstSteps(): readonly GuideTask[] {
+export function teacherFirstSteps(audience: TaskAudience = 'teacher'): readonly GuideTask[] {
+  const admin = audience === 'admin';
   return [
     {
       id: CREATE_CLASS_TASK,
       doneBy: 'hasStudents',
       screen: 'groups',
-      title: $localize`:@@guide.teacher.createClass.title:Crear tu clase y matricular a su alumnado`,
-      summary: $localize`:@@guide.teacher.createClass.summary:Tu clase, las asignaturas que das en ella y su alumnado.`,
+      title: admin
+        ? $localize`:@@guide.admin.createClass.title:Crear una clase y matricular a su alumnado`
+        : $localize`:@@guide.teacher.createClass.title:Crear tu clase y matricular a su alumnado`,
+      summary: admin
+        ? $localize`:@@guide.admin.createClass.summary:Una clase, sus asignaturas con su docente y su alumnado.`
+        : $localize`:@@guide.teacher.createClass.summary:Tu clase, las asignaturas que das en ella y su alumnado.`,
       keywords: [
         $localize`:@@guide.teacher.createClass.keywords:grupo clase asignatura matricular alumnos curso unirse`,
       ],
@@ -54,16 +66,28 @@ export function teacherFirstSteps(): readonly GuideTask[] {
         {
           anchor: A.classDialogSave,
           inOverlay: true,
+          savesDialog: true,
           title: $localize`:@@guide.teacher.createClass.dialog.title:La clase`,
-          text: $localize`:@@guide.teacher.createClass.dialog.text:Su nombre, como 1.º DAW A, y su curso. Si ya existe porque la da otro docente, te lo dice al escribirlo: únete a ella con tus asignaturas.`,
+          text: admin
+            ? $localize`:@@guide.admin.createClass.dialog.text:Su nombre, como 1.º DAW A, y su curso. Si ya existe, te lo dice al escribirlo.`
+            : $localize`:@@guide.teacher.createClass.dialog.text:Su nombre, como 1.º DAW A, y su curso. Si ya existe porque la da otro docente, te lo dice al escribirlo: únete a ella con tus asignaturas.`,
           action: $localize`:@@guide.teacher.createClass.dialog.action:Escribe su nombre y pulsa «Crear y elegir asignaturas»`,
         },
         {
           anchor: A.subjectsDialogSave,
           inOverlay: true,
-          title: $localize`:@@guide.teacher.createClass.subjects.title:Tus asignaturas`,
-          text: $localize`:@@guide.teacher.createClass.subjects.text:Marca las que das en esta clase. Cada una es un grupo, con su propio alumnado y sus bloques.`,
-          action: $localize`:@@guide.teacher.createClass.subjects.action:Marca tus asignaturas y pulsa «Añadir»`,
+          savesDialog: true,
+          ...(admin
+            ? {
+                title: $localize`:@@guide.admin.createClass.subjects.title:Sus asignaturas`,
+                text: $localize`:@@guide.admin.createClass.subjects.text:Marca las de esta clase y elige el docente que las da. Cada una es un grupo, con su propio alumnado y sus bloques.`,
+                action: $localize`:@@guide.admin.createClass.subjects.action:Marca las asignaturas, elige su docente y pulsa «Añadir»`,
+              }
+            : {
+                title: $localize`:@@guide.teacher.createClass.subjects.title:Tus asignaturas`,
+                text: $localize`:@@guide.teacher.createClass.subjects.text:Marca las que das en esta clase. Cada una es un grupo, con su propio alumnado y sus bloques.`,
+                action: $localize`:@@guide.teacher.createClass.subjects.action:Marca tus asignaturas y pulsa «Añadir»`,
+              }),
         },
         {
           anchor: A.groupsEnroll,
@@ -74,8 +98,11 @@ export function teacherFirstSteps(): readonly GuideTask[] {
         {
           anchor: A.enrollDialogSave,
           inOverlay: true,
+          savesDialog: true,
           title: $localize`:@@guide.teacher.createClass.enrollDialog.title:Elige a tu alumnado`,
-          text: $localize`:@@guide.teacher.createClass.enrollDialog.text:Elígelo entre quienes no tienen clase este curso, pega sus correos, tráelo de otra clase o búscalo. Solo están las cuentas que ya existen: si falta alguien, pide a la administración que le dé de alta.`,
+          text: admin
+            ? $localize`:@@guide.admin.createClass.enrollDialog.text:Elígelo entre quienes no tienen clase este curso, pega sus correos, tráelo de otra clase o búscalo. Solo están las cuentas que ya existen: si falta alguien, dale de alta en Usuarios.`
+            : $localize`:@@guide.teacher.createClass.enrollDialog.text:Elígelo entre quienes no tienen clase este curso, pega sus correos, tráelo de otra clase o búscalo. Solo están las cuentas que ya existen: si falta alguien, pide a la administración que le dé de alta.`,
           action: $localize`:@@guide.teacher.createClass.enrollDialog.action:Elige al alumnado y pulsa «Matricular»`,
         },
         {
@@ -117,6 +144,7 @@ export function teacherFirstSteps(): readonly GuideTask[] {
         {
           anchor: A.blockDialogSave,
           inOverlay: true,
+          savesDialog: true,
           title: $localize`:@@guide.teacher.createBlock.dialog.title:El bloque`,
           text: $localize`:@@guide.teacher.createBlock.dialog.text:Su título, como «Tema 1: Bucles». Puedes dejarlo oculto o hacer que se abra solo un día.`,
           action: $localize`:@@guide.teacher.createBlock.dialog.action:Escribe su título y pulsa «Crear el bloque»`,
@@ -212,6 +240,7 @@ export function teacherFirstSteps(): readonly GuideTask[] {
         {
           anchor: A.addExercisesSave,
           inOverlay: true,
+          savesDialog: true,
           title: $localize`:@@guide.teacher.assign.dialog.title:Elige del banco`,
           text: $localize`:@@guide.teacher.assign.dialog.text:Busca y marca los que quieras: se añaden al final del bloque. Si no hay ninguno de tu asignatura, escribe uno antes en Ejercicios.`,
           action: $localize`:@@guide.teacher.assign.dialog.action:Marca los ejercicios y pulsa «Añadir»`,

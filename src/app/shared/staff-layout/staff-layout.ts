@@ -33,12 +33,15 @@ interface StaffLink extends NavLink {
 interface NavSection {
   readonly label: string;
   readonly links: readonly StaffLink[];
+  /** The whole section, for the guided help of the administration (7.0b2). */
+  readonly anchor: GuideAnchorId;
 }
 
 const A = GUIDE_ANCHORS;
 
 const TEACHING: NavSection = {
   label: $localize`:@@staff.teaching:Docencia`,
+  anchor: A.navTeaching,
   links: [
     {
       path: APP_PATHS.teacher.live,
@@ -75,15 +78,27 @@ const TEACHING: NavSection = {
 
 const ADMINISTRATION: NavSection = {
   label: $localize`:@@staff.administration:Administración`,
+  anchor: A.navAdministration,
   links: [
     {
       path: APP_PATHS.admin.users,
       label: $localize`:@@nav.users:Usuarios`,
       icon: 'manage_accounts',
+      anchor: A.navUsers,
     },
-    { path: APP_PATHS.admin.system, label: $localize`:@@nav.system:Sistema`, icon: 'tune' },
+    {
+      path: APP_PATHS.admin.system,
+      label: $localize`:@@nav.system:Sistema`,
+      icon: 'tune',
+      anchor: A.navSystem,
+    },
     // Every build serves the showcase to the administration, production included (D-053)
-    { path: DEV_PATHS.showcase, label: $localize`:@@nav.showcase:Muestrario`, icon: 'palette' },
+    {
+      path: DEV_PATHS.showcase,
+      label: $localize`:@@nav.showcase:Muestrario`,
+      icon: 'palette',
+      anchor: A.navShowcase,
+    },
   ],
 };
 

@@ -1,4 +1,4 @@
-import { ApplicationRef, Component, signal } from '@angular/core';
+import { ApplicationRef, Component, EnvironmentInjector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
@@ -14,9 +14,17 @@ import { type TourEnd, TourRunner } from './tour-runner';
 @Component({ template: '' })
 class EmptyPage {}
 
+/** A tour that gets to its last globe, which asks for the next first step, and ends so. */
+function endingWith(end: TourEnd): TourRunner['run'] {
+  return async (_steps, options) => {
+    await options?.next?.();
+    return end;
+  };
+}
+
 class FakeTourRunner {
   readonly beaconsShown = signal(false);
-  run = vi.fn<TourRunner['run']>(() => Promise.resolve<TourEnd>('done'));
+  run = vi.fn<TourRunner['run']>(endingWith('done'));
   showBeacons = vi.fn<TourRunner['showBeacons']>(() => Promise.resolve());
   hideBeacons = vi.fn<TourRunner['hideBeacons']>();
 }
@@ -109,6 +117,11 @@ describe('GuideStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
   }
 
+  /** The title the tour of that call offered on its last globe. */
+  function offeredBy(call: number): Promise<string | undefined> | undefined {
+    return runner.run.mock.calls[call][1]?.next?.();
+  }
+
   async function useProfile(state: GuideState = {}, facts: GuideFacts = FACTS): Promise<void> {
     service.guideState.mockResolvedValue(state);
     loadFacts.mockResolvedValue(facts);
@@ -154,7 +167,48 @@ describe('GuideStore', () => {
 
       expect(loadFacts).toHaveBeenCalledOnce();
       await store.startTask(SETTINGS);
-      expect(runner.run).toHaveBeenCalledWith(SETTINGS.steps, { next: undefined, sideMenu });
+      expect(runner.run.mock.calls[0][1]?.sideMenu).toBeDefined();
+    });
+
+    it('gives the tour the side menu of the layout open now, not of the one where it started', async () => {
+      const first = { open: vi.fn(() => Promise.resolve()), close: vi.fn(), closed: vi.fn() };
+      const second = { open: vi.fn(), close: vi.fn(), closed: vi.fn(() => Promise.resolve()) };
+      profile = { ...profile, sideMenu: first };
+      await useProfile();
+      await store.startTask(SETTINGS);
+      const sideMenu = runner.run.mock.calls[0][1]!.sideMenu!;
+
+      await sideMenu.open();
+      store.use({ ...profile, sideMenu: second });
+      sideMenu.close();
+      await sideMenu.closed();
+
+      expect(first.open).toHaveBeenCalledOnce();
+      expect(second.close).toHaveBeenCalledOnce();
+      expect(second.closed).toHaveBeenCalledOnce();
+      // An area without one, as the student's: nothing to open, nothing to wait for
+      store.use({ ...profile, sideMenu: undefined });
+      expect(sideMenu.open()).toBeUndefined();
+      sideMenu.close();
+      await expect(sideMenu.closed()).resolves.toBeUndefined();
+    });
+
+    it('gives no side menu to an area without one', async () => {
+      await useProfile();
+
+      await store.startTask(SETTINGS);
+
+      expect(runner.run.mock.calls[0][1]?.sideMenu).toBeUndefined();
+    });
+
+    it('gives the mascot of the globes the injector of the area open now', async () => {
+      const injector = TestBed.inject(EnvironmentInjector);
+      profile = { ...profile, injector };
+      await useProfile();
+
+      await store.startTask(SETTINGS);
+
+      expect(runner.run.mock.calls[0][1]?.injector?.()).toBe(injector);
     });
 
     it('reads the facts of another profile', async () => {
@@ -266,10 +320,11 @@ describe('GuideStore', () => {
 
       await store.startWelcome();
 
-      expect(runner.run).toHaveBeenCalledWith(profile.welcome.steps, {
-        closeLabel: 'Saltar la bienvenida',
-        next: 'Empezar un ejercicio',
-      });
+      expect(runner.run).toHaveBeenCalledWith(
+        profile.welcome.steps,
+        expect.objectContaining({ closeLabel: 'Saltar la bienvenida' }),
+      );
+      await expect(offeredBy(0)).resolves.toBe('Empezar un ejercicio');
       expect(service.saveGuideState).toHaveBeenCalledWith({ welcome: 1 });
       expect(store.welcomeDue()).toBe(false);
     });
@@ -286,11 +341,12 @@ describe('GuideStore', () => {
 
     it('starts the first step pending if chosen on its last globe', async () => {
       await useProfile();
-      runner.run.mockResolvedValueOnce('next').mockResolvedValueOnce('closed');
+      runner.run.mockImplementationOnce(endingWith('next')).mockResolvedValueOnce('closed');
 
       await store.startWelcome();
 
-      expect(runner.run).toHaveBeenNthCalledWith(2, START.steps, { next: 'Ejecutar las pruebas' });
+      expect(runner.run).toHaveBeenNthCalledWith(2, START.steps, expect.anything());
+      await expect(offeredBy(1)).resolves.toBe('Ejecutar las pruebas');
       expect(store.state().welcome).toBe(1);
     });
 
@@ -299,10 +355,7 @@ describe('GuideStore', () => {
 
       await store.startWelcome();
 
-      expect(runner.run).toHaveBeenCalledWith(profile.welcome.steps, {
-        closeLabel: 'Saltar la bienvenida',
-        next: undefined,
-      });
+      await expect(offeredBy(0)).resolves.toBeUndefined();
     });
 
     it('offers no first step that cannot be done yet', async () => {
@@ -310,10 +363,7 @@ describe('GuideStore', () => {
 
       await store.startWelcome();
 
-      expect(runner.run).toHaveBeenCalledWith(profile.welcome.steps, {
-        closeLabel: 'Saltar la bienvenida',
-        next: undefined,
-      });
+      await expect(offeredBy(0)).resolves.toBeUndefined();
     });
 
     it('is not seen if it could not start', async () => {
@@ -346,11 +396,13 @@ describe('GuideStore', () => {
       await settle();
 
       expect(router.url).toBe('/alumno/ajustes');
-      expect(runner.run).toHaveBeenCalledWith(SETTINGS.steps, { next: undefined });
+      expect(runner.run).toHaveBeenCalledWith(SETTINGS.steps, expect.anything());
       expect(service.saveGuideState).toHaveBeenCalledWith({
         done: { settings: '2026-11-23T10:00:00.000Z' },
       });
-      expect(loadFacts).toHaveBeenCalledTimes(2);
+      // Once at the start, once on the last globe and once after it
+      expect(loadFacts).toHaveBeenCalledTimes(3);
+      await expect(offeredBy(0)).resolves.toBeUndefined();
     });
 
     it('stays where it is when it is already in its place', async () => {
@@ -374,12 +426,14 @@ describe('GuideStore', () => {
 
     it('offers the next first step on its last globe, and starts it if chosen', async () => {
       await useProfile();
-      runner.run.mockResolvedValueOnce('next').mockResolvedValueOnce('closed');
+      runner.run.mockImplementationOnce(endingWith('next')).mockResolvedValueOnce('closed');
 
       await store.startTask(START);
 
-      expect(runner.run).toHaveBeenNthCalledWith(1, START.steps, { next: 'Ejecutar las pruebas' });
-      expect(runner.run).toHaveBeenNthCalledWith(2, RUN.steps, { next: undefined });
+      expect(runner.run).toHaveBeenNthCalledWith(1, START.steps, expect.anything());
+      expect(runner.run).toHaveBeenNthCalledWith(2, RUN.steps, expect.anything());
+      await expect(offeredBy(0)).resolves.toBe('Ejecutar las pruebas');
+      await expect(offeredBy(1)).resolves.toBeUndefined();
       expect(router.url).toBe('/alumno/ejercicio/a');
       expect(store.state().done).toHaveProperty('start-exercise');
     });
@@ -389,7 +443,37 @@ describe('GuideStore', () => {
 
       await store.startTask(START);
 
-      expect(runner.run).toHaveBeenCalledWith(START.steps, { next: undefined });
+      await expect(offeredBy(0)).resolves.toBeUndefined();
+    });
+
+    it('chooses the next first step with the data read on its last globe (7.0b2)', async () => {
+      // No exercise open at the start: «Ejecutar las pruebas» is not possible yet
+      await useProfile({}, { known: new Set(), places: { catalog: ['/alumno'] } });
+      loadFacts.mockResolvedValue(FACTS);
+      let loadedOnLastGlobe = false;
+      runner.run
+        .mockImplementationOnce(async (_steps, options) => {
+          await options?.next?.();
+          loadedOnLastGlobe = store.loaded();
+          return 'next';
+        })
+        .mockResolvedValueOnce('closed');
+
+      await store.startTask(START);
+
+      expect(runner.run).toHaveBeenNthCalledWith(2, RUN.steps, expect.anything());
+      // The facts read by the last globe count as read
+      expect(loadedOnLastGlobe).toBe(true);
+    });
+
+    it('chooses with the data it had if they cannot be read on its last globe', async () => {
+      await useProfile();
+      loadFacts.mockRejectedValue(new DataError('network'));
+      runner.run.mockImplementationOnce(endingWith('next')).mockResolvedValueOnce('closed');
+
+      await store.startTask(START);
+
+      expect(runner.run).toHaveBeenNthCalledWith(2, RUN.steps, expect.anything());
     });
 
     it('does not start without a page for its place, or while another tour runs', async () => {

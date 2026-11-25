@@ -14,7 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { NavigationStart, Router } from '@angular/router';
 import type { DestroyReason, Driver, DriveStep, PopoverDOM } from 'driver.js';
 import type { Hints } from 'driver.js/hints';
-import { filter, firstValueFrom } from 'rxjs';
+import { filter, firstValueFrom, take } from 'rxjs';
 
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
 import { prefersReducedMotion } from '../../shared/reduced-motion';
@@ -28,12 +28,17 @@ import type { GuideBeacon, GuideSideMenu, GuideStep } from './guide-task';
 export type TourEnd = 'done' | 'next' | 'closed' | 'interrupted';
 
 export interface TourOptions {
-  /** Title of the next first step, offered on the last globe. */
-  readonly next?: string;
+  /**
+   * The title of the next first step, offered on the last globe; asked once the tour gets there,
+   * as what the tour did may make another one possible (7.0b2).
+   */
+  readonly next?: () => Promise<string | undefined>;
   /** Name of the button that closes it: «Saltar la bienvenida» in the welcome. */
   readonly closeLabel?: string;
   /** The side menu of the area, for the steps that point at its entries (D-094). */
   readonly sideMenu?: GuideSideMenu;
+  /** The injector of the area, read for each globe: its mascot wears what the area provides. */
+  readonly injector?: () => EnvironmentInjector | undefined;
 }
 
 /** driver.js and its beacons, downloaded apart and only the first time the help is used (2.12). */
@@ -77,6 +82,13 @@ const SWITCH_OFF = '[role="switch"][aria-checked="false"]';
 const AFTER_SWITCH_MS = 150;
 /** The id of the globe, which driver.js points the piece to: it tells its attributes apart. */
 const DRIVER_POPOVER_ID = 'driver-popover-content';
+/** The dark layer of an open beacon, which driver.js paints inline: the scrim of the theme. */
+const SCRIM = 'var(--mat-sys-scrim)';
+/** The button of the next first step, so it is added once to its globe. */
+const NEXT_TASK_CLASS = 'app-guide-next-task';
+/** What takes the focus in a menu or a dialog of Material left open when a tour ends. */
+const FOCUSABLE =
+  '[role^="menuitem"]:not([disabled]), input:not([disabled]), textarea:not([disabled]), button:not([disabled])';
 
 const TEXTS = {
   next: $localize`:@@guide.next:Siguiente`,
@@ -147,6 +159,10 @@ export class TourRunner {
     if (this.ended) return 'interrupted';
     const returnFocus = this.document.activeElement;
     const reducedMotion = prefersReducedMotion(this.document.defaultView);
+    // Asked once, when the last globe shows for the first time
+    let nextTitle: Promise<string | undefined> | undefined;
+    const askNext = options.next;
+    const next = askNext && (() => (nextTitle ??= askNext()));
 
     return new Promise<TourEnd>((resolve) => {
       /** Set by whoever ends the tour on purpose, before destroying it. */
@@ -185,7 +201,7 @@ export class TourRunner {
             popover.wrapper.classList.toggle(IN_OVERLAY_CLASS, !!step.inOverlay);
             popover.progress.textContent = this.progressOf(steps, tour.getActiveIndex()!);
             if (!step.inSideMenu) options.sideMenu?.close();
-            this.decorate(popover, step, tour.isLastStep(), options, finish, () => tour.moveNext());
+            this.decorate(popover, step, tour, options, next, finish);
           }
         },
         onHighlighted: (element, driveStep) => {
@@ -198,6 +214,12 @@ export class TourRunner {
               if (activeStep(tour) === step) void sideMenu.open()?.then(() => tour.refresh());
             });
           }
+          // Saved, the tour goes on; closed without saving, onElementMissing takes it back
+          if (step?.savesDialog && element) {
+            this.whenSaved(element, () => {
+              if (activeStep(tour) === step) tour.moveNext();
+            });
+          }
         },
         onDestroyed: (_element, _step, { reason }) => {
           leaving.unsubscribe();
@@ -206,9 +228,7 @@ export class TourRunner {
           this.tour = undefined;
           const how = end ?? endOf(reason);
           // «Siguiente» starts another tour at once, which takes the focus itself
-          if (how !== 'next' && returnFocus instanceof HTMLElement && returnFocus.isConnected) {
-            returnFocus.focus();
-          }
+          if (how !== 'next') this.restoreFocus(returnFocus);
           resolve(how);
         },
       });
@@ -250,6 +270,10 @@ export class TourRunner {
       })),
       buttonText: TEXTS.gotIt,
       popoverClass: POPOVER_CLASS,
+      // The piece lit and its globe beside it, as in the tours, only while it is open: by the
+      // beacon, the globe covered the piece it explains (7.0b2)
+      overlay: true,
+      overlayColor: SCRIM,
       // At the corner where each piece starts, as it is read: at the end, the beacons of the pieces
       // as wide as the screen piled up on its edge
       beacon: {
@@ -282,6 +306,32 @@ export class TourRunner {
     this.hints?.hide();
     this.hints = undefined;
     this.beaconsShownState.set(false);
+  }
+
+  /**
+   * Where the focus goes when a tour ends: into the menu or the dialog the task left open for the
+   * user to go on (a how-to may end by opening one), else back where it was.
+   */
+  private restoreFocus(returnFocus: Element | null): void {
+    const surface = [...this.document.querySelectorAll<HTMLElement>(MATERIAL_SURFACES)].at(-1);
+    if (surface) {
+      surface.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    } else if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
+      returnFocus.focus();
+    }
+  }
+
+  /** Calls `saved` once the dialog that holds `piece` closes with a result: «Cancelar» gives none. */
+  private whenSaved(piece: Element, saved: () => void): void {
+    const ref = this.dialogs.openDialogs.find((open) =>
+      this.document.getElementById(open.id)?.contains(piece),
+    );
+    ref
+      ?.afterClosed()
+      .pipe(take(1))
+      .subscribe((result: unknown) => {
+        if (result) saved();
+      });
   }
 
   /** Once no dialog is open (the help panel itself), which would take the focus back. */
@@ -318,9 +368,10 @@ export class TourRunner {
         showButtons: step.action ? ['previous', 'close'] : ['next', 'previous', 'close'],
       },
       // Only a click on the piece itself counts: in a menu or a dialog the whole surface is lit
-      advanceOn: step.action
-        ? { event: 'click', when: (_surface, _step, { event }) => this.pressed(anchor, event) }
-        : false,
+      advanceOn:
+        step.action && !step.savesDialog
+          ? { event: 'click', when: (_surface, _step, { event }) => this.pressed(anchor, event) }
+          : false,
       // In a dialog, its own focus trap rules: both at once leave the Tab key stuck (7.0a)
       allowPageInteraction: !!step.inOverlay,
       // While a step only explains, its piece cannot take the user somewhere else
@@ -351,11 +402,12 @@ export class TourRunner {
   private decorate(
     popover: PopoverDOM,
     step: GuideStep,
-    last: boolean,
+    tour: Driver,
     options: TourOptions,
+    next: (() => Promise<string | undefined>) | undefined,
     finish: (how: TourEnd) => void,
-    moveNext: () => void,
   ): void {
+    const last = tour.isLastStep();
     const element = step.anchor ? this.find(step.anchor) : undefined;
     const offSwitch = element?.querySelector<HTMLElement>(SWITCH_OFF);
     if (step.whenDisabled && element && isDisabled(element)) {
@@ -376,22 +428,32 @@ export class TourRunner {
           step.turnOn,
           () => {
             offSwitch.click();
-            setTimeout(moveNext, AFTER_SWITCH_MS);
+            setTimeout(() => tour.moveNext(), AFTER_SWITCH_MS);
           },
           true,
         ),
       );
-    } else if (last && options.next) {
-      // «Terminar» stays, as the secondary choice, beside the next first step
-      popover.nextButton.classList.add('app-guide-secondary');
-      popover.footerButtons.append(
-        footerButton(this.document, TEXTS.nextTask(options.next), () => finish('next'), true),
-      );
+    } else if (last && next) {
+      // «Terminar» stays, as the secondary choice, beside the next first step, once it is known
+      void next().then((title) => {
+        const footer = popover.footerButtons;
+        if (!title || !footer.isConnected || !tour.isLastStep()) return;
+        if (footer.querySelector(`.${NEXT_TASK_CLASS}`)) return;
+        popover.nextButton.classList.add('app-guide-secondary');
+        const button = footerButton(
+          this.document,
+          TEXTS.nextTask(title),
+          () => finish('next'),
+          true,
+        );
+        button.classList.add(NEXT_TASK_CLASS);
+        footer.append(button);
+      });
     }
-    this.showMascot(popover.title, last ? 'joy' : 'idle');
+    this.showMascot(popover.title, last ? 'joy' : 'idle', options.injector?.());
   }
 
-  private showMascot(title: HTMLElement, mood: MascotMood): void {
+  private showMascot(title: HTMLElement, mood: MascotMood, area?: EnvironmentInjector): void {
     this.dropMascot();
     // A box of its own sets the size: the mascot sets the classes of its own element
     const box = this.document.createElement('span');
@@ -399,8 +461,9 @@ export class TourRunner {
     const host = this.document.createElement('span');
     box.append(host);
     title.prepend(box);
+    // The providers of the routes of the area are seen through its environment injector only
     const mascot = createComponent(Mascot, {
-      environmentInjector: this.injector,
+      environmentInjector: area ?? this.injector,
       hostElement: host,
     });
     mascot.setInput('mood', mood);
@@ -427,10 +490,16 @@ export class TourRunner {
     };
   }
 
-  /** The click was on an enabled piece with the id: what an action step waits for. */
+  /**
+   * The click was on an enabled piece with the id: what an action step waits for. A mark inside the
+   * label of a tab stands for the whole tab, as in `find` (the languages of an exercise, 7.0b2).
+   */
   private pressed(anchor: GuideAnchorId | undefined, event: Event): boolean {
     const target = event.target instanceof Element ? event.target : null;
-    const piece = anchor ? target?.closest(guideAnchorSelector(anchor)) : null;
+    if (!anchor || !target) return false;
+    const selector = guideAnchorSelector(anchor);
+    const piece =
+      target.closest(selector) ?? target.closest('[role="tab"]')?.querySelector(selector);
     return !!piece && !isDisabled(piece);
   }
 

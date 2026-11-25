@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { EnvironmentInjector, inject } from '@angular/core';
 
 import { AuthStore } from '../auth/auth-store';
 import { APP_PATHS } from '../core/app-paths';
@@ -1315,6 +1315,8 @@ export function studentGuide(): GuideProfile {
     welcome,
     beacons,
     screenOf: studentScreen,
+    // The mascot of the globes wears what the student chose (student.routes.ts)
+    injector: inject(EnvironmentInjector),
     loadFacts: async () => {
       const userId = auth.userId();
       return studentFacts(userId ? await exercises.listAssigned(userId) : []);

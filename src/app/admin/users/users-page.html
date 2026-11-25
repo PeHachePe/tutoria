@@ -11,12 +11,19 @@
         matButton="outlined"
         type="button"
         [disabled]="!users.hasValue()"
+        [appGuideAnchor]="anchors.usersNewStudents"
         (click)="createStudents()"
       >
         <mat-icon aria-hidden="true">group_add</mat-icon>
         <span i18n="@@users.newStudents">Alta de varios…</span>
       </button>
-      <button matButton="filled" type="button" [disabled]="!users.hasValue()" (click)="create()">
+      <button
+        matButton="filled"
+        type="button"
+        [disabled]="!users.hasValue()"
+        [appGuideAnchor]="anchors.usersNew"
+        (click)="create()"
+      >
         <mat-icon aria-hidden="true">person_add</mat-icon>
         <span i18n="@@users.new">Nuevo usuario</span>
       </button>
@@ -28,6 +35,7 @@
     <div
       class="flex flex-wrap items-center gap-3 rounded-xl bg-warning-container py-2 pr-2 pl-4 text-on-warning-container"
       role="status"
+      [appGuideAnchor]="anchors.usersFinished"
     >
       <mat-icon aria-hidden="true">school</mat-icon>
       <p class="mr-auto text-body-medium" i18n="@@users.finished.notice">
@@ -58,12 +66,20 @@
   } @else {
     <!-- One row from sm; on a phone the search on its own and the two selects side by side -->
     <search class="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
-      <mat-form-field subscriptSizing="dynamic" class="col-span-2 sm:w-72">
+      <mat-form-field
+        subscriptSizing="dynamic"
+        class="col-span-2 sm:w-72"
+        [appGuideAnchor]="anchors.usersSearch"
+      >
         <mat-label i18n="@@users.search">Buscar por nombre o correo</mat-label>
         <mat-icon matPrefix aria-hidden="true">search</mat-icon>
         <input matInput type="search" [value]="filters().search" (input)="onSearch($event)" />
       </mat-form-field>
-      <mat-form-field subscriptSizing="dynamic" class="min-w-0 sm:w-48">
+      <mat-form-field
+        subscriptSizing="dynamic"
+        class="min-w-0 sm:w-48"
+        [appGuideAnchor]="anchors.usersRole"
+      >
         <mat-label i18n="@@users.role">Rol</mat-label>
         <mat-select [value]="roleValue()" (selectionChange)="selectRole($event.value)">
           <mat-option [value]="allRoles" i18n="@@users.role.all">Todos los roles</mat-option>
@@ -72,7 +88,11 @@
           }
         </mat-select>
       </mat-form-field>
-      <mat-form-field subscriptSizing="dynamic" class="min-w-0 sm:w-40">
+      <mat-form-field
+        subscriptSizing="dynamic"
+        class="min-w-0 sm:w-40"
+        [appGuideAnchor]="anchors.usersStatus"
+      >
         <mat-label i18n="@@users.status">Estado</mat-label>
         <mat-select [value]="statusValue()" (selectionChange)="selectStatus($event.value)">
           @for (option of statusOptions; track option.status) {
@@ -81,7 +101,11 @@
         </mat-select>
       </mat-form-field>
       <!-- Where each student is after the final evaluation (5.2g) -->
-      <mat-form-field subscriptSizing="dynamic" class="col-span-2 min-w-0 sm:w-60">
+      <mat-form-field
+        subscriptSizing="dynamic"
+        class="col-span-2 min-w-0 sm:w-60"
+        [appGuideAnchor]="anchors.usersSituation"
+      >
         <mat-label i18n="@@users.situation">Situación del alumnado</mat-label>
         <mat-select [value]="situationValue()" (selectionChange)="selectSituation($event.value)">
           <mat-option [value]="allSituations" i18n="@@users.situation.all">Todas</mat-option>
@@ -101,7 +125,11 @@
       }
     </div>
 
-    <p class="-mt-3 text-body-medium text-on-surface-variant" aria-live="polite">
+    <p
+      class="-mt-3 text-body-medium text-on-surface-variant"
+      aria-live="polite"
+      [appGuideAnchor]="anchors.usersCount"
+    >
       @if (hasFilters()) {
         <span i18n="@@users.count.filtered">{matching().length, plural,
           =0 {Ninguna cuenta de {{ total() }}}
@@ -153,7 +181,10 @@
         </app-empty-state>
       }
     } @else {
-      <div class="flex flex-col overflow-hidden rounded-2xl bg-panel">
+      <div
+        class="flex flex-col overflow-hidden rounded-2xl bg-panel"
+        [appGuideAnchor]="anchors.usersTable"
+      >
         <!-- The table scrolls in its own zone, under its header, and never stretches the page (5.4).
              Focusable, so changing the page takes the focus back to its top -->
         <div
@@ -253,27 +284,48 @@
                   matIconButton
                   type="button"
                   [matMenuTriggerFor]="actions"
+                  [appGuideAnchor]="row.menuAnchor"
                   [attr.aria-label]="row.actionsLabel"
                 >
                   <mat-icon aria-hidden="true">more_vert</mat-icon>
                 </button>
                 <mat-menu #actions="matMenu" xPosition="before">
-                  <button mat-menu-item type="button" (click)="edit(row.entry)">
+                  <button
+                    mat-menu-item
+                    type="button"
+                    [appGuideAnchor]="anchors.usersEdit"
+                    (click)="edit(row.entry)"
+                  >
                     <mat-icon aria-hidden="true">edit</mat-icon>
                     <span i18n="@@users.edit">Editar</span>
                   </button>
-                  <button mat-menu-item type="button" (click)="resetPassword(row.entry)">
+                  <button
+                    mat-menu-item
+                    type="button"
+                    [appGuideAnchor]="anchors.usersPassword"
+                    (click)="resetPassword(row.entry)"
+                  >
                     <mat-icon aria-hidden="true">key</mat-icon>
                     <span i18n="@@users.resetPassword">Restablecer la contraseña</span>
                   </button>
                   @if (row.hasClasses) {
-                    <button mat-menu-item type="button" (click)="showTrajectory(row.entry)">
+                    <button
+                      mat-menu-item
+                      type="button"
+                      [appGuideAnchor]="anchors.usersTrajectory"
+                      (click)="showTrajectory(row.entry)"
+                    >
                       <mat-icon aria-hidden="true">timeline</mat-icon>
                       <span i18n="@@users.trajectory">Ver su trayectoria</span>
                     </button>
                   }
                   @if (row.disabled) {
-                    <button mat-menu-item type="button" (click)="setStatus(row.entry, 'active')">
+                    <button
+                      mat-menu-item
+                      type="button"
+                      [appGuideAnchor]="anchors.usersDisable"
+                      (click)="setStatus(row.entry, 'active')"
+                    >
                       <mat-icon aria-hidden="true">check_circle</mat-icon>
                       <span i18n="@@users.enable">Activar</span>
                     </button>
@@ -290,7 +342,12 @@
                       </span>
                     </button>
                   } @else {
-                    <button mat-menu-item type="button" (click)="setStatus(row.entry, 'disabled')">
+                    <button
+                      mat-menu-item
+                      type="button"
+                      [appGuideAnchor]="anchors.usersDisable"
+                      (click)="setStatus(row.entry, 'disabled')"
+                    >
                       <mat-icon aria-hidden="true">block</mat-icon>
                       <span i18n="@@users.disable">Desactivar</span>
                     </button>

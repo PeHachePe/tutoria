@@ -9,13 +9,22 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const APP = path.join(ROOT, 'src', 'app');
-const ANCHORS_FILE = path.join(APP, 'core', 'guide', 'guide-anchor.ts');
+const GUIDE = path.join(APP, 'core', 'guide');
+/** The ids, declared by area: one file each, besides guide-anchor.ts, which joins them. */
+const ANCHOR_FILES = [
+  path.join(GUIDE, 'guide-anchor.ts'),
+  ...readdirSync(path.join(GUIDE, 'anchors')).map((file) => path.join(GUIDE, 'anchors', file)),
+];
 const TEACHER_GUIDE = path.join(APP, 'teacher', 'teacher-guide');
+const ADMIN_GUIDE = path.join(APP, 'admin', 'admin-guide');
 /** The profiles of the guided help, each in one or more files: they name the pieces with `A.<key>`. */
 const PROFILES = {
   student: [path.join(APP, 'student', 'student-guide.ts')],
-  teacher: ['teacher-beacons.ts', 'teacher-tasks.ts', 'teacher-guide.ts'].map((file) =>
-    path.join(TEACHER_GUIDE, file),
+  teacher: ['teacher-beacons.ts', 'teacher-tasks.ts', 'teacher-how-tos.ts', 'teacher-guide.ts'].map(
+    (file) => path.join(TEACHER_GUIDE, file),
+  ),
+  admin: ['admin-beacons.ts', 'admin-tasks.ts', 'admin-guide.ts'].map((file) =>
+    path.join(ADMIN_GUIDE, file),
   ),
 };
 const PROFILE_FILES = Object.values(PROFILES).flat();
@@ -31,11 +40,14 @@ function sources(directory) {
   });
 }
 
-/** The keys of GUIDE_ANCHORS. */
-function anchorKeys() {
-  const text = readFileSync(ANCHORS_FILE, 'utf8');
-  const block = text.slice(text.indexOf('GUIDE_ANCHORS = {'), text.indexOf('} as const'));
-  return [...block.matchAll(/^\s+(\w+): '/gm)].map(([, key]) => key);
+/** The keys and ids of every area, as declared: a key or an id repeated would hide another. */
+function anchorEntries() {
+  return ANCHOR_FILES.flatMap((file) =>
+    [...readFileSync(file, 'utf8').matchAll(/^\s+(\w+): '([\w-]+)',$/gm)].map(([, key, id]) => ({
+      key,
+      id,
+    })),
+  );
 }
 
 /** The keys the files of a profile point at. */
@@ -54,7 +66,7 @@ function keysNamedBy(files) {
 function markedKeys() {
   const marked = new Set();
   for (const file of sources(APP)) {
-    if (file === ANCHORS_FILE || PROFILE_FILES.includes(file)) continue;
+    if (ANCHOR_FILES.includes(file) || PROFILE_FILES.includes(file)) continue;
     const text = readFileSync(file, 'utf8');
     for (const [, key] of text.matchAll(/\b(?:anchors|GUIDE_ANCHORS|A)\.(\w+)/g)) marked.add(key);
   }
@@ -62,12 +74,15 @@ function markedKeys() {
 }
 
 describe('the pieces of the guided help', () => {
-  const keys = anchorKeys();
+  const entries = anchorEntries();
+  const keys = entries.map(({ key }) => key);
   const marked = markedKeys();
 
-  it('are declared once each', () => {
+  it('are declared once each, with an id of their own', () => {
     assert.ok(keys.length > 50);
-    assert.equal(new Set(keys).size, keys.length);
+    const repeated = (list) => list.filter((item, index) => list.indexOf(item) !== index);
+    assert.deepEqual(repeated(keys), [], 'keys declared twice');
+    assert.deepEqual(repeated(entries.map(({ id }) => id)), [], 'ids declared twice');
   });
 
   it('are all named by some profile, or marked for one', () => {
@@ -82,7 +97,7 @@ describe('the pieces of the guided help', () => {
   for (const [profile, files] of Object.entries(PROFILES)) {
     it(`are all marked in some template: ${profile}`, () => {
       const named = [...keysNamedBy(files)];
-      assert.ok(named.length > 50);
+      assert.ok(named.length > 20);
       assert.deepEqual(
         named.filter((key) => !keys.includes(key)),
         [],

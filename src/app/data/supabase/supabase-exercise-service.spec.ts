@@ -240,8 +240,18 @@ describe('SupabaseExerciseService', () => {
       { exercise_id: 'sum', student_count: 30 },
       { exercise_id: 'vowels', student_count: 0 },
     ];
-    const DAW = { id: 'g-1', label: null, school_class: { name: '1.º DAW A' } };
-    const DAM = { id: 'g-2', label: 'Tarde', school_class: { name: '1.º DAM B' } };
+    const DAW = {
+      id: 'g-1',
+      label: null,
+      subject_id: 'subject-1',
+      school_class: { name: '1.º DAW A', school_year: '2026/27' },
+    };
+    const DAM = {
+      id: 'g-2',
+      label: 'Tarde',
+      subject_id: 'subject-2',
+      school_class: { name: '1.º DAM B', school_year: '2025/26' },
+    };
 
     beforeEach(() => {
       server.on('POST', '/rest/v1/rpc/exercise_student_counts', { body: COUNTS });
@@ -287,9 +297,10 @@ describe('SupabaseExerciseService', () => {
         subjectIds: ['subject-1', 'subject-2'],
         testCount: 5,
         studentCount: 30,
+        // With their subject and their year, so a class with it twice reads apart (7.0b2)
         groups: [
-          { id: 'g-2', name: '1.º DAM B · Tarde' },
-          { id: 'g-1', name: '1.º DAW A' },
+          { id: 'g-2', name: '1.º DAM B · Tarde', subjectId: 'subject-2', schoolYear: '2025/26' },
+          { id: 'g-1', name: '1.º DAW A', subjectId: 'subject-1', schoolYear: '2026/27' },
         ],
       });
       expect(bank.exercises[1]).toMatchObject({ testCount: 0, studentCount: 0, groups: [] });
@@ -297,6 +308,9 @@ describe('SupabaseExerciseService', () => {
       expect(bank.exercises[0].exercise).not.toHaveProperty('scope');
       const request = server.sentTo('GET', '/rest/v1/exercise')[0];
       expect(request.params.get('order')).toBe('created_at.desc');
+      expect(request.params.get('select')).toContain(
+        'class_group(id,label,subject_id,school_class(name,school_year))',
+      );
       expect(request.params.get('scope.subject_id')).toBe('in.(subject-1)');
     });
 
@@ -360,7 +374,7 @@ describe('SupabaseExerciseService', () => {
       expect(entry.subjectIds).toEqual(['subject-1']);
       expect(entry).toMatchObject({
         studentCount: 30,
-        groups: [{ id: 'g-1', name: '1.º DAW A' }],
+        groups: [{ id: 'g-1', name: '1.º DAW A', subjectId: 'subject-1', schoolYear: '2026/27' }],
       });
 
       // An exercise nobody started is not among the counts

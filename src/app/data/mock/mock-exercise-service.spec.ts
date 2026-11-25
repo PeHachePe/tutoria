@@ -15,6 +15,9 @@ import {
 import { fixtureId } from './fixtures/fixture-id';
 import { SEED } from './fixtures/seed';
 import { ADVANCED_PROGRAMMING_ID, BASIC_PROGRAMMING_ID, WEB_CLIENT_ID } from './fixtures/subjects';
+
+/** The subject and the year of the groups of the bank that the tests name: basic, this year. */
+const BASIC_NOW = { subjectId: BASIC_PROGRAMMING_ID, schoolYear: '2026/27' };
 import {
   ADMIN_ID,
   DAM_GROUP_ID,
@@ -312,7 +315,7 @@ describe('MockExerciseService', () => {
         testCount: 5,
         studentCount: studentsOf(1),
         // Only the groups of the teacher: the other teacher's DAM B is not hers
-        groups: [{ id: DAW_GROUP_ID, name: '1.º DAW A' }],
+        groups: [{ id: DAW_GROUP_ID, name: '1.º DAW A', ...BASIC_NOW }],
       });
       expect(studentsOf(1)).toBeGreaterThan(0);
     });
@@ -360,8 +363,8 @@ describe('MockExerciseService', () => {
       const bank = await service.listBank({ kind: 'all' });
 
       expect(bank.exercises[0].groups).toEqual([
-        { id: DAM_GROUP_ID, name: '1.º DAM B' },
-        { id: DAW_GROUP_ID, name: '1.º DAW A' },
+        { id: DAM_GROUP_ID, name: '1.º DAM B', ...BASIC_NOW },
+        { id: DAW_GROUP_ID, name: '1.º DAW A', ...BASIC_NOW },
       ]);
     });
 
@@ -372,7 +375,7 @@ describe('MockExerciseService', () => {
       expect(entry.tests.map((test) => test.isHidden)).toEqual([false, false, false, true, true]);
       expect(entry.subjectIds).toEqual([BASIC_PROGRAMMING_ID]);
       expect(entry.studentCount).toBe(studentsOf(1));
-      expect(entry.groups).toEqual([{ id: DAW_GROUP_ID, name: '1.º DAW A' }]);
+      expect(entry.groups).toEqual([{ id: DAW_GROUP_ID, name: '1.º DAW A', ...BASIC_NOW }]);
     });
 
     it('is not available to students', async () => {

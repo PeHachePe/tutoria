@@ -12,10 +12,11 @@ import { DataError } from '../../data/data-error';
 import { ExerciseService } from '../../data/exercise-service';
 import { exerciseId } from '../../data/mock/fixtures/exercises';
 import { SEED } from '../../data/mock/fixtures/seed';
-import { ADVANCED_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
+import { ADVANCED_PROGRAMMING_ID, BASIC_PROGRAMMING_ID } from '../../data/mock/fixtures/subjects';
 import { fixtureId } from '../../data/mock/fixtures/fixture-id';
 import {
   ADMIN_ID,
+  DAW_CLASS_ID,
   DAW_GROUP_ID,
   DAW_WEB_GROUP_ID,
   TEACHER_ID,
@@ -100,11 +101,30 @@ describe('ExerciseBankPage', () => {
     expect(text(first)).toContain('countEvens()');
     expect(text(first)).toContain('Tuyo');
     expect(text(first)).toContain('5 pruebas');
-    expect(text(first)).toContain('Asignado en 1.º DAW A');
+    expect(text(first)).toContain('Asignado en 1.º DAW A · Programación básica');
     expect(text(first)).toMatch(/\d+ alumnos lo han empezado/);
     expect(screen.getByRole('link', { name: 'Nuevo ejercicio' }).getAttribute('href')).toBe(
       '/docente/ejercicios/nuevo',
     );
+  });
+
+  it('names where it is assigned with its subject, and with its year if it is a past one', async () => {
+    await renderBank('/docente/ejercicios', TEACHER_ID, (db) =>
+      db.update('classes', (rows) =>
+        rows.map((row) => (row.id === DAW_CLASS_ID ? { ...row, schoolYear: '2025/26' } : row)),
+      ),
+    );
+
+    expect(text(rows()[0])).toContain('Asignado en 1.º DAW A · Programación básica (2025/26)');
+  });
+
+  it('names the group alone where it cannot name its subject', async () => {
+    await renderBank('/docente/ejercicios', TEACHER_ID, (db) =>
+      db.update('subjects', (rows) => rows.filter((row) => row.id !== BASIC_PROGRAMMING_ID)),
+    );
+
+    expect(text(rows()[0])).toContain('Asignado en 1.º DAW A');
+    expect(text(rows()[0])).not.toContain('1.º DAW A ·');
   });
 
   it('turns the page through the URL and keeps the focus on the list', async () => {
@@ -381,7 +401,9 @@ describe('ExerciseBankPage', () => {
     it('keeps it when the teacher cancels', async () => {
       const { question } = await renderUnstarted(false, true);
 
-      expect(question).toContain('Se quitará también de los bloques de 1.º DAW A.');
+      expect(question).toContain(
+        'Se quitará también de los bloques de 1.º DAW A · Programación básica.',
+      );
       await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
       expect(
         TestBed.inject(MockDb)

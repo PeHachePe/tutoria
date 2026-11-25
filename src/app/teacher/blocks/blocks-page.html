@@ -279,6 +279,7 @@
                       mat-menu-item
                       type="button"
                       [disabled]="row.assignments.length === 0"
+                      [appGuideAnchor]="anchors.blocksDueAll"
                       (click)="chooseBlockDueDate(row.planned)"
                     >
                       <mat-icon aria-hidden="true">event</mat-icon>
@@ -484,6 +485,7 @@
                           type="button"
                           [disabled]="row.targets.length === 0"
                           [matMenuTriggerFor]="moveTargets"
+                          [appGuideAnchor]="anchors.blocksMoveTo"
                         >
                           <mat-icon aria-hidden="true">drive_file_move</mat-icon>
                           <span i18n="@@blocks.exercise.move">Mover a otro bloque</span>

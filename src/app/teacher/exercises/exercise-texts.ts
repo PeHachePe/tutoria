@@ -7,6 +7,7 @@ import { MatInput } from '@angular/material/input';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatTab, MatTabGroup, MatTabLabel } from '@angular/material/tabs';
 
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 import { LANGUAGE_OPTIONS } from '../../core/i18n/locale';
 import { ExerciseService } from '../../data/exercise-service';
 import type { ContentLocale } from '../../data/localized-text';
@@ -50,6 +51,7 @@ const LANGUAGE_NAMES = new Map(LANGUAGE_OPTIONS.map((option) => [option.locale, 
     MatTabLabel,
     MatIcon,
     MatButton,
+    GuideAnchor,
   ],
   templateUrl: './exercise-texts.html',
   host: { class: 'flex flex-col gap-3' },
@@ -68,6 +70,7 @@ export class ExerciseTexts {
 
   private readonly exercises = inject(ExerciseService);
 
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly languages = LANGUAGE_OPTIONS;
 
   /** The language being translated now, if any: one at a time. */

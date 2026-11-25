@@ -261,13 +261,23 @@
                   <span i18n="@@bank.view">Ver</span>
                 }
               </a>
-              <a mat-menu-item [routerLink]="paths.newExercise" [queryParams]="copyQuery(row.id)">
+              <a
+                mat-menu-item
+                [routerLink]="paths.newExercise"
+                [queryParams]="copyQuery(row.id)"
+                [appGuideAnchor]="anchors.bankDuplicate"
+              >
                 <mat-icon aria-hidden="true">content_copy</mat-icon>
                 <span i18n="@@bank.duplicate">Duplicar</span>
               </a>
               <!-- An archived exercise is not assigned again until it is back in the bank -->
               @if (!row.archived) {
-                <button mat-menu-item type="button" (click)="assign(row.entry)">
+                <button
+                  mat-menu-item
+                  type="button"
+                  [appGuideAnchor]="anchors.bankAssign"
+                  (click)="assign(row.entry)"
+                >
                   <mat-icon aria-hidden="true">playlist_add</mat-icon>
                   <span i18n="@@bank.assign">Asignar a un bloque…</span>
                 </button>

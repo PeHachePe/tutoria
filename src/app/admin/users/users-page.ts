@@ -36,6 +36,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { AuthStore } from '../../auth/auth-store';
 import { ADMIN_PARAMS } from '../../core/app-paths';
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 import {
   AdminService,
   type DisableResult,
@@ -163,6 +164,7 @@ const COLUMNS = ['name', 'role', 'groups', 'actions'];
     LoadError,
     LoadingSkeleton,
     Skeleton,
+    GuideAnchor,
   ],
   templateUrl: './users-page.html',
 })
@@ -182,6 +184,7 @@ export class UsersPage {
   /** The page, from 1. */
   readonly pagina = input<string>();
 
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly params = ADMIN_PARAMS;
   protected readonly roles = ROLES;
   protected readonly roleLabels = ROLE_LABELS;
@@ -294,7 +297,7 @@ export class UsersPage {
   /** What each row shows, prepared here so the template only reads it. */
   protected readonly rows = computed(() => {
     const me = this.auth.userId();
-    return this.page().rows.map((entry) => ({
+    const rows = this.page().rows.map((entry) => ({
       entry,
       id: entry.user.id,
       role: ROLE_LABELS[entry.user.role],
@@ -308,6 +311,14 @@ export class UsersPage {
       hasClasses: entry.classes.length > 0,
       // An interpolated i18n attribute is not set on a Material button: the label goes in code
       actionsLabel: $localize`:@@users.actions:Acciones de ${entry.user.name}:name:`,
+    }));
+    // The guided help opens the menu of another person, best one with classes, whose menu has
+    // every entry (the own one cannot be disabled, and only a student has a trajectory)
+    const others = rows.filter((row) => !row.mine);
+    const guided = others.find((row) => row.hasClasses) ?? others[0];
+    return rows.map((row) => ({
+      ...row,
+      menuAnchor: row === guided ? GUIDE_ANCHORS.usersMenu : null,
     }));
   });
 

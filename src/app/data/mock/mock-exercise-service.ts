@@ -279,10 +279,15 @@ export class MockExerciseService extends ExerciseService {
     );
     const groups = tables.groups
       .filter((group) => groupIds.has(group.id) && canManageGroup(user, group))
-      .map((group) => ({
-        id: group.id,
-        name: groupName(classOfGroup(tables, group).name, group.label),
-      }))
+      .map((group) => {
+        const schoolClass = classOfGroup(tables, group);
+        return {
+          id: group.id,
+          name: groupName(schoolClass.name, group.label),
+          subjectId: group.subjectId,
+          schoolYear: schoolClass.schoolYear,
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
     return { studentCount: new Set(students).size, groups };
   }

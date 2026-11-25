@@ -18,7 +18,14 @@ import {
   withTaskDone,
   withWelcomeSeen,
 } from './guide-progress';
-import type { GuideFacts, GuidePlace, GuideProfile, GuideStep, GuideTask } from './guide-task';
+import type {
+  GuideFacts,
+  GuidePlace,
+  GuideProfile,
+  GuideSideMenu,
+  GuideStep,
+  GuideTask,
+} from './guide-task';
 import { type TourEnd, type TourOptions, TourRunner } from './tour-runner';
 
 const NO_FACTS: GuideFacts = { known: new Set(), places: {} };
@@ -84,9 +91,11 @@ export class GuideStore {
   /** A tour is running: no other starts meanwhile. */
   readonly running = this.runningState.asReadonly();
   readonly beaconsShown = this.runner.beaconsShown;
-  /** What is saved and what the data says are both read. */
+  /** What is saved and what the data says are both read (the facts, maybe by the last globe). */
   readonly loaded = computed(
-    () => this.saved.status() === 'resolved' && this.factsResource.status() === 'resolved',
+    () =>
+      this.saved.status() === 'resolved' &&
+      (this.factsResource.status() === 'resolved' || this.factsResource.status() === 'local'),
   );
 
   readonly firstSteps = computed(() =>
@@ -118,6 +127,16 @@ export class GuideStore {
       (welcome.when?.() ?? true)
     );
   });
+
+  /**
+   * The side menu of the layout open now, not of the one where the tour started: crossing from the
+   * administration to the screens of the teacher, the layout is another one (7.0b2, D-093).
+   */
+  private readonly sideMenu: GuideSideMenu = {
+    open: () => this.profileState()?.sideMenu?.open(),
+    close: () => this.profileState()?.sideMenu?.close(),
+    closed: () => this.profileState()?.sideMenu?.closed() ?? Promise.resolve(),
+  };
 
   /** The tour of every piece of the screen open, if it has one. */
   readonly screenTour = computed(() => {
@@ -161,7 +180,7 @@ export class GuideStore {
     const next = this.possible(this.firstSteps().next);
     const end = await this.runTour(welcome.place, welcome.steps, {
       closeLabel: SKIP_WELCOME,
-      next: next?.title,
+      next: () => Promise.resolve(next?.title),
     });
     if (end === undefined) return;
     this.save(withWelcomeSeen(this.state(), welcome.version));
@@ -173,17 +192,26 @@ export class GuideStore {
    * step on its last globe, that one starts at once.
    */
   async startTask(task: GuideTask): Promise<void> {
-    if (!this.profileState() || this.runningState()) return;
-    const next = this.possible(
-      nextFirstStep(this.firstStepTasks(), this.state(), this.facts(), task.id),
-    );
-    const end = await this.runTour(task.place, task.steps, { next: next?.title });
+    const profile = this.profileState();
+    if (!profile || this.runningState()) return;
+    // Chosen on the last globe, with the data read again: assigning the first exercise makes
+    // «Seguir la clase en vivo» possible (7.0b2)
+    const chosen: { next?: GuideTask } = {};
+    const end = await this.runTour(task.place, task.steps, {
+      next: async () => {
+        await this.readFactsNow(profile);
+        chosen.next = this.possible(
+          nextFirstStep(this.firstStepTasks(), this.state(), this.facts(), task.id),
+        );
+        return chosen.next?.title;
+      },
+    });
     if (end === undefined) return;
     if (end === 'done' || end === 'next') {
       this.save(withTaskDone(this.state(), task.id, new Date().toISOString()));
     }
     this.refreshFacts();
-    if (end === 'next' && next) await this.startTask(next);
+    if (end === 'next' && chosen.next) await this.startTask(chosen.next);
   }
 
   /** «Ya sé usarla»: the first steps hide, and the dot of the button goes. */
@@ -197,6 +225,15 @@ export class GuideStore {
 
   hideBeacons(): void {
     this.runner.hideBeacons();
+  }
+
+  /** Reads the facts at once, for what follows to use them; a failure keeps the ones read. */
+  private async readFactsNow(profile: GuideProfile): Promise<void> {
+    try {
+      this.factsResource.set(await profile.loadFacts());
+    } catch {
+      // The last ones read are still worth: «Siguiente» offers what they allow
+    }
   }
 
   /** The task, if it can be done now: «Siguiente: …» never offers one the user cannot do. */
@@ -217,7 +254,8 @@ export class GuideStore {
       if (path !== this.router.url && !(await this.router.navigateByUrl(path))) return undefined;
       return await this.runner.run(steps, {
         ...options,
-        sideMenu: this.profileState()?.sideMenu,
+        sideMenu: this.profileState()?.sideMenu && this.sideMenu,
+        injector: () => this.profileState()?.injector,
       });
     } finally {
       this.runningState.set(false);

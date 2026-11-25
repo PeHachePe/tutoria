@@ -35,6 +35,8 @@ import {
   type ExerciseBank,
   ExerciseService,
 } from '../../data/exercise-service';
+import { groupTitle } from '../../data/group-name';
+import { schoolYearOf } from '../../data/school-year';
 import { exerciseText, subjectName } from '../../data/localized-text';
 import { confirmAction } from '../../shared/confirm-dialog/confirm-dialog';
 import { DifficultyChip } from '../../shared/difficulty-chip/difficulty-chip';
@@ -204,11 +206,19 @@ export class ExerciseBankPage {
       ).length,
   );
 
+  /** The year of today: the groups of past years say theirs. */
+  private readonly currentYear = schoolYearOf(new Date());
+
+  /** The name of each subject in the language of the interface. */
+  private readonly subjectNames = computed(
+    () => new Map(this.subjectOptions().map((subject) => [subject.id, subject.name])),
+  );
+
   /** Every exercise that passes the filters. */
   protected readonly matching = computed(() => {
     const bank = this.shown();
     const userId = this.auth.userId();
-    const names = new Map(this.subjectOptions().map((subject) => [subject.id, subject.name]));
+    const names = this.subjectNames();
     return filterBank(bank.exercises, this.filters(), { locale: this.locale, userId }).map(
       (entry) => this.row(entry, names),
     );
@@ -321,7 +331,7 @@ export class ExerciseBankPage {
       title: $localize`:@@bank.delete.title:¿Borrar «${title}:title:»?`,
       text:
         assigned > 0
-          ? $localize`:@@bank.delete.assigned:Se quitará también de los bloques de ${entry.groups.map((group) => group.name).join(', ')}:groups:. No se puede deshacer.`
+          ? $localize`:@@bank.delete.assigned:Se quitará también de los bloques de ${entry.groups.map((group) => assignedGroup(group, this.subjectNames(), this.currentYear)).join(', ')}:groups:. No se puede deshacer.`
           : $localize`:@@bank.delete.text:Nadie lo ha empezado todavía. No se puede deshacer.`,
       confirm: $localize`:@@bank.delete.confirm:Borrar`,
     });
@@ -368,7 +378,9 @@ export class ExerciseBankPage {
       topics: text.topics.join(', '),
       lang: text.locale === this.locale ? null : text.locale,
       subjects: entry.subjectIds.map((id) => subjectNames.get(id)).filter((name) => !!name),
-      groups: entry.groups.map((group) => group.name).join(', '),
+      groups: entry.groups
+        .map((group) => assignedGroup(group, subjectNames, this.currentYear))
+        .join(', '),
       mine: entry.exercise.createdBy === this.auth.userId(),
       editable: canEditExercise(entry.exercise, this.auth.user()),
       archived: entry.exercise.archivedAt !== null,
@@ -376,4 +388,19 @@ export class ExerciseBankPage {
       deletable: canEditExercise(entry.exercise, this.auth.user()) && entry.studentCount === 0,
     };
   }
+}
+
+/**
+ * Where an exercise is assigned, with the subject, «1.º DAW A · Programación básica», as the
+ * selectors name a group, and the year if it is a past one: otherwise a class with it in two of
+ * its subjects, or in two years, reads twice the same (7.0b2).
+ */
+function assignedGroup(
+  group: BankExercise['groups'][number],
+  subjectNames: ReadonlyMap<string, string>,
+  currentYear: string,
+): string {
+  const subject = subjectNames.get(group.subjectId);
+  const name = subject ? groupTitle(group.name, subject, null) : group.name;
+  return group.schoolYear === currentYear ? name : `${name} (${group.schoolYear})`;
 }

@@ -20,6 +20,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 
+import { GUIDE_ANCHORS, GuideAnchor } from '../../core/guide/guide-anchor';
 import { LanguageService } from '../../core/i18n/language-service';
 import { LOCALE_NAMES } from '../../core/i18n/locale-names';
 import { AdminService, type SubjectDraft } from '../../data/admin-service';
@@ -121,6 +122,7 @@ interface SubjectRow {
     LoadError,
     LoadingSkeleton,
     Skeleton,
+    GuideAnchor,
   ],
   templateUrl: './system-page.html',
 })
@@ -132,6 +134,7 @@ export class SystemPage {
   private readonly document = inject(DOCUMENT);
   private readonly locale = inject(LanguageService).locale;
 
+  protected readonly anchors = GUIDE_ANCHORS;
   protected readonly presetOptions = PRESET_OPTIONS;
   protected readonly fallbackPresetOptions = FALLBACK_PRESET_OPTIONS;
   protected readonly formatOptions = FORMAT_OPTIONS;

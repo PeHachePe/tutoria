@@ -85,13 +85,23 @@
           }
           <mat-menu #classMenu="matMenu" xPosition="before">
             @if (option.managed.canEdit && option.managed.open) {
-              <button mat-menu-item type="button" (click)="editClass(option)">
+              <button
+                mat-menu-item
+                type="button"
+                [appGuideAnchor]="anchors.groupsClassEdit"
+                (click)="editClass(option)"
+              >
                 <mat-icon aria-hidden="true">edit</mat-icon>
                 <span i18n="@@groups.edit">Editar</span>
               </button>
             }
             @if (mine().length > 0) {
-              <button mat-menu-item type="button" (click)="duplicateClass(option)">
+              <button
+                mat-menu-item
+                type="button"
+                [appGuideAnchor]="anchors.groupsClassDuplicate"
+                (click)="duplicateClass(option)"
+              >
                 <mat-icon aria-hidden="true">content_copy</mat-icon>
                 <span i18n="@@groups.duplicate">Duplicar…</span>
               </button>
@@ -112,7 +122,13 @@
             @if (option.managed.canEdit && option.managed.open) {
               @if (option.managed.groups.length > 0) {
                 <!-- It says why, at sight, and keeps the focus -->
-                <button mat-menu-item type="button" disabled disabledInteractive>
+                <button
+                  mat-menu-item
+                  type="button"
+                  disabled
+                  disabledInteractive
+                  [appGuideAnchor]="anchors.groupsClassRemove"
+                >
                   <mat-icon aria-hidden="true">delete</mat-icon>
                   <span class="flex max-w-64 flex-col py-2">
                     <span i18n="@@groups.remove">Eliminar</span>
@@ -122,7 +138,12 @@
                   </span>
                 </button>
               } @else {
-                <button mat-menu-item type="button" (click)="removeClass(option)">
+                <button
+                  mat-menu-item
+                  type="button"
+                  [appGuideAnchor]="anchors.groupsClassRemove"
+                  (click)="removeClass(option)"
+                >
                   <mat-icon aria-hidden="true">delete</mat-icon>
                   <span i18n="@@groups.remove">Eliminar</span>
                 </button>

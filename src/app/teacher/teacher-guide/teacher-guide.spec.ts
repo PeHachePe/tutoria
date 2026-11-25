@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { EnvironmentInjector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
@@ -12,7 +12,8 @@ import type { BankExercise } from '../../data/exercise-service';
 import { GroupService } from '../../data/group-service';
 import type { ManagedClass } from '../../data/group-service';
 import type { Role } from '../../data/user';
-import { staffGuide, teacherGuide, teacherTours, teacherWelcome } from './teacher-guide';
+import { teacherGuide, teacherTours, teacherWelcome } from './teacher-guide';
+import { teacherFirstSteps } from './teacher-tasks';
 
 const SIDE_MENU = {
   open: () => undefined,
@@ -57,6 +58,13 @@ describe('teacher guide', () => {
       expect(live.steps[1]).toMatchObject({ optional: true });
     });
 
+    it('leaves the bars and the menu out when another screen takes them (the administration)', () => {
+      const [live] = teacherTours(beacons, false);
+
+      expect(live.steps.map((step) => step.anchor)).toEqual(['live-state']);
+      expect(live.summary).toBe('Cada pieza de la sesión en vivo.');
+    });
+
     it('has the detail of an attempt only where one is open', () => {
       const attempt = teacherTours(beacons).find((tour) => tour.tourOf === 'attempt');
 
@@ -66,10 +74,11 @@ describe('teacher guide', () => {
   });
 
   describe('teacherWelcome', () => {
-    it('welcomes by first name, with the bar in its order, the menu and where to go on', () => {
+    it('welcomes by first name, with the bar in its order, the whole menu and where to go on', () => {
       const welcome = teacherWelcome('Marta');
 
-      expect(welcome).toMatchObject({ version: 1, screen: 'live', place: 'live' });
+      // Version 2: every entry of the menu, Histórico and Bloques too (7.0b2)
+      expect(welcome).toMatchObject({ version: 2, screen: 'live', place: 'live' });
       expect(welcome.steps[0].title).toBe('¡Hola, Marta!');
       expect(welcome.steps.map((step) => step.anchor)).toEqual([
         undefined,
@@ -79,15 +88,45 @@ describe('teacher guide', () => {
         'user-menu',
         'side-menu',
         'nav-live',
+        'nav-history',
         'nav-bank',
+        'nav-blocks',
         'nav-groups',
         undefined,
       ]);
-      expect(welcome.steps.filter((step) => step.inSideMenu)).toHaveLength(4);
+      expect(welcome.steps.filter((step) => step.inSideMenu)).toHaveLength(6);
     });
 
     it('welcomes without a name', () => {
       expect(teacherWelcome('').steps[0].title).toBe('¡Hola!');
+    });
+  });
+
+  describe('teacherFirstSteps', () => {
+    it('goes on with the dialogs that save once they close saving (7.0b2)', () => {
+      const saving = teacherFirstSteps()
+        .flatMap((task) => task.steps)
+        .filter((step) => step.savesDialog)
+        .map((step) => step.anchor);
+
+      expect(saving).toEqual([
+        'class-dialog-save',
+        'subjects-dialog-save',
+        'enroll-dialog-save',
+        'block-dialog-save',
+        'add-exercises-save',
+      ]);
+    });
+
+    it('creates the class in the words of the administration, with the same id', () => {
+      const [teacher] = teacherFirstSteps();
+      const [admin] = teacherFirstSteps('admin');
+
+      expect(admin.id).toBe(teacher.id);
+      expect(admin.title).toBe('Crear una clase y matricular a su alumnado');
+      expect(admin.steps[3].text).toContain('elige el docente');
+      expect(admin.steps[5].text).toContain('dale de alta en Usuarios');
+      expect(teacher.steps[3].text).toContain('Marca las que das');
     });
   });
 
@@ -138,6 +177,10 @@ describe('teacher guide', () => {
       ]);
       expect(profile.tasks.slice(0, 5).map((task) => task.id)).toEqual(profile.firstSteps);
       expect(new Set(profile.tasks.map((task) => task.id)).size).toBe(profile.tasks.length);
+      // The how-tos after the first steps, and the tours of the screens at the end
+      expect(profile.tasks[5].id).toBe('edit-class');
+      expect(profile.tasks.at(-1)?.id).toBe('tour-history');
+      expect(profile.injector).toBe(TestBed.inject(EnvironmentInjector));
       expect(profile.welcome.steps[0].title).toBe('¡Hola, Marta!');
       expect(profile.sideMenu).toBe(SIDE_MENU);
       expect(profile.screenOf('/docente/grupos')).toBe('groups');
@@ -178,15 +221,6 @@ describe('teacher guide', () => {
       const profile = TestBed.runInInjectionContext(() => teacherGuide(SIDE_MENU));
 
       expect(profile.welcome.steps[0].title).toBe('¡Hola!');
-    });
-
-    it('is chosen by the role: the teacher has it, the administration not yet (7.0b2)', () => {
-      configure('teacher');
-      expect(TestBed.runInInjectionContext(() => staffGuide(SIDE_MENU))?.id).toBe('teacher');
-
-      TestBed.resetTestingModule();
-      configure('admin');
-      expect(TestBed.runInInjectionContext(() => staffGuide(SIDE_MENU))).toBeUndefined();
     });
   });
 });

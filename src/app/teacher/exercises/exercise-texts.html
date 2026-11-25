@@ -18,7 +18,11 @@
   @for (tab of tabs(); track tab.locale) {
     <mat-tab>
       <ng-template mat-tab-label>
-        <span class="flex items-center gap-1.5">
+        <!-- A translation tab, for the guided help: it stands for the whole tab -->
+        <span
+          class="flex items-center gap-1.5"
+          [appGuideAnchor]="tab.source ? null : anchors.formLanguageTab"
+        >
           <span [attr.lang]="tab.locale">{{ tab.name }}</span>
           @if (tab.source) {
             <span class="text-on-surface-variant" i18n="@@exerciseTexts.original">(original)</span>
@@ -59,6 +63,7 @@
                 matButton="tonal"
                 type="button"
                 [disabled]="!canTranslate() || translating() !== null"
+                [appGuideAnchor]="anchors.formTranslate"
                 (click)="translate(tab.locale)"
               >
                 <mat-icon aria-hidden="true">{{

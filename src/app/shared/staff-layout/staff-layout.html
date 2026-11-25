@@ -53,27 +53,30 @@
           @if (rail() && !$first) {
             <mat-divider class="my-2" />
           }
-          <h2 class="eyebrow px-4 pt-4 pb-1" [class.sr-only]="rail()">{{ section.label }}</h2>
-          @for (link of section.links; track link.path) {
-            <!-- The aria-label equals the tooltip, so screen readers do not read the name twice -->
-            <a
-              mat-list-item
-              [routerLink]="link.path"
-              routerLinkActive
-              #active="routerLinkActive"
-              [activated]="active.isActive"
-              ariaCurrentWhenActive="page"
-              [appGuideAnchor]="link.anchor ?? null"
-              [attr.aria-label]="link.label"
-              [matTooltip]="link.label"
-              matTooltipPosition="after"
-              [matTooltipDisabled]="!rail()"
-              (click)="closeIfOver()"
-            >
-              <mat-icon matListItemIcon>{{ link.icon }}</mat-icon>
-              <span matListItemTitle [class.sr-only]="rail()">{{ link.label }}</span>
-            </a>
-          }
+          <!-- The whole section, for the guided help to point at it -->
+          <div [appGuideAnchor]="section.anchor">
+            <h2 class="eyebrow px-4 pt-4 pb-1" [class.sr-only]="rail()">{{ section.label }}</h2>
+            @for (link of section.links; track link.path) {
+              <!-- The aria-label equals the tooltip, so screen readers do not read the name twice -->
+              <a
+                mat-list-item
+                [routerLink]="link.path"
+                routerLinkActive
+                #active="routerLinkActive"
+                [activated]="active.isActive"
+                ariaCurrentWhenActive="page"
+                [appGuideAnchor]="link.anchor ?? null"
+                [attr.aria-label]="link.label"
+                [matTooltip]="link.label"
+                matTooltipPosition="after"
+                [matTooltipDisabled]="!rail()"
+                (click)="closeIfOver()"
+              >
+                <mat-icon matListItemIcon>{{ link.icon }}</mat-icon>
+                <span matListItemTitle [class.sr-only]="rail()">{{ link.label }}</span>
+              </a>
+            }
+          </div>
         }
       </mat-nav-list>
     </mat-sidenav>

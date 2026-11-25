@@ -34,7 +34,7 @@
       </app-loading-skeleton>
     } @else {
       <form class="flex flex-col gap-2" [formRoot]="providerForm">
-        <mat-form-field>
+        <mat-form-field [appGuideAnchor]="anchors.systemPreset">
           <mat-label i18n="@@system.preset">Proveedor</mat-label>
           <mat-select
             [value]="providerForm.presetId().value()"
@@ -57,7 +57,7 @@
             <mat-error>{{ error.message }}</mat-error>
           }
         </mat-form-field>
-        <div class="flex flex-col gap-x-4 sm:flex-row">
+        <div class="flex flex-col gap-x-4 sm:flex-row" [appGuideAnchor]="anchors.systemModel">
           <mat-form-field class="sm:flex-1">
             <mat-label i18n="@@system.model.main">Modelo principal</mat-label>
             <input matInput [formField]="providerForm.model" />
@@ -74,7 +74,11 @@
           </mat-form-field>
         </div>
         <div class="flex flex-col gap-x-4 sm:flex-row">
-          <mat-form-field class="mb-4 sm:flex-1" subscriptSizing="dynamic">
+          <mat-form-field
+            class="mb-4 sm:flex-1"
+            subscriptSizing="dynamic"
+            [appGuideAnchor]="anchors.systemKeySecret"
+          >
             <mat-label i18n="@@system.keySecret">Nombre del secreto con la clave</mat-label>
             <input matInput [formField]="providerForm.keySecret" />
             <mat-hint i18n="@@system.keySecret.hint"
@@ -94,7 +98,7 @@
           </mat-form-field>
         </div>
 
-        <fieldset class="mt-2 flex flex-col gap-3">
+        <fieldset class="mt-2 flex flex-col gap-3" [appGuideAnchor]="anchors.systemFallbacks">
           <legend class="mb-1 text-title-medium" i18n="@@system.fallbacks">
             Modelos de respaldo, en orden
           </legend>
@@ -218,6 +222,7 @@
               type="button"
               id="add-fallback"
               [disabled]="!canAddFallback()"
+              [appGuideAnchor]="anchors.systemAddFallback"
               disabledInteractive
               aria-describedby="fallbacks-limit"
               (click)="canAddFallback() && addFallback()"
@@ -235,7 +240,13 @@
         </fieldset>
 
         <div class="mt-4 flex flex-wrap items-center gap-3">
-          <button matButton="outlined" type="button" [disabled]="checking()" (click)="check()">
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="checking()"
+            [appGuideAnchor]="anchors.systemCheck"
+            (click)="check()"
+          >
             @if (checking()) {
               <span i18n="@@system.checking">Probando…</span>
             } @else {
@@ -248,6 +259,7 @@
             [disabled]="!canSave()"
             disabledInteractive
             aria-describedby="save-reason"
+            [appGuideAnchor]="anchors.systemSave"
           >
             @if (saving()) {
               <span i18n="@@system.saving">Guardando…</span>
@@ -279,7 +291,7 @@
             }
           </p>
         }
-        <div role="status">
+        <div role="status" [appGuideAnchor]="anchors.systemResults">
           @if (results(); as checks) {
             <ul
               class="flex flex-col gap-2"
@@ -311,6 +323,7 @@
   <section
     class="flex flex-col gap-4 rounded-2xl bg-panel p-4 sm:p-6"
     aria-labelledby="subjects-heading"
+    [appGuideAnchor]="anchors.systemSubjects"
     [attr.aria-busy]="subjects.isLoading()"
   >
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -319,6 +332,7 @@
         matButton="filled"
         type="button"
         [disabled]="!subjects.hasValue()"
+        [appGuideAnchor]="anchors.systemNewSubject"
         (click)="createSubject()"
       >
         <mat-icon aria-hidden="true">add</mat-icon>
@@ -350,7 +364,7 @@
         class="flex max-h-96 flex-col divide-y divide-outline-variant overflow-y-auto"
         aria-labelledby="subjects-heading"
       >
-        @for (row of subjectRows(); track row.subject.id) {
+        @for (row of subjectRows(); track row.subject.id; let first = $first) {
           <li class="flex items-center gap-3 py-2">
             <div class="flex min-w-0 flex-1 flex-col">
               <span class="text-body-large" [attr.lang]="row.lang">{{ row.name }}</span>
@@ -365,6 +379,7 @@
               matButton
               type="button"
               [attr.aria-label]="editLabel(row.name)"
+              [appGuideAnchor]="first ? anchors.systemEditSubject : null"
               (click)="editSubject(row.subject)"
             >
               <span i18n="@@system.subjects.edit">Editar</span>

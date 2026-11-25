@@ -11,7 +11,8 @@
   pointer-events: none;
 }
 
-/* The dark layer: the scrim of the theme instead of plain black */
+/* The dark layer: the scrim of the theme instead of plain black (that of an open beacon comes
+   inline from driver.js, so TourRunner gives it the same token) */
 .driver-overlay path {
   fill: var(--mat-sys-scrim);
 }

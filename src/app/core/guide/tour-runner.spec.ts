@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, createEnvironmentInjector, EnvironmentInjector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { provideRouter, Router } from '@angular/router';
 import type { Config, DestroyReason, DriveStep, Driver, PopoverDOM } from 'driver.js';
 import type { DriverHint, Hints, HintsConfig } from 'driver.js/hints';
 
+import { MASCOT_ACCESSORIES } from '../../shared/mascot/mascot-accessories';
 import type { GuideAnchorId } from './guide-anchor';
 import type { GuideBeacon, GuideStep } from './guide-task';
 import { GuideLibrary, type TourEnd, TourRunner } from './tour-runner';
@@ -174,6 +175,14 @@ describe('TourRunner', () => {
     return element;
   }
 
+  /** A piece that shows, with a size: jsdom gives none. */
+  function shownPiece(anchor: GuideAnchorId): HTMLElement {
+    const element = piece(anchor);
+    element.checkVisibility = () => true;
+    element.getBoundingClientRect = () => ({ width: 10, height: 10 }) as DOMRect;
+    return element;
+  }
+
   /**
    * Starts a tour and waits until driver.js is running it. The end comes in an object: an async
    * function that returned the promise itself would wait for it.
@@ -303,6 +312,14 @@ describe('TourRunner', () => {
       expect(pressed(null)).toBe(false);
       button.setAttribute('aria-disabled', 'true');
       expect(pressed(button)).toBe(false);
+      // A mark inside the label of a tab stands for the whole tab
+      const tab = piece(
+        'run-tests',
+        '<div role="tab"><span class="pad"></span><b>Inglés</b></div>',
+      );
+      tab.removeAttribute('data-guide');
+      tab.querySelector('b')?.setAttribute('data-guide', 'run-tests');
+      expect(pressed(tab.querySelector('.pad'))).toBe(true);
       // A step without a piece never goes on by itself
       const noPiece = tour.steps[1].advanceOn as { when: (...args: unknown[]) => boolean };
       expect(noPiece.when(button, tour.steps[1], { event: { target: button } })).toBe(false);
@@ -497,9 +514,30 @@ describe('TourRunner', () => {
       };
 
       expect(mascot()?.querySelector('svg')).toBeTruthy();
+      // By default, the accessories of every mascot
+      expect(mascot()?.classList).toContain('mascot-bone');
       expect(mascot()?.classList).not.toContain('mascot-joy');
       tour.moveNext();
       expect(mascot()?.classList).toContain('mascot-joy');
+    });
+
+    it('dresses the mascot with what the area provides: the accessories of the student', async () => {
+      const bare = signal(false);
+      const area = createEnvironmentInjector(
+        [
+          {
+            provide: MASCOT_ACCESSORIES,
+            useValue: { headset: bare, bowTie: bare, boneCursor: bare },
+          },
+        ],
+        TestBed.inject(EnvironmentInjector),
+      );
+
+      void (await start([STEP], { injector: () => area }));
+      TestBed.tick();
+
+      const mascot = tour.popover?.title.querySelector('.app-guide-mascot > *');
+      expect(mascot?.classList).not.toContain('mascot-bone');
     });
 
     it('explains why an action is not possible yet, and ends there', async () => {
@@ -525,21 +563,139 @@ describe('TourRunner', () => {
       await expect(end).resolves.toBe('closed');
     });
 
+    /** The button of the next first step in the globe drawn last, once it is known. */
+    const nextTaskButton = () =>
+      [...(tour.popover?.footerButtons.querySelectorAll('button') ?? [])].find((button) =>
+        button.textContent?.startsWith('Siguiente: '),
+      );
+
     it('offers the next first step on its last globe, without taking the focus back', async () => {
       const before = piece('help');
       before.focus();
-      const { end } = await start([STEP], { next: 'Ejecutar las pruebas' });
+      const next = vi.fn(() => Promise.resolve<string | undefined>('Ejecutar las pruebas'));
+      const { end } = await start([STEP, STEP], { next });
+      expect(next).not.toHaveBeenCalled();
+      tour.moveNext();
       const popover = tour.popover as PopoverDOM;
+      document.body.append(popover.wrapper);
       piece('hint').focus();
 
+      await vi.waitFor(() => expect(nextTaskButton()).toBeDefined());
       expect(popover.nextButton.classList).toContain('app-guide-secondary');
-      const next = [...popover.footerButtons.querySelectorAll('button')].find(
-        (button) => button.textContent === 'Siguiente: Ejecutar las pruebas',
-      );
-      next?.click();
+      expect(nextTaskButton()?.textContent).toBe('Siguiente: Ejecutar las pruebas');
+      // Drawn again, as driver.js does when the page changes: asked once, offered once
+      tour.config.onPopoverRender?.(popover, {} as never);
+      await Promise.resolve();
+      expect(next).toHaveBeenCalledOnce();
+      expect(popover.footerButtons.querySelectorAll('.app-guide-next-task')).toHaveLength(1);
+      nextTaskButton()?.click();
 
       await expect(end).resolves.toBe('next');
       expect(document.activeElement).not.toBe(before);
+    });
+
+    it('offers no next first step in a globe no longer shown, or once the tour left the last one', async () => {
+      let answer: (title: string | undefined) => void = () => undefined;
+      void (await start([STEP, STEP], {
+        next: () => new Promise<string | undefined>((resolve) => (answer = resolve)),
+      }));
+      tour.moveNext();
+      const gone = tour.popover as PopoverDOM;
+      const shown = popoverDom();
+      document.body.append(shown.wrapper);
+      tour.config.onPopoverRender?.(shown, {} as never);
+
+      tour.index = 0;
+      answer('Ejecutar las pruebas');
+      await vi.waitFor(() => expect(shown.nextButton.classList).not.toContain('x'));
+
+      for (const popover of [gone, shown]) {
+        expect(popover.footerButtons.querySelector('.app-guide-next-task')).toBeNull();
+      }
+    });
+
+    it('offers no next first step when the profile has none to offer', async () => {
+      void (await start([STEP], { next: () => Promise.resolve(undefined) }));
+      await Promise.resolve();
+
+      expect(nextTaskButton()).toBeUndefined();
+      expect(tour.popover?.nextButton.classList).not.toContain('app-guide-secondary');
+    });
+
+    it('goes on from a dialog that saves once it closes saving, not with the click (7.0b2)', async () => {
+      const dialogs = TestBed.inject(MatDialog);
+      const step = {
+        anchor: 'class-dialog-save' as const,
+        ...STEP,
+        action: 'Crear',
+        inOverlay: true,
+      };
+      void (await start([
+        { anchor: 'groups-add-class', ...STEP },
+        { ...step, savesDialog: true },
+        STEP,
+      ]));
+      expect(tour.steps[1].advanceOn).toBe(false);
+
+      // Cancelled: nothing; the tour goes back by itself when the piece goes away
+      let ref = dialogs.open(SomeDialog, { id: 'clase' });
+      await vi.waitFor(() => expect(document.getElementById('clase')).not.toBeNull());
+      document.getElementById('clase')?.append(shownPiece('class-dialog-save'));
+      tour.moveNext();
+      ref.close();
+      await vi.waitFor(() => expect(document.getElementById('clase')).toBeNull());
+      expect(tour.index).toBe(1);
+
+      // Saved: the next step
+      ref = dialogs.open(SomeDialog, { id: 'otra' });
+      await vi.waitFor(() => expect(document.getElementById('otra')).not.toBeNull());
+      document.getElementById('otra')?.append(shownPiece('class-dialog-save'));
+      tour.render();
+      ref.close(true);
+      await vi.waitFor(() => expect(tour.index).toBe(2));
+    });
+
+    it('waits for no dialog when the piece is in none, or the tour has moved on', async () => {
+      const dialogs = TestBed.inject(MatDialog);
+      const outside = shownPiece('class-dialog-save');
+      void (await start([{ anchor: 'class-dialog-save', ...STEP, savesDialog: true }, STEP]));
+      expect(tour.moveNext).not.toHaveBeenCalled();
+      outside.remove();
+
+      const ref = dialogs.open(SomeDialog, { id: 'clase' });
+      await vi.waitFor(() => expect(document.getElementById('clase')).not.toBeNull());
+      document.getElementById('clase')?.append(shownPiece('class-dialog-save'));
+      tour.render();
+      tour.index = 1;
+      ref.close(true);
+      await vi.waitFor(() => expect(dialogs.openDialogs).toHaveLength(0));
+
+      expect(tour.moveNext).not.toHaveBeenCalled();
+    });
+
+    it('leaves the focus alone when where it was is gone', async () => {
+      const button = piece('help');
+      button.focus();
+      const { end } = await start([STEP]);
+      const other = piece('hint');
+      other.focus();
+      button.remove();
+
+      tour.destroy('done');
+      await end;
+
+      expect(document.activeElement).toBe(other);
+    });
+
+    it('leaves the focus in the menu or the dialog the task ends by opening', async () => {
+      piece('help').focus();
+      const { end } = await start([STEP]);
+      const menu = piece('hint', '<div role="menu"><button role="menuitem">Editar</button></div>');
+
+      tour.destroy('done');
+      await end;
+
+      expect(document.activeElement).toBe(menu.querySelector('button'));
     });
 
     it('offers to turn on a switch that is off, and goes on once its choices are drawn', async () => {
@@ -674,6 +830,8 @@ describe('TourRunner', () => {
       expect(hints.config).toMatchObject({
         buttonText: 'Entendido',
         popoverClass: 'app-guide-popover',
+        overlay: true,
+        overlayColor: 'var(--mat-sys-scrim)',
         beacon: { side: 'top', align: 'start', animate: true, className: 'app-guide-beacon' },
       });
       expect(hints.config.hints?.map((hint) => hint.popover?.title)).toEqual([

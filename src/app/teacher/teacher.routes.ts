@@ -15,7 +15,7 @@ import { GroupsPage } from './groups/groups-page';
 import { HistoryPage } from './history/history-page';
 import { LivePage } from './live/live-page';
 import { LiveStore } from './live/live-store';
-import { staffGuide } from './teacher-guide/teacher-guide';
+import { staffGuide } from '../admin/admin-guide/staff-guide';
 
 /** Teacher area (2.2), also open to the admin. Loaded lazily by app.routes.ts. */
 export const teacherRoutes: Routes = [

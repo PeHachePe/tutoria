@@ -202,11 +202,21 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
             <mat-icon aria-hidden="true">download</mat-icon>
           </button>
           <mat-menu #exportMenu="matMenu" xPosition="before">
-            <button mat-menu-item type="button" (click)="downloadList()">
+            <button
+              mat-menu-item
+              type="button"
+              [appGuideAnchor]="anchors.groupsExportItems"
+              (click)="downloadList()"
+            >
               <mat-icon aria-hidden="true">table_view</mat-icon>
               <span i18n="@@classStudents.download">Descargar la lista (CSV)</span>
             </button>
-            <button mat-menu-item type="button" (click)="copyEmails()">
+            <button
+              mat-menu-item
+              type="button"
+              [appGuideAnchor]="anchors.groupsExportItems"
+              (click)="copyEmails()"
+            >
               <mat-icon aria-hidden="true">content_copy</mat-icon>
               <span i18n="@@classStudents.copyEmails">Copiar los correos</span>
             </button>
@@ -225,6 +235,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
         <div
           class="flex flex-wrap items-center gap-x-2 rounded-xl bg-surface-container-high py-1 pr-1 pl-4"
           role="toolbar"
+          [appGuideAnchor]="anchors.groupsOutcomesBar"
           aria-label="Evaluación final"
           i18n-aria-label="@@classStudents.outcomes"
         >
@@ -357,6 +368,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                             <button
                               mat-menu-item
                               type="button"
+                              [appGuideAnchor]="anchors.groupsSubjectEnroll"
                               (click)="enrollInGroup(column.managed, column.title)"
                             >
                               <mat-icon aria-hidden="true">person_add</mat-icon>
@@ -366,7 +378,13 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                           <!-- A closed class: only its blocks are left to see -->
                           @if (!readOnly() && column.managed.started) {
                             <!-- Its students' work is kept (5.2a): it says why, at sight, and keeps the focus -->
-                            <button mat-menu-item type="button" disabled disabledInteractive>
+                            <button
+                              mat-menu-item
+                              type="button"
+                              disabled
+                              disabledInteractive
+                              [appGuideAnchor]="anchors.groupsSubjectRemove"
+                            >
                               <mat-icon aria-hidden="true">delete</mat-icon>
                               <span class="flex max-w-64 flex-col py-2">
                                 <span i18n="@@groups.remove">Eliminar</span>
@@ -380,6 +398,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                             <button
                               mat-menu-item
                               type="button"
+                              [appGuideAnchor]="anchors.groupsSubjectRemove"
                               (click)="removeGroup.emit(column.managed)"
                             >
                               <mat-icon aria-hidden="true">delete</mat-icon>
@@ -448,6 +467,7 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                           class="inline-flex items-center gap-1 rounded-full py-1 ps-2 pe-1 text-label-large outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
                           [class]="row.outcome.chip"
                           [matMenuTriggerFor]="outcomeMenu"
+                          [appGuideAnchor]="firstRow ? anchors.groupsOutcome : null"
                           [attr.aria-label]="row.outcomeLabel"
                         >
                           <mat-icon aria-hidden="true" class="size-5! text-[1.25rem]!">{{
@@ -530,7 +550,12 @@ const OUTCOME_OPTIONS = [...CLASS_OUTCOMES, null].map((value) => ({
                       </button>
                       <mat-menu #studentMenu="matMenu" xPosition="before">
                         @if (row.entry.member) {
-                          <button mat-menu-item type="button" (click)="removeFromClass(row)">
+                          <button
+                            mat-menu-item
+                            type="button"
+                            [appGuideAnchor]="anchors.groupsStudentRemove"
+                            (click)="removeFromClass(row)"
+                          >
                             <mat-icon aria-hidden="true">group_remove</mat-icon>
                             <span i18n="@@classStudents.remove">Quitar de la clase</span>
                           </button>
