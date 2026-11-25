@@ -2889,3 +2889,48 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 **Consecuencias:** ficha 13 (globo y prueba en el navegador); en el móvil, donde el diálogo ocupa la pantalla, el globo aún puede tapar una parte (`PENDIENTES.md`).
 
 **Aprobación:** el autor dio el visto bueno tras verlo en el navegador («Sí, sigue»). Lo técnico, por delegación del autor.
+
+## D-096 · La ayuda guiada de la administración: un perfil en las dos áreas, posible con lo que exista y hecha solo al terminar (25/11/2026, propuesta)
+
+**Contexto:** el 7.0b2 lleva la ayuda guiada a la administración, que es la cuenta del tribunal. Trabaja en sus dos pantallas (Usuarios y Sistema) y en todas las del docente, con todos los grupos del centro. Al construirla salieron tres preguntas: qué perfil tiene cuando entra en las pantallas del docente, cuándo puede hacer una tarea y cuándo la ha hecho, y qué pasa con una tarea en marcha al cruzar de un área a otra, porque cada área tiene su propio `StaffLayout`.
+
+**Decisión:**
+
+- **Un solo perfil, el de la administración, en todas las pantallas del personal.** Lo elige el rol (`staffGuide`, en `admin/admin-guide/`), y las rutas de las dos áreas lo dan a `StaffLayout`. Tiene sus primeros pasos (los de la cuenta del tribunal), sus tareas, sus recorridos y sus balizas, y además todas las del docente. «Crear una clase y matricular» es la tarea del docente con el mismo id, así que se hace una vez, pero con sus palabras: la administración elige el docente de cada asignatura y da de alta a quien falte.
+- **Posible en cuanto algo existe, sea de quien sea:** sus hechos (`adminFacts`) cuentan las clases abiertas con asignaturas, el alumnado, los bloques y las asignaciones de todo el centro, no solo lo suyo, como hace el docente (D-093).
+- **Hecha solo al terminarla,** también las del docente: el perfil les quita su condición de hecha (`doneBy`). Los datos del centro no dicen qué hizo la administración, y con ellos el tribunal vería sus primeros pasos ya hechos sin haberlos visto.
+- **La tarea sigue al cruzar de área:** `GuideStore` da al recorrido un menú lateral que delega en el del perfil en uso en cada momento, no en el del layout donde empezó. Así no hace falta un único `StaffLayout` padre de las dos áreas, que D-093 dejaba como plan B. Por el mismo camino le da el inyector del área a la mascota de los globos, que con el del alumno lleva sus accesorios.
+
+**Alternativas:**
+
+- **El perfil del área en lugar del rol:** al pasar de Usuarios a Grupos cambiarían la lista de tareas, los primeros pasos y la tarea en marcha.
+- **Hechos «suyos» también para la administración:** no da clases (no figura como docente de ningún grupo), así que casi nada sería posible.
+- **Un único `StaffLayout` padre de las dos áreas en `app.routes.ts`:** resuelve el cruce, pero mueve las rutas y los proveedores de las dos áreas; el menú que delega basta.
+
+**Consecuencias:** ficha 13 (catálogo de la administración y del docente); la mascota del alumno lleva sus accesorios; las balizas del docente le hablan a la administración de «tu grupo» (`PENDIENTES.md`).
+
+**Aprobación:** el autor dio el visto bueno tras verlo en el navegador («Sí, sigue»). Lo técnico, por delegación del autor.
+
+## D-097 · «¿Cómo se hace…?»: tareas cortas que no crean nada; las balizas resaltan su pieza; los diálogos avanzan al guardar (25/11/2026, propuesta)
+
+**Contexto:** el 7.0b2 completa «¿Cómo se hace…?» del personal (34 tareas) y resuelve lo que el 7.0b1 dejó en `PENDIENTES.md`: el globo de una baliza tapaba su pieza, un diálogo con error dejaba avanzar la tarea, «Siguiente: …» se decidía con los datos del principio y el banco repetía la clase.
+
+**Decisión:**
+
+- **Tareas cortas que no crean nada:** de uno a cinco globos sobre la pantalla real. Las de un menú lo abren y acaban pulsando su opción, que abre su diálogo o pide confirmación; el foco queda dentro del menú o del diálogo para que el usuario siga o cancele. Con el autor: todas las del catálogo, no solo las más usadas.
+- **La bienvenida enseña todo el menú lateral,** entrada a entrada y en su orden: la del docente pasa a doce pasos (versión 2, para que la vea quien ya vio la primera), y la de la administración, después de la sección «Docencia», sigue por cada entrada. A petición del autor: antes se saltaban Bloques e Histórico.
+- **Las balizas resaltan su pieza** con el oscurecido de driver.js (`overlay`), solo mientras su globo está abierto, y el globo va al lado de la pieza, no del punto. Con el autor, la opción recomendada.
+- **Un paso que guarda un diálogo** (`savesDialog`) avanza cuando el diálogo se cierra con resultado, no con el clic: si hay un error y el diálogo sigue abierto, la tarea espera. Cancelar sigue volviendo al paso anterior.
+- **«Siguiente: …» se decide en el último globo,** con los hechos leídos de nuevo en ese momento: asignar el primer ejercicio ofrece ya «Seguir la clase en vivo». El botón aparece en cuanto se sabe.
+- **El banco nombra la asignatura y, si es de otro curso, el curso:** «1.º DAW A · Programación básica (2025/26)». Lo que se repetía era el mismo grupo en dos cursos.
+- **Las piezas, declaradas por área** en `core/guide/anchors/`; la prueba de los scripts comprueba además que no se repite ningún id.
+
+**Alternativas:**
+
+- **Tareas que hacen la acción entera:** crearían datos de verdad en lo que es solo una consulta.
+- **Colocar mejor el globo de la baliza, sin oscurecer:** en las piezas grandes no siempre hay sitio.
+- **Avanzar con el clic y volver atrás si el diálogo sigue abierto:** el globo saltaría adelante y atrás.
+
+**Consecuencias:** ficha 13; las tareas de un menú con una opción que ese usuario no tiene esperan sin decir por qué (`PENDIENTES.md`).
+
+**Aprobación:** el autor eligió en el paso las opciones recomendadas y pidió la bienvenida completa. Lo técnico, por delegación del autor.

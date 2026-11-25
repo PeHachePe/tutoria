@@ -35,7 +35,8 @@ Un diálogo lateral a la derecha, a toda la altura y de 26 rem de ancho; en el m
 ### Globo de las tareas
 
 - **Aspecto** (`src/styles/guide.css`, con tokens): la superficie más clara del tema (blanca en el claro), una línea fina y una sombra suave; la flecha, un triángulo que apunta a la pieza; la mascota a la izquierda del título, alegre en el último paso; el texto y, en los pasos de acción, la instrucción en una franja con un punto que late («Pulsa «Entregar»»).
-- **Pie:** «Paso 2 de 5», «Anterior», «Siguiente» (relleno; «Terminar» en el último) y «Cerrar» (×). Los pasos de acción no tienen «Siguiente»: avanzan solos. En el último paso de un primer paso o de la bienvenida, «Siguiente: Ejecutar las pruebas» (relleno) junto a «Terminar» (con borde) empieza el siguiente primer paso pendiente, si se puede hacer.
+- **Pie:** «Paso 2 de 5», «Anterior», «Siguiente» (relleno; «Terminar» en el último) y «Cerrar» (×). Los pasos de acción no tienen «Siguiente»: avanzan solos. En el último paso de un primer paso o de la bienvenida, «Siguiente: Ejecutar las pruebas» (relleno) junto a «Terminar» (con borde) empieza el siguiente primer paso pendiente, si se puede hacer. Se decide al llegar a ese globo, con los datos leídos de nuevo, porque la tarea puede haber hecho posible otro: asignar el primer ejercicio permite «Seguir la clase en vivo» (7.0b2).
+- **La mascota** lleva lo que el área le da: la del alumno, los accesorios que eligió en sus ajustes (7.0b2).
 - **Oscurecido:** la pantalla se oscurece con el velo del tema salvo la pieza, que conserva su forma con el radio de las esquinas.
 - **«Paso N de M»** cuenta solo los pasos que se ven a ese ancho: un paso opcional cuenta si su pieza está (7.0b1).
 - **Encima de todo:** el globo va en la capa superior del navegador, como los diálogos y menús de Material, para que ninguno lo tape; en un diálogo tan alto que no le deja sitio al lado, va a la esquina inferior izquierda y deja libres sus botones (7.0b1, D-095).
@@ -44,18 +45,21 @@ Un diálogo lateral a la derecha, a toda la altura y de 26 rem de ancho; en el m
 
 - Un punto del color primario que late, con un aro claro para verse sobre cualquier fondo (la barra verde incluida), en la esquina donde empieza cada pieza, como se lee. Las piezas sin tamaño (el indicador de guardado sin cambios) no llevan.
 - Al pulsarlo, su globo: el título de la pieza, qué hace, «Ocultar la ayuda» y «Entendido».
-- **Sin oscurecer la pantalla:** es ayuda sobre la marcha; la pantalla se ve entera, para saber dónde está cada punto, y se puede seguir usando. El oscurecido es de los recorridos y las tareas.
+- **Con la pieza resaltada** solo mientras su globo está abierto: la pantalla se oscurece salvo la pieza y el globo va a su lado, como en los recorridos. Junto al punto, tapaba la pieza que explica (7.0b2). Con los globos cerrados, la pantalla se ve entera, para saber dónde está cada punto, y se puede seguir usando.
 - Esc con un globo abierto lo cierra; sin ninguno, las apaga. También «Ocultar la ayuda» y cambiar de pantalla.
 
 ## Catálogo de tareas
 
-Cada tarea tiene un id estable (en inglés), su perfil, título, una línea de lo que consigue, palabras clave, la pantalla donde ocurre, dónde empieza, sus pasos y, si la hay, su condición de hecha. Los textos de cada globo están en `student/student-guide.ts`, con `$localize`, y en los tres idiomas.
+Cada tarea tiene un id estable (en inglés), su perfil, título, una línea de lo que consigue, palabras clave, la pantalla donde ocurre, dónde empieza, sus pasos y, si la hay, su condición de hecha. Los textos de cada globo están en `student/student-guide.ts`, `teacher/teacher-guide/` y `admin/admin-guide/`, con `$localize`, y en los tres idiomas. Las piezas que señalan se declaran por área en `core/guide/anchors/` (7.0b2).
 
 Reglas comunes:
 
 - **Dónde empiezan:** si una tarea es de la pantalla de trabajo y el alumno está en otra, se abre su siguiente ejercicio (el que propone el catálogo) o el que la tarea necesita (uno entregado, uno con varios intentos). Las de la barra empiezan donde se esté.
 - **Piezas que dependen del ancho:** en el móvil, la pantalla de trabajo va en pestañas, así que la tarea pide antes abrir la pestaña («Abre la pestaña «Tutor»»). En la tableta, o con el código ampliado, el tutor está plegado en la mascota, y la tarea pide abrirla. Son pasos que se saltan solos donde su pieza no existe o no se ve.
 - **Menús y diálogos de Material:** se resalta el menú o el diálogo entero y el globo va a su lado, sin tapar sus otras opciones; la tarea avanza solo al pulsar la opción que pide. Esc cierra el diálogo y la tarea vuelve al paso que lo abrió.
+- **Guardar un diálogo** («Crear», «Matricular», «Añadir»): la tarea sigue cuando el diálogo se cierra guardando, no con el clic, que puede encontrar un error y dejarlo abierto (7.0b2).
+- **Acabar en un menú o un diálogo:** las de «¿Cómo se hace…?» que abren uno acaban ahí, con el foco dentro, para que el usuario siga o cancele; las demás devuelven el foco a donde estaba.
+- **Pestañas:** una pieza marcada en la etiqueta de una pestaña es toda la pestaña, para resaltarla y para su acción.
 - **Un interruptor que muestra más opciones** (la voz): si está apagado, el globo ofrece «Activar la voz», que lo enciende y sigue por sus opciones; «Siguiente» continúa sin ellas.
 - **Datos de verdad:** si un paso crea algo o es definitivo (entregar, practicar de nuevo), el globo lo dice antes.
 
@@ -98,12 +102,12 @@ Con las palabras de la interfaz: el docente crea **clases** (con su curso), cada
 
 **Menú lateral:** un paso `inSideMenu` señala una entrada del menú. En el móvil, `TourRunner` lo abre antes con la función que da `StaffLayout` y lo vuelve a abrir si Esc o el fondo lo cierran; en el raíl (escritorio plegado) se señala el icono, sin desplegarlo (D-094).
 
-**Bienvenida** (versión 1, en En vivo; diez pasos):
+**Bienvenida** (versión 2, en En vivo; doce pasos). La versión 1 (7.0b1) se saltaba Bloques e Histórico; desde el 7.0b2 enseña todo el menú (D-097):
 
 1. «¡Hola, {nombre}!» (centrado): quién es y que se puede saltar.
 2. La ayuda · 3. Claro u oscuro (se puede probar) · 4. Tu idioma (se puede cambiar) · 5. Tu menú: la barra, seguida y en su orden.
 3. El menú lateral entero, y su botón para plegarlo o abrirlo.
-4. En vivo · 8. Ejercicios · 9. Grupos (sus entradas del menú). Bloques e Histórico se explican en sus balizas.
+4. Cada entrada del menú, en su orden: En vivo · Histórico · Ejercicios · Bloques · Grupos.
 5. Por dónde seguir (centrado), con «Siguiente: Crear tu clase y matricular a su alumnado» (o el primer paso pendiente).
 
 **Primeros pasos** (cada uno avisa antes de crear algo y dice cómo deshacerlo):
@@ -117,6 +121,17 @@ Con las palabras de la interfaz: el docente crea **clases** (con su curso), cada
 | `follow-live`     | Seguir la clase en vivo                   | _menú_ En vivo (**acción**) · grupo y bloque · en directo o fuera de clase · dónde está la clase · ritmo de la clase (en directo) · el alumnado y sus pestañas · la tabla: cada fila abre su detalle                                                                                                                                                                                                                                     | al terminar                      | una asignación |
 
 **Recorrer esta pantalla** (una por pantalla, hecha de sus balizas): en vivo (con la barra y el menú, como el catálogo del alumno), detalle del intento, ejercicios, formulario, bloques, grupos e histórico.
+
+**¿Cómo se hace…?** (7.0b2; cortas y sin crear nada: las de un menú lo abren y acaban pulsando su opción, que abre su diálogo o pide confirmación; con el mismo «Necesita» que los primeros pasos):
+
+| Pantalla   | Tareas (id)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Grupos     | Cambiar el nombre o el curso de una clase (`edit-class`: menú de la clase → «Editar») · Preparar la clase del curso siguiente (`duplicate-class`: → «Duplicar…») · Añadir una asignatura a la clase (`add-subject`) · Matricular solo en una asignatura (`enroll-in-subject`: menú de la asignatura → «Matricular solo aquí…») · Quitar a un alumno de la clase (`remove-student`) · Poner la evaluación final (`final-evaluation`) · Exportar el alumnado (`export-students`) · Quitar una asignatura o eliminar la clase (`remove-subject`; con trabajo, el globo dice por qué no) |
+| Bloques    | Copiar los bloques de otro grupo (`copy-blocks`) · Poner fechas de entrega (`due-dates`: la de un ejercicio y, en el menú del bloque, la de todo el bloque) · Ocultar un bloque o un ejercicio (`hide-content`) · Cambiar el orden (`reorder`) · Mover un ejercicio a otro bloque (`move-exercise`; con un solo bloque, el globo dice por qué no) · Borrar varios bloques a la vez (`select-several`)                                                                                                                                                                                |
+| Banco      | Buscar en el banco (`find-exercise`) · Adaptar un ejercicio de otro docente (`duplicate-exercise`: menú → «Duplicar», que abre la copia en el formulario) · Asignar un ejercicio desde el banco (`assign-from-bank`)                                                                                                                                                                                                                                                                                                                                                                 |
+| Formulario | Traducir un ejercicio (`translate-exercise`: la pestaña de otro idioma → «Traducir con IA») · Probar un ejercicio como alumno (`try-as-student`) · Ajustar cuándo se ofrece el tutor (`proactive-thresholds`)                                                                                                                                                                                                                                                                                                                                                                        |
+| En vivo    | Atender a quien necesita ayuda (`attend`) · Seguir otro grupo u otro bloque (`other-group`) · Buscar a un alumno en la clase (`find-student`) · Ver qué hizo un alumno, paso a paso (`attempt-timeline`, en el detalle de un intento)                                                                                                                                                                                                                                                                                                                                                |
+| Histórico  | Ver cómo evoluciona un grupo (`group-evolution`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 **Balizas** (cada pieza; las de la barra y el menú, en todas):
 
@@ -133,9 +148,24 @@ Con las palabras de la interfaz: el docente crea **clases** (con su curso), cada
 
 ### Administración (7.0b2)
 
-- **Bienvenida** (en Usuarios): los mismos pasos de la barra y el menú, Usuarios, Sistema, la sección «Docencia» (entra en todas las pantallas del docente), el Muestrario (qué es, para que no se tome por un fallo) y, al final, «Siguiente: Dar de alta un usuario».
-- **Primeros pasos,** los de la cuenta del tribunal, hechos solo al terminar su recorrido: dar de alta un usuario (una cuenta no se borra: se desactiva) · crear una clase y matricular (la del docente, con el mismo id: se hace una vez) · probar el proveedor de IA (gasta una llamada) · seguir la clase en vivo.
-- **¿Cómo se hace…?, recorridos y balizas** de Usuarios y Sistema, y todas las del docente.
+Un solo perfil en todas las pantallas del personal, elegido por el rol (D-093): al entrar en las del docente conserva sus tareas y su tarea en marcha, que sigue con el menú lateral de la pantalla nueva. Trabaja con todos los grupos del centro, así que una tarea es posible en cuanto algo existe, sea de quien sea, y todas, también las del docente, se dan por hechas solo al terminarlas: los datos del centro no dicen qué hizo ella (D-096).
+
+**Bienvenida** (versión 1, en Usuarios; dieciséis pasos): «¡Hola, {nombre}!» · la barra y el menú lateral, como el docente · todo el menú en su orden: la sección «Docencia» entera (todas las pantallas del docente, con todos los grupos) y cada una de sus entradas, Usuarios, Sistema y el Muestrario (una página de trabajo, no un fallo) · «Por dónde seguir», con «Siguiente: Dar de alta un usuario».
+
+**Primeros pasos,** los de la cuenta del tribunal:
+
+| Id              | Título                                     | Pasos                                                                                                                                                                           |
+| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `add-user`      | Dar de alta un usuario                     | «Nuevo usuario» (**acción**; aviso: la cuenta es de verdad y no se borra, se desactiva) · _diálogo_ (**acción**: «Crear la cuenta», al guardar) · la lista, con la cuenta nueva |
+| `create-class`  | Crear una clase y matricular a su alumnado | La del docente, con sus palabras: elige el docente de cada asignatura y, si falta alguien, lo da de alta en Usuarios                                                            |
+| `test-provider` | Probar el proveedor de IA                  | El modelo · «Probar la conexión» (**acción**; gasta una llamada a cada modelo) · el resultado                                                                                   |
+| `follow-live`   | Seguir la clase en vivo                    | La del docente                                                                                                                                                                  |
+
+**¿Cómo se hace…?:** dar de alta a varios alumnos a la vez (`add-students`) · dar otra contraseña a una cuenta (`reset-password`) · cambiar el nombre, el correo o el rol (`edit-user`) · desactivar o activar una cuenta (`disable-user`) · desactivar a quien ya terminó (`finished-students`) · ver la trayectoria de un alumno (`trajectory`) · cambiar el proveedor o el modelo de IA (`change-provider`) · añadir un modelo de respaldo (`fallback-model`) · crear o traducir una asignatura (`subjects`). Las del menú de una cuenta abren el de la primera de otra persona con clases, que tiene todas sus opciones. Y todas las del docente.
+
+**Recorrer esta pantalla:** Usuarios (con la barra y el menú) y Sistema; las del docente, sin la barra.
+
+**Balizas:** las de la barra y el menú del docente, con TutorIA llevando a Usuarios, y sus entradas Usuarios, Sistema y Muestrario; Usuarios (alta de varios, nuevo usuario, quién ya terminó, buscar, rol, estado, situación del alumnado, cuántas, la tabla y el menú de cada cuenta); Sistema (proveedor, modelo principal, la clave, respaldos, añadir un respaldo, probar, guardar, el resultado, asignaturas, nueva asignatura y editar); y todas las del docente.
 
 ## Interacciones
 
@@ -212,7 +242,7 @@ Hecha el 24/11/2026 en En vivo, con datos simulados, antes de construir: driver.
 - [x] Un docente nuevo prepara su primera clase guiado de principio a fin (crear la clase, sus asignaturas y matricular), también en el móvil con el menú lateral (7.0b1).
 - [x] Cada pieza de cada pantalla del docente tiene su baliza y su paso en «Recorrer esta pantalla» (7.0b1).
 - [x] Las pantallas vacías de un docente sin clases llevan a «Crear tu clase» (7.0b1).
-- [ ] La administración y «¿Cómo se hace…?» del personal (7.0b2).
+- [ ] La administración enseña al tribunal la aplicación en sus primeros pasos, también al cruzar a las pantallas del docente y en el móvil, y el personal tiene su «¿Cómo se hace…?» (7.0b2).
 
 ## Fuera de alcance
 
@@ -221,5 +251,4 @@ Hecha el 24/11/2026 en En vivo, con datos simulados, antes de construir: driver.
 
 ## Pulido pendiente
 
-- Al abrir una baliza, su globo puede tapar la pieza que explica: se propuso resaltarla y poner el globo a su lado, como en los recorridos (`PENDIENTES.md`).
-- La mascota del globo lleva los accesorios por defecto, no los que el alumno eligió (`PENDIENTES.md`).
+Nada: los dos puntos que quedaban (el globo de una baliza tapaba su pieza; la mascota del globo no llevaba los accesorios del alumno) se resolvieron en el 7.0b2.
