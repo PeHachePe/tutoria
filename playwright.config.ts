@@ -10,7 +10,8 @@ const SMOKE_URL = process.env['SMOKE_URL'];
 const TEST_TIME_ZONE = 'Europe/Madrid';
 
 /**
- * End-to-end tests and the screenshots of `npm run screenshots` (5.6) against the `demo` build:
+ * End-to-end tests, the screenshots of `npm run screenshots` (5.6) and the user manual of
+ * `npm run manual` (7.0c) against the `demo` build:
  * optimized like production and with the simulated data, served as static files (step 1.1e, D-025).
  */
 export default defineConfig({
@@ -31,13 +32,23 @@ export default defineConfig({
   projects: [
     {
       name: 'e2e',
-      testIgnore: ['screenshots/**', 'smoke/**'],
+      testIgnore: ['screenshots/**', 'smoke/**', 'manual/**'],
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'screenshots',
       testMatch: 'screenshots/capture.spec.ts',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // The user manual of `npm run manual` (7.0c): each guided task done from beginning to end
+      name: 'manual',
+      testMatch: 'manual/manual.spec.ts',
+      // The whole Chromium in its new headless mode, as a real browser: the headless shell crashes
+      // when the voice of the tutor is turned on
+      // Without traces: each task opens its own context, and the manual keeps its own screenshot of
+      // a failure in tmp/manual
+      use: { ...devices['Desktop Chrome'], channel: 'chromium', trace: 'off' },
     },
     {
       name: 'smoke',

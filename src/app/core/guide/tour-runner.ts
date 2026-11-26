@@ -18,7 +18,7 @@ import { filter, firstValueFrom, take } from 'rxjs';
 
 import { Mascot, type MascotMood } from '../../shared/mascot/mascot';
 import { prefersReducedMotion } from '../../shared/reduced-motion';
-import { type GuideAnchorId, guideAnchorSelector } from './guide-anchor';
+import { GUIDE_STEP_ATTRIBUTE, type GuideAnchorId, guideAnchorSelector } from './guide-anchor';
 import type { GuideBeacon, GuideSideMenu, GuideStep } from './guide-task';
 
 /**
@@ -199,6 +199,11 @@ export class TourRunner {
             raiseToTopLayer(popover.wrapper);
             // Over a tall dialog, guide.css moves it out of the way of its buttons
             popover.wrapper.classList.toggle(IN_OVERLAY_CLASS, !!step.inOverlay);
+            if (step.anchor) {
+              popover.wrapper.setAttribute(GUIDE_STEP_ATTRIBUTE, step.anchor);
+            } else {
+              popover.wrapper.removeAttribute(GUIDE_STEP_ATTRIBUTE);
+            }
             popover.progress.textContent = this.progressOf(steps, tour.getActiveIndex()!);
             if (!step.inSideMenu) options.sideMenu?.close();
             this.decorate(popover, step, tour, options, next, finish);

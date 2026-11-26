@@ -23,6 +23,13 @@ export type GuideAnchorId = (typeof GUIDE_ANCHORS)[keyof typeof GUIDE_ANCHORS];
 /** The attribute that carries the id in the page, for TourRunner to find the piece. */
 export const GUIDE_ANCHOR_ATTRIBUTE = 'data-guide';
 
+/**
+ * The attribute of a globe with the id of the piece its step explains: the manual (`npm run manual`,
+ * 7.0c) reads it to do the action of the step on that piece, also inside a dialog, where the whole
+ * dialog is lit. The piece itself is not in the accessibility tree of the globe, so no role finds it.
+ */
+export const GUIDE_STEP_ATTRIBUTE = 'data-guide-step';
+
 /** CSS selector of the pieces marked with an id. */
 export function guideAnchorSelector(anchor: GuideAnchorId): string {
   return `[${GUIDE_ANCHOR_ATTRIBUTE}="${anchor}"]`;

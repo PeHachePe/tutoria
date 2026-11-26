@@ -1184,7 +1184,7 @@ Cada paso indica una estimación orientativa de horas, lo que se hace, cuándo e
 
 ### Bloque A · Hasta la PEC3 (la aplicación completa)
 
-Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b1, 7.0b2, 7.0c, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
+Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b1, 7.0b2, 7.0c, 7.0d, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
 
 #### Fase 0 · Cimientos (≈12 h)
 
@@ -4406,9 +4406,9 @@ Tests, en este orden:
 🧪 `ChromeTutorService` con un `LanguageModel` falso.
 Commit: `feat: on-device tutor`.
 
-#### Fase 7 · Cierre (≈26 h)
+#### Fase 7 · Cierre (≈29 h)
 
-La ayuda guiada (7.0a, 7.0b y 7.0c) va antes del 7.1, para que sus e2e y axe ya la recorran. Es una petición del autor, y su manual entra en la memoria.
+La ayuda guiada (7.0a, 7.0b y 7.0c) va antes del 7.1, para que sus e2e y axe ya la recorran. Es una petición del autor, y su manual entra en la memoria. El diario (7.0d), otra idea del autor, recoge todo lo registrado en una web y un PDF.
 
 **7.0a · Ayuda guiada: la base, el panel y el alumno (≈5 h)** · ficha `13-ayuda` · §2.12 · D-080
 
@@ -4462,6 +4462,24 @@ Commit: `feat(guide): the admin's guided tasks and the staff's how-tos (step 7.0
 
 ✅ `npm run manual` genera los tres manuales sin errores, y cada tarea guiada se completa sola en el navegador.
 Commit: `docs(guide): user manual generated from the guided tasks (step 7.0c)`.
+
+**7.0d · Diario del proyecto: una web y un PDF con todo lo registrado (≈3 h)** · §5 (registro) · idea del autor (26/11/2026)
+
+Todo lo que se registra en `docs/` (el plan, el registro, las bitácoras, las decisiones, las capturas y el manual) se convierte en algo que se lee a gusto: para el tribunal, para la memoria y como materia prima de la presentación de la PEC4.
+
+- **`npm run diary`:** un script de Node, sin Angular ni framework, que lee `docs/` y genera una web estática (HTML y CSS propios, con algo de JavaScript solo para buscar y filtrar) en una carpeta ignorada por git. Se rehace cuando se quiera, así que al final de la PEC4 recoge todo.
+- **Qué enseña:**
+  - **Línea de tiempo:** cada paso por fecha, con qué se hizo, las horas humanas y de Claude, los tokens, el coste equivalente, los tests, la validación del autor y sus commits, enlazado a su bitácora completa.
+  - **Evolución de las pantallas:** las capturas de cada pantalla en orden, de su primera versión a la última.
+  - **Decisiones:** cada una con su contexto, lo que se eligió, las alternativas y quién la aprobó, enlazada desde los pasos que la citan y filtrable.
+  - **Cifras:** horas estimadas frente a reales por fase, horas y tokens acumulados, tests y líneas de código, en gráficas sencillas (SVG generado por el script).
+  - **El manual de usuario** (7.0c) de los tres perfiles, con sus capturas.
+  - **Para la presentación:** las frases «Para la presentación» de cada bitácora y las cifras destacadas, juntas, como guion de partida de la presentación de la PEC4.
+- **PDF:** el mismo contenido en un PDF para leer o imprimir (Playwright `page.pdf()` con una hoja de estilos de impresión), sin dependencias nuevas.
+- **Publicado gratis** (Vercel o GitHub Pages) y enlazado desde el README. Sin nada del entorno de trabajo del autor ni texto literal del chat.
+
+✅ `npm run diary` genera la web y el PDF sin errores, se lee bien en el móvil y en claro y oscuro, y no publica nada que no esté ya en el repositorio.
+Commit: `docs(diary): project diary as a static site and a PDF (step 7.0d)`.
 
 **7.1 · Accesibilidad y responsive**
 

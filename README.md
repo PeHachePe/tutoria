@@ -1,59 +1,40 @@
-# Tutoria
+# TutorIA
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.6.
+Aplicación web de ejercicios de programación autoevaluables, con un tutor de IA que da pistas graduadas sin entregar nunca la solución y un panel docente con analítica formativa. Es un Trabajo Fin de Máster, construido paso a paso con un agente de codificación (Claude Code) bajo supervisión humana.
 
-## Development server
+- **Aplicación publicada:** <https://tutoria-rosy.vercel.app>
+- **Tecnología:** Angular 22 (signals, zoneless, Signal Forms), Angular Material y Tailwind, Supabase (Postgres, autenticación y Edge Functions) y driver.js para la ayuda guiada.
 
-To start a local development server, run:
+## Manual de usuario
 
-```bash
-ng serve
+Un manual por perfil, generado desde las tareas guiadas de la propia aplicación, con el texto de cada globo y su captura:
+
+- [Alumnado](docs/manual/alumno.md)
+- [Profesorado](docs/manual/docente.md)
+- [Administración](docs/manual/administracion.md)
+
+## Documentación del proyecto
+
+- [Plan de desarrollo](docs/PLAN.md): la especificación, las decisiones de arquitectura y los pasos.
+- [Decisiones](docs/DECISIONES.md): cada decisión técnica y de producto, con su contexto y sus alternativas.
+- [Registro de trabajo y de uso de IA](docs/REGISTRO.md) y [bitácora](docs/bitacora/) de cada paso, con sus [capturas](docs/capturas/).
+- [Fichas de pantalla](docs/screens/) y [despliegue](docs/DESPLIEGUE.md).
+
+## Arrancarla en local
+
+Con Node 24 o 26:
+
+```sh
+npm install
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+`npm start` abre la aplicación en <http://localhost:4200> con datos simulados, sin nada más que instalar; la barra de desarrollo permite entrar con cada perfil. Contra una base de datos de verdad, con Docker abierto: `npm run db:start` y `npm run start:local` (detalles en [DESPLIEGUE.md](docs/DESPLIEGUE.md)).
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| Comando               | Qué hace                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `npm run check`       | Formato, lint, tests unitarios (cobertura del 100 %), de scripts y de las Edge Functions |
+| `npm run e2e`         | Tests end-to-end con Playwright                                                          |
+| `npm run manual`      | Vuelve a generar los manuales de usuario (`-- alumno` para uno solo)                     |
+| `npm run screenshots` | Capturas de las pantallas para la memoria                                                |
+| `npm run db:reset`    | Supabase local desde cero: migraciones y datos de demostración                           |

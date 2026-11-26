@@ -460,6 +460,14 @@ describe('TourRunner', () => {
       expect(tour.popover?.wrapper.classList).toContain('app-guide-in-overlay');
     });
 
+    it('names on the globe the piece of its step, for the manual to act on it (7.0c)', async () => {
+      void (await start([{ ...STEP, anchor: 'help' }, STEP]));
+
+      expect(tour.popover?.wrapper.getAttribute('data-guide-step')).toBe('help');
+      tour.moveNext();
+      expect(tour.popover?.wrapper.hasAttribute('data-guide-step')).toBe(false);
+    });
+
     it('measures the entry again once the side menu has slid in', async () => {
       piece('help');
       const sideMenu = {
