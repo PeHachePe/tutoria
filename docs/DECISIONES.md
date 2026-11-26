@@ -2934,3 +2934,28 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 **Consecuencias:** ficha 13; las tareas de un menú con una opción que ese usuario no tiene esperan sin decir por qué (`PENDIENTES.md`).
 
 **Aprobación:** el autor eligió en el paso las opciones recomendadas y pidió la bienvenida completa. Lo técnico, por delegación del autor.
+
+## D-098 · El manual de usuario sale de hacer las tareas guiadas en el navegador (26/11/2026, propuesta)
+
+**Contexto:** D-080 decidió que el manual se genera de las tareas guiadas para que no se desfase de la aplicación. El 7.0c lo construye: hay que decidir de dónde salen las tareas, cómo se hacen sin nadie delante y qué forma tiene el manual.
+
+**Decisión:**
+
+- **Las tareas se leen del panel de «Ayuda»,** no de una lista aparte: el manual recorre lo que ve el usuario, y una tarea nueva entra sola. Las hace un usuario de la semilla con datos para todas: Lucía (que ya ha practicado de nuevo un ejercicio, así que tiene intentos a los que volver), Marta y la administración. Los primeros pasos, en su orden, se leen del panel de quien aún no los ha hecho (Tomás y Nuria; la administración, la propia), porque el de quien ya los hizo solo los celebra. Las dos tareas del detalle de un intento, que solo se pueden hacer con uno abierto, empiezan en el de la semilla.
+- **Cada tarea se hace como un usuario,** en una sesión limpia y empezada desde el panel: «Siguiente» en los globos que explican y, en los de acción, la acción sobre su pieza. El globo dice en `data-guide-step` qué pieza explica su paso, porque dentro de un diálogo se resalta el diálogo entero y la pieza no tiene otra forma de encontrarse. Los diálogos que guardan se rellenan antes con datos inventados (una clase «2.º DAW B», un bloque, una cuenta). «Entregar», que solo se activa con todas las pruebas superadas, se prepara escribiendo la solución de ejemplo de la semilla, y la tarea vuelve a empezar. Cuando la aplicación explica en el globo que algo aún no se puede hacer (eliminar una asignatura que ya tiene trabajo), ese globo es el último paso, como lo vería el usuario.
+- **El texto de cada paso se lee del globo en la página,** no del código: el manual dice exactamente lo que dice la aplicación, con los mismos datos.
+- **Si una tarea no se completa, `npm run manual` falla** y dice cuál y en qué paso, con una captura del error en `tmp/manual`; no escribe un manual a medias. Una tarea que el panel ofrece como no disponible para ese usuario se lista con su motivo.
+- **Un manual por perfil** (`docs/manual/alumno.md`, `docente.md` y `administracion.md`): índice, bienvenida, primeros pasos, «¿Cómo se hace…?» y recorridos de pantalla; por tarea, su resumen y sus pasos con el texto del globo, lo que hay que hacer y la captura. El de la administración enlaza al del docente las tareas que comparten, en lugar de repetirlas.
+- **Capturas de la pieza y su globo con algo de pantalla alrededor** (al menos 880 × 520 de una ventana de 1280 × 800), en WebP: se leen sin ampliar y pesan poco en el repositorio.
+- **Solo en español** y con los datos de demostración, como las capturas de la memoria.
+- **Con el Chromium completo** (`channel: 'chromium'`), no con el navegador reducido de Playwright, que se cuelga al activar la voz del tutor. En paralelo, por trozos de cada perfil, y cada tarea con una segunda oportunidad si la primera carga tarda.
+
+**Alternativas:**
+
+- **Leer las tareas importando su código:** los textos usan `$localize` y las tareas dependen de Angular; además no comprobaría que se pueden hacer.
+- **Un manual escrito a mano o solo con los textos de las tareas:** se desfasa, y no prueba nada.
+- **Capturas de la pantalla entera en PNG:** unos 45 MB, y el texto del globo queda pequeño.
+
+**Consecuencias:** `npm run manual` hace también de prueba de toda la ayuda guiada (no entra en `npm run check` porque tarda unos minutos). Se vuelve a generar cuando cambian las tareas o las pantallas. El 7.0d (diario del proyecto) lo publica en HTML y PDF.
+
+**Aprobación:** el autor aprobó el plan del paso. Lo técnico, por delegación del autor.
