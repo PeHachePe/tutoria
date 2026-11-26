@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { MANUALS, manualMarkdown, parseProfiles } from './markdown.mjs';
+import { MANUALS, parseProfiles } from './content.mjs';
+import { manualMarkdown } from './markdown.mjs';
 
 const step = (title, extra = {}) => ({
   title,
@@ -55,12 +56,15 @@ const write = (overrides = {}) =>
   });
 
 describe('manualMarkdown', () => {
-  it('says what it is and how it is made again, not to be edited by hand', () => {
+  it('says what it is and its edition, and only out of sight how it is made', () => {
     const markdown = write();
 
-    assert.match(markdown, /^# Manual del profesorado\n/);
-    assert.match(markdown, /`npm run manual`/);
-    assert.match(markdown, /26\/11\/2026/);
+    assert.match(
+      markdown,
+      /^<!-- Generado con npm run manual[^>]*-->\n\n# Manual del profesorado\n/,
+    );
+    assert.match(markdown, /_Edición del 26\/11\/2026\._/);
+    assert.equal(markdown.match(/npm run manual/g).length, 1);
   });
 
   it('puts the welcome first, then the first steps in their order, the how-tos and the tours', () => {
@@ -120,7 +124,7 @@ describe('manualMarkdown', () => {
     const index = { ...INDEX, shared: [task('copy-blocks', 'Copiar los bloques de otro grupo')] };
     const markdown = write({ profile: 'admin', index });
 
-    assert.match(markdown, /^# Manual de la administración\n/);
+    assert.match(markdown, /\n# Manual de la administración\n/);
     assert.match(markdown, /\[Copiar los bloques de otro grupo\]\(docente\.md#copy-blocks\)/);
     assert.doesNotMatch(markdown, /### <a id="copy-blocks">/);
   });

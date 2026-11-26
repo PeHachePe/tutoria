@@ -7,11 +7,11 @@ Aplicación web de ejercicios de programación autoevaluables, con un tutor de I
 
 ## Manual de usuario
 
-Un manual por perfil, generado desde las tareas guiadas de la propia aplicación, con el texto de cada globo y su captura:
+Un manual por perfil, generado desde las tareas guiadas de la propia aplicación, con el texto de cada globo y su captura, para leer aquí o en PDF:
 
-- [Alumnado](docs/manual/alumno.md)
-- [Profesorado](docs/manual/docente.md)
-- [Administración](docs/manual/administracion.md)
+- Alumnado: [en línea](docs/manual/alumno.md) · [PDF](docs/manual/alumno.pdf)
+- Profesorado: [en línea](docs/manual/docente.md) · [PDF](docs/manual/docente.pdf)
+- Administración: [en línea](docs/manual/administracion.md) · [PDF](docs/manual/administracion.pdf)
 
 ## Documentación del proyecto
 
@@ -35,6 +35,6 @@ npm start
 | --------------------- | ---------------------------------------------------------------------------------------- |
 | `npm run check`       | Formato, lint, tests unitarios (cobertura del 100 %), de scripts y de las Edge Functions |
 | `npm run e2e`         | Tests end-to-end con Playwright                                                          |
-| `npm run manual`      | Vuelve a generar los manuales de usuario (`-- alumno` para uno solo)                     |
+| `npm run manual`      | Vuelve a generar los manuales de usuario, en Markdown y PDF (`-- alumno` para uno solo)  |
 | `npm run screenshots` | Capturas de las pantallas para la memoria                                                |
 | `npm run db:reset`    | Supabase local desde cero: migraciones y datos de demostración                           |

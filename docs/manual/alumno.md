@@ -1,8 +1,10 @@
+<!-- Generado con npm run manual desde las tareas guiadas: no se edita a mano. -->
+
 # Manual del alumnado
 
 Cómo se usa TutorIA como alumno o alumna: ver tus ejercicios, resolverlos con la ayuda del tutor, entregarlos y ajustar la aplicación a tu gusto.
 
-> Generado con `npm run manual` el 26/11/2026 a partir de las tareas guiadas de la aplicación: cada tarea se hizo de principio a fin en el navegador, con los datos de demostración, y cada paso lleva el texto de su globo y su captura. No se edita a mano: se vuelve a generar cuando cambian las tareas o las pantallas.
+_Edición del 26/11/2026._
 
 Todo lo que cuenta este manual está también dentro de la aplicación: el botón «Ayuda» (?), arriba a la derecha, hace estas mismas tareas contigo sobre tus propios datos.
 

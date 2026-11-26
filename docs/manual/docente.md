@@ -1,8 +1,10 @@
+<!-- Generado con npm run manual desde las tareas guiadas: no se edita a mano. -->
+
 # Manual del profesorado
 
 Cómo se usa TutorIA como docente: preparar tus clases y sus asignaturas, escribir y asignar ejercicios, seguir la clase en vivo y ver cómo evoluciona cada grupo.
 
-> Generado con `npm run manual` el 26/11/2026 a partir de las tareas guiadas de la aplicación: cada tarea se hizo de principio a fin en el navegador, con los datos de demostración, y cada paso lleva el texto de su globo y su captura. No se edita a mano: se vuelve a generar cuando cambian las tareas o las pantallas.
+_Edición del 26/11/2026._
 
 Todo lo que cuenta este manual está también dentro de la aplicación: el botón «Ayuda» (?), arriba a la derecha, hace estas mismas tareas contigo sobre tus propios datos.
 

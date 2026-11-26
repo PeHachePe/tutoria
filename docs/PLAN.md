@@ -4456,7 +4456,7 @@ Commit: `feat(guide): the admin's guided tasks and the staff's how-tos (step 7.0
 
 **7.0c · Manual de usuario generado desde la ayuda (≈2 h)** · §2.12 · D-080
 
-- **`npm run manual`:** un proyecto de Playwright (`manual`, como el de `screenshots`) que, con los datos simulados y en español, hace cada tarea guiada de cada perfil de principio a fin. Guarda una captura de cada paso, con la pieza resaltada y su globo, y escribe `docs/manual/alumno.md`, `docente.md` y `administracion.md`: un índice y, por tarea, sus pasos con el texto del globo (leído de la página) y su captura.
+- **`npm run manual`:** un proyecto de Playwright (`manual`, como el de `screenshots`) que, con los datos simulados y en español, hace cada tarea guiada de cada perfil de principio a fin. Guarda una captura de cada paso, con la pieza resaltada y su globo, y escribe `docs/manual/alumno.md`, `docente.md` y `administracion.md`: un índice y, por tarea, sus pasos con el texto del globo (leído de la página) y su captura. Y lo mismo en PDF (`alumno.pdf`…), que es lo que se entrega: portada, índice con enlaces, cada parte en su página y números de página (a petición del autor, D-098).
 - Se rehace cada vez que cambian las tareas o las pantallas. Si una pieza ya no existe, falla, y así sirve también de prueba de que todas las tareas siguen funcionando.
 - Enlazado desde el README y como anexo de la memoria (manual de usuario).
 
@@ -4473,9 +4473,9 @@ Todo lo que se registra en `docs/` (el plan, el registro, las bitácoras, las de
   - **Evolución de las pantallas:** las capturas de cada pantalla en orden, de su primera versión a la última.
   - **Decisiones:** cada una con su contexto, lo que se eligió, las alternativas y quién la aprobó, enlazada desde los pasos que la citan y filtrable.
   - **Cifras:** horas estimadas frente a reales por fase, horas y tokens acumulados, tests y líneas de código, en gráficas sencillas (SVG generado por el script).
-  - **El manual de usuario** (7.0c) de los tres perfiles, con sus capturas.
+  - **El manual de usuario** (7.0c) de los tres perfiles, con sus capturas, y enlaces a sus PDF.
   - **Para la presentación:** las frases «Para la presentación» de cada bitácora y las cifras destacadas, juntas, como guion de partida de la presentación de la PEC4.
-- **PDF:** el mismo contenido en un PDF para leer o imprimir (Playwright `page.pdf()` con una hoja de estilos de impresión), sin dependencias nuevas.
+- **PDF:** el diario en un PDF para leer o imprimir, como los del manual (Playwright `page.pdf()` con una hoja de estilos de impresión), sin dependencias nuevas.
 - **Publicado gratis** (Vercel o GitHub Pages) y enlazado desde el README. Sin nada del entorno de trabajo del autor ni texto literal del chat.
 
 ✅ `npm run diary` genera la web y el PDF sin errores, se lee bien en el móvil y en claro y oscuro, y no publica nada que no esté ya en el repositorio.
