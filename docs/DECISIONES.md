@@ -2947,6 +2947,8 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 - **Si una tarea no se completa, `npm run manual` falla** y dice cuál y en qué paso, con una captura del error en `tmp/manual`; no escribe un manual a medias. Una tarea que el panel ofrece como no disponible para ese usuario se lista con su motivo.
 - **Un manual por perfil** (`docs/manual/alumno.md`, `docente.md` y `administracion.md`): índice, bienvenida, primeros pasos, «¿Cómo se hace…?» y recorridos de pantalla; por tarea, su resumen y sus pasos con el texto del globo, lo que hay que hacer y la captura. El de la administración enlaza al del docente las tareas que comparten, en lugar de repetirlas.
 - **Capturas de la pieza y su globo con algo de pantalla alrededor** (al menos 880 × 520 de una ventana de 1280 × 800), en WebP: se leen sin ampliar y pesan poco en el repositorio.
+- **También en PDF, que es lo que se entrega** (a petición del autor): `npm run manual` escribe además `alumno.pdf`, `docente.pdf` y `administracion.pdf` desde una página de impresión con el mismo contenido (Playwright `page.pdf()`, sin dependencias nuevas): portada con la mascota y la fecha de la edición, índice con enlaces, marcadores, cada parte en su página, cada paso entero con su captura y número de página. Las capturas del PDF van en JPEG, que Chromium guarda tal cual: unos 13 MB los tres. `--reescribir` vuelve a escribir los manuales con lo recogido, sin repetir las tareas.
+- **El manual habla al usuario:** cómo se genera solo lo dice `docs/manual/README.md` y un comentario invisible del Markdown; la portada dice solo la fecha de la edición. El autor lo pidió al ver la primera versión.
 - **Solo en español** y con los datos de demostración, como las capturas de la memoria.
 - **Con el Chromium completo** (`channel: 'chromium'`), no con el navegador reducido de Playwright, que se cuelga al activar la voz del tutor. En paralelo, por trozos de cada perfil, y cada tarea con una segunda oportunidad si la primera carga tarda.
 
@@ -2956,6 +2958,6 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 - **Un manual escrito a mano o solo con los textos de las tareas:** se desfasa, y no prueba nada.
 - **Capturas de la pantalla entera en PNG:** unos 45 MB, y el texto del globo queda pequeño.
 
-**Consecuencias:** `npm run manual` hace también de prueba de toda la ayuda guiada (no entra en `npm run check` porque tarda unos minutos). Se vuelve a generar cuando cambian las tareas o las pantallas. El 7.0d (diario del proyecto) lo publica en HTML y PDF.
+**Consecuencias:** `npm run manual` hace también de prueba de toda la ayuda guiada (no entra en `npm run check` porque tarda unos minutos). Se vuelve a generar cuando cambian las tareas o las pantallas. El 7.0d (diario del proyecto) lo enlaza desde su web.
 
-**Aprobación:** el autor aprobó el plan del paso. Lo técnico, por delegación del autor.
+**Aprobación:** el autor aprobó el plan del paso, pidió el PDF y quitar del manual la nota de cómo se genera. Lo técnico, por delegación del autor.
