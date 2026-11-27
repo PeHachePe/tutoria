@@ -1,6 +1,6 @@
 # Decisiones técnicas
 
-Cada decisión nueva, o cada cambio sobre una anterior, va en su propia entrada. Las propone el agente y las aprueba el humano.
+Cada decisión nueva, o cada cambio sobre una anterior, va en su propia entrada. Las propone el agente y las aprueba el autor.
 
 ## D-001 · Decisiones de partida (06/11/2026)
 
@@ -113,7 +113,7 @@ Plantilla para las siguientes:
 
 ## D-009 · Métricas leyendo los registros de Claude Code, sin `ccusage` (06/11/2026)
 
-**Contexto:** el paso 0.2 permite calcular los tokens y el coste de cada sesión con `ccusage` o leyendo directamente los JSONL de `~/.claude/projects/`. `ccusage` es una dependencia más y toma los precios de una lista externa que puede no tener todavía los modelos recientes, como `claude-opus-5-5`. Además, en esos JSONL cada respuesta del modelo aparece en varias líneas con el mismo consumo (en la sesión del 0.1, 401 líneas para 150 respuestas), y hay que contarlas una sola vez.
+**Contexto:** el paso 0.2 permite calcular los tokens y el coste de cada sesión con `ccusage` o leyendo directamente los registros JSONL que guarda Claude Code. `ccusage` es una dependencia más y toma los precios de una lista externa que puede no tener todavía los modelos recientes, como `claude-opus-5-5`. Además, en esos JSONL cada respuesta del modelo aparece en varias líneas con el mismo consumo (en la sesión del 0.1, 401 líneas para 150 respuestas), y hay que contarlas una sola vez.
 
 **Decisión:**
 
@@ -154,7 +154,7 @@ Plantilla para las siguientes:
 
 ## D-011 · Integración continua con GitHub Actions (06/11/2026)
 
-**Contexto:** hoy, que el código que llega al repositorio pase `npm run check` depende de que el agente lo ejecute al cerrar cada paso y de que el autor lo revise antes del commit. Nada lo comprueba de forma independiente, y todo se prueba solo en el equipo del autor, con Windows. El repositorio está en GitHub (`PeHachePe/tutoria`).
+**Contexto:** hoy, que el código que llega al repositorio pase `npm run check` depende de que el agente lo ejecute al cerrar cada paso y de que el autor lo revise antes del commit. Nada lo comprueba de forma independiente, y todo se prueba solo en un equipo local, con Windows. El repositorio está en GitHub (`PeHachePe/tutoria`).
 
 **Decisión:**
 
@@ -165,7 +165,7 @@ Plantilla para las siguientes:
 
 **Alternativas:**
 
-- Un hook de pre-commit con Husky: otra dependencia, se salta con `--no-verify`, ralentiza cada commit a medida que crecen los tests y solo comprueba el equipo del autor.
+- Un hook de pre-commit con Husky: otra dependencia, se salta con `--no-verify`, ralentiza cada commit a medida que crecen los tests y solo comprueba el equipo local.
 - Las dos cosas: el hook duplicaría lo que ya hace el CI, sin aportar nada más.
 - Nada: la comprobación seguiría dependiendo de la disciplina del agente y del autor.
 
@@ -185,7 +185,7 @@ Plantilla para las siguientes:
 
 - De cada petición solo se registra la hora y la sesión (`"event": "prompt"`), nunca su texto. Se borró el texto de todas las peticiones ya registradas.
 - Los comandos y los archivos se siguen registrando, sin la salida de los comandos y sin la carpeta de usuario del equipo.
-- `eventos.jsonl` deja de subirse al repositorio: está en `.gitignore` y se queda en el equipo del autor. Las métricas no lo necesitan, porque se calculan con los registros locales de Claude Code.
+- `eventos.jsonl` deja de subirse al repositorio: está en `.gitignore` y se queda en local. Las métricas no lo necesitan, porque se calculan con los registros locales de Claude Code.
 
 **Alternativas:** guardar el texto truncado o resumido, que seguiría publicando parte de la conversación.
 
@@ -289,7 +289,7 @@ Plantilla para las siguientes:
 
 ## D-017 · Ajustes del plan tras contrastarlo con la memoria (07/11/2026)
 
-**Contexto:** al empezar el paso 0.5 se contrastó el plan con la memoria del TFM, con la consigna de proponer mejoras siempre que se vean. Al comparar sus requisitos (RF y casos de uso) con el plan v4.2 aparecieron huecos: cosas que la memoria promete y que el plan no construía.
+**Contexto:** al empezar el paso 0.5 se contrastó el plan con la memoria del TFM para detectar mejoras. Al comparar sus requisitos (RF y casos de uso) con el plan v4.2 aparecieron huecos: cosas que la memoria promete y que el plan no construía.
 
 **Decisión:** el plan pasa a la v4.3 con estos cambios:
 
@@ -509,7 +509,7 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 **Contexto:** el paso 1.1d recoge los detalles de los shells propuestos en el 1.1. El plan pedía las view transitions del router (`withViewTransitions()`) y el tema activo bien visible en el menú de usuario. Al implementarlo:
 
 - `withViewTransitions()` sigue en developer preview en Angular 22, y el lint del proyecto solo admite APIs estables (`@angular-eslint/no-developer-preview`, §4.8);
-- se probaron el tema y el idioma como submenús del menú de usuario, con la elección actual en cada entrada («Tema · Oscuro»), y no funcionaban bien: el segundo submenú se abre encima del primero y queda mal. Antes, con las opciones dentro del menú, el problema era que solo un ✓ marcaba la activa.
+- se probaron el tema y el idioma como submenús del menú de usuario, con la elección actual en cada entrada («Tema · Oscuro»), pero el segundo submenú se abre encima del primero y lo tapa. Con las opciones dentro del menú, en cambio, solo un ✓ marcaba la activa.
 
 **Decisión:**
 
@@ -600,7 +600,7 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
   - «Ejercicios» de la barra sigue resaltado dentro de un ejercicio, con `isActive()` del router (estable desde Angular 21.1), pero `aria-current="page"` solo lo lleva el catálogo;
   - `format-value.ts` pasa de `dev/` a `shared/`, porque producción no puede importar nada de `dev/`;
   - el lint de i18n ignora `scope`, un atributo de tabla que no se traduce.
-- **Iteración 1, mejoras que propuso Claude al revisar la pantalla:**
+- **Iteración 1, mejoras que propuso el agente al revisar la pantalla:**
   - la pantalla de trabajo usa hasta 100 rem (1600 px) de ancho, y las demás del alumno siguen en 1152 px, cómodos para leer: el layout lo decide con el mismo `isActive()` de la barra;
   - el enunciado muestra una sombra suave en el borde con más contenido por ver (utilidad `scroll-shadows` en `styles.css`, solo CSS y con tokens), para que el alumno sepa que se desplaza;
   - en el móvil, el título usa `title-medium` y como mucho dos líneas, y el contenido empieza más arriba;
@@ -639,7 +639,7 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 
 ## D-030 · Ejecutar y entregar: runner en un Worker por ejecución, resultados honestos y separador del enunciado (08/11/2026)
 
-**Contexto:** el paso 1.5 añade la ejecución de las pruebas con un Web Worker (datos simulados) y la entrega. Al revisar el paso salieron desajustes del plan (las transiciones no pasan todas por el servicio de intentos, el e2e del paso ya no toca por D-026, el explorador seguía con su ejecución simulada) y riesgos: el límite de 2 s contado desde la descarga del Worker, la comparación por JSON sensible al orden de las claves y ciega a `NaN` o `undefined`, el foco perdido al entregar y un guardado en curso que podía llegar después de la ejecución. Se añaden además las mejoras de UX que propuso Claude, el separador entre enunciado y código y el recuento de pruebas en el chip.
+**Contexto:** el paso 1.5 añade la ejecución de las pruebas con un Web Worker (datos simulados) y la entrega. Al revisar el paso salieron desajustes del plan (las transiciones no pasan todas por el servicio de intentos, el e2e del paso ya no toca por D-026, el explorador seguía con su ejecución simulada) y riesgos: el límite de 2 s contado desde la descarga del Worker, la comparación por JSON sensible al orden de las claves y ciega a `NaN` o `undefined`, el foco perdido al entregar y un guardado en curso que podía llegar después de la ejecución. Se añaden además las mejoras de UX que propuso el agente, el separador entre enunciado y código y el recuento de pruebas en el chip.
 
 **Decisión:**
 
@@ -786,7 +786,7 @@ Ya estaban en el plan y no cambian: «probar la conexión» del proveedor de IA 
 
 ## D-034 · Catálogo: sesiones con título, «entregado» frente a «superado» y por dónde seguir (09/11/2026)
 
-**Contexto:** el catálogo era poco vistoso, y «Sesión 1» no podía llevar un título como «Tema 1: Bucles»: la sesión era solo un número en `exercise_assignment.session`. Además, el catálogo plegaba al llegar las sesiones superadas enteras, de modo que Lucía, con el último ejercicio superado pero sin entregar, veía «8/8 superados» y cuatro sesiones plegadas: la pantalla invitaba a irse sin entregar (anotado en `PENDIENTES.md` desde el 1.6). Antes de reentregar la PEC2 con el código, el catálogo tenía que lucir.
+**Contexto:** el catálogo era poco vistoso, y «Sesión 1» no podía llevar un título como «Tema 1: Bucles»: la sesión era solo un número en `exercise_assignment.session`. Además, el catálogo plegaba al llegar las sesiones superadas enteras, de modo que Lucía, una alumna de los datos simulados, con el último ejercicio superado pero sin entregar, veía «8/8 superados» y cuatro sesiones plegadas: la pantalla invitaba a irse sin entregar (anotado en `PENDIENTES.md` desde el 1.6). El catálogo debía quedar presentable antes de reentregar la PEC2 con el código.
 
 **Decisión:**
 
@@ -867,15 +867,15 @@ Tras revisar la primera versión, con los colores del tema, las reacciones pasan
 
 ## D-036 · Reacciones: un catálogo de recetas declarativas, separado de la emoción (09/11/2026)
 
-**Contexto:** tras cerrar el 1.8 (D-035), la revisión de las reacciones en el navegador dejó estos puntos:
+**Contexto:** tras cerrar el 1.8 (D-035), la revisión de las reacciones en el navegador dejó estos requisitos:
 
-- un efecto raro con una sola reacción y al pedir pistas seguidas: la nueva cortaba la anterior;
-- un icono grande que lata en el centro de la pantalla y más cosas alrededor;
-- muchas reacciones distintas, que la IA pudiera, por ejemplo, lanzarle una piedra al alumno;
+- corregir un efecto extraño con una sola reacción y al pedir pistas seguidas: la nueva cortaba la anterior;
+- un icono grande que lata en el centro de la pantalla, con más elementos alrededor;
+- muchas reacciones distintas, hasta el punto de que la IA pudiera, por ejemplo, lanzarle una piedra al alumno;
 - que fuera fácil añadir expresiones en el futuro;
 - risas y enfado.
 
-Quedaba por decidir si la IA compondría las animaciones (iconos, si late o se lanza) o si convenía tenerlas configuradas en el back.
+Quedaba por decidir si la IA compondría las animaciones (iconos, si late o se lanza) o si convenía tenerlas configuradas en el back-end.
 
 **Decisión:**
 
@@ -923,7 +923,7 @@ Quedaba por decidir si la IA compondría las animaciones (iconos, si late o se l
 
 ## D-037 · Reacciones: emojis oficiales de Fluent, 3D o planos, y reacciones de broma (09/11/2026)
 
-**Contexto:** con el catálogo de recetas (D-036), las reacciones tenían que lucir más: emojis 3D en lugar de iconos planos, muchos y variados, animados si se podía, y bromas para cuando el alumno pide la solución. Solo de fuentes oficiales.
+**Contexto:** con el catálogo de recetas (D-036), se buscaba que las reacciones fueran más vistosas: emojis 3D en lugar de iconos planos, muchos y variados, animados si era posible, y bromas para cuando el alumno pide la solución, siempre de fuentes oficiales.
 
 **Decisión:**
 
@@ -998,7 +998,7 @@ Quedaba por decidir si la IA compondría las animaciones (iconos, si late o se l
 
 ## D-039 · Tailwind primero y estilos globales repartidos en `src/styles/` (10/11/2026)
 
-**Contexto:** al cerrar la fase 1 tocaba una revisión general de limpieza: `src/styles.css` lo más limpio posible y Tailwind siempre que sea viable, con CSS o SCSS como último recurso. `src/styles.css` mezclaba tokens, animaciones, base y utilidades, y el chat del tutor tenía su propio CSS.
+**Contexto:** al cerrar la fase 1 se hizo una revisión general de limpieza con dos objetivos: dejar `src/styles.css` lo más limpio posible y usar Tailwind siempre que sea viable, con CSS o SCSS como último recurso. `src/styles.css` mezclaba tokens, animaciones, base y utilidades, y el chat del tutor tenía su propio CSS.
 
 **Decisión:**
 
@@ -1033,7 +1033,7 @@ Quedaba por decidir si la IA compondría las animaciones (iconos, si late o se l
 
 - **Aviso de datos:** solo `app_user.privacy_notice_seen_at`, que prueba que se informó al alumno. El registro de eventos forma parte de la función educativa (RGPD art. 6.1.e), no se basa en el consentimiento: no se ofrece retirarlo, porque quitaría al docente justo la señal de foco y pegado, que se lee de forma formativa (§2.8).
 - **Seed:** crea primero las cuentas de `auth.users`, con su identidad de correo, la contraseña de prueba de las fixtures y las cuentas desactivadas bloqueadas hasta 2999; el trigger crea cada `app_user` y su inserción lo completa con `on conflict`, como preveía D-018. `updated_at` solo se mueve si la actualización no lo fija, para que el seed conserve las fechas de las fixtures.
-- **Configuración local:** puertos 553xx en lugar de 543xx, para convivir con otros proyectos de Supabase del Mac; registro público desactivado en `[auth]`. En `[auth.email]` tiene que quedar activado, porque si no se desactiva también el inicio de sesión con correo.
+- **Configuración local:** puertos 553xx en lugar de 543xx, para convivir con otros proyectos de Supabase en el mismo equipo; registro público desactivado en `[auth]`. En `[auth.email]` tiene que quedar activado, porque si no se desactiva también el inicio de sesión con correo.
 - **Tipos generados:** `npm run db:types` escribe `src/app/data/supabase/database.types.ts` y lo formatea; se excluye del lint y de la cobertura porque lo genera el CLI (D-010).
 
 **Alternativas:**
@@ -1042,7 +1042,7 @@ Quedaba por decidir si la IA compondría las animaciones (iconos, si late o se l
 - Columnas de `app_user` editables con un trigger que vigile qué cambia, en lugar del permiso por columna.
 - Crear el intento con un `insert` del cliente.
 - Ofrecer la retirada del consentimiento (`process_tracking_withdrawn_at`), que se llegó a escribir y se quitó en la revisión (se perdería la señal).
-- Parar el otro proyecto de Supabase para usar los puertos por defecto.
+- Parar los demás proyectos locales de Supabase para usar los puertos por defecto.
 
 **Consecuencias:**
 
@@ -1095,7 +1095,7 @@ Quedaba por decidir si la IA compondría las animaciones (iconos, si late o se l
 **Contexto:** el plan preveía, para el 2.3, una Edge Function `execute` que enviara el código a un Judge0 alojado con capa gratuita. Al planear el paso se compararon alternativas más libres:
 
 - los Judge0 o similares alojados (RapidAPI, Sulu, Piston, Wandbox, Glot, JDoodle…) tienen cuotas pequeñas o ninguna garantía, y algunos piden permiso a sus autores;
-- montarlos en un servidor propio exige una máquina Linux siempre encendida, y en el Mac Judge0 no funciona en Docker (cgroups v1);
+- montarlos en un servidor propio exige una máquina Linux siempre encendida, y en macOS Judge0 no funciona en Docker (cgroups v1);
 - ejecutar en el navegador no vale: el cliente no es de fiar y podría ponerse `passed`.
 
 Además, cualquier servicio externo gratuito recibe el código del alumnado sin un acuerdo de tratamiento de datos, lo que choca con la minimización de §2.10.
@@ -1121,7 +1121,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 **Alternativas:**
 
 - **Judge0 alojado:** el plan original. Tiene cuenta, clave, cuota diaria y una petición externa por ejecución, y el código sale a un tercero.
-- **Judge0 o Piston en un servidor propio:** coste o mantenimiento, y no funciona en local en el Mac.
+- **Judge0 o Piston en un servidor propio:** coste o mantenimiento, y no funciona en local en macOS.
 - **`node:vm` en un programa enviado a Judge0:** no aísla (`this.constructor.constructor('return process')()`), y obliga a leer una salida que el alumno puede manipular.
 - **Copiar el código compartido en `supabase/functions/_shared/`:** dos copias de la comparación que se pueden separar.
 
@@ -1152,8 +1152,8 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **Humor** (iteración 2, a petición del autor): el prompt permite un chascarrillo breve y amable cuando encaje (una broma como mucho, por ejemplo con algo curioso de su código o su mensaje), siempre seguido de la ayuda, nunca a costa del alumno, nunca si está frustrado y sin datos curiosos ajenos al ejercicio. Sin ejemplos concretos en el prompt, para que no los repita. Las bromas de reacción (`wink`, `secret`…) siguen reservadas para las peticiones de la solución; con un chiste, `laugh`. La batería del 2.5 comprobará que el humor no rebaja la regla absoluta.
 - **Despistes de escritura con su línea** (iteración 3, a petición del autor): una coma, un punto y coma, un paréntesis, una palabra mal escrita o una variable sin declarar no son la solución, así que el tutor los señala con claridad en cualquier nivel, con la línea y qué falta o sobra, sin reescribirla; las pistas graduadas quedan para la lógica. El sandbox recoge la línea del error (`lineNumber` en los de sintaxis y `solution.js:N` en el `stack` de los demás) en `RunLoadError.line` y `TestResult.line`, y la petición al modelo cita la línea y su texto.
 - **Emoción e intensidad con criterio** (iteración 4: salían siempre la misma reacción y la misma intensidad). El modelo no sabía qué significaba cada intensidad y respondía casi siempre `encouragement/2`. El prompt explica cuándo usar cada emoción (el dato del docente) y qué tamaño tiene cada intensidad en pantalla, empezando por 1. En seis situaciones de prueba salieron `celebration/3` (todo superado), `surprise/2` (pide la solución), `joy/2`, `encouragement/1` (pista) y `encouragement/2` (frustración), cada una con su reacción.
-- **Intensidades altas** (iteración 7, a petición del autor: que se vea más el efecto). Las reacciones son parte de la gracia, así que el prompt pide ser generoso: 2 es lo normal (una pista, una duda, un avance), 3 en cuanto haya chispa (superar pruebas, un buen razonamiento, una broma, un papel de teatro, una petición de la solución) y 1 solo para acompañar con empatía a un alumno frustrado, donde un efecto grande desentonaría. En once situaciones de prueba: seis con intensidad 3, tres con 2 y las dos de frustración con 1.
-- **Reacciones de teatro abiertas** (iteración 6, a petición del autor: que el tutor juegue, tome papeles y envíe reacciones distintas sin que sean tabú). Las bromas del catálogo (`wink`, `secret`, `seriously`, `throw`, `grumpy`) dejan de reservarse a las peticiones de la solución: el tutor puede fingir que se enfada con un punto y coma rebelde, lanzar una bola de papel a un despiste repetido o guiñar ante un truco, siempre que se note que es broma y con cariño. El único límite: nada de teatro si el alumno está frustrado o desanimado. Cambia la regla de D-036 y D-037 («nunca ante un error»), y los usos de esas reacciones en `REACTION_USES`. En la prueba: `grumpy` ante el mismo despiste, `wink` ante «devuelvo 9 siempre», `secret` ante la insistencia y `empathy`, sin teatro, ante «no sirvo para esto».
+- **Intensidades altas** (iteración 7, a petición del autor, para que el efecto se vea más). Las reacciones son parte de la gracia, así que el prompt pide ser generoso: 2 es lo normal (una pista, una duda, un avance), 3 en cuanto haya chispa (superar pruebas, un buen razonamiento, una broma, un papel de teatro, una petición de la solución) y 1 solo para acompañar con empatía a un alumno frustrado, donde un efecto grande desentonaría. En once situaciones de prueba: seis con intensidad 3, tres con 2 y las dos de frustración con 1.
+- **Reacciones de teatro abiertas** (iteración 6, a petición del autor, para que el tutor pueda jugar, adoptar papeles y enviar reacciones variadas). Las bromas del catálogo (`wink`, `secret`, `seriously`, `throw`, `grumpy`) dejan de reservarse a las peticiones de la solución: el tutor puede fingir que se enfada con un punto y coma rebelde, lanzar una bola de papel a un despiste repetido o guiñar ante un truco, siempre que se note que es broma y con cariño. El único límite: nada de teatro si el alumno está frustrado o desanimado. Cambia la regla de D-036 y D-037 («nunca ante un error»), y los usos de esas reacciones en `REACTION_USES`. En la prueba: `grumpy` ante el mismo despiste, `wink` ante «devuelvo 9 siempre», `secret` ante la insistencia y `empathy`, sin teatro, ante «no sirvo para esto».
 - **Emoji de respaldo mientras carga el 3D** (iteración 5: apareció una reacción sin imagen). Los emojis 3D animados pesan 400–500 KB; con el tutor real la respuesta llega de golpe y el texto corto acaba antes de que el emoji se descargue la primera vez, y hasta ahora la pieza escondía su icono sin nada que mostrar. Cada pieza con emoji animado lleva detrás una versión ligera, que se ve en cuanto carga y deja paso al animado cuando está listo; si el animado falla, se queda la ligera. Primero fue la plana en 2D; en la iteración 8 pasó a ser la 3D estática (abajo).
 - **3D estático en lugar de plano, y animados en segundo plano** (iteración 8). A veces seguía viéndose la versión de respaldo, la calidad de los animados es baja, y el autor propuso los estilos Color o 3D estático de Fluent. Medidas: el 3D estático en WebP de 256 px y calidad 85 pesa 4–8 KB (el Color, 9–25 KB; el plano, 2–4 KB; el animado, 300–500 KB) y es el mismo dibujo que el animado, así que el cambio no se nota. `npm run emojis` genera `public/reactions/still/` (45 emojis, unos 250 KB) y deja de generar los planos, que desaparecen. La capa de reacciones usa el estático de respaldo (`stillEmojiOf()`), y el ajuste «Emojis 3D» pasa a «Emojis animados»: desactivado, se ven los estáticos. Los ligeros (estáticos y pequeños) se descargan al poco de entrar; los animados, poco a poco en segundo plano (`EmojiPrefetcher.prefetchInBackground()`): en los momentos de reposo, de uno en uno, con prioridad baja y en orden de uso (pensando, bombilla, ánimo, fiesta, risa…), nunca con el ahorro de datos del navegador ni en 2G, y uno que falla se reintenta una vez a los 30 s. Se quedan en memoria durante la visita y en la caché HTTP para las siguientes. Hasta que alguna de sus dos imágenes ha cargado, la pieza enseña su icono en lugar de esconderlo: si las dos fallaran, se vería el icono, nunca un hueco (aparecieron piezas vacías con el código de antes en la pestaña, que pedía los planos ya borrados). Bajar la calidad de los animados apenas ahorraba (la risa, de 411 a 337 KB con calidad 45) y se veían peor: mejor subirla más adelante.
 - **Validación (§2.6):** zod y la detección de código (bloques con ``` y líneas con aspecto de código). Como mucho, dos llamadas al modelo: si la primera respuesta no vale, una segunda que refuerza la regla incumplida. Si tampoco vale, la respuesta por defecto en el idioma del alumno; en una intervención proactiva, silencio, porque un mensaje genérico interrumpiría para nada. El modelo recibe además el formato como `json_schema`, que Gemini y Ollama aceptan.
@@ -1364,7 +1364,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
   - con un código que supera los ejemplos: no hay línea que señalar ni pista que dar, y si no ha ejecutado ese código, que le invite a pulsar «Ejecutar». En ese caso, la línea de la petición no le impone un nivel.
 - **Historial como chat:** las 10 últimas interacciones van como mensajes de alumno y de tutor, y las respuestas del tutor como el JSON que escribió, para que siga respondiendo en ese formato.
 - **Código numerado** (`3| …`), y pistas que citan la línea solo cuando algún ejemplo falla.
-- **Ejemplos de sintaxis de un catálogo fijo** (iteración 1, a petición del autor: más ayuda cuando el alumno pide un ejemplo):
+- **Ejemplos de sintaxis de un catálogo fijo** (iteración 1, a petición del autor, para dar más ayuda cuando el alumno pide un ejemplo):
   - `SYNTAX_EXAMPLES`, en `data/tutor/syntax-examples.ts`, sin imports, tiene un ejemplo corto y genérico de función, `for`, `for…of`, `while`, `if`, variables, vectores, cadenas, `Math` y operadores, sin acumuladores ni nada que se parezca a un ejercicio;
   - el modelo pide los temas en el campo `syntax`, y el servidor añade sus ejemplos (dos como mucho) solo a una pregunta, nunca a una pista;
   - `syntaxTopicsIn()` reconoce la pregunta («¿cómo es la sintaxis del for?», «ponme un ejemplo de Math.floor») y añade una nota en la petición; también lo usa el tutor simulado.
@@ -1423,7 +1423,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 ## D-051 · Las herramientas del tutor: un registro con el formato de WebMCP, en el JSON de la respuesta (12/11/2026)
 
-**Contexto:** el paso 2.5e (D-047) da herramientas al tutor y las abre a los agentes del navegador con WebMCP. Al aprobar el plan se añadió poder preguntar por los propios datos («¿qué asignaturas tengo?», «¿cuántos me quedan?», «¿cuántos errores llevo?»), lo que obligaba a decidir si eso iba en el front o en el back, y se valoró objetivamente todo el diseño, usando el WebMCP de Angular en lo posible. Con esa valoración, el paso se partió en dos: el 2.5e (registro, consultas, navegación, interfaz y ajustes) y el 2.5f (lo que toca el código o la entrega).
+**Contexto:** el paso 2.5e (D-047) da herramientas al tutor y las abre a los agentes del navegador con WebMCP. Al aprobar el plan se añadió poder preguntar por los propios datos («¿qué asignaturas tengo?», «¿cuántos me quedan?», «¿cuántos errores llevo?»), lo que obligaba a decidir si eso iba en el front o en el back, y se revisó todo el diseño para usar el WebMCP de Angular en lo posible. Tras esa revisión, el paso se partió en dos: el 2.5e (registro, consultas, navegación, interfaz y ajustes) y el 2.5f (lo que toca el código o la entrega).
 
 **Decisión:**
 
@@ -1515,7 +1515,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **Límite diario del tutor: 60 llamadas por alumno en 24 horas,** además de las 6 por minuto. El plan gratuito del proveedor limita las llamadas del proyecto entero al día, así que ningún alumno puede gastar la cuota del resto. Se lee de una vez (`latest_tutor_calls` con la ventana del día; las del minuto son las más recientes). En la app, una espera de más de un minuto (`isLongWait()`) dice «Has llegado al límite de preguntas de hoy» y el botón «Reintentar a las 14:32», no una cuenta atrás de miles de segundos.
 - **Recarga ante un chunk viejo** (`reloadOnStaleChunk`): cada despliegue cambia los nombres de los chunks perezosos, y una pestaña abierta antes falla al navegar a una pantalla que no había visitado. El router la carga de cero una vez; si vuelve a fallar en 10 s, enseña el error, sin bucles.
 - **Respaldo gratuito del tutor:** Flash-Lite con 10 s, y detrás `gemma-4-31b-it` y `gemma-4-26b-a4b-it` con 30 s, de la misma API y clave y con cuota propia (en el seed y en la nube). El día del despliegue Google tuvo Flash-Lite saturado en el plan gratuito y el tutor no respondía; con la cadena, respondió Gemma. Un proveedor de otra empresa (Groq) queda en pendientes: Mistral ya no da clave gratuita sin más.
-- **Smoke e2e contra la URL pública** (`npm run smoke`, proyecto `smoke` de Playwright, opcional): sin servidor local; la URL y la cuenta de Lucas por defecto, y la contraseña la pide sin mostrarla, igual en macOS y Windows. Recorre el tutor real y falla si la CSP bloquea algo o si faltan las credenciales.
+- **Smoke e2e contra la URL pública** (`npm run smoke`, proyecto `smoke` de Playwright, opcional): sin servidor local; la URL y la cuenta de Lucas, un alumno del seed, por defecto, y la contraseña la pide sin mostrarla, igual en macOS y Windows. Recorre el tutor real y falla si la CSP bloquea algo o si faltan las credenciales.
 
 **Alternativas:**
 
@@ -1536,7 +1536,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 ## D-054 · La sesión en vivo: a quién atender y qué explicar a todos, descrito sin clasificar (13/11/2026)
 
-**Contexto:** el paso 4.1 hace la pantalla que el docente mira en plena clase. El plan pedía tres tarjetas («Necesitan ayuda», «Constancia», «Para revisar») y una tabla. Al probarlas resultaron poco útiles: repetían la tabla, obligaban a leer listas largas y no decían qué hacer. Además, no se debe clasificar a nadie, ni por esfuerzo ni por sospecha de copia, y la pantalla tiene que funcionar con datos simulados y reales a la vez.
+**Contexto:** el paso 4.1 hace la pantalla que el docente mira en plena clase. El plan pedía tres tarjetas («Necesitan ayuda», «Constancia», «Para revisar») y una tabla. Esas tarjetas repetían la tabla, obligaban a leer listas largas y no decían qué hacer. Además, no se debe clasificar a nadie, ni por esfuerzo ni por sospecha de copia, y la pantalla tiene que funcionar con datos simulados y reales a la vez.
 
 **Decisión:**
 
@@ -1792,7 +1792,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Probado contra Supabase local con el modelo real: una pista de nivel 1 con su acción, sin filas en `tutor_interaction`, y 403 para un alumno.
 - Queda en [PENDIENTES](PENDIENTES.md) probar desde el banco sin abrir el formulario.
 
-**Iteración 1 (revisión del autor):** «Ver como el alumno» resultaba redundante, y la X a la izquierda pedía una justificación. Se quita «Ver como el alumno» y su diálogo: «Probar como alumno» ya muestra el enunciado como lo leerá el alumno, y ahora se abre en el idioma de la pestaña abierta del formulario (`TryoutExercise.locale`, `openLocale` de `ExerciseTexts`), que era lo único que aportaba el otro. Solo se pierde ver el enunciado antes de tener pruebas válidas, que ya está en el formulario. La zona del enunciado pone `lang` siempre que el texto no está en el idioma de la interfaz, no solo cuando falta la traducción (WCAG 3.1.2). La X se queda a la izquierda: es la pauta de Material 3 para los diálogos a pantalla completa y el sitio de «Volver» en la pantalla del alumno. Lo aprobó el autor.
+**Iteración 1 (revisión del autor):** «Ver como el alumno» resultaba redundante, y se revisó la posición de la X a la izquierda. Se quita «Ver como el alumno» y su diálogo: «Probar como alumno» ya muestra el enunciado como lo leerá el alumno, y ahora se abre en el idioma de la pestaña abierta del formulario (`TryoutExercise.locale`, `openLocale` de `ExerciseTexts`), que era lo único que aportaba el otro. Solo se pierde ver el enunciado antes de tener pruebas válidas, que ya está en el formulario. La zona del enunciado pone `lang` siempre que el texto no está en el idioma de la interfaz, no solo cuando falta la traducción (WCAG 3.1.2). La X se queda a la izquierda: es la pauta de Material 3 para los diálogos a pantalla completa y el sitio de «Volver» en la pantalla del alumno. Lo aprobó el autor.
 
 **Aprobación:** el plan, con el diálogo a pantalla completa en lugar de una ruta, aprobado por el autor. En producción todo va contra el servidor real (`execute` y el modelo de IA); solo no se guarda nada. El detalle técnico, por delegación del autor.
 
@@ -1986,7 +1986,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 ## D-068 · El panel en vivo, replanteado: cada dato responde a una decisión del docente (17/11/2026)
 
-**Contexto:** al probarla, la sesión en vivo del 4.1 y el 4.1b resultó poco útil. No se sabía en qué grupo y asignatura se estaba (un título genérico y dos desplegables con el texto cortado); con los datos del seed, tres tarjetas vacías; casi ninguna gráfica; listas que crecían sin tope (el feed, la cola y veinticuatro tarjetas de alumnos), y una cola que daba como «a quién atender» cosas que no lo son, como salir de la ventana. Quedaba además por decidir cómo sigue el panel a un grupo que trabaja en bloques distintos (ideas A a E de `PENDIENTES.md`) y qué señales nuevas entran. El paso 4.1c lo replantea sin código.
+**Contexto:** la sesión en vivo del 4.1 y el 4.1b no respondía bien a lo que el docente necesita en clase. No se sabía en qué grupo y asignatura se estaba (un título genérico y dos desplegables con el texto cortado); con los datos del seed, tres tarjetas vacías; casi ninguna gráfica; listas que crecían sin tope (el feed, la cola y veinticuatro tarjetas de alumnos), y una cola que daba como «a quién atender» cosas que no lo son, como salir de la ventana. Quedaba además por decidir cómo sigue el panel a un grupo que trabaja en bloques distintos (ideas A a E de `PENDIENTES.md`) y qué señales nuevas entran. El paso 4.1c lo replantea sin código.
 
 **Decisión** (propuesta en el diseño del paso 4.1c):
 
@@ -2010,7 +2010,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **E (dos vistas con un botón):** D-054 ya descartó las vistas; el filtro de bloque da lo mismo en una sola pantalla.
 - **Retocar la pantalla del 4.1** (quitar columnas, añadir el bloque a cada fila): fue la primera propuesta del paso; se descartó para replantearla entera.
 - **La inactividad y la salida de la ventana como último grupo de la cola** (D-054): llenaban la cola de alumnos a los que el docente no tiene nada que resolver.
-- **El ritmo de escritura** (cientos de caracteres en segundos, pendiente del 2.5c): pide un evento nuevo, da falsos positivos (autocompletado, deshacer, el esqueleto que pone el tutor) y es justo el dato «por salir» y con tono de vigilancia que este replanteo quita. Queda como trabajo futuro.
+- **El ritmo de escritura** (cientos de caracteres en segundos, pendiente del 2.5c): pide un evento nuevo, da falsos positivos (autocompletado, deshacer, el esqueleto que pone el tutor) y es justo el tipo de dato que no responde a ninguna decisión y tiene tono de vigilancia, que este replanteo quita. Queda como trabajo futuro.
 - **Un mapa de alumnos por ejercicios:** descartado en D-054.
 - **Mantener «Lo último»:** era la columna que más crecía y no cambiaba ninguna decisión.
 
@@ -2022,7 +2022,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - Las figuras 9 y 18 de la memoria cambian: capturas nuevas en el 4.1e.
 - La fila de «Llamar al profesor» sigue en `PENDIENTES.md`: cuando se haga, será el primer motivo de la cola.
 
-**Aprobación:** propuesta. El autor revisó el boceto del replanteo y dejó el resto a criterio del agente, con dos condiciones: que sea útil de verdad para el docente y animado, y que no salgan datos por salir ni la salida de la ventana como algo que atender.
+**Aprobación:** propuesta. El autor revisó el boceto del replanteo y dejó el resto a criterio del agente, con dos condiciones: que resulte útil para el docente y animado, y que no aparezcan datos que no respondan a una decisión ni la salida de la ventana como algo que atender.
 
 **Hecho así (4.1e):** la pantalla de la ficha, con los cambios de D-070.
 
@@ -2135,7 +2135,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 ## D-073 · El histórico: lo que ya pasó, bloque a bloque, para dos decisiones fuera de clase (18/11/2026)
 
-**Contexto:** el paso 4.4 construye el histórico del grupo (`/docente/historico`, ficha 09, figuras 10 y 19 de la memoria). La especificación pedía una gráfica de la media de pistas por bloque y tres KPI (tiempo medio, porcentaje de superados y alumnos con señales), contando solo el intento que cuenta de cada asignación (D-046), y, por D-054, el ritmo de entrega respecto a la fecha. Con la regla del panel en vivo (D-068), cada dato tiene que responder a una decisión del docente. La primera versión, que seguía el plan al pie de la letra, no se aprobó al probarla: mezclaba la tendencia del grupo, un bloque y las fechas de todo el grupo sin decirlo; la gráfica no explicaba sus colores; con un solo bloque era una barra suelta; las entregas dejaban huecos y escondían los nombres tras «Ver quiénes». Se rehízo a partir de un boceto aprobado por el autor.
+**Contexto:** el paso 4.4 construye el histórico del grupo (`/docente/historico`, ficha 09, figuras 10 y 19 de la memoria). La especificación pedía una gráfica de la media de pistas por bloque y tres KPI (tiempo medio, porcentaje de superados y alumnos con señales), contando solo el intento que cuenta de cada asignación (D-046), y, por D-054, el ritmo de entrega respecto a la fecha. Con la regla del panel en vivo (D-068), cada dato tiene que responder a una decisión del docente. Una primera versión que seguía el plan al pie de la letra mezclaba la tendencia del grupo, un bloque y las fechas de todo el grupo sin decirlo; la gráfica no explicaba sus colores; con un solo bloque era una barra suelta; las entregas dejaban huecos y escondían los nombres tras «Ver quiénes». Se rehízo a partir de un boceto aprobado por el autor.
 
 **Decisión:**
 
@@ -2277,7 +2277,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 ## D-080 · Ayuda guiada: un único botón «Ayuda», tareas guiadas con driver.js y el manual generado de ellas (19/11/2026, propuesta)
 
-**Contexto:** hace falta una ayuda que explique cada perfil, sobre todo el del alumno y el del docente, marcando cada pieza paso a paso: visual, accesible y también en el móvil. Además, que se pueda volver a ella para ver cómo se hace algo concreto, y que sirva casi de manual. La cuenta del tribunal es de administración, así que su primera impresión será la ayuda.
+**Contexto:** hace falta una ayuda que explique cada perfil, sobre todo el del alumno y el del docente, marcando cada pieza paso a paso: visual, accesible y también en el móvil. Además, debe poder consultarse de nuevo para ver cómo se hace algo concreto y servir casi de manual. La cuenta del tribunal es de administración, así que su primera impresión será la ayuda.
 
 **Decisión:**
 
@@ -2332,7 +2332,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 - Pasos 7.0a (≈ 5 h), 7.0b (≈ 4 h) y 7.0c (≈ 2 h), antes del 7.1 para que sus e2e y axe ya recorran la ayuda. La fase 7 pasa de ≈ 15 h a ≈ 26 h.
 - Si falta tiempo, se recortan las tareas que no son primeros pasos, justo después del 7.3. Cada una es sobre todo texto, así que se pueden añadir más tarde.
-- Una dependencia nueva (`driver.js`), una columna en `app_user`, un store nuevo (`GuideStore`, §4.5) y la carpeta `core/guide/`.
+- Una dependencia nueva (`driver.js`), una tabla propia (`user_guide_state`), un store nuevo (`GuideStore`, §4.5) y la carpeta `core/guide/`.
 - El CSS de driver.js se adapta con los tokens del tema en `src/styles/guide.css` (D-039).
 - La pantalla de datos registrados cuenta qué se guarda de la ayuda.
 
@@ -2357,7 +2357,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - **«Duplicar» va en el menú de la clase** y copia solo los grupos de quien duplica (todos, para la administración), con su asignatura, nombre de desdoble y docente, en la clase del nombre y curso elegidos (creada, o la existente, a la que se une); con sus bloques y las fechas en semanas enteras (D-079) y, si se quiere, su alumnado. Los demás docentes añaden después sus asignaturas.
 - **La pantalla de grupos se rehace alrededor de la clase** (`?clase=`): se elige la clase; a un lado sus asignaturas (de todos sus docentes, con menú solo en las propias) y al otro su alumnado, con una nota por alumno («No cursa: …», el desdoble en que está o «De otra clase: …») y sus acciones. «Nueva clase» sugiere las clases que existen y, si se escribe una, se une a ella.
 - **La matrícula, como una tabla** (segunda iteración, a petición del autor, en lugar del sistema de altas y bajas): una fila por alumno y una columna por grupo de la clase, con las siglas de la asignatura (sacadas de sus iniciales: PB, DWEC; sin campo nuevo) y, debajo, el desdoble y el docente. En los grupos propios (todos, para la administración), una casilla matricula o da de baja al momento, y el aviso ofrece «Deshacer» en lugar de pedir confirmación en cada clic; en los de otros docentes solo se ve. «Quitar de la clase», que alcanza a todos, sigue pidiendo confirmación.
-- **Matricular a muchos de una vez** (también a petición del autor: había que conocer los nombres de los 30 alumnos y añadirlos uno a uno): el diálogo tiene «Sin clase este curso» (el alumnado activo sin clase en el curso, con «Seleccionar todos»; `class_candidates`), «Pegar una lista» (correos o nombres completos, uno por línea, hasta 500; dice qué líneas no tienen una cuenta de alumno, o tienen más de una; `match_students`), «De otra clase» y «Buscar». La pantalla envía los elegidos en peticiones de 50, una tras otra: cada una es todo o nada.
+- **Matricular a muchos de una vez** (también a petición del autor, porque había que conocer los nombres de los 30 alumnos y añadirlos uno a uno): el diálogo tiene «Sin clase este curso» (el alumnado activo sin clase en el curso, con «Seleccionar todos»; `class_candidates`), «Pegar una lista» (correos o nombres completos, uno por línea, hasta 500; dice qué líneas no tienen una cuenta de alumno, o tienen más de una; `match_students`), «De otra clase» y «Buscar». La pantalla envía los elegidos en peticiones de 50, una tras otra: cada una es todo o nada.
 - **Un solo panel** (tercera iteración: las asignaturas como tarjetas encima de la tabla no escalaban, porque puede haber 20, y faltaba el menú en la de otro docente): cada asignatura es una columna de la tabla, con su menú ⋮ en la cabecera (editar, ver sus bloques, matricular solo ahí, eliminar) o un candado y «La da …» si es de otro docente; con muchas, la tabla se desplaza en horizontal con los nombres fijos. «Matricular solo aquí» ofrece primero «De esta clase» (los que no están en el grupo, para elegirlos), no «Añadir los de esta clase» entera, que deshacía las excepciones.
 - **Las asignaturas se añaden en un solo sitio** (iteraciones cuarta a sexta: añadirlas desde dos diálogos era redundante, uno con desdoble y otro sin él). «Añadir clase» pide solo el nombre y el curso; si la clase existe lo dice («Esta clase ya existe (la dan …): únete con tus asignaturas») y no la crea otra vez. Después, siempre, el mismo diálogo «Añadir asignaturas a …», que sabe qué grupos tiene la clase (`school_classes` trae todos, con su desdoble y su docente). Tiene la estética del de matrícula (séptima iteración, tras descartar un desplegable múltiple cuyo aviso «un desdoble se añade solo» no se entendía): la lista de las asignaturas del centro, por orden alfabético y con filtro, y debajo las elegidas, cada una «Toda la clase» o «Desdoble» con su nombre; una que la clase ya tiene para toda la clase solo puede ser desdoble. Se añaden de una en una con `add_class_group`: si una falla, las añadidas salen de las elegidas y el resto espera otro intento.
 - **Un desdoble puede crearse antes que el grupo de toda la clase** (para el docente que da de alta su asignatura antes): con una sola asignatura nueva, la casilla «Es un desdoble (la asignatura se da partida)» le da nombre y lo crea sin alumnos. El grupo de toda la clase que llegue después no toma a quien ya está en un desdoble de esa asignatura, ni al crearse ni al matricular en la clase. Los desdobles se numeran desde «Desdoble 1», haya o no grupo de toda la clase.
@@ -2489,7 +2489,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - `docs/DESPLIEGUE.md`: `db push --remote` y volver a desplegar `admin-users`.
 - Para la memoria: el cierre de curso real de un centro de FP (promociona, repite, titula, baja) se definió con el autor, y por qué la evaluación informa pero no bloquea.
 
-**Aprobación:** el autor aprobó el plan. Al probarlo se vio que se podía matricular a una alumna de baja; se optó por no bloquear y avisar, con la vista de centro para la administración. De la misma revisión salieron la procedencia en «Buscar» y el 5.2h (quién gestiona a un alumno al que no se da clase y quién da de alta a los nuevos), los mensajes de «no encontrado» (Andrea no salía en la búsqueda), mirar la última clase aunque no sea la copiada (no lo hacía: se corrigió) y la regla de una clase por curso. El detalle técnico, por delegación del autor.
+**Aprobación:** el autor aprobó el plan. Al probarlo se vio que se podía matricular a una alumna de baja; se optó por no bloquear y avisar, con la vista de centro para la administración. De la misma revisión salieron la procedencia en «Buscar» y el 5.2h (quién gestiona a un alumno al que no se da clase y quién da de alta a los nuevos), los mensajes de «no encontrado» (una alumna de los datos de ejemplo, Andrea, no salía en la búsqueda), mirar la última clase aunque no sea la copiada (no lo hacía: se corrigió) y la regla de una clase por curso. El detalle técnico, por delegación del autor.
 
 ## D-085 · El alta de varios alumnos con la lista de secretaría, y el ancho fijo de los diálogos con formulario (21/11/2026, propuesta)
 
@@ -2538,7 +2538,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - `docs/DESPLIEGUE.md`: volver a desplegar `admin-users`.
 - Para la memoria: lo que pesa en un centro no es crear las cuentas, sino entregarlas; por eso el paso acaba en un CSV y en tiras para recortar.
 
-**Aprobación:** el autor aprobó el plan. De la prueba salieron dos arreglos: el ancho de los diálogos con formulario (el de «Nuevo usuario» cambiaba al pulsar el ojo) y el nombre del PDF, que se guardaba como «Claude.pdf» (era el navegador interno; ahora se llama como el CSV). Paso aprobado. El detalle técnico, por delegación del autor.
+**Aprobación:** el autor aprobó el plan. De la prueba salieron dos arreglos: el ancho de los diálogos con formulario (el de «Nuevo usuario» cambiaba al pulsar el ojo) y el nombre del PDF, que tomaba el título de la ventana del navegador (ahora se llama como el CSV). Paso aprobado. El detalle técnico, por delegación del autor.
 
 ## D-086 · El dictado: el campo de siempre, que el alumno revisa y envía (21/11/2026, propuesta)
 
@@ -2618,7 +2618,7 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 - La medición de los diez turnos la hace el autor y decide el 6.1d (`PENDIENTES.md`); también si Chrome de Android pita al reabrir el micrófono.
 - En [E2E-PENDIENTES](E2E-PENDIENTES.md), el e2e de la llamada con un reconocimiento falso y axe en cada estado.
 
-**Aprobación:** el autor aprobó la tarjeta C y las propuestas. De su revisión salieron la llamada sin `effect()` y el aviso en lugar del sondeo de la pregunta que espera (se quedan los tres temporizadores de tiempo sin voz). Para interrumpir con una sola tecla se valoraron Esc y Control sola; Claude eligió Control sola, con Ctrl + . para pausar, por delegación del autor. Probado en el navegador y aprobado.
+**Aprobación:** el autor aprobó la tarjeta C y las propuestas. De su revisión salieron la llamada sin `effect()` y el aviso en lugar del sondeo de la pregunta que espera (se quedan los tres temporizadores de tiempo sin voz). Para interrumpir con una sola tecla se valoraron Esc y Control sola; el agente eligió Control sola, con Ctrl + . para pausar, por delegación del autor. Probado en el navegador y aprobado.
 
 ## D-088 · El tutor proactivo en el navegador: una función sin imports, los eventos de la visita y una intervención que no se ve hasta que habla (22/11/2026, propuesta)
 
@@ -2728,11 +2728,11 @@ Además, cualquier servicio externo gratuito recibe el código del alumnado sin 
 
 ## D-091 · Los unitarios con el equipo cargado: consultas dentro de su zona, Material sin animaciones y la mitad de los núcleos (23/11/2026, propuesta)
 
-**Contexto:** desde el 6.2b, `npm run check` fallaba con el equipo cargado, siempre en tests distintos de las pantallas grandes del docente. En la línea base de esta sesión fallaron 22 tests de 5 ficheros, casi todos por los 15 s; solos, pasaban. Medido con perfiles de CPU y contando las llamadas a `getComputedStyle()`, salieron tres causas que se suman:
+**Contexto:** desde el 6.2b, `npm run check` fallaba con el equipo cargado, siempre en tests distintos de las pantallas grandes del docente. En la medición de partida fallaron 22 tests de 5 ficheros, casi todos por los 15 s; solos, pasaban. Medido con perfiles de CPU y contando las llamadas a `getComputedStyle()`, salieron tres causas que se suman:
 
 - **Las consultas a toda la página.** `getByRole(…, { name })` calcula el nombre accesible de cada elemento con ese rol y, para saber qué está oculto, el estilo de cada elemento de dentro. jsdom 30 calcula para cada uno la cascada entera, en torno a 1 ms, y la olvida con cualquier cambio del DOM. En la página de bloques de 1.º DAW A, con 1300 elementos y 127 botones, una consulta de botón por nombre sobre `screen` calculaba unos 630 estilos: medio segundo. Las consultas eran la mitad del tiempo de `blocks-page.spec.ts`.
 - **Las animaciones de Material.** jsdom no las reproduce, y Material esperaba cada una con un temporizador: un diálogo no tomaba el foco ni avisaba de que se había cerrado hasta que vencía, y un menú tampoco se daba por cerrado. En Grupos, «Añadir asignaturas a…» se abre después de guardar la clase y de cerrar el primer diálogo, y con carga no llegaba en el segundo que espera `findByRole`.
-- **Demasiados workers.** Vitest lanza tantos como núcleos menos uno: 7 en el M3 de desarrollo, que tiene 4 núcleos de rendimiento y 4 de eficiencia, mientras Docker (Supabase) y otra aplicación ocupaban la CPU. Vitest empieza por los ficheros más lentos, así que las pantallas grandes corrían a la vez en los núcleos lentos. En la suite entera, un test tardaba entre 20 y 60 veces lo que tarda solo, sobre todo al principio de cada fichero. La memoria no era el problema: los workers sumaban unos 2,2 GB y el swap no creció.
+- **Demasiados workers.** Vitest lanza tantos como núcleos menos uno: 7 en el equipo de desarrollo (un Apple M3, con 4 núcleos de rendimiento y 4 de eficiencia), mientras Docker (Supabase) y otras aplicaciones ocupaban la CPU. Vitest empieza por los ficheros más lentos, así que las pantallas grandes corrían a la vez en los núcleos lentos. En la suite entera, un test tardaba entre 20 y 60 veces lo que tarda solo, sobre todo al principio de cada fichero. La memoria no era el problema: los workers sumaban unos 2,2 GB y el swap no creció.
 
 Además, un test que se pasa del tiempo no se detiene: en la línea base, el de crear un ejercicio siguió tecleando `[2, 3]` dentro del siguiente, que falló por eso. Es el fallo «por el orden» que se vio en el 6.2c.
 
@@ -2740,7 +2740,7 @@ Además, un test que se pasa del tiempo no se detiene: en la línea base, el de 
 
 - **Los elementos que se repiten se buscan dentro de su zona,** como los busca el docente: los botones de un bloque y de sus ejercicios, dentro del bloque (`blockButton()`, `blockMenu()` y `exerciseMenu()` en `blocks-page.spec.ts`), y los de la barra para borrar varios bloques, dentro de la barra. `class-students.spec.ts` ya lo hacía con las casillas de la tabla (`box()`). Los botones de la página sin zona propia («Nuevo bloque», «Seleccionar», «Copiar de otro grupo») siguen buscándose en `screen`: son uno o dos por test.
 - **Material sin animaciones en todos los unitarios:** `src/providers-testing.ts`, el `providersFile` del builder de Angular. Un test puede volver a activarlas. Tres specs lo hacían por su cuenta (`staff-layout`, `dev-toolbar` y `showcase-page`) y dejan de repetirlo.
-- **`maxWorkers: '50%'`** en `vitest-base.config.mts`, salvo en el CI: en el M3, sus 4 núcleos de rendimiento. El CI es una máquina limpia, donde estos tests no fallaban, y sigue con lo que Vitest pone por defecto (3 workers con sus 4 vCPU), para no alargar el job `check` sin ganar nada (iteración 2).
+- **`maxWorkers: '50%'`** en `vitest-base.config.mts`, salvo en el CI: en el equipo de desarrollo, sus 4 núcleos de rendimiento. El CI es una máquina limpia, donde estos tests no fallaban, y sigue con lo que Vitest pone por defecto (3 workers con sus 4 vCPU), para no alargar el job `check` sin ganar nada (iteración 2).
 - **Los tiempos máximos no cambian:** 15 s por test y la espera de Testing Library para los diálogos. No hizo falta alargarlos.
 
 **Resultados,** en el mismo equipo y con la misma carga de fondo (suite entera de unitarios, 3256 tests):
@@ -2961,3 +2961,30 @@ En `blocks-page.spec.ts`, los estilos calculados bajan de 49 600 a 25 200. Despu
 **Consecuencias:** `npm run manual` hace también de prueba de toda la ayuda guiada (no entra en `npm run check` porque tarda unos minutos). Se vuelve a generar cuando cambian las tareas o las pantallas. El 7.0d (diario del proyecto) lo enlaza desde su web.
 
 **Aprobación:** el autor aprobó el plan del paso; el PDF y quitar del manual la nota de cómo se genera, a petición suya. Lo técnico, por delegación del autor.
+
+## D-099 · El diario del proyecto: un generador sin framework, un tablero de pasos y una presentación (27/11/2026, propuesta)
+
+**Contexto:** el 7.0d convierte lo registrado en `docs/` en algo que se lea a gusto: para la tutora en la PEC3, para el tribunal y como base de la presentación de la PEC4. Los primeros bocetos eran una página larga con todo seguido, y navegarla resultaba incómodo. Además, la documentación tenía frases de crónica del chat y capturas que no aportaban, que el diario habría hecho más visibles.
+
+**Decisión:**
+
+- **`npm run diary`, un script de Node sin framework:** lee `docs/` y la fecha de los commits, y escribe en `dist/diary/` (ignorada por git) una web estática de HTML, CSS y JavaScript propios. Sin dependencias nuevas: las capturas pasan a WebP con `sharp` y el PDF sale de Playwright, que ya estaban.
+- **Dos páginas con los mismos datos y sin scroll infinito:**
+  - **el diario** (`index.html`): un tablero en zigzag con una casilla por paso, del color de su fase; la carlina avanza de casilla en casilla y al lado se abre la ficha del paso (qué se hizo, problemas, validación, decisiones y capturas). Cuatro vistas más: cifras, la evolución de cada pantalla, las decisiones paginadas y filtrables, y el guion con las frases para la presentación;
+  - **la presentación** (`laminas.html`): 17 láminas a pantalla completa en el orden de una demo (problema, propuesta, alumno, tutor, docente, administración, cómo se construyó, cifras y lo que queda), con notas del orador (tecla N) e índice.
+- **Las cifras salen de `docs/` cada vez,** y el texto pensado para el público (las láminas, las notas y lo que ganó el tutor en cada versión de sus instrucciones) está escrito una vez, en `scripts/diary/content.mjs`.
+- **Las entregas son hitos, no pasos:** la PEC3 y la PEC4 se muestran como hitos, y como pendiente solo lo que el plan deja para después de la PEC3. Lo que se termina antes de entregar no aparece como pendiente.
+- **Las capturas que no aportan no se muestran:** el generador descarta la que enseña la página de error y la que repite la versión anterior. Las siete que había así se borraron del repositorio.
+- **El PDF solo con `--pdf`:** las láminas, una por página de 16:9. Se genera al cerrar cada entrega, no en cada paso, porque cambia con el proyecto.
+- **El paso incluyó una revisión del tono de toda la documentación** (bitácoras, decisiones, registro, pendientes y fichas): sin crónica de la conversación ni detalles del entorno del autor, los problemas como hallazgo y solución, y en «Para la presentación» solo lo que le dice algo a quien no conoce el proyecto.
+
+**Alternativas:**
+
+- **Una página larga con secciones, índice lateral y animaciones al bajar:** se probó en tres estilos y resultaba incómoda de navegar.
+- **Una aplicación Angular:** el diario es documentación del proyecto, no parte del producto, y no necesita framework.
+- **Las imágenes dentro del HTML:** unos 4 MB por página, y no se pueden reutilizar entre las dos.
+- **Publicarlo ya:** sus datos cambian hasta la entrega.
+
+**Consecuencias:** se ejecuta al cerrar la PEC3 y la PEC4, y su resultado se publica y se enlaza desde el README entonces (`PENDIENTES.md`). El manual de usuario se cuenta en las cifras; sus PDF siguen en `docs/manual/`.
+
+**Aprobación:** el autor eligió el tablero y la presentación entre los prototipos, pidió la revisión del tono y aprobó el guion de las láminas. Lo técnico, por delegación del autor.

@@ -4467,18 +4467,18 @@ Commit: `docs(guide): user manual generated from the guided tasks (step 7.0c)`.
 
 Todo lo que se registra en `docs/` (el plan, el registro, las bitácoras, las decisiones, las capturas y el manual) se convierte en algo que se lee a gusto: para el tribunal, para la memoria y como materia prima de la presentación de la PEC4.
 
-- **`npm run diary`:** un script de Node, sin Angular ni framework, que lee `docs/` y genera una web estática (HTML y CSS propios, con algo de JavaScript solo para buscar y filtrar) en una carpeta ignorada por git. Se rehace cuando se quiera, así que al final de la PEC4 recoge todo.
-- **Qué enseña:**
-  - **Línea de tiempo:** cada paso por fecha, con qué se hizo, las horas humanas y de Claude, los tokens, el coste equivalente, los tests, la validación del autor y sus commits, enlazado a su bitácora completa.
-  - **Evolución de las pantallas:** las capturas de cada pantalla en orden, de su primera versión a la última.
-  - **Decisiones:** cada una con su contexto, lo que se eligió, las alternativas y quién la aprobó, enlazada desde los pasos que la citan y filtrable.
-  - **Cifras:** horas estimadas frente a reales por fase, horas y tokens acumulados, tests y líneas de código, en gráficas sencillas (SVG generado por el script).
-  - **El manual de usuario** (7.0c) de los tres perfiles, con sus capturas, y enlaces a sus PDF.
-  - **Para la presentación:** las frases «Para la presentación» de cada bitácora y las cifras destacadas, juntas, como guion de partida de la presentación de la PEC4.
-- **PDF:** el diario en un PDF para leer o imprimir, como los del manual (Playwright `page.pdf()` con una hoja de estilos de impresión), sin dependencias nuevas.
-- **Publicado gratis** (Vercel o GitHub Pages) y enlazado desde el README. Sin nada del entorno de trabajo del autor ni texto literal del chat.
+- **`npm run diary`:** un script de Node, sin Angular ni framework, que lee `docs/` y genera una web estática (HTML, CSS y JavaScript propios) en `dist/diary/`, ignorada por git. Se rehace cuando se quiera, así que en cada entrega recoge todo (D-099).
+- **El diario** (`index.html`), sin scroll infinito, en cinco vistas:
+  - **Camino:** un tablero con una casilla por paso, del color de su fase, y su ficha: qué se hizo, problemas, validación, decisiones, capturas, horas, coste y tests. La PEC3 y la PEC4 son hitos, y solo queda como pendiente lo que el plan deja para después de la PEC3.
+  - **Cifras:** el plan frente a las horas reales por fase, tests y coste día a día, commits por día, la batería de elusión y cómo cambiaron las instrucciones del tutor.
+  - **Pantallas:** la evolución de cada pantalla, versión a versión, en escritorio y en móvil.
+  - **Decisiones:** paginadas, filtrables y enlazadas con los pasos que las citan.
+  - **Guion:** las frases «Para la presentación» de las bitácoras, con favoritas para la defensa.
+- **La presentación** (`laminas.html`): 17 láminas en el orden de una demo, con notas del orador; su texto está en `scripts/diary/content.mjs`.
+- **PDF de las láminas** con `npm run diary -- --pdf` (Playwright `page.pdf()`), sin dependencias nuevas. Se genera al cerrar cada entrega.
+- **Publicado gratis** (Vercel o GitHub Pages) y enlazado desde el README al cerrar la PEC3. Sin nada del entorno de trabajo del autor ni texto literal del chat: el paso incluye la revisión del tono de toda la documentación.
 
-✅ `npm run diary` genera la web y el PDF sin errores, se lee bien en el móvil y en claro y oscuro, y no publica nada que no esté ya en el repositorio.
+✅ `npm run diary` genera la web sin errores, se lee bien en el móvil y en claro y oscuro, y no publica nada que no esté ya en el repositorio.
 Commit: `docs(diary): project diary as a static site and a PDF (step 7.0d)`.
 
 **7.1 · Accesibilidad y responsive**

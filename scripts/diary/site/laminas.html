@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TutorIA · Presentación</title>
+    <link rel="icon" href="favicon.svg" />
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="laminas.css" />
+  </head>
+  <body>
+    <main class="deck" id="deck" aria-roledescription="presentación" aria-live="polite"></main>
+    <button class="arrow prev" type="button" data-go="-1" aria-label="Lámina anterior">←</button>
+    <button class="arrow next" type="button" data-go="1" aria-label="Lámina siguiente">→</button>
+    <footer class="dock">
+      <a class="btn" href="index.html">🗺️ Diario</a>
+      <button class="btn" type="button" data-index aria-haspopup="dialog">☰ Índice</button>
+      <button
+        class="btn"
+        type="button"
+        data-notes
+        aria-pressed="false"
+        title="Notas del orador (tecla N)"
+      >
+        🗒 Notas
+      </button>
+      <nav class="dots" aria-label="Láminas"></nav>
+      <span class="count" aria-live="off"></span>
+      <button
+        class="btn icon"
+        type="button"
+        data-theme-toggle
+        aria-label="Cambiar entre claro y oscuro"
+      >
+        ◐
+      </button>
+    </footer>
+    <dialog id="toc" aria-labelledby="toc-title"></dialog>
+    <script src="data.js"></script>
+    <script src="common.js"></script>
+    <script src="laminas.js"></script>
+  </body>
+</html>

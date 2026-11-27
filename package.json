@@ -26,6 +26,7 @@
     "smoke": "node scripts/smoke.mjs",
     "screenshots": "node scripts/screenshots.mjs",
     "manual": "node scripts/manual.mjs",
+    "diary": "node scripts/diary.mjs",
     "favicon": "node scripts/generate-favicon.mjs",
     "emojis": "node scripts/generate-reaction-emojis.mjs",
     "elusion": "node scripts/elusion.mjs",

@@ -19,6 +19,7 @@ Un manual por perfil, generado desde las tareas guiadas de la propia aplicación
 - [Decisiones](docs/DECISIONES.md): cada decisión técnica y de producto, con su contexto y sus alternativas.
 - [Registro de trabajo y de uso de IA](docs/REGISTRO.md) y [bitácora](docs/bitacora/) de cada paso, con sus [capturas](docs/capturas/).
 - [Fichas de pantalla](docs/screens/) y [despliegue](docs/DESPLIEGUE.md).
+- **Diario del proyecto:** `npm run diary` genera en `dist/diary/` una web con todo lo anterior (un tablero con cada paso, las cifras, la evolución de las pantallas y las decisiones) y la presentación del proyecto; `npm run diary -- --pdf` añade las láminas en PDF.
 
 ## Arrancarla en local
 

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diario de TutorIA</title>
+    <link rel="icon" href="favicon.svg" />
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="camino.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Saltar al contenido</a>
+    <header class="topbar">
+      <a class="brand" href="#camino"
+        ><img src="favicon.svg" alt="" width="34" height="34" /><span
+          >Diario de <b>TutorIA</b></span
+        ></a
+      >
+      <nav class="tabs" aria-label="Secciones">
+        <a href="#camino" data-view="camino"><span aria-hidden="true">🗺️</span> Camino</a>
+        <a href="#cifras" data-view="cifras"><span aria-hidden="true">📊</span> Cifras</a>
+        <a href="#pantallas" data-view="pantallas"><span aria-hidden="true">🪄</span> Pantallas</a>
+        <a href="#decisiones" data-view="decisiones"
+          ><span aria-hidden="true">🧭</span> Decisiones</a
+        >
+        <a href="#guion" data-view="guion"><span aria-hidden="true">🎤</span> Guion</a>
+      </nav>
+      <a class="btn" href="laminas.html">▶ Presentación</a>
+      <button
+        class="btn icon"
+        type="button"
+        data-theme-toggle
+        aria-label="Cambiar entre claro y oscuro"
+      >
+        ◐
+      </button>
+    </header>
+
+    <main id="main">
+      <section class="view" id="v-camino" aria-label="El camino">
+        <div class="board-side">
+          <div class="board-top">
+            <p class="lead">
+              <b>86 casillas, una por paso.</b> Pulsa una o usa <kbd>←</kbd> <kbd>→</kbd> para
+              avanzar con la carlina.
+            </p>
+            <div class="legend" role="group" aria-label="Resaltar una fase"></div>
+          </div>
+          <div class="board" id="board"></div>
+        </div>
+        <aside class="detail" id="detail" aria-live="polite"></aside>
+      </section>
+      <section class="view" id="v-cifras" aria-label="Cifras" hidden></section>
+      <section class="view" id="v-pantallas" aria-label="Pantallas" hidden></section>
+      <section class="view" id="v-decisiones" aria-label="Decisiones" hidden></section>
+      <section class="view" id="v-guion" aria-label="Guion de la defensa" hidden></section>
+    </main>
+    <dialog id="dlg" aria-labelledby="dlg-title"></dialog>
+    <script src="data.js"></script>
+    <script src="common.js"></script>
+    <script src="camino.js"></script>
+  </body>
+</html>
