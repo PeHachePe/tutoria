@@ -60,7 +60,7 @@ Unitarios: 1841 (nuevos: 0) · e2e: 39. Sesión sin código. No se ejecutó `npm
 
 ## Validación humana
 
-- El autor eligió la fase 5 entre las opciones que propuso el agente y pidió su plan.
+- El autor eligió la fase 5 entre las opciones que propuso el agente.
 - Recibió el resumen de las decisiones tomadas por el agente (las de D-072, la partición en cinco subpasos y que las asignaturas entren en el 5.3) y ejecutó el commit sin pedir cambios.
 
 ## Capturas

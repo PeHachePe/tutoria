@@ -85,7 +85,7 @@ Después, `npm run check` tres veces seguidas, todas en verde, con Supabase y la
 
 Claude lo comprobó con las pasadas de arriba: la línea base reproduce los fallos, cada cambio se midió por separado y los tres `check` seguidos pasan enteros.
 
-**Iteración 2:** el autor preguntó si lo había solucionado y qué pasaba, y después qué ganaba el CI con 2 workers en lugar de 3. Nada: el CI no fallaba, y el comentario daba por hecho, sin comprobarlo, que sus vCPU son dos hilos por núcleo. El CI vuelve a lo de Vitest por defecto y el comentario y D-091 se corrigen. Preguntó también qué era la fila del 1.10 (`app.routes.spec.ts`) y aceptó cerrarla con D-091: mismo patrón y ningún fallo en seis pasadas completas.
+**Iteración 2:** el CI no ganaba nada con 2 workers en lugar de 3: el CI no fallaba, y el comentario daba por hecho, sin comprobarlo, que sus vCPU son dos hilos por núcleo. El CI vuelve a lo de Vitest por defecto y el comentario y D-091 se corrigen. La fila del 1.10 (`app.routes.spec.ts`) se cierra con D-091: mismo patrón y ningún fallo en seis pasadas completas.
 
 ## Métricas
 

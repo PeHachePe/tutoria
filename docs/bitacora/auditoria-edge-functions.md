@@ -63,9 +63,9 @@ Cobertura de la app, 100 %.
 
 ## Validación humana
 
-El autor pidió la auditoría y, vistos los hallazgos, que se arreglara todo decidiendo lo más útil; ejecutó los commits. Las decisiones de producto de D-063 quedan a su revisión. Publicado en la nube el 16/11 por el autor: las dos migraciones de la auditoría y las tres funciones.
+Vistos los hallazgos, se arregló todo decidiendo lo más útil; el autor ejecutó los commits. Las decisiones de producto de D-063 quedan a su revisión. Publicado en la nube el 16/11 por el autor: las dos migraciones de la auditoría y las tres funciones.
 
-Iteración 1: el autor pidió revisar lo hecho en otra sesión y, vistos los dos huecos, arreglarlos.
+Iteración 1: revisión de lo hecho en otra sesión; los dos huecos encontrados, arreglados.
 
 ## Capturas
 

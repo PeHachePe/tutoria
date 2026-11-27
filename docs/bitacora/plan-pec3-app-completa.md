@@ -35,7 +35,7 @@ Reordenar el plan para entregar la aplicación completa en la PEC3 y dejar la PE
 ## Problemas y cómo se resolvieron
 
 - La sesión del 1.7, en paralelo, confirmó `PLAN.md`, `DECISIONES.md` y `metricas.csv` con estos cambios dentro (`54e81cc`), así que el commit propio (`0018c12`) solo llevó esta bitácora.
-- El autor creía que la PEC3 pedía la versión final. El enunciado pide una beta; el objetivo de llegar con la aplicación completa se fijó igualmente, por la carga de la PEC4.
+- El enunciado de la PEC3 pide una beta, no la versión final; el objetivo de llegar con la aplicación completa se fijó igualmente, por la carga de la PEC4.
 - Había trabajo del 1.7 sin confirmar en el árbol: las métricas del repositorio de esta sesión lo incluyen. Lo de esta sesión son solo los tres documentos (+63 / −33 líneas en el plan y las decisiones).
 
 ## Decisiones
