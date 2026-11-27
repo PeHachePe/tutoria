@@ -1184,7 +1184,7 @@ Cada paso indica una estimación orientativa de horas, lo que se hace, cuándo e
 
 ### Bloque A · Hasta la PEC3 (la aplicación completa)
 
-Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b1, 7.0b2, 7.0c, 7.0d, 7.1 y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
+Los pasos se hacen en este orden: fases 0, 1 y 2; 3.1 (despliegue en la nube); fases 4 y 5; 6.1 y 6.2; 7.0a, 7.0b1, 7.0b2, 7.0c, 7.0d, 7.1a1, 7.1a2, 7.1a3, 7.1b, 7.1c, 7.1d y 7.2; y, al final, 3.2 (entrega de la PEC3). El bloque B, hasta la PEC4, son el 6.3, el 7.3 y el 7.4, más lo que se recorte del bloque A (D-032). La numeración no cambia para no romper las referencias de la bitácora.
 
 #### Fase 0 · Cimientos (≈12 h)
 
@@ -4481,11 +4481,21 @@ Todo lo que se registra en `docs/` (el plan, el registro, las bitácoras, las de
 ✅ `npm run diary` genera la web sin errores, se lee bien en el móvil y en claro y oscuro, y no publica nada que no esté ya en el repositorio.
 Commit: `docs(diary): project diary as a static site and a PDF (step 7.0d)`.
 
-**7.1 · Accesibilidad y responsive**
+**7.1 · Accesibilidad y responsive (≈13,5 h, en cuatro subpasos)**
 
 - e2e de todas las pantallas (D-026): los de comportamiento y un test de accesibilidad por pantalla con `@axe-core/playwright` que recorre sus estados (diálogos abiertos, errores, vacío, y la ayuda: panel, globo y balizas), completo en claro y solo contraste en oscuro (D-025), sin ninguna infracción.
 - Recorrido completo con teclado y con un lector de pantalla (NVDA en Windows), que encuentra lo que axe no puede comprobar solo.
 - `npm run screenshots -- pec4` como evidencia para la memoria.
+
+Se parte en subpasos, como el 7.0b, para que cada uno quepa en una sesión. Los e2e de cada uno salen de `docs/E2E-PENDIENTES.md`, y sus filas se borran al hacerlos:
+
+- **7.1a · El alumno (≈7 h, en tres sesiones):** e2e y axe de acceso, catálogo, pantalla de trabajo con el tutor, ajustes y datos registrados. Se parte porque al alumno le tocan unas 20 filas de `E2E-PENDIENTES.md`:
+  - **7.1a1 (≈2 h):** la base común de los e2e (anchos, desplazamiento, latencia, fallos de red y voz simulados), los tests intermitentes del CI, acceso, catálogo, ajustes (también los de la voz), datos registrados y muestrario.
+  - **7.1a2 (≈2,5 h):** la pantalla de trabajo (editor, ejecutar y entregar, señales, intentos y 375 px) y los e2e contra Supabase local (2.2, 2.3 y la parte local del 2.5c), con su proyecto `local` de Playwright, que reutiliza el 7.1b.
+  - **7.1a3 (≈2,5 h):** el tutor: chat, flotante, reacciones, voz, dictado, llamada, proactivo y bocadillo.
+- **7.1b · El docente (≈2,5 h):** e2e y axe de sesión en vivo, detalle del intento, ejercicios (banco, editor y bloques) e histórico.
+- **7.1c · La administración y las capturas (≈2 h):** e2e y axe de usuarios, grupos y sistema; la ayuda guiada en los tres perfiles; `npm run screenshots` falla si la página capturada enseña un error (`PENDIENTES.md`, 7.0d); y `npm run screenshots -- pec4`.
+- **7.1d · Teclado y lector de pantalla (≈2 h):** el recorrido con teclado y con NVDA lo hace el autor, y sus hallazgos se corrigen en el mismo subpaso.
 
 **7.2 · Endurecimiento**
 

@@ -1,7 +1,13 @@
 import type { Page } from '@playwright/test';
 
 import { SEED, SEED_VERSION } from '../../src/app/data/mock/fixtures/seed';
-import { ADMIN_ID, DAW_STUDENT_IDS, TEACHER_ID } from '../../src/app/data/mock/fixtures/users';
+import {
+  ADMIN_ID,
+  DAM_STUDENT_IDS,
+  DAW_STUDENT_IDS,
+  NEW_STUDENT_IDS,
+  TEACHER_ID,
+} from '../../src/app/data/mock/fixtures/users';
 import { WELCOME_VERSIONS } from '../../src/app/core/guide/welcome-versions';
 
 /** Seed users of each role, the same ones the dev toolbar offers. */
@@ -9,6 +15,12 @@ export const USERS = {
   student: DAW_STUDENT_IDS[0],
   /** Hugo: exercises in every status and hints asked, for the screenshots of the catalog. */
   studentHalfway: DAW_STUDENT_IDS[1],
+  /** Aya: every exercise submitted, for the congratulations of the catalog. */
+  studentDone: DAW_STUDENT_IDS[2],
+  /** Elena, of 1.º DAM B: a subject whose sessions have no title. */
+  studentOtherClass: DAM_STUDENT_IDS[0],
+  /** Marina, new this year and in no class yet: the empty catalog. */
+  studentWithoutClass: NEW_STUDENT_IDS[0],
   teacher: TEACHER_ID,
   admin: ADMIN_ID,
 } as const;
@@ -17,6 +29,12 @@ export const USERS = {
 const DB_KEY = 'tutoria.mock-db';
 const SESSION_KEY = 'tutoria.mock-session';
 const LATENCY_KEY = 'tutoria.mock-latency';
+
+/** The «Lenta» latency of the dev toolbar, to see the loading states (skeletons after 300 ms). */
+export const SLOW_LATENCY = { min: 1500, max: 3000 } as const;
+
+/** No wait at all, as the dev toolbar's «Sin espera»: the default of the tests. */
+const NO_LATENCY = { min: 0, max: 0 } as const;
 
 /** When the seed user saw the notice on the registered data, for the tests that skip it. */
 const NOTICE_SEEN_AT = '2026-09-15T08:00:00.000Z';
@@ -37,20 +55,24 @@ function databaseWithNoticeSeen(userId: string): string {
 /**
  * Starts every page of the test with the given session (or none) and without simulated latency, as
  * the dev toolbar would leave it, and with the notice on the registered data and the welcome of the
- * guided help already seen, unless a test about the notice says otherwise. It must run before the first `page.goto()`.
+ * guided help already seen, unless a test about the notice says otherwise. `latency` slows the
+ * simulated network down to see the loading states. It must run before the first `page.goto()`.
  */
 export async function startAs(
   page: Page,
   userId: string | null,
-  { dataNoticeSeen = true } = {},
+  {
+    dataNoticeSeen = true,
+    latency = NO_LATENCY,
+  }: { dataNoticeSeen?: boolean; latency?: { min: number; max: number } } = {},
 ): Promise<void> {
   await page.addInitScript(
-    ({ dbKey, sessionKey, latencyKey, userId, database }) => {
+    ({ dbKey, sessionKey, latencyKey, userId, database, latency }) => {
       // Only on the first load of the test: later reloads keep what the app saved (sign out…)
       if (sessionStorage.getItem('e2e-started')) return;
       sessionStorage.setItem('e2e-started', 'yes');
       localStorage.clear();
-      localStorage.setItem(latencyKey, JSON.stringify({ min: 0, max: 0 }));
+      localStorage.setItem(latencyKey, JSON.stringify(latency));
       if (userId) localStorage.setItem(sessionKey, userId);
       if (database) localStorage.setItem(dbKey, database);
     },
@@ -60,6 +82,7 @@ export async function startAs(
       latencyKey: LATENCY_KEY,
       userId,
       database: userId && dataNoticeSeen ? databaseWithNoticeSeen(userId) : null,
+      latency,
     },
   );
 }

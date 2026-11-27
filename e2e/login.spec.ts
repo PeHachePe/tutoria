@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { expectNoAxeViolations } from './support/axe';
+import { A11Y, expectNoAxeViolations } from './support/axe';
 import { startAs } from './support/session';
 
 /** Test password of every seed user (data/mock/fixtures/users.ts). */
@@ -19,7 +19,7 @@ test.describe('acceso', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Acceso' })).toBeVisible();
   });
 
-  test('accesibilidad: pasa axe en cada estado de su ficha', async ({ page }) => {
+  test('accesibilidad: pasa axe en cada estado de su ficha', A11Y, async ({ page }) => {
     // «Enviando» only disables the button and changes its text: axe exempts disabled controls
     test.slow();
     await expectNoAxeViolations(page, 'inicial');

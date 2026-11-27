@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectNoAxeViolations } from './support/axe';
+import { A11Y, expectNoAxeViolations } from './support/axe';
 import { startAs } from './support/session';
 
 // The /dev/ui showcase (step 0.4): every visual piece of the app, so axe covers them all at once
@@ -14,7 +14,7 @@ test.describe('muestrario', () => {
   });
 
   // The menus are checked by the shells test, and the snack bar lasts only 4 seconds
-  test('accesibilidad: pasa axe con sus piezas y un diálogo', async ({ page }) => {
+  test('accesibilidad: pasa axe con sus piezas y un diálogo', A11Y, async ({ page }) => {
     test.slow();
     await expectNoAxeViolations(page, 'inicial');
 

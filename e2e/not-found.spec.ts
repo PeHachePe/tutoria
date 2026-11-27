@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectNoAxeViolations } from './support/axe';
+import { A11Y, expectNoAxeViolations } from './support/axe';
 import { startAs, USERS } from './support/session';
 
 test.describe('página no encontrada', () => {
@@ -13,7 +13,7 @@ test.describe('página no encontrada', () => {
     ).toBeVisible();
   });
 
-  test('accesibilidad: pasa axe', async ({ page }) => {
+  test('accesibilidad: pasa axe', A11Y, async ({ page }) => {
     await expectNoAxeViolations(page, 'con sesión');
   });
 

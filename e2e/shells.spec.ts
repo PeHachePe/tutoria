@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectNoAxeViolations } from './support/axe';
+import { A11Y, expectNoAxeViolations } from './support/axe';
 import { startAs, USERS } from './support/session';
 
 test.describe('sin sesión', () => {
@@ -20,7 +20,7 @@ test.describe('sin sesión', () => {
 test.describe('alumno', () => {
   test.beforeEach(async ({ page }) => startAs(page, USERS.student));
 
-  test('accesibilidad: pasa axe con la barra, sus menús y en el móvil', async ({ page }) => {
+  test('accesibilidad: pasa axe con la barra, sus menús y en el móvil', A11Y, async ({ page }) => {
     test.slow();
     await page.goto('/alumno');
     await expect(page.getByRole('heading', { level: 1, name: 'Ejercicios' })).toBeVisible();
@@ -133,33 +133,35 @@ test.describe('alumno', () => {
 test.describe('docente', () => {
   test.beforeEach(async ({ page }) => startAs(page, USERS.teacher));
 
-  test('accesibilidad: pasa axe con el menú lateral abierto y plegado, también en el móvil', async ({
-    page,
-  }) => {
-    test.slow();
-    await page.goto('/docente/en-vivo');
-    const button = page.getByRole('button', { name: 'Menú de navegación' });
-    await expect(button).toHaveAttribute('aria-expanded', 'true');
-    await expectNoAxeViolations(page, 'escritorio, menú abierto');
+  test(
+    'accesibilidad: pasa axe con el menú lateral abierto y plegado, también en el móvil',
+    A11Y,
+    async ({ page }) => {
+      test.slow();
+      await page.goto('/docente/en-vivo');
+      const button = page.getByRole('button', { name: 'Menú de navegación' });
+      await expect(button).toHaveAttribute('aria-expanded', 'true');
+      await expectNoAxeViolations(page, 'escritorio, menú abierto');
 
-    await button.click();
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await page
-      .getByRole('navigation', { name: 'Principal' })
-      .getByRole('link', { name: 'Histórico' })
-      .hover();
-    await expect(page.getByText('Histórico', { exact: true }).last()).toBeVisible();
-    await expectNoAxeViolations(page, 'escritorio, menú plegado con su tooltip');
+      await button.click();
+      await expect(button).toHaveAttribute('aria-expanded', 'false');
+      await page
+        .getByRole('navigation', { name: 'Principal' })
+        .getByRole('link', { name: 'Histórico' })
+        .hover();
+      await expect(page.getByText('Histórico', { exact: true }).last()).toBeVisible();
+      await expectNoAxeViolations(page, 'escritorio, menú plegado con su tooltip');
 
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.reload();
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await expectNoAxeViolations(page, 'móvil, menú cerrado');
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.reload();
+      await expect(button).toHaveAttribute('aria-expanded', 'false');
+      await expectNoAxeViolations(page, 'móvil, menú cerrado');
 
-    await button.click();
-    await expect(button).toHaveAttribute('aria-expanded', 'true');
-    await expectNoAxeViolations(page, 'móvil, menú abierto');
-  });
+      await button.click();
+      await expect(button).toHaveAttribute('aria-expanded', 'true');
+      await expectNoAxeViolations(page, 'móvil, menú abierto');
+    },
+  );
 
   test('aterriza en su shell, con el menú lateral de docencia', async ({ page }) => {
     await page.goto('/');
@@ -233,7 +235,7 @@ test.describe('docente', () => {
 test.describe('administrador', () => {
   test.beforeEach(async ({ page }) => startAs(page, USERS.admin));
 
-  test('accesibilidad: pasa axe con las dos secciones del menú lateral', async ({ page }) => {
+  test('accesibilidad: pasa axe con las dos secciones del menú lateral', A11Y, async ({ page }) => {
     await page.goto('/admin/usuarios');
     await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible();
     await expectNoAxeViolations(page, 'escritorio');

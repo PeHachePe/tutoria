@@ -9,6 +9,16 @@ import { expect, type Page } from '@playwright/test';
 const POPUP_REGIONS = 'dialog, [role=dialog], [role=alertdialog], svg, [role=menu], [role=listbox]';
 
 /**
+ * Rules axe leaves off by default that the app must pass: `target-size` is WCAG 2.2 AA (2.5.8,
+ * targets of at least 24 × 24 px), and axe 4.14 keeps it off only because 2.2 is newer than its
+ * other rules. It is the only rule of level A or AA that axe does not run by default (step 7.1a1).
+ */
+const EXTRA_RULES = { 'target-size': { enabled: true } } as const;
+
+/** Tag of every accessibility test, to run them alone with `npm run e2e:a11y` (step 7.1a1). */
+export const A11Y = { tag: '@a11y' } as const;
+
+/**
  * The two passes of every state (D-025): all of axe's rules in light mode and, in dark mode, only
  * the contrast, which is all the theme changes. The rest would repeat the light pass and double the
  * time of every accessibility test.
@@ -32,9 +42,10 @@ export async function expectNoAxeViolations(page: Page, state: string): Promise<
     // Legacy mode runs axe inside the page. By default it opens a blank page on every call to put
     // the results together, which took 3 to 6 s per pass even on a page of 41 elements; this way it
     // takes about 1 s. It only gives up cross-origin iframes, which the app does not have (D-025).
-    let axe = new AxeBuilder({ page })
-      .setLegacyMode(true)
-      .options({ checks: { region: { options: { regionMatcher: POPUP_REGIONS } } } });
+    let axe = new AxeBuilder({ page }).setLegacyMode(true).options({
+      checks: { region: { options: { regionMatcher: POPUP_REGIONS } } },
+      rules: EXTRA_RULES,
+    });
     if (rules) axe = axe.withRules([...rules]);
     const { violations } = await axe.analyze();
     const report = violations.map(
