@@ -8,8 +8,8 @@ Reordenar el plan para entregar la aplicación completa en la PEC3 y dejar la PE
 
 ## Qué se pidió
 
-- Cuántos pasos quedan, yendo por el 1.7.
-- Aclarar qué piden la PEC3 y la PEC4: la beta, el vídeo de 5 minutos de la PEC3 y el vídeo de defensa de la PEC4, con sus 5 minutos de demo.
+- Contar los pasos que quedan, desde el 1.7.
+- Ajustar el plan a lo que piden la PEC3 y la PEC4: la beta y el vídeo de 5 minutos de la PEC3, y el vídeo de defensa de la PEC4, con sus 5 minutos de demo.
 - Tener la app acabada para la PEC3.
 
 ## Qué hizo Claude
@@ -48,7 +48,7 @@ Sin cambios de código: unitarios 661 · e2e 38.
 
 ## Validación humana
 
-El autor fijó el objetivo en el chat y dio por bueno el plan v4.4, con el orden de recorte, a la primera.
+El autor fijó el objetivo y aprobó el plan v4.4, con el orden de recorte.
 
 ## Capturas
 
@@ -62,4 +62,4 @@ No aplica.
 
 ## Para la presentación
 
-A los tres días de empezar, el ritmo real permitió adelantar el objetivo: la PEC3 pasa de entregar la capa 1 a entregar la aplicación completa.
+—

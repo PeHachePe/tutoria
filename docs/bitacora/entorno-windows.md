@@ -8,7 +8,7 @@ Dejar el equipo Windows listo para la fase 2, que necesita Supabase en local (y,
 
 ## Qué se pidió
 
-- Saber en qué paso va el proyecto y qué hace falta en local para el 2.4.
+- Revisar el estado del proyecto y lo que necesita en local el paso 2.4.
 - Descartar Ollama por ahora y usar un proveedor externo (Gemini).
 - Instalar Docker, que el equipo no tenía, y comprobar que todo está listo para trabajar.
 
@@ -17,7 +17,7 @@ Dejar el equipo Windows listo para la fase 2, que necesita Supabase en local (y,
 1. Comprobó que el siguiente paso es el 2.4 (tutor real) y que el equipo no tenía WSL ni Docker.
 2. Indicó la instalación: `wsl --install` y reinicio, Docker Desktop con WSL 2 (por `winget`) y primer arranque hasta «Engine running».
 3. Ante el aviso de la protección LSA de Windows, recomendó dejarla activada: ni WSL ni Docker la necesitan desactivada.
-4. Diagnosticó con el registro de Docker Desktop un primer arranque cortado mientras formateaba su disco, sin error; el autor lo abrió de nuevo y arrancó.
+4. Diagnosticó con el registro de Docker Desktop un primer arranque cortado mientras formateaba su disco, sin error; al abrirlo de nuevo, arrancó.
 5. Arrancó Supabase local por primera vez (`db:start`: imágenes, seis migraciones y seed) y revisó los contenedores. El de `vector` (registros para Studio) se reinicia en bucle en Windows, sin efecto en el desarrollo.
 6. Comprobó Node 24.19, la CLI de Supabase 3.1.0, Deno 2.5.6, `check` y `db:test`.
 7. Un test de `app.routes.spec.ts` fallaba solo con la batería completa: el alumno de prueba no ha visto el aviso de datos, que el layout abre en `afterNextRender`, y en un equipo cargado el diálogo ya estaba abierto al buscar el `h1` y ocultaba la página. El spec da ahora el aviso por visto, porque comprueba las rutas, no el aviso (que ya prueban sus propios tests).
@@ -68,4 +68,4 @@ No aplica.
 
 ## Para la presentación
 
-Pasar a Windows destapó una carrera en un test que en el Mac nunca fallaba: un equipo más lento también sirve para probar.
+Desarrollar también en Windows destapó una carrera en un test que en macOS nunca fallaba.

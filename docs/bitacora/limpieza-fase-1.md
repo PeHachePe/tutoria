@@ -11,7 +11,7 @@ Dejar el proyecto lo más pulido posible antes de la fase 2: quitar lo innecesar
 - Una revisión general para hacer limpieza: quitar cosas innecesarias, limpiar código malo y reorganizar o agrupar en carpetas si hace falta.
 - `src/styles.css` lo más limpio posible y repartido en ficheros específicos si es mejor idea.
 - Usar siempre Tailwind en lo posible; SCSS y CSS cuando Tailwind complique o ensucie, sin sobrejustificarlo.
-- Si los «datos simulados» del modo de desarrollo (`/dev/datos`) son necesarios o aportan algo, con la decisión delegada en Claude.
+- Decidir si el explorador de datos simulados del modo de desarrollo (`/dev/datos`) sigue aportando algo, con la decisión delegada en Claude.
 - **Iteración 2:** que Claude reformule los ejercicios de las fixtures que lo necesiten y añada más si lo ve conveniente.
 
 ## Qué hizo Claude
@@ -61,7 +61,7 @@ Iteración 2: el test de los contenidos de las fixtures se actualiza; `npm run c
 
 Sobre la propuesta, el valor del explorador de datos quedó a criterio de Claude, con la regla de Tailwind primero sin sobrejustificar el CSS.
 
-- Iteración 2: ejercicios aprobados, con margen para reformular o añadir los que Claude viera oportunos. Aprobado con el commit `4012772`.
+- Iteración 2: aprobados los ejercicios reformulados, con margen para que Claude reformulara o añadiera los que viera oportunos. Commit `4012772`.
 
 ## Capturas
 

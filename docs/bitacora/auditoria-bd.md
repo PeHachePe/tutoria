@@ -59,7 +59,7 @@ Cobertura de la app, 100 %. Los de pgTAP nuevos cubren: un alumno de dos docente
 
 ## Validación humana
 
-Aprobado empezar por la base de datos y, vistos los hallazgos, la migración. Acotar la lectura del docente al grupo se hizo como se recomendó; queda a su revisión. Ejecutó los commits; la migración sigue sin publicar en la nube.
+Aprobó empezar por la base de datos y, vistos los hallazgos, la migración. La lectura del docente se acotó al grupo, como se recomendó, y queda a su revisión. El autor ejecutó los commits; la migración sigue sin publicar en la nube.
 
 ## Capturas
 

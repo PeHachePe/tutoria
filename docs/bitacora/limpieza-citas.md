@@ -17,12 +17,12 @@ Que la documentación de `docs/` no reproduzca frases literales del chat entre e
 
 1. Buscó en todo el repositorio las citas atribuidas al autor y las frases coloquiales entre comillas. Encontró unas 330, todas en `docs/`. El código, los comentarios, los textos de la interfaz y la configuración estaban limpios.
 2. Repartió la reescritura entre tres subagentes en paralelo: `DECISIONES.md` (91 citas), la bitácora (unas 210 en 64 ficheros) y `REGISTRO.md`, `PENDIENTES.md` y las fichas (33).
-3. Las aprobaciones («Adelante», «Sí, ciérralo»…) se reducen a «aprobó el plan» o «cerró el paso». Las peticiones y las críticas pasan a estilo indirecto, con el mismo contenido.
+3. Las aprobaciones se reducen a «aprobó el plan» o «cerró el paso». Las peticiones y las críticas pasan a estilo indirecto, con el mismo contenido.
 4. Se mantienen entre comillas los textos de la interfaz y los mensajes de prueba escritos en la app haciendo de alumno («PIKACHU», «no me acuerdo»…), porque son datos del producto y explican los cambios del tutor.
 5. El «por ahora» de la regla de pendientes pasa a «de forma provisional».
 6. Quitó las anécdotas sobre los gustos del autor en D-037, en la bitácora del 1.8 y en la del 6.1a. D-037 pasa a titularse «… y reacciones de broma».
-7. Los «al autor no le gustaba X» pasan a ser el motivo de diseño del cambio («las tarjetas no escalaban, porque puede haber 20»).
-8. **Iteración 2:** tres subagentes revisaron el tono de `DECISIONES.md`, las 87 bitácoras, `REGISTRO.md` y `PENDIENTES.md` (unas 735 frases en 86 ficheros). La crónica pasa a un estilo impersonal centrado en el problema y la solución. Se quitan las dudas, quejas, correcciones y detalles domésticos del autor. Las líneas «Aprobación:» y la validación humana quedan sobrias. Las decisiones de producto del autor se mantienen con una sola mención y los fallos de Claude se conservan, porque sirven a la memoria. Las menciones a «el autor» bajan de unas 810 a 480.
+7. Las preferencias del autor pasan a contarse como el motivo de diseño del cambio («las tarjetas no escalaban, porque puede haber 20»).
+8. **Iteración 2:** tres subagentes revisaron el tono de `DECISIONES.md`, las 87 bitácoras, `REGISTRO.md` y `PENDIENTES.md` (unas 735 frases en 86 ficheros). La crónica pasa a un estilo impersonal centrado en el problema y la solución. Se quitan las dudas, las correcciones y los detalles domésticos del autor. Las líneas «Aprobación:» y la validación humana quedan sobrias. Las decisiones de producto del autor se mantienen con una sola mención y los fallos de Claude se conservan, porque sirven a la memoria. Las menciones a «el autor» bajan de unas 810 a 480.
 9. Añadió la regla a `CLAUDE.md` (punto 4 del cierre de paso) y a `docs/bitacora/_plantilla.md`: la validación y lo pedido se escriben en estilo indirecto, sin citas literales del chat. En la iteración 2 la regla de `CLAUDE.md` se amplió al tono: neutro, impersonal y sin crónica.
 
 ## Comandos e instalaciones
@@ -42,7 +42,7 @@ Que la documentación de `docs/` no reproduzca frases literales del chat entre e
 - El subagente de la bitácora se detuvo por el límite de uso y se reanudó con su contexto cuando se restableció.
 - En la iteración 2 dos subagentes compartían la carpeta temporal y uno sobrescribió el script del otro a mitad del trabajo. Las ediciones se aplicaron con reemplazos exactos que comprobaban cada frase, así que no hubo daños. Para otra vez, una carpeta por subagente.
 - `npm run metrics` sin `--session` midió otra sesión abierta a la vez en el proyecto. Se borró su fila y se midió esta sesión con `--session`.
-- Algunas citas eran ambiguas: términos de Claude por los que preguntó el autor, o mensajes al tutor durante las pruebas. Se dejaron las que no son palabras del autor dirigidas a Claude.
+- Algunas citas eran ambiguas: términos propios de Claude que se retomaban en la conversación, o mensajes al tutor durante las pruebas. Se dejaron las que no son palabras del autor dirigidas a Claude.
 
 ## Decisiones
 
@@ -54,7 +54,7 @@ No cambia código. `npm run format` aplicado.
 
 ## Validación humana
 
-Revisión pedida por el autor; reescritura de las citas aprobada. Iteración 2: ampliada a todo el tono de la documentación. Muestras revisadas por Claude en el diff, con algunas frases corregidas (fórmulas de aprobación forzadas y frases sin sujeto).
+Revisión a petición del autor; aprobó la reescritura de las citas. Iteración 2: ampliada a todo el tono de la documentación. Claude revisó muestras en el diff y corrigió algunas frases (fórmulas de aprobación forzadas y frases sin sujeto).
 
 ## Capturas
 
@@ -70,4 +70,4 @@ Incluye los seis subagentes.
 
 ## Para la presentación
 
-La documentación generada con un agente tiende a transcribir el chat. También tiende a narrar como una crónica lo que hizo y dijo el autor. En la revisión, unas 330 citas pasaron a estilo indirecto y unas 735 frases a un tono neutro, y la regla pasó a las instrucciones del agente.
+La documentación que escribe un agente de IA tiende a transcribir el chat y a narrar como una crónica lo que hizo y dijo el autor. Una revisión pasó unas 330 citas a estilo indirecto y unas 735 frases a un tono neutro, y la regla quedó en las instrucciones del agente para que no se repita.

@@ -8,10 +8,9 @@ Que el CI deje de fallar al instalar Chromium y que no vuelva a depender de lo q
 
 ## Qué se pidió
 
-- Por qué fallaba `npx playwright install --with-deps chromium` en el CI, si antes funcionaba y si había cambiado algo.
-- Cuál es la mejor solución; qué problema tiene el contenedor de Playwright, si fijar una versión antigua de Ubuntu es buena idea, y si Cypress u otras herramientas serían mejores.
-- La mejor solución, que sirviera a largo plazo y diera menos problemas, y más rápida si se podía.
-- Al relanzar el CI, la instalación pasó, pero falló el test de las cuentas de demostración del login.
+- Diagnosticar por qué fallaba en el CI `npx playwright install --with-deps chromium`, que antes funcionaba.
+- Comparar las soluciones (el contenedor de Playwright, fijar una versión anterior de Ubuntu, Cypress u otras herramientas) y aplicar la más duradera, con menos problemas y, si se puede, más rápida.
+- Arreglar el test de las cuentas de demostración del login, que falló al relanzar el CI una vez superada la instalación.
 
 ## Qué hizo Claude
 
@@ -40,7 +39,7 @@ Que el CI deje de fallar al instalar Chromium y que no vuelva a depender de lo q
 
 ## Problemas y cómo se resolvieron
 
-- **Disco C: lleno:** al descargar la imagen (unos 3,6 GB descomprimida) para reproducir el CI en local, el disco llegó al 100 % y Docker dejó de responder. El autor liberó espacio.
+- **Disco lleno:** al descargar la imagen (unos 3,6 GB descomprimida) para reproducir el CI en local, el disco llegó al 100 % y Docker dejó de responder. Se liberó espacio.
 - **Imagen local corrupta:** la extracción se cortó con el disco lleno, y Docker siguió reutilizando esas capas al descargarla de nuevo: 601 de los 678 ficheros de los navegadores estaban vacíos, y Chromium salía sin error. Se borró la copia local. En GitHub la imagen se descarga limpia en cada ejecución, así que la prueba real del contenedor es el primer CI tras el commit.
 
 ## Decisiones
@@ -53,10 +52,10 @@ Unitarios: 1070 (nuevos: 0) · e2e: 38 (el de login, corregido). En local, la su
 
 ## Validación humana
 
-- El fallo no venía de un cambio del agente, sino de GitHub.
+- El fallo venía de GitHub, no de un cambio del proyecto.
 - Se valoraron las alternativas, Cypress incluido, buscando la solución más duradera, con menos problemas y más rápida.
 - Relanzó el CI: la instalación pasó y destapó el test de login del 2.5c.
-- Liberó espacio en C:. Los e2e en local no necesitan Docker: solo el CI usa el contenedor.
+- Los e2e en local no necesitan Docker: solo el CI usa el contenedor.
 - **Cierre:** el autor hizo los commits y los subió; el primer CI con el contenedor pasó con sus tres jobs (`check`, `playwright-version` y `e2e`).
 
 ## Capturas

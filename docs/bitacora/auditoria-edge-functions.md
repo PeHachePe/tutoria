@@ -10,7 +10,7 @@ Revisar `execute`, `tutor` y `translate` como lo haría alguien con una cuenta y
 
 - Una auditoría de las Edge Functions, con cada hallazgo serio comprobado en el Supabase local y anotado en `PENDIENTES.md`.
 - Después, vistos los hallazgos, arreglarlos decidiendo lo más útil, y mejorar el prompt del tutor sin perder su esencia.
-- En otra sesión, revisar lo hecho, porque la primera se quedó sin cerrar, y arreglar lo que saliera.
+- En otra sesión, revisar lo hecho, porque la primera terminó sin cerrar el paso, y arreglar lo que saliera.
 
 ## Qué hizo Claude
 
@@ -48,8 +48,8 @@ QuickJS pasa de 0.31.0 a 0.32.0 (`supabase/functions/deno.json`).
 - **El tutor no arrancaba en local.** Importaba un fichero de la app que el runtime no tenía montado; la validación del nombre de función se movió a `run-result.ts`, que ya se importaba.
 - **Borrado con los disparadores apagados.** Una limpieza de datos de prueba dejó 12 eventos sin intento; se borraron y la base quedó como la línea base.
 - **`npm run check` se pasó entero después de los commits,** en verde: antes solo lint, Deno, pgTAP y unitarios.
-- **En la revisión, la base local del otro equipo estaba en las migraciones del 12/11.** Con `supabase migration up` pasan 231 de 233 pruebas de pgTAP; las dos que fallan (`blocks_and_assignments`, `exercise_editor`) dependen del seed, que cambió después. Tras `db:reset`, las 243 pasan.
-- **En ese equipo (Windows) los unitarios agotaban los 5 s en pruebas pesadas del panel docente** (entre 1 y 4 de 1841 en cada pasada, nunca las mismas; solas pasan). No tenían que ver con la revisión: renderizan la pantalla entera en jsdom y, con todos los ficheros a la vez, se pasaban del tiempo por defecto de Vitest. `vitest-base.config.mts` lo sube a 15 s (`testTimeout`), y `npm run check` sale en verde también allí.
+- **En la revisión, la base local estaba en las migraciones del 12/11.** Con `supabase migration up` pasan 231 de 233 pruebas de pgTAP; las dos que fallan (`blocks_and_assignments`, `exercise_editor`) dependen del seed, que cambió después. Tras `db:reset`, las 243 pasan.
+- **En Windows, los unitarios agotaban los 5 s en pruebas pesadas del panel docente** (entre 1 y 4 de 1841 en cada pasada, nunca las mismas; solas pasan). No tenían que ver con la revisión: renderizan la pantalla entera en jsdom y, con todos los ficheros a la vez, se pasaban del tiempo por defecto de Vitest. `vitest-base.config.mts` lo sube a 15 s (`testTimeout`), y `npm run check` sale en verde también allí.
 
 ## Decisiones
 
@@ -100,4 +100,3 @@ De la revisión posterior:
 
 - Un límite que lee y después escribe no limita: 70 peticiones a la vez pasaron 28 con el tope en 6.
 - Un ajuste que decide adónde viaja una clave es parte de la clave: con una sesión de administración bastaba para llevársela.
-- Lo que falta por demostrar: el prompt v6 y el validador contra el modelo real, con la batería de elusión.

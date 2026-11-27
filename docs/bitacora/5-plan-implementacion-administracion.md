@@ -8,7 +8,7 @@ Dejar escrita en `docs/PLAN.md` la fase 5 (usuarios, grupos y matrícula, y sist
 
 ## Qué se pidió
 
-- Aprovechar la sesión para planificar lo que aún no tenía plan detallado. De lo que faltaba (fase 5, 4.4, 4.5, 4.2b y fase 7), el agente propuso la fase 5 por ser el bloque más grande sin desglosar y el más delicado (cuentas, `service_role` y RLS), y el autor la eligió.
+- Un plan de implementación detallado para un bloque que aún no lo tenía. De lo que faltaba (fase 5, 4.4, 4.5, 4.2b y fase 7) se eligió la fase 5, por ser el bloque más grande sin desglosar y el más delicado (cuentas, `service_role` y RLS).
 - Sin implementar nada ni tocar código.
 
 ## Qué hizo Claude
@@ -34,7 +34,7 @@ Dejar escrita en `docs/PLAN.md` la fase 5 (usuarios, grupos y matrícula, y sist
 
 ## Problemas y cómo se resolvieron
 
-- **Las tres fichas de la fase (`10`, `11` y `12`) no existen.** Cada sesión de pantalla escribe primero la suya con la plantilla, a partir de su plan, y el autor la valida con el plan corto.
+- **Las tres fichas de la fase (`10`, `11` y `12`) no existen.** Cada sesión de pantalla escribe primero la suya con la plantilla, a partir de su plan, y se valida junto con el plan corto.
 - **`AdminService` no tiene ninguna versión y mezcla lo del administrador con lo del docente.** Los grupos y la matrícula pasan a `GroupService`; `AdminService` se queda con las cuentas, las asignaturas y el proveedor.
 - **Hoy solo el administrador puede escribir en `class_group` y en `enrollment`,** y un docente no lee a los alumnos que no son suyos: el 5.2a trae la migración con las políticas del docente y una RPC de búsqueda acotada.
 - **Las reglas de las cuentas harían falta dos veces** (en la función y en los datos simulados): van a un fichero sin importaciones que comparten, como el contrato del tutor.
@@ -60,8 +60,8 @@ Unitarios: 1841 (nuevos: 0) · e2e: 39. Sesión sin código. No se ejecutó `npm
 
 ## Validación humana
 
-- El autor eligió la fase 5 entre las opciones que propuso el agente.
-- Recibió el resumen de las decisiones tomadas por el agente (las de D-072, la partición en cinco subpasos y que las asignaturas entren en el 5.3) y ejecutó el commit sin pedir cambios.
+- Eligió la fase 5 entre las opciones propuestas.
+- Aprobó el plan y sus decisiones (las de D-072, la partición en cinco subpasos y que las asignaturas entren en el 5.3) sin cambios y ejecutó el commit.
 
 ## Capturas
 
@@ -77,5 +77,4 @@ Medidas antes de escribir esta bitácora.
 
 ## Para la presentación
 
-- La fase de administración pasa de tres pasos con siete viñetas a cinco subpasos con sus ficheros, firmas, reglas y tests, sin cambiar sus 10 horas.
-- Planificar antes de escribir código sacó a la luz lo que el plan no decía: que el docente no podía escribir en sus propios grupos, que cambiar un rol podía dejar grupos huérfanos y que las asignaturas no tenían pantalla.
+—

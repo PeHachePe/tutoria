@@ -1,6 +1,6 @@
 # 11 · Grupos y matrícula
 
-`/docente/grupos?clase=` · Docente y administrador · Capa 2 · 2 h (5.2b, rehecha en su revisión), el 5.2c (preparar un curso nuevo) y el 5.2d (la clase compartida)
+`/docente/grupos?clase=` · Docente y administrador · Capa 2 · 2 h (5.2b, rediseñada tras su revisión), el 5.2c (preparar un curso nuevo) y el 5.2d (la clase compartida)
 
 ## Objetivo
 
@@ -76,7 +76,7 @@ Escritorio, tablet y móvil, en un solo panel que llega hasta el final de la ven
 - [x] Los grupos del docente (todos, para el administrador, con su docente).
 - [x] Crear, editar y eliminar un grupo; el empezado no se elimina, con su motivo.
 - [x] Matricular buscando por nombre o correo, varios a la vez o el alumnado de otra clase; dar de baja conservando el trabajo (RF-16).
-- [x] Revisión visual del autor de la versión rehecha (dada por buena el 20/11/2026, con la del 5.2d).
+- [x] Revisión visual del autor de la versión rediseñada (dada por buena el 20/11/2026, con la del 5.2d).
 - [x] Duplicar una clase para el curso siguiente o una paralela, con sus bloques (fechas movidas o sin ellas) y, si se quiere, su alumnado (5.2c).
 - [x] La clase existe una sola vez y la comparten sus docentes; quien crea una que ya existe se une a ella (5.2d).
 - [x] El alumnado es de la clase: matricular en ella llega a todas sus asignaturas, y cada grupo admite excepciones (5.2d).
