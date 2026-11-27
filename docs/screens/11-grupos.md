@@ -90,7 +90,7 @@ Escritorio, tablet y móvil, en un solo panel que llega hasta el final de la ven
 - [x] El curso se elige, nunca se escribe: «Este curso» o «El que viene» (5.2d).
 - [x] La tabla ocupa todo el alto de la ventana, con la columna de los nombres fija y con fondo propio (5.2d).
 - [x] «Añadir asignaturas» con la estética de matricular, para muchas asignaturas: filtro, elegidas abajo, cada una de toda la clase o desdoble (5.2d).
-- [x] Revisión visual del autor de lo del 5.2d (20/11/2026: «de momento la doy por buena»).
+- [x] Revisión visual del autor de lo del 5.2d (dada por buena de forma provisional el 20/11/2026).
 - [x] Las clases de cursos pasados, de solo lectura, con un aviso y «Duplicar…»; la administración las reabre y las vuelve a cerrar (5.2e, D-082).
 - [x] La evaluación final de cada alumno de la clase, también cerrada, con atajos y «Deshacer» (5.2g, D-084).
 - [x] Al matricular, de dónde viene cada alumno; quien tituló o causó baja no se cuela en una lista, y nadie está en dos clases del mismo curso (5.2g).

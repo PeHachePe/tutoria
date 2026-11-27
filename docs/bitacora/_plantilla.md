@@ -6,7 +6,7 @@ Fecha · Sesión de Claude Code · Commit
 
 ## Qué se pidió
 
-Las peticiones principales del humano, resumidas.
+Las peticiones principales del humano, resumidas en estilo indirecto, sin citas literales del chat.
 
 ## Qué hizo Claude
 
@@ -31,7 +31,7 @@ Unitarios: N (nuevos: M) · e2e: N
 
 ## Validación humana
 
-Qué se revisó, cómo, y qué se pidió cambiar en cada iteración.
+Qué se revisó, cómo, y qué se pidió cambiar en cada iteración, en estilo indirecto, sin citas literales del chat.
 
 ## Capturas
 

@@ -10,7 +10,7 @@ Que el CI deje de fallar al instalar Chromium y que no vuelva a depender de lo q
 
 - Por qué fallaba `npx playwright install --with-deps chromium` en el CI, si antes funcionaba y si había cambiado algo.
 - Cuál es la mejor solución; qué problema tiene el contenedor de Playwright, si fijar una versión antigua de Ubuntu es buena idea, y si Cypress u otras herramientas serían mejores.
-- «Haz la mejor solución, pero que sirva a largo plazo y la que menos problemas dé», y más rápida si se puede.
+- La mejor solución, que sirviera a largo plazo y diera menos problemas, y más rápida si se podía.
 - Al relanzar el CI, la instalación pasó, pero falló el test de las cuentas de demostración del login.
 
 ## Qué hizo Claude
